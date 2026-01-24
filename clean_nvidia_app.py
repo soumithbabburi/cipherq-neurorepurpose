@@ -48,13 +48,6 @@ try:
     TIER_SELECTOR_AVAILABLE = True
 except ImportError:
     TIER_SELECTOR_AVAILABLE = False
-
-# Import tier selection UI
-try:
-    from tier_selector import render_tier_selector, get_tier_filtered_drugs
-    TIER_SELECTOR_AVAILABLE = True
-except ImportError:
-    TIER_SELECTOR_AVAILABLE = False
     print("Warning: tier_selector not available - using all drugs")
 
 # Database Connection
