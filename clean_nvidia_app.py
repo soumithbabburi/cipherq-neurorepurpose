@@ -11763,6 +11763,26 @@ def render_molecular_docking_section():
                 st.warning("No docking poses generated")
                 return
             
+            # === PROFESSIONAL 3D VIEWER (NVIDIA DiffDock Style) ===
+            # Show ALL poses in one interactive viewer (before the expanders)
+            st.markdown("---")
+            st.markdown("### 🧬 Interactive 3D Molecular Docking Viewer")
+            
+            try:
+                from nvidia_style_viewer import create_nvidia_style_viewer
+                viewer_success = create_nvidia_style_viewer(
+                    drug_name=selected_drug,
+                    target_protein=target_protein,
+                    poses=valid_poses,
+                    height=600
+                )
+                if viewer_success:
+                    logger.info("✅ NVIDIA-style professional viewer rendered")
+            except Exception as viewer_error:
+                logger.warning(f"Professional viewer not available: {viewer_error}")
+                st.info("💡 Professional 3D viewer unavailable - see pose details below")
+            
+            st.markdown("---")
             st.markdown(f"**Docking poses for {selected_drug}:**")
             
             for i, pose in enumerate(valid_poses):
@@ -11797,17 +11817,11 @@ def render_molecular_docking_section():
                                 # Render professional protein+ligand complex
                                 # Render actual molecular visualization
                                 try:
-                                    # Target protein is already correctly set - just log it
-                                    logger.info(f"3D Viewer rendering: {selected_drug} -> {target_protein}")
+                                    # 3D viewer is now shown ABOVE (outside loop) for all poses
+                                    # No need to show it again inside each expander
+                                    # Just show the Deep 3D Analysis
                                     
-                                    # Extract SDF data from pose dict
-                                    pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
-                                    # BULLETPROOF py3Dmol viewer using REAL DiffDock data
-                                    from simple_3d_viewer import create_simple_3d_viewer
-                                    success = create_simple_3d_viewer(
-                                        drug_name=selected_drug,
-                                        target_protein=target_protein
-                                    )
+                                    success = True  # Skip individual viewer
                                     
                                     # DEEP 3D MOLECULAR ANALYSIS - Precise geometric analysis
                                     if success:
