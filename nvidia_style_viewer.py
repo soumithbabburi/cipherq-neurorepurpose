@@ -196,14 +196,23 @@ def create_nvidia_style_viewer(drug_name: str, target_protein: str, poses: list,
                 let proteinData = `{protein_pdb_js}`;
                 viewer.addModel(proteinData, "pdb");
                 
-                // Style protein as ribbons (NVIDIA style)
+                // Style protein as ribbons/cartoon (NVIDIA DiffDock style)
+                // Show FULL protein structure with all secondary structures
                 viewer.setStyle({{model: 0}}, {{
                     cartoon: {{
-                        color: 'lightgray',
-                        opacity: 0.8,
-                        thickness: 0.5
+                        color: 'spectrum',  // Rainbow colors by chain
+                        opacity: 0.85,
+                        thickness: 0.8,
+                        style: 'trace',
+                        arrows: true  // Show beta sheets as arrows
                     }}
                 }});
+                
+                // Add semi-transparent surface for depth
+                viewer.addSurface($3Dmol.SurfaceType.VDW, {{
+                    opacity: 0.2,
+                    color: 'white'
+                }}, {{model: 0}});
                 
                 // Add all ligand poses
                 let ligands = [
