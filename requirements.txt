@@ -17,3 +17,4 @@ fuzzywuzzy>=0.18.0
 python-levenshtein>=0.20.0
 typing-extensions>=4.0.0
 psycopg2-binary>=2.9.0
+biopython
