@@ -58,38 +58,54 @@ def get_db_connection():
     logger = logging.getLogger(__name__)
     
     try:
+        from psycopg2 import pool
+        
         if CONFIG_AVAILABLE:
             db_params = Config.get_db_params()
         else:
             # Fallback to environment variables
             db_params = {
                 "host": os.getenv("DB_HOST", "localhost"),
+                "port": int(os.getenv("DB_PORT", 5432)),
                 "database": os.getenv("DB_NAME", "cipherq_repurpose"),
                 "user": os.getenv("DB_USER", "babburisoumith"),
-                "password": os.getenv("DB_PASSWORD", "")
+                "password": os.getenv("DB_PASSWORD", ""),
+                "sslmode": "require" if "neon.tech" in os.getenv("DB_HOST", "") else "prefer"
             }
         
-        conn = psycopg2.connect(**db_params)
-        logger.info(f"✅ Database connected: {db_params['database']}@{db_params['host']}")
-        return conn
+        # Create connection pool (1-20 connections)
+        connection_pool = pool.SimpleConnectionPool(1, 20, **db_params)
+        logger.info(f"✅ Connection pool created: {db_params['database']}@{db_params['host']}")
+        return connection_pool
     except Exception as e:
-        st.error(f"❌ Database connection failed: {e}")
-        logger.error(f"DB connection error: {e}")
+        st.error(f"❌ Connection pool creation failed: {e}")
+        logger.error(f"Pool creation error: {e}")
         return None
 
 def execute_db(sql: str, params: tuple = None) -> list:
-    """Execute SQL query and return list of dictionaries"""
+    """Execute SQL query using connection pool - prevents 'connection already closed' errors"""
+    pool = get_db_connection()
+    
+    if not pool:
+        return []
+    
+    conn = None
     try:
-        conn = get_db_connection()
-        if conn is None:
-            return []
+        # Get connection from pool
+        conn = pool.getconn()
+        
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(sql, params)
             results = cur.fetchall()
             return [dict(row) for row in results]
+            
     except Exception as e:
-        st.error(f"Query execution failed: {e}")
+        logger.error(f"Query execution failed: {e}")
         return []
+    finally:
+        # Return connection to pool
+        if conn:
+            pool.putconn(conn)
 
 @st.cache_data(ttl=3600)
 def get_drugs_by_category(category: str, limit: int = 10) -> list:
@@ -9198,12 +9214,12 @@ def generate_network_explanation(nodes_df, edges_df, disease_name):
     # Extract network components
     drugs = nodes_df[nodes_df['label'] == 'Drug']['name'].tolist()
     proteins = nodes_df[nodes_df['label'] == 'Protein']['name'].tolist()
-    pathways = nodes_df[nodes_df['label'] == 'Pathway']['name'].tolist() if 'Pathway' in nodes_df['label'].values else []
     
     # Analyze connections
     drug_connections = {}
     for drug in drugs:
         drug_id = f"DRUG_{drug.replace(' ', '_').upper()}"
+        # Find all proteins this drug targets
         drug_edges = edges_df[edges_df['source'] == drug_id]
         targets = []
         for _, edge in drug_edges.iterrows():
@@ -9213,7 +9229,7 @@ def generate_network_explanation(nodes_df, edges_df, disease_name):
                 targets.append(target_name[0])
         drug_connections[drug] = targets
     
-    # Try to use Gemini API for DETAILED therapeutic explanation
+    # Try to use Gemini API for intelligent, context-aware explanation
     try:
         import requests
         import os
@@ -9221,66 +9237,46 @@ def generate_network_explanation(nodes_df, edges_df, disease_name):
         api_key = os.getenv('GEMINI_API_KEY')
         
         if api_key:
-            # Enhanced prompt with pathways
-            drug_target_text = '\n'.join([f'- {drug} → {", ".join(targets)}' for drug, targets in drug_connections.items()])
-            pathway_text = f"\n\n**Pathways in network ({len(pathways)}):** {', '.join(pathways[:10])}" if pathways else ""
+            # Create prompt with ONLY actual graph data
+            drug_target_text = '\n'.join([f'- {drug}: {", ".join(targets)}' for drug, targets in drug_connections.items()])
             
-            prompt = f"""You are a drug repurposing expert analyzing a molecular network for {disease_name}.
+            prompt = f"""You are analyzing a drug repurposing network for {disease_name}.
 
-**Network Structure:**
-{drug_target_text}{pathway_text}
+Here are the ACTUAL drug-protein connections from the database:
+{drug_target_text}
 
-**Task:** For EACH drug, explain in 2-3 detailed sentences:
-1. What biological mechanism it uses (how it modulates the target protein)
-2. How this mechanism could be therapeutic for {disease_name} specifically
-3. What disease processes it might affect (inflammation, metabolism, cell death, etc.)
+Explain in 2-3 sentences PER DRUG how targeting these specific proteins could be therapeutic for {disease_name}. Be factual and scientific. Focus on the biological mechanisms of these exact proteins."""
 
-Be scientific and specific. Focus on the actual molecular mechanisms and disease pathology connections. NO generic statements."""
-
-            # Try multiple Gemini models
-            for model in ["gemini-1.5-flash", "gemini-pro"]:
-                try:
-                    response = requests.post(
-                        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
-                        headers={"Content-Type": "application/json"},
-                        json={
-                            "contents": [{
-                                "parts": [{"text": prompt}]
-                            }],
-                            "generationConfig": {
-                                "temperature": 0.7,
-                                "maxOutputTokens": 1500
-                            }
-                        },
-                        timeout=30
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        explanation = result['candidates'][0]['content']['parts'][0]['text']
-                        logger.info(f"✅ Generated detailed therapeutic explanation using {model}")
-                        return explanation
-                    else:
-                        logger.warning(f"{model} returned {response.status_code}")
-                        continue
-                except Exception as model_error:
-                    logger.warning(f"{model} failed: {model_error}")
-                    continue
+            # Call Gemini API
+            response = requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "contents": [{
+                        "parts": [{"text": prompt}]
+                    }]
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                explanation = result['candidates'][0]['content']['parts'][0]['text']
+                logger.info("✅ Generated explanation using Gemini API")
+                return explanation
+            else:
+                logger.warning(f"Gemini API returned {response.status_code}")
             
     except Exception as e:
-        logger.info(f"Gemini API unavailable: {e}")
+        logger.info(f"Gemini API unavailable, using simple description: {e}")
     
     # Fallback: Just list the connections
-    explanation = f"**Network: {len(drugs)} Drugs → {len(proteins)} Targets"
-    if pathways:
-        explanation += f" → {len(pathways)} Pathways"
-    explanation += f" → {disease_name}**\n\n"
+    explanation = f"**Network: {len(drugs)} Drugs → {len(proteins)} Targets → {disease_name}**\n\n"
     
     for drug, targets in drug_connections.items():
         explanation += f"• **{drug}** → {', '.join(targets)}\n"
     
-    if pathways:
-        explanation += f"\n*Network includes {len(pathways)} biological pathways from database.*"
+    explanation += f"\n*Graph shows {len(edges_df)} validated drug-protein interactions from database.*"
     
     return explanation
 
@@ -9499,7 +9495,14 @@ def render_biocypher_network_section():
                                             from stable_echarts_renderer import render_echarts_html
                                             render_echarts_html(network_data, key="biocypher_network", height_px=600)
                                             
-                                            # Metrics removed - don't show counts below graph
+                                            # Show network metrics
+                                            col1, col2, col3 = st.columns(3)
+                                            with col1:
+                                                st.metric("💊 Drugs", metrics['drug_count'])
+                                            with col2:
+                                                st.metric("🎯 Targets", metrics['target_count'])
+                                            with col3:
+                                                st.metric("🔗 Connections", metrics['total_edges'])
                                             
                                             logger.info(f"✅ Network visualization rendered successfully")
                                             
