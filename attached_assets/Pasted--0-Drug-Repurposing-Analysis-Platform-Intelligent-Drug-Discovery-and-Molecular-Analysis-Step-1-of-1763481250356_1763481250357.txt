@@ -1,0 +1,157 @@
+
+0
+
+Drug Repurposing Analysis Platform
+Intelligent Drug Discovery and Molecular Analysis
+
+
+Step 1 of 6
+Research Query
+diabetic drugs for alzheimers
+
+Example Queries
+
+Analysis Results
+Comprehensive drug repurposing analysis completed
+
+
+Drug Overview
+
+
+Network Analysis
+
+
+Quantum Properties
+
+
+Optimization
+
+
+Molecular Docking
+
+
+PBPK Simulation
+
+
+Evidence Base
+
+PBPK Human Simulation
+Physiologically-based pharmacokinetic modeling with human body compartments
+
+{'name': 'Metformin', 'confidence': 0.95, 'mechanism': 'Biguanide mechanism', 'targets': ['AMPK'], 'indication': 'Biguanide → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 95.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+Human Body Distribution
+Brain
+    <!-- Body -->
+    <rect x="160" y="100" width="80" height="120" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <text x="200" y="140" text-anchor="middle" font-size="12" fill="#1e3a8a">Liver</text>
+    <text x="200" y="180" text-anchor="middle" font-size="12" fill="#1e3a8a">Target</text>
+
+    <!-- Heart -->
+    <circle cx="180" cy="130" r="15" fill="#fecaca" stroke="#ef4444" stroke-width="2"/>
+    <text x="180" y="135" text-anchor="middle" font-size="10" fill="#7f1d1d">Heart</text>
+
+    <!-- Kidneys -->
+    <ellipse cx="170" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <ellipse cx="230" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <text x="200" y="245" text-anchor="middle" font-size="12" fill="#78350f">Kidneys</text>
+
+    <!-- Blood circulation (animated) -->
+    <circle cx="200" cy="280" r="60" fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="5,5">
+        <animateTransform attributeName="transform" type="rotate" from="0 200 280" to="360 200 280" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <text x="200" y="285" text-anchor="middle" font-size="14" fill="#991b1b" font-weight="bold">Plasma</text>
+</svg>
+
+Simulation Parameters
+Dose (mg) - {'name': 'Metformin', 'confidence': 0.95, 'mechanism': 'Biguanide mechanism', 'targets': ['AMPK'], 'indication': 'Biguanide → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 95.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+100.00
+
+
+Administration Route - {'name': 'Metformin', 'confidence': 0.95, 'mechanism': 'Biguanide mechanism', 'targets': ['AMPK'], 'indication': 'Biguanide → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 95.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+oral
+Duration (hours) - {'name': 'Metformin', 'confidence': 0.95, 'mechanism': 'Biguanide mechanism', 'targets': ['AMPK'], 'indication': 'Biguanide → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 95.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+24.00
+
+
+
+{'name': 'Lisinopril', 'confidence': 0.94, 'mechanism': 'ACE Inhibitor mechanism', 'targets': ['ACE'], 'indication': 'ACE Inhibitor → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 94.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+Human Body Distribution
+Brain
+    <!-- Body -->
+    <rect x="160" y="100" width="80" height="120" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <text x="200" y="140" text-anchor="middle" font-size="12" fill="#1e3a8a">Liver</text>
+    <text x="200" y="180" text-anchor="middle" font-size="12" fill="#1e3a8a">Target</text>
+
+    <!-- Heart -->
+    <circle cx="180" cy="130" r="15" fill="#fecaca" stroke="#ef4444" stroke-width="2"/>
+    <text x="180" y="135" text-anchor="middle" font-size="10" fill="#7f1d1d">Heart</text>
+
+    <!-- Kidneys -->
+    <ellipse cx="170" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <ellipse cx="230" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <text x="200" y="245" text-anchor="middle" font-size="12" fill="#78350f">Kidneys</text>
+
+    <!-- Blood circulation (animated) -->
+    <circle cx="200" cy="280" r="60" fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="5,5">
+        <animateTransform attributeName="transform" type="rotate" from="0 200 280" to="360 200 280" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <text x="200" y="285" text-anchor="middle" font-size="14" fill="#991b1b" font-weight="bold">Plasma</text>
+</svg>
+
+Simulation Parameters
+Dose (mg) - {'name': 'Lisinopril', 'confidence': 0.94, 'mechanism': 'ACE Inhibitor mechanism', 'targets': ['ACE'], 'indication': 'ACE Inhibitor → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 94.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+100.00
+
+
+Administration Route - {'name': 'Lisinopril', 'confidence': 0.94, 'mechanism': 'ACE Inhibitor mechanism', 'targets': ['ACE'], 'indication': 'ACE Inhibitor → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 94.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+oral
+Duration (hours) - {'name': 'Lisinopril', 'confidence': 0.94, 'mechanism': 'ACE Inhibitor mechanism', 'targets': ['ACE'], 'indication': 'ACE Inhibitor → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 94.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+24.00
+
+
+
+{'name': 'Aspirin', 'confidence': 0.85, 'mechanism': 'NSAID mechanism', 'targets': ['COX-1/COX-2'], 'indication': 'NSAID → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 85.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+Human Body Distribution
+Brain
+    <!-- Body -->
+    <rect x="160" y="100" width="80" height="120" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <text x="200" y="140" text-anchor="middle" font-size="12" fill="#1e3a8a">Liver</text>
+    <text x="200" y="180" text-anchor="middle" font-size="12" fill="#1e3a8a">Target</text>
+
+    <!-- Heart -->
+    <circle cx="180" cy="130" r="15" fill="#fecaca" stroke="#ef4444" stroke-width="2"/>
+    <text x="180" y="135" text-anchor="middle" font-size="10" fill="#7f1d1d">Heart</text>
+
+    <!-- Kidneys -->
+    <ellipse cx="170" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <ellipse cx="230" cy="200" rx="12" ry="20" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>
+    <text x="200" y="245" text-anchor="middle" font-size="12" fill="#78350f">Kidneys</text>
+
+    <!-- Blood circulation (animated) -->
+    <circle cx="200" cy="280" r="60" fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="5,5">
+        <animateTransform attributeName="transform" type="rotate" from="0 200 280" to="360 200 280" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <text x="200" y="285" text-anchor="middle" font-size="14" fill="#991b1b" font-weight="bold">Plasma</text>
+</svg>
+
+Simulation Parameters
+Dose (mg) - {'name': 'Aspirin', 'confidence': 0.85, 'mechanism': 'NSAID mechanism', 'targets': ['COX-1/COX-2'], 'indication': 'NSAID → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 85.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+100.00
+
+
+Administration Route - {'name': 'Aspirin', 'confidence': 0.85, 'mechanism': 'NSAID mechanism', 'targets': ['COX-1/COX-2'], 'indication': 'NSAID → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 85.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+oral
+Duration (hours) - {'name': 'Aspirin', 'confidence': 0.85, 'mechanism': 'NSAID mechanism', 'targets': ['COX-1/COX-2'], 'indication': 'NSAID → diabetes repurposing', 'patent_status': 'Approved', 'clinical_stage': 'Confidence: 85.0%', 'pagerank': 0.050069268364009344, 'betweenness': 0.0, 'network_score': 0.030041561018405605}
+
+24.00
+
+
+
