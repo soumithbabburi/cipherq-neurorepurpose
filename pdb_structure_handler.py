@@ -37,7 +37,6 @@ def get_db_connection():
             db_params = Config.get_db_params()
             conn = psycopg2.connect(**db_params)
         else:
-            # Connect to Neon using the full connection string
             conn = psycopg2.connect(NEON_CONN_STRING)
 
         logger.info(f"✅ Connected to Neon database")
@@ -47,32 +46,26 @@ def get_db_connection():
         return None
 
 class PDBStructureHandler:
-    """
-    Handle PDB structure downloading and processing for molecular docking.
-    Queries the Neon PostgreSQL database for target PDB IDs and drug SMILES.
-    """
-    
     def __init__(self):
         self.pdb_base_url = "https://files.rcsb.org/download"
         self.structure_dir = "data/structures"
-        
+
         if not os.path.exists(self.structure_dir):
             os.makedirs(self.structure_dir)
-        
-        # Persistent DB connection
+
+        # Persistent cached connection
         self.conn = get_db_connection()
         if not self.conn:
             logger.error("❌ Could not establish Neon database connection.")
 
-    def __del__(self):
-        if self.conn:
-            self.conn.close()
-            logger.info("✅ Neon database connection closed.")
+    # Removed __del__ to avoid closing cached connection
 
     def get_target_structure(self, gene_symbol: str) -> Optional[str]:
         if not self.conn:
             logger.error("❌ No active DB connection.")
             return None
+        if self.conn.closed:
+            self.conn = get_db_connection()
 
         pdb_id = None
         try:
@@ -100,11 +93,11 @@ class PDBStructureHandler:
     def download_pdb(self, pdb_id: str) -> Optional[str]:
         pdb_id = pdb_id.upper()
         local_path = os.path.join(self.structure_dir, f"{pdb_id}.pdb")
-        
+
         if os.path.exists(local_path):
             logger.info(f"📂 Using cached PDB file: {local_path}")
             return local_path
-            
+
         try:
             logger.info(f"🌐 Downloading PDB {pdb_id} from RCSB...")
             pdbl = PDBList()
@@ -114,14 +107,16 @@ class PDBStructureHandler:
                 return local_path
         except Exception as e:
             logger.error(f"❌ Failed to download PDB {pdb_id}: {e}")
-            
+
         return None
 
     def get_drug_smiles(self, drug_name: str) -> Optional[str]:
         if not self.conn:
             logger.error("❌ No active DB connection.")
             return None
-            
+        if self.conn.closed:
+            self.conn = get_db_connection()
+
         smiles = None
         try:
             cur = self.conn.cursor()
@@ -132,16 +127,16 @@ class PDBStructureHandler:
             cur.close()
         except Exception as e:
             logger.error(f"❌ Error fetching SMILES for {drug_name}: {e}")
-            
+
         return smiles
 
     def prepare_docking_pair(self, drug_name: str, gene_symbol: str) -> Dict[str, Any]:
         structure_path = self.get_target_structure(gene_symbol)
         smiles = self.get_drug_smiles(drug_name)
-        
+
         if not structure_path or not smiles:
             return {"status": "error", "message": "Missing structure or SMILES data"}
-            
+
         return {
             "status": "success",
             "drug": drug_name,
