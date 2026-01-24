@@ -38,6 +38,10 @@ class PDBStructureHandler:
             logger.error(f"❌ Error fetching SMILES for {drug_name}: {e}")
             return None
     
+    def get_drug_smiles(self, drug_name: str) -> str:
+        """Alias for get_smiles_for_drug (for compatibility)"""
+        return self.get_smiles_for_drug(drug_name)
+    
     def get_protein_pdb(self, protein_name: str) -> str:
         """Get PDB ID for protein"""
         try:
