@@ -11618,6 +11618,16 @@ def render_molecular_docking_section():
                                 output_dir = f"./diffdock_output/{selected_drug}"
                                 os.makedirs(output_dir, exist_ok=True)
                                 
+                                # SAVE PROTEIN PDB so 3D viewer can find it!
+                                protein_pdb = docking_result.get('protein_pdb', '')
+                                if protein_pdb:
+                                    protein_pdb_path = f"{output_dir}/protein.pdb"
+                                    with open(protein_pdb_path, 'w') as f:
+                                        f.write(protein_pdb)
+                                    logger.info(f"✅ Saved protein PDB: {protein_pdb_path}")
+                                else:
+                                    logger.warning("No protein_pdb in docking result!")
+                                
                                 poses = []
                                 for i, pose_result in enumerate(pose_results):
                                     # Save SDF file
