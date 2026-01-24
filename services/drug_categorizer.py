@@ -1,38 +1,31 @@
 """
 Fixed Drug Categorizer Service
-Returns ALL drugs in category (not limited to 7!)
+Uses centralized database_utils (no more connection errors!)
 """
-import psycopg2
-import os
 import logging
 from typing import List, Dict
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
 class DrugCategorizer:
-    """Categorize and retrieve drugs from database - SHOWS ALL DRUGS"""
+    """Categorize and retrieve drugs - uses database_utils for connections"""
     
     def __init__(self):
-        self.conn = psycopg2.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            database=os.getenv("DB_NAME", "cipherq_repurpose"),
-            user=os.getenv("DB_USER", "babburisoumith"),
-            password=os.getenv("DB_PASSWORD", "")
-        )
-        logger.info("Drug categorizer initialized")
+        # Don't create connection here - use database_utils!
+        logger.info("Drug categorizer initialized (using database_utils)")
     
     def get_drugs_by_category(self, category: str, limit: int = 100) -> List[Dict]:
-        """
-        Get ALL drugs in category (increased limit to 100!)
-        
-        Args:
-            category: Category name (e.g., "Diabetes", "Cardiovascular")
-            limit: Maximum number of drugs (default 100, was 7!)
-        """
-        cursor = self.conn.cursor()
+        """Get ALL drugs in category"""
         
         try:
-            # Query with LARGE limit to show all drugs
+            # Use centralized database connection
+            from database_utils import execute_query
+            
             sql = """
                 SELECT 
                     name,
@@ -48,61 +41,61 @@ class DrugCategorizer:
                 LIMIT %s
             """
             
-            cursor.execute(sql, (f'%{category}%', limit))
-            rows = cursor.fetchall()
+            results = execute_query(sql, (f'%{category}%', limit))
             
             drugs = []
-            for row in rows:
+            for row in results:
                 drugs.append({
-                    'name': row[0],
-                    'category': row[1],
-                    'class': row[2],
-                    'mechanism': row[3],
-                    'smiles': row[4],
-                    'qed_score': float(row[5]) if row[5] else 0.0,
-                    'fda_status': row[6]
+                    'name': row.get('name'),
+                    'category': row.get('therapeutic_category'),
+                    'class': row.get('drug_class'),
+                    'mechanism': row.get('mechanism_of_action'),
+                    'smiles': row.get('smiles'),
+                    'qed_score': float(row.get('qed_score', 0)) if row.get('qed_score') else 0.0,
+                    'fda_status': row.get('fda_status')
                 })
             
-            cursor.close()
             logger.info(f"✅ Retrieved {len(drugs)} drugs for category {category}")
             return drugs
             
         except Exception as e:
             logger.error(f"Drug categorizer error: {e}")
-            cursor.close()
             return []
     
     def get_all_categories(self) -> List[str]:
         """Get all unique categories"""
-        cursor = self.conn.cursor()
-        
-        cursor.execute("""
-            SELECT DISTINCT therapeutic_category 
-            FROM drugs 
-            WHERE therapeutic_category IS NOT NULL
-            ORDER BY therapeutic_category
-        """)
-        
-        categories = [row[0] for row in cursor.fetchall()]
-        cursor.close()
-        return categories
+        try:
+            from database_utils import execute_query
+            
+            results = execute_query("""
+                SELECT DISTINCT therapeutic_category 
+                FROM drugs 
+                WHERE therapeutic_category IS NOT NULL
+                ORDER BY therapeutic_category
+            """)
+            
+            return [row['therapeutic_category'] for row in results]
+        except Exception as e:
+            logger.error(f"Get categories error: {e}")
+            return []
     
     def get_random_drugs(self, limit: int = 10) -> List[Dict]:
         """Get random drugs"""
-        cursor = self.conn.cursor()
-        
-        cursor.execute("""
-            SELECT name, therapeutic_category, drug_class, smiles
-            FROM drugs
-            ORDER BY RANDOM()
-            LIMIT %s
-        """, (limit,))
-        
-        rows = cursor.fetchall()
-        drugs = [{'name': r[0], 'category': r[1], 'class': r[2], 'smiles': r[3]} for r in rows]
-        
-        cursor.close()
-        return drugs
+        try:
+            from database_utils import execute_query
+            
+            results = execute_query("""
+                SELECT name, therapeutic_category, drug_class, smiles
+                FROM drugs
+                ORDER BY RANDOM()
+                LIMIT %s
+            """, (limit,))
+            
+            return [{'name': r['name'], 'category': r['therapeutic_category'], 
+                    'class': r['drug_class'], 'smiles': r['smiles']} for r in results]
+        except Exception as e:
+            logger.error(f"Random drugs error: {e}")
+            return []
 
 
 # Singleton instance
