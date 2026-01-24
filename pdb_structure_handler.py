@@ -12,10 +12,40 @@ import logging
 import psycopg2
 from typing import Dict, List, Any, Optional, Tuple
 from Bio.PDB import PDBList
+import streamlit as st
+
+# Optional: import your Config if available
+try:
+    from config import Config
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+@st.cache_resource
+def get_db_connection():
+    """Create and cache database connection using Config"""
+    try:
+        if CONFIG_AVAILABLE:
+            db_params = Config.get_db_params()
+        else:
+            # Fallback to environment variables
+            db_params = {
+                "host": os.getenv("DB_HOST", "localhost"),
+                "database": os.getenv("DB_NAME", "cipherq_repurpose"),
+                "user": os.getenv("DB_USER", "babburisoumith"),
+                "password": os.getenv("DB_PASSWORD", "")
+            }
+        
+        conn = psycopg2.connect(**db_params)
+        logger.info(f"✅ Database connected: {db_params['database']}@{db_params['host']}")
+        return conn
+    except Exception as e:
+        logger.error(f"❌ Database connection failed: {e}")
+        return None
 
 class PDBStructureHandler:
     """
@@ -33,17 +63,8 @@ class PDBStructureHandler:
             os.makedirs(self.structure_dir)
 
     def _get_db_connection(self):
-        """Standard connection to the cipherq_repurpose database."""
-        try:
-            return psycopg2.connect(
-                host="localhost",
-                database="cipherq_repurpose",
-                user="babburisoumith",
-                password=""
-            )
-        except Exception as e:
-            logger.error(f"❌ PDB Handler: Database connection failed: {e}")
-            return None
+        """Get a cached database connection."""
+        return get_db_connection()
 
     def get_target_structure(self, gene_symbol: str) -> Optional[str]:
         """
