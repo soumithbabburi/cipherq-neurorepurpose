@@ -58,54 +58,38 @@ def get_db_connection():
     logger = logging.getLogger(__name__)
     
     try:
-        from psycopg2 import pool
-        
         if CONFIG_AVAILABLE:
             db_params = Config.get_db_params()
         else:
             # Fallback to environment variables
             db_params = {
                 "host": os.getenv("DB_HOST", "localhost"),
-                "port": int(os.getenv("DB_PORT", 5432)),
                 "database": os.getenv("DB_NAME", "cipherq_repurpose"),
                 "user": os.getenv("DB_USER", "babburisoumith"),
-                "password": os.getenv("DB_PASSWORD", ""),
-                "sslmode": "require" if "neon.tech" in os.getenv("DB_HOST", "") else "prefer"
+                "password": os.getenv("DB_PASSWORD", "")
             }
         
-        # Create connection pool (1-20 connections)
-        connection_pool = pool.SimpleConnectionPool(1, 20, **db_params)
-        logger.info(f"✅ Connection pool created: {db_params['database']}@{db_params['host']}")
-        return connection_pool
+        conn = psycopg2.connect(**db_params)
+        logger.info(f"✅ Database connected: {db_params['database']}@{db_params['host']}")
+        return conn
     except Exception as e:
-        st.error(f"❌ Connection pool creation failed: {e}")
-        logger.error(f"Pool creation error: {e}")
+        st.error(f"❌ Database connection failed: {e}")
+        logger.error(f"DB connection error: {e}")
         return None
 
 def execute_db(sql: str, params: tuple = None) -> list:
-    """Execute SQL query using connection pool - prevents 'connection already closed' errors"""
-    pool = get_db_connection()
-    
-    if not pool:
-        return []
-    
-    conn = None
+    """Execute SQL query and return list of dictionaries"""
     try:
-        # Get connection from pool
-        conn = pool.getconn()
-        
+        conn = get_db_connection()
+        if conn is None:
+            return []
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(sql, params)
             results = cur.fetchall()
             return [dict(row) for row in results]
-            
     except Exception as e:
-        logger.error(f"Query execution failed: {e}")
+        st.error(f"Query execution failed: {e}")
         return []
-    finally:
-        # Return connection to pool
-        if conn:
-            pool.putconn(conn)
 
 @st.cache_data(ttl=3600)
 def get_drugs_by_category(category: str, limit: int = 10) -> list:
@@ -11580,9 +11564,16 @@ def render_molecular_docking_section():
                     # Final fallback
                     if not target_protein:
                         target_protein = determine_target_protein_dynamically(selected_drug)
-                        st.warning(f"Using fallback target: **{target_protein}**")
+                        if target_protein:
+                            st.warning(f"Using fallback target: **{target_protein}**")
+                        else:
+                            # Use generic protein if all else fails
+                            target_protein = "Generic Protein"
+                            st.warning(f"⚠️ No specific target found for {selected_drug}, using generic protein structure")
                 else:
                     target_protein = determine_target_protein_dynamically(selected_drug)
+                    if not target_protein:
+                        target_protein = "Generic Protein"
                 
                 if docking_svc:
                     with st.spinner(f"Running NVIDIA BioNeMo DiffDock for {selected_drug}..."):
@@ -11799,6 +11790,16 @@ def render_molecular_docking_section():
                                 # Render professional protein+ligand complex
                                 # Render actual molecular visualization
                                 try:
+                                    # SAFEGUARD: Ensure target_protein is set before 3D viewer
+                                    if not target_protein or target_protein == "Unknown":
+                                        # Try to get target one more time
+                                        target_protein = determine_target_protein_dynamically(selected_drug)
+                                        if not target_protein:
+                                            target_protein = "Generic Protein"
+                                        logger.warning(f"Target was None/Unknown, using: {target_protein}")
+                                    
+                                    logger.info(f"3D Viewer: {selected_drug} -> {target_protein}")
+                                    
                                     # Extract SDF data from pose dict
                                     pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
                                     # BULLETPROOF py3Dmol viewer using REAL DiffDock data
