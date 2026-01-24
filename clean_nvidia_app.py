@@ -11780,25 +11780,15 @@ def render_molecular_docking_section():
                                 poses_data = [sdf_data]
                                 confidence_scores = [pose['confidence']]
                                 
-                                # Dynamic target resolution - NO hardcoded fallbacks
-                                target_protein = determine_target_protein_dynamically(selected_drug)
-                                if not target_protein:
-                                    st.error(" **Target Protein Resolution Failed**")
-                                    st.warning(f"Cannot determine target protein for {selected_drug}. Dynamic target resolution required for protein-ligand complex.")
-                                    return
+                                # target_protein is ALREADY set from BioCypher graph or earlier logic
+                                # DON'T call determine_target_protein_dynamically here - it overwrites the correct value!
+                                logger.info(f"✅ Using target for pose {i+1}: {selected_drug} -> {target_protein}")
                                 
                                 # Render professional protein+ligand complex
                                 # Render actual molecular visualization
                                 try:
-                                    # SAFEGUARD: Ensure target_protein is set before 3D viewer
-                                    if not target_protein or target_protein == "Unknown":
-                                        # Try to get target one more time
-                                        target_protein = determine_target_protein_dynamically(selected_drug)
-                                        if not target_protein:
-                                            target_protein = "Generic Protein"
-                                        logger.warning(f"Target was None/Unknown, using: {target_protein}")
-                                    
-                                    logger.info(f"3D Viewer: {selected_drug} -> {target_protein}")
+                                    # Target protein is already correctly set - just log it
+                                    logger.info(f"3D Viewer rendering: {selected_drug} -> {target_protein}")
                                     
                                     # Extract SDF data from pose dict
                                     pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
