@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """
-PDB STRUCTURE HANDLER - DATABASE INTEGRATED VERSION
+PDB STRUCTURE HANDLER - NEON DATABASE VERSION
 Downloads and processes protein structures and drug SMILES 
-by querying the PostgreSQL database instead of static JSON files.
+by querying the Neon PostgreSQL database instead of local JSON files.
 """
 
 import os
-import requests
-import io
 import logging
-import psycopg2
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 from Bio.PDB import PDBList
+import psycopg2
 import streamlit as st
 
 # Optional: import your Config if available
@@ -25,23 +23,24 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Neon connection string
+NEON_CONN_STRING = (
+    "postgresql://neondb_owner:npg_X3pDYGci7asM@ep-orange-dust-afdedmkv-pooler.c-2.us-west-2.aws.neon.tech/"
+    "neondb?sslmode=require&channel_binding=require"
+)
+
 @st.cache_resource
 def get_db_connection():
-    """Create and cache database connection using Config"""
+    """Create and cache a persistent connection to Neon database"""
     try:
         if CONFIG_AVAILABLE:
             db_params = Config.get_db_params()
+            conn = psycopg2.connect(**db_params)
         else:
-            # Fallback to environment variables
-            db_params = {
-                "host": os.getenv("DB_HOST", "localhost"),
-                "database": os.getenv("DB_NAME", "cipherq_repurpose"),
-                "user": os.getenv("DB_USER", "babburisoumith"),
-                "password": os.getenv("DB_PASSWORD", "")
-            }
-        
-        conn = psycopg2.connect(**db_params)
-        logger.info(f"✅ Database connected: {db_params['database']}@{db_params['host']}")
+            # Connect to Neon using the full connection string
+            conn = psycopg2.connect(NEON_CONN_STRING)
+
+        logger.info(f"✅ Connected to Neon database")
         return conn
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
@@ -50,61 +49,55 @@ def get_db_connection():
 class PDBStructureHandler:
     """
     Handle PDB structure downloading and processing for molecular docking.
-    Queries the PostgreSQL database for target PDB IDs and drug SMILES.
+    Queries the Neon PostgreSQL database for target PDB IDs and drug SMILES.
     """
     
     def __init__(self):
         self.pdb_base_url = "https://files.rcsb.org/download"
-        self.pdb_info_url = "https://data.rcsb.org/rest/v1/core/entry"
         self.structure_dir = "data/structures"
         
-        # Ensure download directory exists
         if not os.path.exists(self.structure_dir):
             os.makedirs(self.structure_dir)
+        
+        # Persistent DB connection
+        self.conn = get_db_connection()
+        if not self.conn:
+            logger.error("❌ Could not establish Neon database connection.")
 
-    def _get_db_connection(self):
-        """Get a cached database connection."""
-        return get_db_connection()
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
+            logger.info("✅ Neon database connection closed.")
 
     def get_target_structure(self, gene_symbol: str) -> Optional[str]:
-        """
-        1. Queries the DATABASE for the PDB ID associated with the gene.
-        2. Downloads the PDB structure from RCSB if not found locally.
-        """
-        conn = self._get_db_connection()
-        if not conn:
+        if not self.conn:
+            logger.error("❌ No active DB connection.")
             return None
-            
+
         pdb_id = None
         try:
-            cur = conn.cursor()
-            # Fetch PDB ID and Name from proteins table
+            cur = self.conn.cursor()
             cur.execute("""
                 SELECT pdb_id, name 
                 FROM proteins 
                 WHERE gene_symbol = %s 
                 LIMIT 1
             """, (gene_symbol.upper(),))
-            
             row = cur.fetchone()
             if row:
                 pdb_id = row[0]
-                logger.info(f"✅ Found PDB ID {pdb_id} for gene {gene_symbol} in DB.")
+                logger.info(f"✅ Found PDB ID {pdb_id} for gene {gene_symbol}.")
             cur.close()
         except Exception as e:
             logger.error(f"❌ Error fetching PDB ID from DB: {e}")
-        finally:
-            conn.close()
 
         if not pdb_id:
             logger.warning(f"⚠️ No PDB ID mapping found for gene: {gene_symbol}")
             return None
 
-        # Download the actual structure file
         return self.download_pdb(pdb_id)
 
     def download_pdb(self, pdb_id: str) -> Optional[str]:
-        """Downloads a PDB file from RCSB and returns the local file path."""
         pdb_id = pdb_id.upper()
         local_path = os.path.join(self.structure_dir, f"{pdb_id}.pdb")
         
@@ -115,10 +108,7 @@ class PDBStructureHandler:
         try:
             logger.info(f"🌐 Downloading PDB {pdb_id} from RCSB...")
             pdbl = PDBList()
-            # This downloads to the directory and returns the path (usually .ent format)
             file_path = pdbl.retrieve_pdb_file(pdb_id, pdir=self.structure_dir, file_format='pdb')
-            
-            # PDBList often names files 'pdbXXXX.ent', we rename to 'XXXX.pdb' for consistency
             if os.path.exists(file_path):
                 os.rename(file_path, local_path)
                 return local_path
@@ -128,15 +118,13 @@ class PDBStructureHandler:
         return None
 
     def get_drug_smiles(self, drug_name: str) -> Optional[str]:
-        """Queries the database to get the SMILES string for a specific drug."""
-        conn = self._get_db_connection()
-        if not conn:
+        if not self.conn:
+            logger.error("❌ No active DB connection.")
             return None
             
         smiles = None
         try:
-            cur = conn.cursor()
-            # Use ILIKE for case-insensitive matching
+            cur = self.conn.cursor()
             cur.execute("SELECT smiles FROM drugs WHERE name ILIKE %s LIMIT 1", (drug_name,))
             row = cur.fetchone()
             if row:
@@ -144,16 +132,10 @@ class PDBStructureHandler:
             cur.close()
         except Exception as e:
             logger.error(f"❌ Error fetching SMILES for {drug_name}: {e}")
-        finally:
-            conn.close()
             
         return smiles
 
     def prepare_docking_pair(self, drug_name: str, gene_symbol: str) -> Dict[str, Any]:
-        """
-        Coordinates the full preparation: 
-        Fetches structure file path + Drug SMILES.
-        """
         structure_path = self.get_target_structure(gene_symbol)
         smiles = self.get_drug_smiles(drug_name)
         
@@ -169,13 +151,10 @@ class PDBStructureHandler:
         }
 
 def get_pdb_handler() -> PDBStructureHandler:
-    """Utility function to get an instance of the handler."""
     return PDBStructureHandler()
 
-# Example usage for testing
+# Example usage
 if __name__ == "__main__":
     handler = get_pdb_handler()
-    
-    # Test case: Query Alzheimer's target (ensure ACHE or similar is in your DB)
-    result = handler.prepare_docking_pair("Donepezil", "ACHE")
+    result = handler.prepare_docking_pair("Pioglitazone", "PPARG")
     print(f"Preparation result: {result}")
