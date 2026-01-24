@@ -11564,16 +11564,9 @@ def render_molecular_docking_section():
                     # Final fallback
                     if not target_protein:
                         target_protein = determine_target_protein_dynamically(selected_drug)
-                        if target_protein:
-                            st.warning(f"Using fallback target: **{target_protein}**")
-                        else:
-                            # Use generic protein if all else fails
-                            target_protein = "Generic Protein"
-                            st.warning(f"⚠️ No specific target found for {selected_drug}, using generic protein structure")
+                        st.warning(f"Using fallback target: **{target_protein}**")
                 else:
                     target_protein = determine_target_protein_dynamically(selected_drug)
-                    if not target_protein:
-                        target_protein = "Generic Protein"
                 
                 if docking_svc:
                     with st.spinner(f"Running NVIDIA BioNeMo DiffDock for {selected_drug}..."):
@@ -11617,16 +11610,6 @@ def render_molecular_docking_section():
                                 import os
                                 output_dir = f"./diffdock_output/{selected_drug}"
                                 os.makedirs(output_dir, exist_ok=True)
-                                
-                                # SAVE PROTEIN PDB so 3D viewer can find it!
-                                protein_pdb = docking_result.get('protein_pdb', '')
-                                if protein_pdb:
-                                    protein_pdb_path = f"{output_dir}/protein.pdb"
-                                    with open(protein_pdb_path, 'w') as f:
-                                        f.write(protein_pdb)
-                                    logger.info(f"✅ Saved protein PDB: {protein_pdb_path}")
-                                else:
-                                    logger.warning("No protein_pdb in docking result!")
                                 
                                 poses = []
                                 for i, pose_result in enumerate(pose_results):
@@ -11763,33 +11746,31 @@ def render_molecular_docking_section():
                 st.warning("No docking poses generated")
                 return
             
-            # === PROFESSIONAL 3D VIEWER (NVIDIA DiffDock Style) ===
-            # Show ALL poses in one interactive viewer (before the expanders)
-            st.markdown("---")
-            st.markdown("### 🧬 Interactive 3D Molecular Docking Viewer")
+            st.markdown(f"**Docking poses for {selected_drug}:**")
             
+            # === ADD PROFESSIONAL NVIDIA-STYLE VIEWER HERE ===
             try:
                 from nvidia_style_viewer import create_nvidia_style_viewer
-                viewer_success = create_nvidia_style_viewer(
+                st.markdown("---")
+                st.markdown("### 🧬 Interactive 3D Molecular Viewer")
+                viewer_rendered = create_nvidia_style_viewer(
                     drug_name=selected_drug,
                     target_protein=target_protein,
                     poses=valid_poses,
                     height=600
                 )
-                if viewer_success:
-                    logger.info("✅ NVIDIA-style professional viewer rendered")
+                if viewer_rendered:
+                    st.markdown("💡 **Click poses in the sidebar to switch between binding configurations**")
+                    st.markdown("---")
             except Exception as viewer_error:
-                logger.warning(f"Professional viewer not available: {viewer_error}")
-                st.info("💡 Professional 3D viewer unavailable - see pose details below")
-            
-            st.markdown("---")
-            st.markdown(f"**Docking poses for {selected_drug}:**")
+                logger.warning(f"Professional viewer unavailable: {viewer_error}")
             
             for i, pose in enumerate(valid_poses):
                 conf_label = pose.get('confidence_label', 'Unknown')
                 affinity = pose.get('binding_affinity', 0)
+                # Collapse all expanders by default (expanded=False) since we have professional viewer
                 with st.expander(f"Pose {i+1} ({conf_label}) - Affinity: {affinity:.1f} kcal/mol", 
-                               expanded=(i==0)):
+                               expanded=False):  # Changed from (i==0) to False
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
@@ -11810,18 +11791,24 @@ def render_molecular_docking_section():
                                 poses_data = [sdf_data]
                                 confidence_scores = [pose['confidence']]
                                 
-                                # target_protein is ALREADY set from BioCypher graph or earlier logic
-                                # DON'T call determine_target_protein_dynamically here - it overwrites the correct value!
-                                logger.info(f"✅ Using target for pose {i+1}: {selected_drug} -> {target_protein}")
+                                # Dynamic target resolution - NO hardcoded fallbacks
+                                target_protein = determine_target_protein_dynamically(selected_drug)
+                                if not target_protein:
+                                    st.error(" **Target Protein Resolution Failed**")
+                                    st.warning(f"Cannot determine target protein for {selected_drug}. Dynamic target resolution required for protein-ligand complex.")
+                                    return
                                 
                                 # Render professional protein+ligand complex
                                 # Render actual molecular visualization
                                 try:
-                                    # 3D viewer is now shown ABOVE (outside loop) for all poses
-                                    # No need to show it again inside each expander
-                                    # Just show the Deep 3D Analysis
-                                    
-                                    success = True  # Skip individual viewer
+                                    # Extract SDF data from pose dict
+                                    pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
+                                    # BULLETPROOF py3Dmol viewer using REAL DiffDock data
+                                    from simple_3d_viewer import create_simple_3d_viewer
+                                    success = create_simple_3d_viewer(
+                                        drug_name=selected_drug,
+                                        target_protein=target_protein
+                                    )
                                     
                                     # DEEP 3D MOLECULAR ANALYSIS - Precise geometric analysis
                                     if success:
