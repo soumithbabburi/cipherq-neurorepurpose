@@ -11927,7 +11927,6 @@ def render_molecular_docking_section():
             # OPTIMIZATION COMPARISON SECTION
             st.markdown("---")
             st.markdown("## Optimization Comparison")
-            
            if (hasattr(st.session_state, 'real_optimization_results') and
                st.session_state.real_optimization_results is not None and
                isinstance(st.session_state.real_optimization_results, list) and
