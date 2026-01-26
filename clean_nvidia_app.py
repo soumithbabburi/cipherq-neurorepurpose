@@ -11673,10 +11673,11 @@ def render_molecular_docking_section():
                                     logger.error("❌ NO GEMINI_API_KEY FOUND IN ENVIRONMENT!")
                                 
                                 try:
-                                    from llm_powered_descriptions import generate_docking_description_with_llm
-                                    logger.info("✅ Successfully imported llm_powered_descriptions")
+                                    # Use BEST FREE LLM (Gemini 1.5 Flash or Groq)
+                                    from best_free_llm import generate_docking_description_BEST_LLM
+                                    logger.info("✅ Using BEST free LLM for description")
                                     
-                                    description = generate_docking_description_with_llm(
+                                    description = generate_docking_description_BEST_LLM(
                                         drug_name=selected_drug,
                                         target_protein=target_protein,
                                         binding_affinity=best_affinity,
@@ -11748,19 +11749,19 @@ def render_molecular_docking_section():
             
             st.markdown(f"**Docking poses for {selected_drug}:**")
             
-            # === ADD PROFESSIONAL NVIDIA-STYLE VIEWER HERE ===
+            # === ADD PROFESSIONAL 3D VIEWER (Light theme, NVIDIA quality!) ===
             try:
-                from nvidia_style_viewer import create_nvidia_style_viewer
+                from professional_light_viewer import create_professional_light_viewer
                 st.markdown("---")
-                st.markdown("### 🧬 Interactive 3D Molecular Viewer")
-                viewer_rendered = create_nvidia_style_viewer(
+                st.markdown("### 🧬 3D Molecular Docking Visualization")
+                viewer_rendered = create_professional_light_viewer(
                     drug_name=selected_drug,
                     target_protein=target_protein,
                     poses=valid_poses,
                     height=600
                 )
                 if viewer_rendered:
-                    st.markdown("💡 **Click poses in the sidebar to switch between binding configurations**")
+                    st.caption("💡 Click pose buttons below the viewer to switch between different binding configurations")
                     st.markdown("---")
             except Exception as viewer_error:
                 logger.warning(f"Professional viewer unavailable: {viewer_error}")
