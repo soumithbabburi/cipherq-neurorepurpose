@@ -11584,26 +11584,33 @@ def render_molecular_docking_section():
                             logger.info(f"✅ Got docking results: {len(nvidia_poses)} poses")
                             logger.info(f"📊 Raw NVIDIA confidences: {raw_confidences[:5]}")
                             
-                            # Extract SDF content from pose dicts
+                            # Extract SDF content AND REAL binding affinities from pose dicts
                             sdf_contents = []
+                            real_vina_affinities = []
                             for pose in nvidia_poses:
                                 if isinstance(pose, dict):
                                     sdf = pose.get('sdf_content', '')
+                                    vina_affinity = pose.get('binding_affinity', 0)
+                                    sdf_contents.append(sdf)
+                                    real_vina_affinities.append(vina_affinity)
                                 else:
-                                    sdf = pose
-                                sdf_contents.append(sdf)
+                                    sdf_contents.append(pose)
+                                    real_vina_affinities.append(0)
                             
-                            # === USE molecular_docking_results_interface (THE ONE THAT WORKS!) ===
+                            logger.info(f"REAL Vina affinities: {real_vina_affinities[:5]}")
+                            
+                            # === USE molecular_docking_results_interface (WITH REAL AFFINITIES!) ===
                             try:
                                 from molecular_docking_results_interface import calculate_docking_metrics
                                 
-                                logger.info("✅ Using molecular_docking_results_interface for REAL NVIDIA scores")
+                                logger.info("✅ Using molecular_docking_results_interface with REAL Vina affinities")
                                 
-                                # Process with REAL NVIDIA confidences (can be negative!)
+                                # Process with REAL affinities (not hardcoded formula!)
                                 pose_results = calculate_docking_metrics(
                                     confidence_scores=raw_confidences,
                                     poses_data=sdf_contents,
-                                    use_ml_ranking=True
+                                    use_ml_ranking=True,
+                                    real_affinities=real_vina_affinities  # Pass REAL affinities from Vina!
                                 )
                                 
                                 # Save SDF files and convert to app format
@@ -11673,11 +11680,10 @@ def render_molecular_docking_section():
                                     logger.error("❌ NO GEMINI_API_KEY FOUND IN ENVIRONMENT!")
                                 
                                 try:
-                                    # Use BEST FREE LLM (Gemini 1.5 Flash or Groq)
-                                    from best_free_llm import generate_docking_description_BEST_LLM
-                                    logger.info("✅ Using BEST free LLM for description")
+                                    from llm_powered_descriptions import generate_docking_description_with_llm
+                                    logger.info("✅ Successfully imported llm_powered_descriptions")
                                     
-                                    description = generate_docking_description_BEST_LLM(
+                                    description = generate_docking_description_with_llm(
                                         drug_name=selected_drug,
                                         target_protein=target_protein,
                                         binding_affinity=best_affinity,
@@ -11749,29 +11755,11 @@ def render_molecular_docking_section():
             
             st.markdown(f"**Docking poses for {selected_drug}:**")
             
-            # === ADD PROFESSIONAL 3D VIEWER (Light theme, NVIDIA quality!) ===
-            try:
-                from professional_light_viewer import create_professional_light_viewer
-                st.markdown("---")
-                st.markdown("### 🧬 3D Molecular Docking Visualization")
-                viewer_rendered = create_professional_light_viewer(
-                    drug_name=selected_drug,
-                    target_protein=target_protein,
-                    poses=valid_poses,
-                    height=600
-                )
-                if viewer_rendered:
-                    st.caption("💡 Click pose buttons below the viewer to switch between different binding configurations")
-                    st.markdown("---")
-            except Exception as viewer_error:
-                logger.warning(f"Professional viewer unavailable: {viewer_error}")
-            
             for i, pose in enumerate(valid_poses):
                 conf_label = pose.get('confidence_label', 'Unknown')
                 affinity = pose.get('binding_affinity', 0)
-                # Collapse all expanders by default (expanded=False) since we have professional viewer
                 with st.expander(f"Pose {i+1} ({conf_label}) - Affinity: {affinity:.1f} kcal/mol", 
-                               expanded=False):  # Changed from (i==0) to False
+                               expanded=(i==0)):
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
