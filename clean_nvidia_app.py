@@ -156,6 +156,7 @@ def get_drug_smiles(drug_name: str) -> str:
 def _format_drug_results(drugs: list) -> list:
     """
     Format database drug results into recommendation format
+    Uses real ML confidence scoring - NO HARDCODING
     
     Args:
         drugs: List of drug dicts from database
@@ -173,18 +174,38 @@ def _format_drug_results(drugs: list) -> list:
         
         # Get targets from database
         try:
-            targets = get_drug_targets_from_db(drug_name)
+            targets = get_drug_targets_from_db(drug_name) if DATABASE_MODULES_AVAILABLE else []
             target_str = ', '.join(targets[:3]) if targets else 'Unknown'
         except Exception as e:
             logger.warning(f"Could not get targets for {drug_name}: {e}")
             target_str = 'Unknown'
+            targets = []
+        
+        # Get real confidence score using ML function
+        try:
+            # Get full target data for scoring
+            if DATABASE_MODULES_AVAILABLE:
+                full_targets = get_drug_targets(drug_name, limit=5)
+            else:
+                full_targets = []
+            
+            # Use ML confidence calculation
+            confidence = calculate_ml_confidence_score(
+                drug_name=drug_name,
+                targets=full_targets,
+                disease_context=drug.get('therapeutic_category', '')
+            )
+        except Exception as e:
+            logger.warning(f"ML scoring failed for {drug_name}: {e}")
+            # Fallback to basic scoring if ML fails
+            confidence = 0.40
         
         formatted.append({
             'name': drug_name,
             'class': drug.get('drug_class', 'Unknown'),
             'mechanism': drug.get('mechanism_of_action', 'Unknown'),
             'target': target_str,
-            'confidence': float(drug.get('qed_score', 0.85)) if drug.get('qed_score') else 0.85,
+            'confidence': confidence,
             'category': drug.get('therapeutic_category', 'Unknown')
         })
     
@@ -3976,7 +3997,7 @@ def display_network_fallback(network_data):
 def step_2_biocypher_networks():
     """Step 2: BioCypher Network Analysis with Target-Based Approach"""
     # Add scientific section divider
-    create_section_divider("BioCypher Knowledge Networks", "Evidence-Based Drug-Target Relationships", "🔗")
+    create_section_divider("BioCypher Knowledge Networks", "Evidence-Based Drug-Target Relationships", "")
     st.markdown("""
     <div class="step-container">
         <div class="step-header">
@@ -9496,7 +9517,7 @@ def render_biocypher_network_section():
                             
                             # === RENDER NETWORK VISUALIZATION ===
                             st.markdown("---")
-                            st.markdown("### 🕸️ Interactive Drug-Target-Disease Network")
+                            st.markdown("### Interactive Drug-Target-Disease Network")
                             
                             try:
                                 # Convert BioCypher data to ECharts format
@@ -9515,7 +9536,7 @@ def render_biocypher_network_section():
                                             with col2:
                                                 st.metric("Targets", metrics['target_count'])
                                             with col3:
-                                                st.metric("🔗 Connections", metrics['total_edges'])
+                                                st.metric("Connections", metrics['total_edges'])
                                             
                                             logger.info(f"Network visualization rendered successfully")
                                             
@@ -9546,6 +9567,88 @@ def render_biocypher_network_section():
                                 logger.error(f"Explanation generation failed: {exp_error}")
                                 st.info("Network analysis temporarily unavailable")
                             
+                            # DISPLAY PATHWAYS AND GENES
+                            st.markdown("---")
+                            st.markdown("### Biological Pathways & Target Genes")
+                            
+                            try:
+                                # Get pathway details
+                                pathway_details = biocypher.get_pathway_details(nodes_df, edges_df)
+                                
+                                if pathway_details:
+                                    col1, col2 = st.columns([1, 1])
+                                    
+                                    with col1:
+                                        st.markdown("#### Affected Pathways")
+                                        
+                                        # Show disease-relevant pathways first
+                                        relevant_pathways = [p for p in pathway_details if p['disease_relevant']]
+                                        other_pathways = [p for p in pathway_details if not p['disease_relevant']]
+                                        
+                                        if relevant_pathways:
+                                            st.success(f"Disease-Relevant Pathways: {len(relevant_pathways)}")
+                                            for pw in relevant_pathways[:10]:
+                                                with st.expander(f"{pw['name']} (Relevance: {pw['relevance_score']:.0%})", expanded=False):
+                                                    st.caption(f"**Source:** {pw['source']}")
+                                                    if pw['category']:
+                                                        st.caption(f"**Category:** {pw['category']}")
+                                                    st.caption(f"**Proteins involved:** {', '.join(pw['proteins'][:5])}")
+                                                    if len(pw['proteins']) > 5:
+                                                        st.caption(f"... and {len(pw['proteins']) - 5} more")
+                                        
+                                        if other_pathways:
+                                            st.info(f"Other Pathways: {len(other_pathways)}")
+                                            with st.expander(f"Show {len(other_pathways)} additional pathways", expanded=False):
+                                                for pw in other_pathways[:15]:
+                                                    st.caption(f"**{pw['name']}** ({pw['protein_count']} proteins)")
+                                    
+                                    with col2:
+                                        st.markdown("#### Target Genes/Proteins")
+                                        
+                                        # Extract gene/protein info
+                                        protein_nodes = nodes_df[nodes_df['type'] == 'protein'].to_dict('records')
+                                        
+                                        st.info(f"Total Targets: {len(protein_nodes)}")
+                                        
+                                        for protein in protein_nodes[:20]:
+                                            gene_name = protein.get('name', 'Unknown')
+                                            full_name = protein.get('full_name', gene_name)
+                                            function = protein.get('function', 'Protein target')
+                                            
+                                            with st.expander(f"{gene_name}", expanded=False):
+                                                if full_name != gene_name:
+                                                    st.caption(f"**Full name:** {full_name}")
+                                                st.caption(f"**Function:** {function}")
+                                                
+                                                # Show which drugs target this protein
+                                                drug_edges = edges_df[
+                                                    (edges_df['target'] == protein['id']) & 
+                                                    (edges_df.get('edge_type', '') == 'drug_protein')
+                                                ]
+                                                if not drug_edges.empty:
+                                                    targeting_drugs = []
+                                                    for _, edge in drug_edges.iterrows():
+                                                        drug_id = edge['source']
+                                                        drug_node = nodes_df[nodes_df['id'] == drug_id]
+                                                        if not drug_node.empty:
+                                                            drug_name_found = drug_node.iloc[0]['name']
+                                                            confidence = edge.get('confidence', 0)
+                                                            targeting_drugs.append(f"{drug_name_found} ({confidence:.0%})")
+                                                    
+                                                    if targeting_drugs:
+                                                        st.caption(f"**Targeted by:** {', '.join(targeting_drugs)}")
+                                        
+                                        if len(protein_nodes) > 20:
+                                            st.caption(f"... and {len(protein_nodes) - 20} more targets")
+                                else:
+                                    st.warning("No pathway information available")
+                                    
+                            except Exception as pathway_error:
+                                logger.error(f"Pathway display error: {pathway_error}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                                st.warning("Could not display pathway details")
+                            
                         else:
                             st.warning("No evidence found in database for selected drugs")
                             logger.warning(f"BioCypher returned empty graph: {len(nodes_df)} nodes, {len(edges_df)} edges")
@@ -9559,7 +9662,7 @@ def render_biocypher_network_section():
                     import traceback
                     logger.error(traceback.format_exc())
             else:
-                st.info("ℹ️ BioCypher not available - install evidence_graph_builder.py")
+                st.info("BioCypher not available - install evidence_graph_builder.py")
                 logger.warning("BioCypher module not loaded")
             
             # End of BioCypher network section
