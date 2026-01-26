@@ -10873,11 +10873,11 @@ def render_optimization_strategies_section():
                             orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
                             opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
                             cns_delta = opt_cns - orig_cns
-                        st.metric("CNS MPO Score", f"{opt_cns:.2f}/6", delta=f"{cns_delta:+.2f}")
-                    
-                    with col3:
-                        st.metric("Overall Score", f"{best_opt.optimized_score:.1f}%", 
-                                 delta=f"{best_opt.score_improvement:+.1f}%")
+                            st.metric("CNS MPO Score", f"{opt_cns:.2f}/6", delta=f"{cns_delta:+.2f}")
+                        
+                        with col3:
+                            st.metric("Overall Score", f"{best_opt.optimized_score:.1f}%", 
+                                     delta=f"{best_opt.score_improvement:+.1f}%")
                     
                     # Detailed Molecular Properties Table
                     st.markdown("---")
