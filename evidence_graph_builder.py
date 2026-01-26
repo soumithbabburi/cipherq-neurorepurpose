@@ -47,6 +47,29 @@ class EvidenceGraphBuilder:
             
             # 2. GET DRUG → PROTEIN INTERACTIONS FROM DATABASE
             logger.info("Querying drug-protein interactions...")
+            
+            # First check if drugs exist in database
+            drug_check = execute_query("""
+                SELECT name FROM drugs WHERE name = ANY(%s)
+            """, (drug_names,))
+            
+            drugs_found = [d['name'] for d in drug_check]
+            drugs_not_found = [d for d in drug_names if d not in drugs_found]
+            
+            if drugs_not_found:
+                logger.warning(f"Drugs not in database: {drugs_not_found}")
+            
+            if not drugs_found:
+                logger.error("NONE of the drugs were found in database!")
+                logger.error(f"Searched for: {drug_names}")
+                # Return empty but with diagnostic info
+                return pd.DataFrame([{
+                    'id': 'ERROR',
+                    'label': 'Error',
+                    'name': f'No drugs found in DB. Searched: {drug_names}',
+                    'type': 'error'
+                }]), pd.DataFrame()
+            
             interactions = execute_query("""
                 SELECT 
                     d.name as drug_name,
@@ -63,7 +86,18 @@ class EvidenceGraphBuilder:
                 WHERE d.name = ANY(%s)
                 ORDER BY dpi.confidence_score DESC NULLS LAST
                 LIMIT 200
-            """, (drug_names,))
+            """, (drugs_found,))
+            
+            if not interactions:
+                logger.warning(f"No interactions found for drugs: {drugs_found}")
+                # Try to find ANY interactions for these drugs
+                basic_drug_info = execute_query("""
+                    SELECT d.name, d.mechanism_of_action, d.drug_class
+                    FROM drugs d
+                    WHERE d.name = ANY(%s)
+                """, (drugs_found,))
+                
+                logger.info(f"Found basic info for {len(basic_drug_info)} drugs but no interactions")
             
             logger.info(f"Found {len(interactions)} drug-protein interactions")
             
