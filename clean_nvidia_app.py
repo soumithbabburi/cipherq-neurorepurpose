@@ -11934,7 +11934,6 @@ def render_molecular_docking_section():
                len(st.session_state.real_optimization_results) > 0 and
                hasattr(st.session_state, 'real_optimization_drug') and
                st.session_state.real_optimization_drug == selected_drug):
-    
                best_opt = st.session_state.real_optimization_results[0]
     
                if best_opt and hasattr(best_opt, 'success') and best_opt.success:
