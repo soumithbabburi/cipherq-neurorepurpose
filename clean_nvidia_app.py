@@ -10857,22 +10857,22 @@ def render_optimization_strategies_section():
                 if st.session_state.real_optimization_results and len(st.session_state.real_optimization_results) > 0:
                     best_opt = st.session_state.real_optimization_results[0]
                     if best_opt and hasattr(best_opt, 'success') and best_opt.success:
-                    st.markdown("---")
-                    st.markdown("## Comprehensive Property Improvements")
-                    
-                    # Primary Metrics
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        orig_bbb = best_opt.original_properties.get('BBB_Score', 0)
-                        opt_bbb = best_opt.optimized_properties.get('BBB_Score', 0)
-                        bbb_delta = opt_bbb - orig_bbb
-                        st.metric("BBB Penetration", f"{opt_bbb:.1f}%", delta=f"{bbb_delta:+.1f}%")
-                    
-                    with col2:
-                        orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
-                        opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
-                        cns_delta = opt_cns - orig_cns
+                        st.markdown("---")
+                        st.markdown("## Comprehensive Property Improvements")
+                        
+                        # Primary Metrics
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            orig_bbb = best_opt.original_properties.get('BBB_Score', 0)
+                            opt_bbb = best_opt.optimized_properties.get('BBB_Score', 0)
+                            bbb_delta = opt_bbb - orig_bbb
+                            st.metric("BBB Penetration", f"{opt_bbb:.1f}%", delta=f"{bbb_delta:+.1f}%")
+                        
+                        with col2:
+                            orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
+                            opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
+                            cns_delta = opt_cns - orig_cns
                         st.metric("CNS MPO Score", f"{opt_cns:.2f}/6", delta=f"{cns_delta:+.2f}")
                     
                     with col3:
