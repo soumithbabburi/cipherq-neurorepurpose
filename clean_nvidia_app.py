@@ -11927,18 +11927,18 @@ def render_molecular_docking_section():
             # OPTIMIZATION COMPARISON SECTION
             st.markdown("---")
             st.markdown("## Optimization Comparison")
-           if (
-               hasattr(st.session_state, 'real_optimization_results') and
-               st.session_state.real_optimization_results is not None and
-               isinstance(st.session_state.real_optimization_results, list) and
-               len(st.session_state.real_optimization_results) > 0 and
-               hasattr(st.session_state, 'real_optimization_drug') and
-               st.session_state.real_optimization_drug == selected_drug
-               ):
-               best_opt = st.session_state.real_optimization_results[0]
+            if (
+                hasattr(st.session_state, 'real_optimization_results') and
+                st.session_state.real_optimization_results is not None and
+                isinstance(st.session_state.real_optimization_results, list) and
+                len(st.session_state.real_optimization_results) > 0 and
+                hasattr(st.session_state, 'real_optimization_drug') and
+                st.session_state.real_optimization_drug == selected_drug
+                ):
+                best_opt = st.session_state.real_optimization_results[0]
     
-               if best_opt and hasattr(best_opt, 'success') and best_opt.success:
-                   st.info(f"Comparing original {selected_drug} vs optimized variant...")
+                if best_opt and hasattr(best_opt, 'success') and best_opt.success:
+                    st.info(f"Comparing original {selected_drug} vs optimized variant...")
                     
                     # Run docking for optimized drug
                     optimized_cache_key = f"opt_docking_{selected_drug}_{best_opt.optimized_smiles}"
