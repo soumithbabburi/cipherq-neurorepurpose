@@ -1,42 +1,29 @@
 """
-Evidence Graph Builder - CORRECT Schema
-Based on actual table columns provided by user
+Evidence Graph Builder - Uses Centralized Database Utils
+No more "connection already closed" errors!
 """
-import psycopg2
 import pandas as pd
 import logging
 import os
+import sys
+
+# Add parent directory for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
 class EvidenceGraphBuilder:
-    """Build evidence graphs using CORRECT column names"""
+    """Build evidence graphs using centralized database connection"""
     
     def __init__(self):
-        self.conn = None
-        self._connect_db()
-    
-    def _connect_db(self):
-        """Connect to database"""
-        try:
-            self.conn = psycopg2.connect(
-                host=os.getenv("DB_HOST", "localhost"),
-                database=os.getenv("DB_NAME", "cipherq_repurpose"),
-                user=os.getenv("DB_USER", "babburisoumith"),
-                password=os.getenv("DB_PASSWORD", "")
-            )
-            logger.info("✅ EvidenceGraphBuilder connected (200K pathways)")
-        except Exception as e:
-            logger.error(f"Database connection failed: {e}")
+        # Don't create connection - use database_utils!
+        logger.info("✅ EvidenceGraphBuilder initialized (using database_utils)")
     
     def build_evidence_graph(self, drug_names: list, disease_name: str):
         """Build: Drugs → Proteins → Pathways → Disease"""
         
-        if not self.conn:
-            return pd.DataFrame(), pd.DataFrame()
-        
         try:
-            cursor = self.conn.cursor()
+            from database_utils import execute_query
             
             nodes = []
             edges = []
@@ -48,10 +35,8 @@ class EvidenceGraphBuilder:
                 nodes.append({'id': drug_id, 'label': 'Drug', 'name': drug, 'type': 'drug'})
                 node_ids.add(drug_id)
             
-            # 2. Drugs → Proteins
-            # drugs.id → drug_protein_interactions.drug_id
-            # proteins.id → drug_protein_interactions.protein_id
-            cursor.execute("""
+            # 2. Drugs → Proteins (uses database_utils)
+            interactions = execute_query("""
                 SELECT d.name, p.gene_symbol, p.name
                 FROM drugs d
                 JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
@@ -60,13 +45,16 @@ class EvidenceGraphBuilder:
                 LIMIT 100
             """, (drug_names,))
             
-            interactions = cursor.fetchall()
             logger.info(f"✅ {len(interactions)} drug-protein interactions")
             
-            protein_db_ids = {}  # gene_symbol → database id
+            protein_db_ids = {}
             protein_genes = set()
             
-            for drug_name, gene_symbol, protein_name in interactions:
+            for row in interactions:
+                drug_name = row['name']
+                gene_symbol = row['gene_symbol']
+                protein_name = row.get('name')
+                
                 protein_id = f"PROTEIN_{gene_symbol}"
                 if protein_id not in node_ids:
                     nodes.append({
@@ -83,22 +71,20 @@ class EvidenceGraphBuilder:
             
             # Get database IDs for proteins
             if protein_genes:
-                cursor.execute("""
+                protein_rows = execute_query("""
                     SELECT id, gene_symbol FROM proteins WHERE gene_symbol = ANY(%s)
                 """, (list(protein_genes),))
-                for db_id, gene in cursor.fetchall():
-                    protein_db_ids[gene] = db_id
+                
+                for row in protein_rows:
+                    protein_db_ids[row['gene_symbol']] = row['id']
             
             logger.info(f"✅ {len(protein_genes)} proteins")
             
-            # 3. Proteins → Pathways  
-            # protein_pathway_members: protein_id → pathways.id
-            # pathways: has 'name', 'pathway_source' (not pathway_name!)
+            # 3. Proteins → Pathways
             if protein_db_ids:
-                logger.info(f"🔍 Checking pathways for {len(protein_db_ids)} proteins: {list(protein_db_ids.keys())[:5]}")
-                logger.info(f"🔍 Database IDs: {list(protein_db_ids.values())[:5]}")
+                logger.info(f"🔍 Checking pathways for {len(protein_db_ids)} proteins")
                 
-                cursor.execute("""
+                pathway_rows = execute_query("""
                     SELECT DISTINCT 
                         p.gene_symbol,
                         pw.id,
@@ -111,17 +97,18 @@ class EvidenceGraphBuilder:
                     LIMIT 30
                 """, (list(protein_db_ids.values()),))
                 
-                pathway_data = cursor.fetchall()
-                
-                if len(pathway_data) == 0:
-                    logger.warning(f"❌ NO PATHWAYS FOUND for these proteins!")
-                    logger.warning(f"   Checked protein IDs: {list(protein_db_ids.values())}")
-                    logger.warning(f"   This means protein_pathway_members table is empty or doesn't have these proteins")
+                if len(pathway_rows) == 0:
+                    logger.warning(f"❌ NO PATHWAYS (protein_pathway_members is empty)")
                 else:
-                    logger.info(f"✅ {len(pathway_data)} pathways from 200K!")
+                    logger.info(f"✅ {len(pathway_rows)} pathways from 200K!")
                 
                 pathway_db_ids = set()
-                for gene, pw_id, pw_name, pw_source in pathway_data:
+                for row in pathway_rows:
+                    gene = row['gene_symbol']
+                    pw_id = row['id']
+                    pw_name = row['name']
+                    pw_source = row.get('pathway_source')
+                    
                     pathway_node_id = f"PATHWAY_{pw_id}"
                     
                     if pathway_node_id not in node_ids:
@@ -138,15 +125,12 @@ class EvidenceGraphBuilder:
                     edges.append({'source': protein_id, 'target': pathway_node_id, 'label': 'PARTICIPATES_IN', 'confidence': 0.85})
                 
                 # 4. Pathways → Disease
-                # pathway_disease_associations uses disease_id (NOT disease_name!)
-                # First get disease_id
-                cursor.execute("SELECT id FROM diseases WHERE name ILIKE %s LIMIT 1", (f"%{disease_name}%",))
-                disease_row = cursor.fetchone()
+                disease_rows = execute_query("SELECT id FROM diseases WHERE name ILIKE %s LIMIT 1", (f"%{disease_name}%",))
                 
-                if disease_row and pathway_db_ids:
-                    disease_db_id = disease_row[0]
+                if disease_rows and pathway_db_ids:
+                    disease_db_id = disease_rows[0]['id']
                     
-                    cursor.execute("""
+                    pw_disease_rows = execute_query("""
                         SELECT pathway_id, relevance_score
                         FROM pathway_disease_associations
                         WHERE disease_id = %s
@@ -154,11 +138,12 @@ class EvidenceGraphBuilder:
                         LIMIT 20
                     """, (disease_db_id, list(pathway_db_ids)))
                     
-                    pw_disease = cursor.fetchall()
-                    logger.info(f"✅ {len(pw_disease)} pathway-disease links")
+                    logger.info(f"✅ {len(pw_disease_rows)} pathway-disease links")
                     
                     disease_id = f"DISEASE_{disease_name.replace(' ', '_').upper()}"
-                    for pw_id, score in pw_disease:
+                    for row in pw_disease_rows:
+                        pw_id = row['pathway_id']
+                        score = row.get('relevance_score')
                         pathway_node_id = f"PATHWAY_{pw_id}"
                         if pathway_node_id in node_ids:
                             edges.append({'source': pathway_node_id, 'target': disease_id, 'label': 'IMPLICATED_IN', 'confidence': score or 0.8})
@@ -173,8 +158,7 @@ class EvidenceGraphBuilder:
                     protein_id = f"PROTEIN_{gene}"
                     edges.append({'source': protein_id, 'target': disease_id, 'label': 'ASSOCIATED', 'confidence': 0.7})
             
-            cursor.close()
-            
+            # Convert to DataFrames
             nodes_df = pd.DataFrame(nodes)
             edges_df = pd.DataFrame(edges)
             
@@ -203,7 +187,8 @@ class EvidenceGraphBuilder:
                 'drugs': 0,
                 'proteins': 0,
                 'pathways': 0,
-                'diseases': 0
+                'diseases': 0,
+                'target_count': 0
             }
         
         drugs_count = len(nodes_df[nodes_df['type'] == 'drug']) if 'type' in nodes_df.columns else 0
@@ -221,5 +206,6 @@ class EvidenceGraphBuilder:
             'drugs': drugs_count,
             'proteins': proteins_count,
             'pathways': pathways_count,
-            'diseases': diseases_count
+            'diseases': diseases_count,
+            'target_count': proteins_count
         }
