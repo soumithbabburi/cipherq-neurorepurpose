@@ -157,12 +157,13 @@ def _format_drug_results(drugs: list) -> list:
     """
     Format database drug results into recommendation format
     Uses real ML confidence scoring - NO HARDCODING
+    ✅ ONLY returns drugs with evidence in database
     
     Args:
         drugs: List of drug dicts from database
         
     Returns:
-        List of formatted drug recommendations
+        List of formatted drug recommendations (only those with targets/evidence)
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -175,19 +176,31 @@ def _format_drug_results(drugs: list) -> list:
         # Get targets from database
         try:
             targets = get_drug_targets_from_db(drug_name) if DATABASE_MODULES_AVAILABLE else []
+            
+            # ✅ CRITICAL: Skip drugs with NO targets/evidence
+            if not targets or len(targets) == 0:
+                logger.warning(f"Skipping {drug_name} - no protein targets found in database")
+                continue  # Don't recommend drugs without evidence!
+            
             target_str = ', '.join(targets[:3]) if targets else 'Unknown'
         except Exception as e:
             logger.warning(f"Could not get targets for {drug_name}: {e}")
-            target_str = 'Unknown'
-            targets = []
+            # ✅ CRITICAL: Skip drugs that fail to get targets
+            continue
         
         # Get real confidence score using ML function
         try:
             # Get full target data for scoring
             if DATABASE_MODULES_AVAILABLE:
                 full_targets = get_drug_targets(drug_name, limit=5)
+                
+                # ✅ Double-check we have target data
+                if not full_targets or len(full_targets) == 0:
+                    logger.warning(f"Skipping {drug_name} - full target data unavailable")
+                    continue
             else:
-                full_targets = []
+                logger.warning(f"Skipping {drug_name} - database modules not available")
+                continue
             
             # Use ML confidence calculation
             confidence = calculate_ml_confidence_score(
@@ -197,8 +210,8 @@ def _format_drug_results(drugs: list) -> list:
             )
         except Exception as e:
             logger.warning(f"ML scoring failed for {drug_name}: {e}")
-            # Fallback to basic scoring if ML fails
-            confidence = 0.40
+            # ✅ CRITICAL: Skip if scoring fails
+            continue
         
         formatted.append({
             'name': drug_name,
@@ -209,6 +222,7 @@ def _format_drug_results(drugs: list) -> list:
             'category': drug.get('therapeutic_category', 'Unknown')
         })
     
+    logger.info(f"Formatted {len(formatted)} drugs WITH EVIDENCE (skipped {len(drugs) - len(formatted)} without evidence)")
     return formatted
 
 
@@ -11707,13 +11721,26 @@ def render_molecular_docking_section():
                     
                     # Fallback: Get from drug data or database
                     if not target_protein:
-                        # Try to get from selected drug data
-                        drug_data = [d for d in recommended_drugs if d.get('name') == selected_drug]
-                        if drug_data and 'targets' in drug_data[0]:
-                            targets_list = drug_data[0]['targets']
-                            if targets_list and targets_list[0] != 'Multiple':
-                                target_protein = targets_list[0]
-                                st.info(f"Using target from drug data: **{target_protein}**")
+                        # Try to get from database directly (more reliable than session data)
+                        try:
+                            from database_utils import execute_query
+                            target_result = execute_query("""
+                                SELECT p.gene_symbol, p.name
+                                FROM drugs d
+                                JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
+                                JOIN proteins p ON p.id = dpi.protein_id
+                                WHERE LOWER(d.name) = %s
+                                ORDER BY dpi.confidence_score DESC NULLS LAST
+                                LIMIT 1
+                            """, (selected_drug.lower(),))
+                            
+                            if target_result:
+                                target_protein = target_result[0]['gene_symbol']
+                                st.info(f"Using target from database: **{target_protein}**")
+                                logger.info(f"Got target from database: {target_protein}")
+                        except Exception as e:
+                            logger.warning(f"Could not get target from database: {e}")
+                            target_protein = None
                     
                     # Final fallback
                     if not target_protein:
@@ -12687,17 +12714,19 @@ def process_drug_discovery_query(query: str) -> list:
         if DATABASE_MODULES_AVAILABLE:
             try:
                 targets = get_drug_targets(drug_name, limit=5)
-                if targets:
-                    target_genes = [t['gene_symbol'] for t in targets[:3]]
-                    target_str = ', '.join(target_genes)
-                    if len(targets) > 3:
-                        target_str += f" (+{len(targets)-3})"
-                    
-                    # Calculate REAL confidence from multiple evidence sources
-                    avg_confidence = calculate_ml_confidence_score(drug_name, targets, query)
-                else:
-                    target_str = 'Multiple targets'
-                    avg_confidence = calculate_ml_confidence_score(drug_name, [], query)
+                
+                # ✅ CRITICAL: Skip drugs with NO targets/evidence
+                if not targets or len(targets) == 0:
+                    logger.warning(f"Skipping {drug_name} - no protein targets found in database")
+                    continue  # Don't recommend drugs without evidence!
+                
+                target_genes = [t['gene_symbol'] for t in targets[:3]]
+                target_str = ', '.join(target_genes)
+                if len(targets) > 3:
+                    target_str += f" (+{len(targets)-3})"
+                
+                # Calculate REAL confidence from multiple evidence sources
+                avg_confidence = calculate_ml_confidence_score(drug_name, targets, query)
                 
                 # Get full drug info including indication
                 drug_info = db_get_drug_by_name(drug_name)
@@ -12705,13 +12734,12 @@ def process_drug_discovery_query(query: str) -> list:
                 
             except Exception as e:
                 logger.warning(f"Failed to get targets for {drug_name}: {e}")
-                target_str = 'Multiple targets'
-                avg_confidence = calculate_ml_confidence_score(drug_name, [], query)
-                indication = 'Multiple indications'
+                # ✅ CRITICAL: Skip drugs that fail to get targets
+                continue  # Don't recommend if we can't verify evidence
         else:
-            target_str = 'Multiple targets'
-            avg_confidence = calculate_ml_confidence_score(drug_name, [], query)
-            indication = 'Multiple indications'
+            # ✅ CRITICAL: Skip if database modules not available
+            logger.warning(f"Skipping {drug_name} - database modules not available")
+            continue
         
         recommended_drugs.append({
             'name': drug_name,
@@ -12725,7 +12753,13 @@ def process_drug_discovery_query(query: str) -> list:
             'indication': indication  # NEW: Shows what it's approved for!
         })
     
-    logger.info(f"DATABASE QUERY '{query}' returned {len(recommended_drugs)} drugs")
+    logger.info(f"DATABASE QUERY '{query}' returned {len(recommended_drugs)} drugs WITH EVIDENCE")
+    
+    # ✅ CRITICAL: Warn if no drugs with evidence found
+    if not recommended_drugs:
+        logger.warning(f"No drugs with database evidence found for query: {query}")
+        logger.warning("All candidate drugs lacked protein target interactions in database")
+    
     return recommended_drugs if recommended_drugs else []
 
 def get_drug_mechanism(drug_name: str) -> str:
