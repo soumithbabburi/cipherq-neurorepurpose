@@ -2051,16 +2051,50 @@ def create_left_filter_panel():
     </div>
     """, unsafe_allow_html=True)
     
-    # Enhanced search functionality
+    # Enhanced search functionality with LLM semantic reasoning
     search_query = st.text_input(
         "Search", 
-        placeholder="Search drugs, targets, diseases, pathways...",
+        placeholder="Describe what you're looking for in natural language...",
         label_visibility="collapsed",
-        help="Use natural language to search across our comprehensive database"
+        help="Use natural language - AI will understand and optimize your search"
     )
     
     if search_query:
-        st.session_state.search_query = search_query
+        # Use Groq LLM to improve search query with semantic reasoning
+        with st.spinner("Understanding your query..."):
+            try:
+                from groq import Groq
+                groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+                
+                response = groq_client.chat.completions.create(
+                    model="mixtral-8x7b-32768",
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Convert this user query into precise search terms for a drug repurposing database.
+
+User query: "{search_query}"
+
+Return ONLY the optimized search terms (comma-separated keywords), nothing else. Focus on:
+- Drug names
+- Target proteins/genes
+- Disease names
+- Biological pathways
+- Mechanisms of action
+
+Optimized search terms:"""
+                    }],
+                    max_tokens=200,
+                    temperature=0.3
+                )
+                
+                optimized_query = response.choices[0].message.content.strip()
+                st.session_state.search_query = optimized_query
+                st.info(f"🔍 Searching for: {optimized_query}")
+                
+            except Exception as e:
+                # Fallback to original query if LLM fails
+                st.session_state.search_query = search_query
+                logger.warning(f"Groq search optimization failed: {e}")
     
     # Modern filter sections with enhanced styling
     st.markdown("<div style='margin-top: var(--cq-space-6);'></div>", unsafe_allow_html=True)
@@ -12028,24 +12062,52 @@ def render_molecular_docking_section():
                                 poses_data = [sdf_data]
                                 confidence_scores = [pose['confidence']]
                                 
-                                # Dynamic target resolution - NO hardcoded fallbacks
-                                target_protein = determine_target_protein_dynamically(selected_drug)
-                                if not target_protein:
-                                    st.error(" **Target Protein Resolution Failed**")
-                                    st.warning(f"Cannot determine target protein for {selected_drug}. Dynamic target resolution required for protein-ligand complex.")
-                                    return
+                                # Dynamic target resolution from graph or database
+                                # DON'T use session_state - use the target_protein already determined above!
+                                # target_protein variable is already set at line 11700-11750
+                                # Just use it directly!
                                 
-                                # Render professional protein+ligand complex
-                                # Render actual molecular visualization
-                                try:
-                                    # Extract SDF data from pose dict
-                                    pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
-                                    # BULLETPROOF py3Dmol viewer using REAL DiffDock data
-                                    from simple_3d_viewer import create_simple_3d_viewer
-                                    success = create_simple_3d_viewer(
-                                        drug_name=selected_drug,
-                                        target_protein=target_protein
-                                    )
+                                if not target_protein:
+                                    st.warning("No target protein available for visualization")
+                                else:
+                                    # Inline 3D visualization with correct target name
+                                    try:
+                                        import py3Dmol
+                                        import streamlit.components.v1 as components
+                                        
+                                        sdf_data = pose.get('sdf_data', create_dynamic_sdf_data(selected_drug))
+                                        
+                                        if sdf_data:
+                                            # Create viewer
+                                            view = py3Dmol.view(width=650, height=500)
+                                            
+                                            # Try to load protein PDB
+                                            pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
+                                            import glob
+                                            pdb_files = glob.glob(pdb_path)
+                                            
+                                            if pdb_files and os.path.exists(pdb_files[0]):
+                                                with open(pdb_files[0], 'r') as f:
+                                                    pdb_data = f.read()
+                                                view.addModel(pdb_data, 'pdb')
+                                                view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
+                                            
+                                            # Add drug ligand
+                                            view.addModel(sdf_data, 'sdf')
+                                            view.setStyle({'model': -1}, {
+                                                'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
+                                                'sphere': {'scale': 0.3}
+                                            })
+                                            
+                                            view.setBackgroundColor('white')
+                                            view.zoomTo()
+                                            
+                                            # Display with correct title
+                                            st.markdown(f"### 3D Docking: {selected_drug} → {target_protein}")
+                                            components.html(view._make_html(), height=500, width=650)
+                                            
+                                    except Exception as viz_err:
+                                        logger.warning(f"3D visualization error: {viz_err}")
                                     
                                     # DEEP 3D MOLECULAR ANALYSIS - Precise geometric analysis
                                     if success:
@@ -12264,14 +12326,14 @@ def render_molecular_docking_section():
                                 st.metric("Binding Affinity", f"{orig_affinity:.1f} kcal/mol")
                                 st.metric("Confidence", f"{original_best_pose.get('confidence', 0):.3f}")
                                 
-                                # Show REAL 3D protein-ligand complex from DiffDock
+                                # Show REAL 3D protein-ligand complex
                                 try:
                                     import py3Dmol
                                     import streamlit.components.v1 as components
                                     import os
                                     
-                                    # Get protein PDB path
-                                    target_protein = st.session_state.get('selected_target', 'AMPK')
+                                    # Use the target_protein already determined (don't redefine!)
+                                    # target_protein is already set above from graph/database
                                     pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
                                     import glob
                                     pdb_files = glob.glob(pdb_path)
@@ -12306,8 +12368,8 @@ def render_molecular_docking_section():
                                         view.setBackgroundColor('white')
                                         view.zoomTo({'model': 1})  # Zoom to ligand
                                         
+                                        st.markdown(f"**3D Structure: {selected_drug} bound to {target_protein}**")
                                         components.html(view._make_html(), height=400, width=450)
-                                        st.caption("Protein (gray) + Original Drug (CYAN - thick representation)")
                                     else:
                                         st.info("3D complex visualization unavailable - run docking first")
                                 except Exception as e:
@@ -12329,8 +12391,7 @@ def render_molecular_docking_section():
                                     import os
                                     import glob
                                     
-                                    # Get protein PDB path
-                                    target_protein = st.session_state.get('selected_target', 'AMPK')
+                                    # Use the target_protein already determined (don't redefine!)
                                     pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
                                     pdb_files = glob.glob(pdb_path)
                                     
@@ -12350,22 +12411,22 @@ def render_molecular_docking_section():
                                         # Create 3D viewer with protein + optimized ligand
                                         view = py3Dmol.view(width=450, height=400)
                                         
-                                        # Add protein (cartoon, semi-transparent)
+                                        # Add protein (cartoon, spectrum colors)
                                         view.addModel(pdb_data, 'pdb')
-                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'lightgray', 'opacity': 0.5}})
+                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
                                         
-                                        # Add optimized ligand (VERY VISIBLE - thick sticks + spheres)
+                                        # Add optimized ligand (green, visible)
                                         view.addModel(sdf_data, 'sdf')
                                         view.setStyle({'model': 1}, {
-                                            'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
-                                            'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
+                                            'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
+                                            'sphere': {'scale': 0.3}
                                         })
                                         
                                         view.setBackgroundColor('white')
-                                        view.zoomTo({'model': 1})  # Zoom to ligand
+                                        view.zoomTo({'model': 1})
                                         
+                                        st.markdown(f"**Optimized structure bound to {target_protein}**")
                                         components.html(view._make_html(), height=400, width=450)
-                                        st.caption("Protein (gray) + Optimized Drug (GREEN - thick representation)")
                                     else:
                                         st.info("3D complex visualization unavailable - run optimization docking first")
                                 except Exception as e:
