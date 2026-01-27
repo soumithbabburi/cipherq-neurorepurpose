@@ -67,48 +67,71 @@ class EvidenceGraphBuilder:
                 })
                 node_ids.add(drug_id)
             
-            # 2. GET DRUG → PROTEIN INTERACTIONS FROM DATABASE
-            logger.info("Querying drug-protein interactions...")
+            # 2. GET DRUG → PROTEIN INTERACTIONS (JSON FIRST, THEN DATABASE)
+            logger.info("Getting drug-protein interactions...")
             
-            # First check if drugs exist in database (case-insensitive)
-            drug_check = execute_query("""
-                SELECT name FROM drugs WHERE LOWER(name) = ANY(ARRAY[%s])
-            """, ([d.lower() for d in drug_names],))
+            interactions = []
             
-            drugs_found = [d['name'] for d in drug_check]
-            drugs_not_found = [d for d in drug_names if d not in drugs_found]
+            # First, try to get from JSON
+            for drug_name in drug_names:
+                drug_lower = drug_name.lower()
+                
+                if drug_lower in _CURATED_INTERACTIONS:
+                    logger.info(f"✅ {drug_name} found in JSON with {len(_CURATED_INTERACTIONS[drug_lower])} targets")
+                    
+                    for target in _CURATED_INTERACTIONS[drug_lower]:
+                        interactions.append({
+                            'drug_name': drug_name,
+                            'protein_id': None,  # Not from DB
+                            'gene_symbol': target['gene_symbol'],
+                            'protein_name': target['protein_name'],
+                            'protein_function': '',
+                            'confidence_score': target['confidence_score'],
+                            'interaction_type': 'target',
+                            'binding_affinity': target.get('binding_affinity')
+                        })
             
-            if drugs_not_found:
-                logger.warning(f"Drugs not in database: {drugs_not_found}")
+            logger.info(f"Found {len(interactions)} interactions from JSON")
             
-            if not drugs_found:
-                logger.error("NONE of the drugs were found in database!")
-                logger.error(f"Searched for: {drug_names}")
-                # Return empty but with diagnostic info
-                return pd.DataFrame([{
-                    'id': 'ERROR',
-                    'label': 'Error',
-                    'name': f'No drugs found in DB. Searched: {drug_names}',
-                    'type': 'error'
-                }]), pd.DataFrame()
-            
-            interactions = execute_query("""
-                SELECT 
-                    d.name as drug_name,
-                    p.id as protein_id,
-                    p.gene_symbol,
-                    p.name as protein_name,
-                    p.function as protein_function,
-                    dpi.confidence_score,
-                    dpi.interaction_type,
-                    dpi.binding_affinity
-                FROM drugs d
-                JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
-                JOIN proteins p ON p.id = dpi.protein_id
-                WHERE LOWER(d.name) = ANY(ARRAY[%s])
-                ORDER BY dpi.confidence_score DESC NULLS LAST
-                LIMIT 200
-            """, ([d.lower() for d in drugs_found],))
+            # If no JSON data, try database
+            if len(interactions) == 0:
+                logger.info("No JSON data found, querying database...")
+                
+                from database_utils import execute_query
+                
+                # Check if drugs exist
+                drug_check = execute_query("""
+                    SELECT name FROM drugs WHERE LOWER(name) = ANY(ARRAY[%s])
+                """, ([d.lower() for d in drug_names],))
+                
+                drugs_found = [d['name'] for d in drug_check]
+                
+                if not drugs_found:
+                    logger.error("Drugs not found in database OR JSON!")
+                    return pd.DataFrame([{
+                        'id': 'ERROR',
+                        'label': 'Error',
+                        'name': f'No drugs found. Searched: {drug_names}',
+                        'type': 'error'
+                    }]), pd.DataFrame()
+                
+                interactions = execute_query("""
+                    SELECT 
+                        d.name as drug_name,
+                        p.id as protein_id,
+                        p.gene_symbol,
+                        p.name as protein_name,
+                        p.function as protein_function,
+                        dpi.confidence_score,
+                        dpi.interaction_type,
+                        dpi.binding_affinity
+                    FROM drugs d
+                    JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
+                    JOIN proteins p ON p.id = dpi.protein_id
+                    WHERE LOWER(d.name) = ANY(ARRAY[%s])
+                    ORDER BY dpi.confidence_score DESC NULLS LAST
+                    LIMIT 200
+                """, ([d.lower() for d in drugs_found],))
             
             if not interactions:
                 logger.warning(f"No interactions found for drugs: {drugs_found}")
