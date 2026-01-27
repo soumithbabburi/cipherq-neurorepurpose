@@ -304,6 +304,15 @@ except ImportError as e:
     REAL_DOCKING_AVAILABLE = False
     QUANTUM_OPTIMIZATION_AVAILABLE = False
 
+# Import AutoDock Vina as fallback
+try:
+    from autodock_vina import run_autodock_vina_docking
+    VINA_FALLBACK_AVAILABLE = True
+    print("✅ AutoDock Vina fallback loaded")
+except ImportError as e:
+    VINA_FALLBACK_AVAILABLE = False
+    print(f"⚠️ AutoDock Vina fallback not available: {e}")
+
 # Import CipherQ Semantic Chat and Real-time Recommendations
 try:
     from cipherq_semantic_chat import semantic_chat, CipherQSemanticChat, KNOWLEDGE_GRAPH_AVAILABLE, ANTHROPIC_AVAILABLE
@@ -1797,13 +1806,25 @@ if REAL_DOCKING_AVAILABLE:
     # Check if docking service needs to be created or updated for current disease
     if 'docking_service' not in st.session_state or st.session_state.get('docking_service_disease') != current_disease:
         try:
+            logger.info(f"=== INITIALIZING DOCKING SERVICE ===")
+            logger.info(f"Disease: {current_disease}")
             # Create new disease-specific docking service instance
             st.session_state.docking_service = DockingService(disease_name=current_disease)
             st.session_state.docking_service_disease = current_disease
-            logger.info(f"NVIDIA BioNeMo DiffDock service initialized for {current_disease}")
+            logger.info(f"✅ NVIDIA BioNeMo DiffDock service initialized for {current_disease}")
+            logger.info(f"Service type: {type(st.session_state.docking_service)}")
         except Exception as e:
-            logger.warning(f"Docking service initialization failed: {e}")
+            logger.error(f"=== DOCKING SERVICE INITIALIZATION FAILED ===")
+            logger.error(f"Disease: {current_disease}")
+            logger.error(f"Error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            logger.error(f"=== END INITIALIZATION ERROR ===")
             st.session_state.docking_service = None
+            # Show warning in sidebar
+            if 'sidebar_warnings' not in st.session_state:
+                st.session_state.sidebar_warnings = []
+            st.session_state.sidebar_warnings.append(f"⚠️ Docking service unavailable: {str(e)[:100]}")
 
 def create_modern_dashboard_header():
     """Create modern dashboard header with navigation and controls"""
@@ -11702,14 +11723,30 @@ def render_molecular_docking_section():
                     target_protein = determine_target_protein_dynamically(selected_drug)
                 
                 if docking_svc:
+                    logger.info(f"=== DOCKING DEBUG START ===")
+                    logger.info(f"Drug: {selected_drug}")
+                    logger.info(f"Target: {target_protein}")
+                    logger.info(f"Docking service: {type(docking_svc).__name__}")
+                    
                     with st.spinner(f"Running NVIDIA BioNeMo DiffDock for {selected_drug}..."):
-                        # Run NVIDIA BioNeMo DiffDock molecular docking
-                        docking_result = docking_svc.perform_docking(
-                            drug_name=selected_drug,
-                            target_name=target_protein
-                        )
+                        try:
+                            # Run NVIDIA BioNeMo DiffDock molecular docking
+                            docking_result = docking_svc.perform_docking(
+                                drug_name=selected_drug,
+                                target_name=target_protein
+                            )
+                            
+                            logger.info(f"Docking result keys: {docking_result.keys() if docking_result else 'None'}")
+                            logger.info(f"Docking success: {docking_result.get('success') if docking_result else False}")
+                        except Exception as dock_err:
+                            logger.error(f"Docking call failed: {dock_err}")
+                            import traceback
+                            logger.error(traceback.format_exc())
+                            docking_result = {'success': False, 'error': str(dock_err)}
+                    
+                    logger.info(f"=== DOCKING DEBUG END ===")
                         
-                        if docking_result and docking_result.get('success'):
+                    if docking_result and docking_result.get('success'):
                             # Get RAW NVIDIA results
                             nvidia_poses = docking_result.get('poses', [])
                             raw_confidences = docking_result.get('raw_nvidia_confidences', docking_result.get('confidence_scores', []))
@@ -11843,15 +11880,128 @@ def render_molecular_docking_section():
                                     st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
                             
                         else:
+                            # DiffDock failed - try AutoDock Vina fallback
                             error = docking_result.get('error', 'Unknown error')
-                            st.warning(f"DiffDock molecular docking failed for {selected_drug}: {error}")
-                            poses = []
+                            logger.error(f"DiffDock failed for {selected_drug}")
+                            logger.error(f"Error: {error}")
+                            logger.error(f"Full result: {docking_result}")
+                            
+                            st.warning(f"⚠️ NVIDIA DiffDock failed for {selected_drug}")
+                            st.info(f"**Error**: {error}")
+                            
+                            # Try AutoDock Vina fallback
+                            if VINA_FALLBACK_AVAILABLE:
+                                st.info("🔄 **Switching to AutoDock Vina fallback...**")
+                                logger.info(f"Attempting AutoDock Vina fallback for {selected_drug}")
+                                
+                                try:
+                                    with st.spinner("Running AutoDock Vina..."):
+                                        vina_result = run_autodock_vina_docking(
+                                            drug_name=selected_drug,
+                                            target_protein=target_protein
+                                        )
+                                    
+                                    if vina_result and vina_result.get('success'):
+                                        st.success(f"✅ AutoDock Vina docking completed successfully!")
+                                        poses = vina_result.get('poses', [])
+                                        logger.info(f"AutoDock Vina generated {len(poses)} poses")
+                                        
+                                        # Process Vina results
+                                        binding_affinities = [p.get('binding_affinity', 0) for p in poses]
+                                        logger.info(f"Vina affinities: {binding_affinities[:5]}")
+                                        
+                                        # Show Vina docking description
+                                        if binding_affinities:
+                                            best_affinity = binding_affinities[0]
+                                            st.markdown("---")
+                                            st.markdown(f"### AutoDock Vina Analysis: {selected_drug} → {target_protein}")
+                                            strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                            st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                                    else:
+                                        vina_error = vina_result.get('error', 'Unknown error') if vina_result else 'No result returned'
+                                        logger.error(f"AutoDock Vina also failed: {vina_error}")
+                                        st.error(f"❌ AutoDock Vina fallback also failed")
+                                        st.warning(f"**Error**: {vina_error}")
+                                        poses = []
+                                        
+                                except Exception as vina_err:
+                                    logger.error(f"AutoDock Vina fallback exception: {vina_err}")
+                                    import traceback
+                                    logger.error(traceback.format_exc())
+                                    st.error(f"❌ AutoDock Vina fallback failed with exception")
+                                    st.warning(f"**Error**: {str(vina_err)}")
+                                    poses = []
+                            else:
+                                st.error(f"❌ Molecular docking failed for {selected_drug}")
+                                st.warning("**AutoDock Vina fallback not available**")
+                                st.info("💡 **Possible causes**:\n- Target protein structure unavailable\n- Invalid drug SMILES\n- DiffDock service unavailable\n- autodock_vina.py module missing")
+                                poses = []
                 else:
-                    st.warning(f"Cannot perform real docking for {selected_drug} - target protein or Vina client not available")
-                    poses = []
+                    # Docking service not available - try AutoDock Vina fallback
+                    logger.warning(f"Docking service not available for {selected_drug}")
+                    logger.warning(f"Target protein: {target_protein}")
+                    logger.warning(f"Docking service type: {type(st.session_state.get('docking_service'))}")
+                    
+                    st.warning(f"⚠️ NVIDIA DiffDock service not initialized")
+                    
+                    if VINA_FALLBACK_AVAILABLE:
+                        st.info("🔄 **Using AutoDock Vina fallback instead...**")
+                        logger.info(f"Using AutoDock Vina fallback (no DiffDock service) for {selected_drug}")
+                        
+                        try:
+                            with st.spinner("Running AutoDock Vina..."):
+                                vina_result = run_autodock_vina_docking(
+                                    drug_name=selected_drug,
+                                    target_protein=target_protein
+                                )
+                            
+                            if vina_result and vina_result.get('success'):
+                                st.success(f"✅ AutoDock Vina docking completed successfully!")
+                                poses = vina_result.get('poses', [])
+                                logger.info(f"AutoDock Vina generated {len(poses)} poses")
+                                
+                                # Process Vina results
+                                binding_affinities = [p.get('binding_affinity', 0) for p in poses]
+                                logger.info(f"Vina affinities: {binding_affinities[:5]}")
+                                
+                                # Show Vina docking description
+                                if binding_affinities:
+                                    best_affinity = binding_affinities[0]
+                                    st.markdown("---")
+                                    st.markdown(f"### AutoDock Vina Analysis: {selected_drug} → {target_protein}")
+                                    strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                    st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                            else:
+                                vina_error = vina_result.get('error', 'Unknown error') if vina_result else 'No result returned'
+                                logger.error(f"AutoDock Vina failed: {vina_error}")
+                                st.error(f"❌ AutoDock Vina fallback failed")
+                                st.warning(f"**Error**: {vina_error}")
+                                poses = []
+                                
+                        except Exception as vina_err:
+                            logger.error(f"AutoDock Vina exception: {vina_err}")
+                            import traceback
+                            logger.error(traceback.format_exc())
+                            st.error(f"❌ AutoDock Vina failed with exception")
+                            st.warning(f"**Error**: {str(vina_err)}")
+                            poses = []
+                    else:
+                        st.error(f"❌ Cannot perform molecular docking for {selected_drug}")
+                        st.warning("**Reason**: Docking service not initialized and AutoDock Vina not available")
+                        st.info("💡 **Try**:\n- Restart the application\n- Check NVIDIA BioNeMo API credentials\n- Verify services/docking_service.py is present\n- Add autodock_vina.py module for fallback")
+                        poses = []
             except Exception as e:
-                logger.error(f"Real docking failed: {e}")
-                st.warning(f"Real docking unavailable for {selected_drug}")
+                logger.error(f"=== DOCKING EXCEPTION ===")
+                logger.error(f"Drug: {selected_drug}")
+                logger.error(f"Error: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                logger.error(f"=== END DOCKING EXCEPTION ===")
+                
+                st.error(f"❌ Unexpected error during docking for {selected_drug}")
+                st.warning(f"**Error**: {str(e)}")
+                with st.expander("🔍 Debug Information"):
+                    st.code(traceback.format_exc())
                 poses = []
             
             # Interpret Vina binding affinity scores correctly
