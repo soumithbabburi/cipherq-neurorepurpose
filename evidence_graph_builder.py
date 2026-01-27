@@ -48,10 +48,10 @@ class EvidenceGraphBuilder:
             # 2. GET DRUG → PROTEIN INTERACTIONS FROM DATABASE
             logger.info("Querying drug-protein interactions...")
             
-            # First check if drugs exist in database
+            # First check if drugs exist in database (case-insensitive)
             drug_check = execute_query("""
-                SELECT name FROM drugs WHERE name = ANY(%s)
-            """, (drug_names,))
+                SELECT name FROM drugs WHERE LOWER(name) = ANY(ARRAY[%s])
+            """, ([d.lower() for d in drug_names],))
             
             drugs_found = [d['name'] for d in drug_check]
             drugs_not_found = [d for d in drug_names if d not in drugs_found]
@@ -83,10 +83,10 @@ class EvidenceGraphBuilder:
                 FROM drugs d
                 JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
                 JOIN proteins p ON p.id = dpi.protein_id
-                WHERE d.name = ANY(%s)
+                WHERE LOWER(d.name) = ANY(ARRAY[%s])
                 ORDER BY dpi.confidence_score DESC NULLS LAST
                 LIMIT 200
-            """, (drugs_found,))
+            """, ([d.lower() for d in drugs_found],))
             
             if not interactions:
                 logger.warning(f"No interactions found for drugs: {drugs_found}")
@@ -94,8 +94,8 @@ class EvidenceGraphBuilder:
                 basic_drug_info = execute_query("""
                     SELECT d.name, d.mechanism_of_action, d.drug_class
                     FROM drugs d
-                    WHERE d.name = ANY(%s)
-                """, (drugs_found,))
+                    WHERE LOWER(d.name) = ANY(ARRAY[%s])
+                """, ([d.lower() for d in drugs_found],))
                 
                 logger.info(f"Found basic info for {len(basic_drug_info)} drugs but no interactions")
             
