@@ -1,13 +1,41 @@
 """
 Database Queries Module
-All database query functions - 100% database-driven
+Checks drug_interactions.json FIRST, then falls back to database
 """
 import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from typing import List, Dict, Optional
+import json
+import os
 
 logger = logging.getLogger(__name__)
+
+# Load curated interactions from JSON file
+_CURATED_INTERACTIONS = None
+
+def load_curated_interactions():
+    """Load curated drug-protein interactions from JSON file"""
+    global _CURATED_INTERACTIONS
+    
+    if _CURATED_INTERACTIONS is not None:
+        return
+    
+    try:
+        if os.path.exists('drug_interactions.json'):
+            with open('drug_interactions.json', 'r') as f:
+                _CURATED_INTERACTIONS = json.load(f)
+            logger.info(f"✅ Loaded curated interactions for {len(_CURATED_INTERACTIONS)} drugs")
+        else:
+            _CURATED_INTERACTIONS = {}
+            logger.warning("drug_interactions.json not found - using database only")
+    except Exception as e:
+        logger.error(f"Failed to load curated interactions: {e}")
+        _CURATED_INTERACTIONS = {}
+
+# Load on import
+load_curated_interactions()
+
 
 def get_db_connection():
     """Get PostgreSQL connection"""
@@ -25,7 +53,19 @@ def get_db_connection():
 
 
 def get_drug_targets(drug_name: str, limit: int = 10) -> List[Dict]:
-    """Get targets from drug_protein_interactions"""
+    """
+    Get targets from JSON first, fallback to database
+    """
+    
+    # CHECK JSON FIRST
+    if _CURATED_INTERACTIONS:
+        drug_name_lower = drug_name.lower()
+        if drug_name_lower in _CURATED_INTERACTIONS:
+            targets = _CURATED_INTERACTIONS[drug_name_lower]
+            logger.info(f"✅ {drug_name} targets from JSON: {[t['gene_symbol'] for t in targets[:limit]]}")
+            return targets[:limit]
+    
+    # FALLBACK TO DATABASE
     try:
         conn = get_db_connection()
         if not conn:
@@ -37,7 +77,8 @@ def get_drug_targets(drug_name: str, limit: int = 10) -> List[Dict]:
                 p.gene_symbol,
                 p.name as protein_name,
                 dpi.confidence_score,
-                dpi.interaction_type
+                dpi.interaction_type,
+                dpi.binding_affinity
             FROM drug_protein_interactions dpi
             JOIN drugs d ON d.id = dpi.drug_id
             JOIN proteins p ON p.id = dpi.protein_id
@@ -51,7 +92,7 @@ def get_drug_targets(drug_name: str, limit: int = 10) -> List[Dict]:
         conn.close()
         
         if results:
-            logger.info(f"✅ {drug_name} targets: {[r['gene_symbol'] for r in results]}")
+            logger.info(f"✅ {drug_name} targets from DB: {[r['gene_symbol'] for r in results]}")
         
         return results
         
