@@ -279,8 +279,8 @@ class EvidenceGraphBuilder:
                     
                     # Check if this pathway is relevant to the target disease
                     disease_match = False
-                    for pd in pathway_diseases:
-                        if disease_name.lower() in pd.lower() or pd.lower() in disease_name.lower():
+                    for disease_item in pathway_diseases:  # Changed from 'pd' to 'disease_item'
+                        if disease_name.lower() in disease_item.lower() or disease_item.lower() in disease_name.lower():
                             disease_match = True
                             break
                     
