@@ -130,7 +130,7 @@ def get_drug_protein_interactions(drug_name: str) -> list:
     FROM drug_protein_interactions dpi
     JOIN drugs d ON d.id = dpi.drug_id
     JOIN proteins p ON p.id = dpi.protein_id
-    WHERE d.name = %s
+    WHERE LOWER(d.name) = LOWER(%s)
     ORDER BY dpi.confidence_score DESC
     LIMIT 20
     """
@@ -147,7 +147,7 @@ def get_drug_targets_from_db(drug_name: str) -> list:
 @st.cache_data(ttl=3600)
 def get_drug_smiles(drug_name: str) -> str:
     """Get SMILES structure from database"""
-    sql = "SELECT smiles FROM drugs WHERE name = %s LIMIT 1"
+    sql = "SELECT smiles FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
     results = execute_db(sql, (drug_name,))
     if results and results[0].get('smiles'):
         return results[0]['smiles']
@@ -11729,10 +11729,10 @@ def render_molecular_docking_section():
                                 FROM drugs d
                                 JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
                                 JOIN proteins p ON p.id = dpi.protein_id
-                                WHERE LOWER(d.name) = %s
+                                WHERE LOWER(d.name) = LOWER(%s)
                                 ORDER BY dpi.confidence_score DESC NULLS LAST
                                 LIMIT 1
-                            """, (selected_drug.lower(),))
+                            """, (selected_drug,))
                             
                             if target_result:
                                 target_protein = target_result[0]['gene_symbol']
@@ -12604,7 +12604,7 @@ def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context
     
     # Component 2: Molecular properties (max 0.25)
     try:
-        sql = "SELECT qed_score, lipinski_violations FROM drugs WHERE name = %s"
+        sql = "SELECT qed_score, lipinski_violations FROM drugs WHERE LOWER(name) = LOWER(%s)"
         results = execute_db(sql, (drug_name,))
         if results and results[0]:
             qed = results[0].get('qed_score')
@@ -12623,7 +12623,7 @@ def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context
     
     # Component 3: Clinical evidence (max 0.25)
     try:
-        sql = "SELECT fda_status, therapeutic_category FROM drugs WHERE name = %s"
+        sql = "SELECT fda_status, therapeutic_category FROM drugs WHERE LOWER(name) = LOWER(%s)"
         results = execute_db(sql, (drug_name,))
         if results and results[0]:
             fda_status = str(results[0].get('fda_status', '')).lower()
@@ -12653,7 +12653,7 @@ def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context
             JOIN drugs d ON d.id = dpi.drug_id
             JOIN proteins p ON p.id = dpi.protein_id
             JOIN protein_pathways pp ON pp.protein_id = p.id
-            WHERE d.name = %s
+            WHERE LOWER(d.name) = LOWER(%s)
         """
         results = execute_db(sql, (drug_name,))
         if results and results[0]:
@@ -12764,7 +12764,7 @@ def process_drug_discovery_query(query: str) -> list:
 
 def get_drug_mechanism(drug_name: str) -> str:
     """Get mechanism of action from database"""
-    sql = "SELECT mechanism_of_action FROM drugs WHERE name = %s LIMIT 1"
+    sql = "SELECT mechanism_of_action FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
     results = execute_db(sql, (drug_name,))
     if results and results[0].get('mechanism_of_action'):
         return results[0]['mechanism_of_action']
@@ -12772,7 +12772,7 @@ def get_drug_mechanism(drug_name: str) -> str:
 
 def get_drug_class(drug_name: str) -> str:
     """Get therapeutic class from database"""
-    sql = "SELECT drug_class FROM drugs WHERE name = %s LIMIT 1"
+    sql = "SELECT drug_class FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
     results = execute_db(sql, (drug_name,))
     if results and results[0].get('drug_class'):
         return results[0]['drug_class']
