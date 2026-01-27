@@ -97,7 +97,7 @@ def execute_query(sql, params=None, fetch=True):
 def get_drug_smiles(drug_name):
     """Helper: Get SMILES for a drug"""
     results = execute_query(
-        "SELECT smiles FROM drugs WHERE name = %s LIMIT 1",
+        "SELECT smiles FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1",
         (drug_name,)
     )
     return results[0]['smiles'] if results else None
@@ -105,7 +105,7 @@ def get_drug_smiles(drug_name):
 def get_protein_by_gene(gene_symbol):
     """Helper: Get protein by gene symbol"""
     results = execute_query(
-        "SELECT * FROM proteins WHERE gene_symbol = %s LIMIT 1",
+        "SELECT * FROM proteins WHERE LOWER(gene_symbol) = LOWER(%s) LIMIT 1",
         (gene_symbol,)
     )
     return results[0] if results else None
