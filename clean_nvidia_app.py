@@ -11948,13 +11948,26 @@ def render_molecular_docking_section():
                                     # Process Vina results
                                     binding_affinities = [p.get('binding_affinity', 0) for p in poses]
                                         
-                                    # Show docking results
+                                    # Show docking results with Groq description
                                     if binding_affinities:
                                         best_affinity = binding_affinities[0]
                                         st.markdown("---")
                                         st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                                        strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                        st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                                        
+                                        # Generate Groq-powered description
+                                        try:
+                                            from llm_powered_descriptions import generate_docking_description_with_llm
+                                            description = generate_docking_description_with_llm(
+                                                drug_name=selected_drug,
+                                                target_protein=target_protein,
+                                                binding_affinity=best_affinity,
+                                                disease_name=disease_name
+                                            )
+                                            st.markdown(description)
+                                        except Exception as desc_err:
+                                            logger.warning(f"Groq description failed: {desc_err}")
+                                            strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                            st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
                                 else:
                                     logger.warning(f"Docking failed for {selected_drug}")
                                     poses = []
@@ -11985,8 +11998,21 @@ def render_molecular_docking_section():
                                     best_affinity = binding_affinities[0]
                                     st.markdown("---")
                                     st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                                    strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                    st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                                    
+                                    # Generate Groq-powered description
+                                    try:
+                                        from llm_powered_descriptions import generate_docking_description_with_llm
+                                        description = generate_docking_description_with_llm(
+                                            drug_name=selected_drug,
+                                            target_protein=target_protein,
+                                            binding_affinity=best_affinity,
+                                            disease_name=disease_name
+                                        )
+                                        st.markdown(description)
+                                    except Exception as desc_err:
+                                        logger.warning(f"Groq description failed: {desc_err}")
+                                        strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                        st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
                             else:
                                 logger.warning(f"Docking failed for {selected_drug}")
                                 poses = []
@@ -12064,7 +12090,10 @@ def render_molecular_docking_section():
                                 
                                 # Try to load protein PDB
                                 pdb_loaded = False
+                                pdb_data = None
+                                
                                 try:
+                                    # Try cache first
                                     pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
                                     import glob
                                     pdb_files = glob.glob(pdb_path)
@@ -12072,11 +12101,35 @@ def render_molecular_docking_section():
                                     if pdb_files and os.path.exists(pdb_files[0]):
                                         with open(pdb_files[0], 'r') as f:
                                             pdb_data = f.read()
-                                        view.addModel(pdb_data, 'pdb')
-                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
-                                        pdb_loaded = True
+                                        logger.info(f"✅ Loaded {target_protein} from cache")
                                 except:
                                     pass
+                                
+                                # If not in cache, try RCSB PDB
+                                if not pdb_data:
+                                    try:
+                                        import requests
+                                        pdb_ids = {
+                                            'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
+                                            'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
+                                            'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK'
+                                        }
+                                        pdb_id = pdb_ids.get(target_protein.upper())
+                                        
+                                        if pdb_id:
+                                            pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+                                            resp = requests.get(pdb_url, timeout=10)
+                                            if resp.status_code == 200:
+                                                pdb_data = resp.text
+                                                logger.info(f"✅ Fetched {target_protein} from RCSB ({pdb_id})")
+                                    except Exception as fetch_err:
+                                        logger.warning(f"Could not fetch PDB: {fetch_err}")
+                                
+                                # Add protein if loaded
+                                if pdb_data:
+                                    view.addModel(pdb_data, 'pdb')
+                                    view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
+                                    pdb_loaded = True
                                 
                                 # Add drug ligand
                                 view.addModel(sdf_data, 'sdf')
