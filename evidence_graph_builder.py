@@ -13,14 +13,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# Load curated interactions
+# Load curated interactions and pathways
 _CURATED_INTERACTIONS = None
+_PATHWAYS = None
+_PROTEIN_PATHWAYS = None
 
-def load_curated_interactions():
-    """Load curated interactions from JSON"""
-    global _CURATED_INTERACTIONS
+def load_curated_data():
+    """Load curated interactions and pathway data from JSON"""
+    global _CURATED_INTERACTIONS, _PATHWAYS, _PROTEIN_PATHWAYS
+    
     if _CURATED_INTERACTIONS is not None:
         return
+    
     try:
         if os.path.exists('drug_interactions.json'):
             with open('drug_interactions.json', 'r') as f:
@@ -30,8 +34,28 @@ def load_curated_interactions():
             _CURATED_INTERACTIONS = {}
     except:
         _CURATED_INTERACTIONS = {}
+    
+    try:
+        if os.path.exists('pathways_COMPREHENSIVE.json'):
+            with open('pathways_COMPREHENSIVE.json', 'r') as f:
+                _PATHWAYS = json.load(f)
+            logger.info(f"✅ Loaded {len(_PATHWAYS)} pathways")
+        else:
+            _PATHWAYS = {}
+    except:
+        _PATHWAYS = {}
+    
+    try:
+        if os.path.exists('protein_pathways_COMPREHENSIVE.json'):
+            with open('protein_pathways_COMPREHENSIVE.json', 'r') as f:
+                _PROTEIN_PATHWAYS = json.load(f)
+            logger.info(f"✅ Loaded protein-pathway mappings")
+        else:
+            _PROTEIN_PATHWAYS = {}
+    except:
+        _PROTEIN_PATHWAYS = {}
 
-load_curated_interactions()
+load_curated_data()
 
 
 class EvidenceGraphBuilder:
@@ -189,24 +213,94 @@ class EvidenceGraphBuilder:
                 })
             
             logger.info(f"Added {len(protein_db_ids)} protein/gene nodes")
-            # ===== FIX: Map JSON gene_symbols to DB IDs =====
-for gene_symbol, protein_id in protein_db_ids.items():
-    if protein_id is None:
-        try:
-            db_res = execute_query(
-                "SELECT id FROM proteins WHERE gene_symbol = %s LIMIT 1",
-                (gene_symbol,)
-            )
-            if db_res:
-                protein_db_ids[gene_symbol] = db_res[0]['id']
-                logger.info(f"Mapped JSON gene {gene_symbol} to DB protein_id {db_res[0]['id']}")
+            
+            # 4. GET PROTEIN → PATHWAY CONNECTIONS FROM JSON
+            logger.info(f"Getting pathways for {len(protein_genes)} proteins from JSON...")
+            
+            pathway_nodes_added = {}
+            
+            if _PROTEIN_PATHWAYS and _PATHWAYS:
+                for gene_symbol in protein_genes.keys():
+                    # Get pathways for this protein from JSON
+                    pathway_ids = _PROTEIN_PATHWAYS.get(gene_symbol, [])
+                    
+                    for pathway_id in pathway_ids:
+                        pathway_info = _PATHWAYS.get(pathway_id)
+                        if not pathway_info:
+                            continue
+                        
+                        pathway_node_id = f"PATHWAY_{pathway_id}"
+                        
+                        # Add pathway node if not already added
+                        if pathway_node_id not in node_ids:
+                            nodes.append({
+                                'id': pathway_node_id,
+                                'label': 'Pathway',
+                                'name': pathway_info['name'],
+                                'display_name': f"{pathway_info['name']} ({pathway_info.get('category', '')})",
+                                'source': pathway_info.get('source', 'KEGG'),
+                                'category': pathway_info.get('category', ''),
+                                'type': 'pathway',
+                                'node_type': 'pathway'
+                            })
+                            node_ids.add(pathway_node_id)
+                            pathway_nodes_added[pathway_id] = pathway_info
+                        
+                        # Add protein → pathway edge
+                        protein_node_id = f"PROTEIN_{gene_symbol}"
+                        if protein_node_id in node_ids:
+                            edges.append({
+                                'source': protein_node_id,
+                                'target': pathway_node_id,
+                                'label': 'PARTICIPATES_IN',
+                                'confidence': 0.85,
+                                'edge_type': 'protein_pathway'
+                            })
+                
+                logger.info(f"Added {len(pathway_nodes_added)} pathway nodes from JSON")
+                
+                # 5. ADD DISEASE NODE (if not already added) AND CONNECT PATHWAYS
+                disease_node_id = f"DISEASE_{disease_name.replace(' ', '_').replace('-', '_').upper()}"
+                
+                if disease_node_id not in node_ids:
+                    nodes.append({
+                        'id': disease_node_id,
+                        'label': 'Disease',
+                        'name': disease_name,
+                        'type': 'disease',
+                        'node_type': 'disease'
+                    })
+                    node_ids.add(disease_node_id)
+                
+                # Connect pathways to disease using JSON pathway data
+                for pathway_id, pathway_info in pathway_nodes_added.items():
+                    pathway_diseases = pathway_info.get('diseases', [])
+                    relevance_score = pathway_info.get('relevance_score', 0.7)
+                    
+                    # Check if this pathway is relevant to the target disease
+                    disease_match = False
+                    for pd in pathway_diseases:
+                        if disease_name.lower() in pd.lower() or pd.lower() in disease_name.lower():
+                            disease_match = True
+                            break
+                    
+                    if disease_match:
+                        pathway_node_id = f"PATHWAY_{pathway_id}"
+                        edges.append({
+                            'source': pathway_node_id,
+                            'target': disease_node_id,
+                            'label': 'ASSOCIATED_WITH',
+                            'confidence': relevance_score,
+                            'edge_type': 'pathway_disease'
+                        })
+                
+                logger.info(f"Connected {sum(1 for e in edges if e.get('edge_type')=='pathway_disease')} pathways to disease")
             else:
-                logger.warning(f"No DB entry found for gene_symbol: {gene_symbol}")
-        except Exception as e:
-            logger.error(f"Error fetching DB ID for {gene_symbol}: {e}")
-
-            # 4. GET PROTEIN → PATHWAY CONNECTIONS
-            if protein_db_ids:
+                logger.warning("No pathway data loaded from JSON")
+                pathway_nodes_added = {}
+            
+            # If no JSON pathways, try database as fallback
+            if not pathway_nodes_added and protein_db_ids:
                 logger.info(f"Querying pathways for {len(protein_db_ids)} proteins...")
                 
                 pathway_rows = execute_query("""
@@ -335,21 +429,24 @@ for gene_symbol, protein_id in protein_db_ids.items():
             else:
                 logger.warning("No proteins found, cannot query pathways")
             
-            # 7. ADD DISEASE NODE
-            disease_display = disease_name
-            if disease_category:
-                disease_display += f" ({disease_category})"
+            # 7. ADD DISEASE NODE (if not already added)
+            disease_node_id = f"DISEASE_{disease_name.replace(' ', '_').replace('-', '_').upper()}"
             
-            nodes.append({
-                'id': disease_node_id,
-                'label': 'Disease',
-                'name': disease_name,
-                'display_name': disease_display,
-                'category': disease_category,
-                'type': 'disease',
-                'node_type': 'disease'
-            })
-            node_ids.add(disease_node_id)
+            if disease_node_id not in node_ids:
+                disease_display = disease_name
+                if disease_category:
+                    disease_display += f" ({disease_category})"
+                
+                nodes.append({
+                    'id': disease_node_id,
+                    'label': 'Disease',
+                    'name': disease_name,
+                    'display_name': disease_display,
+                    'category': disease_category,
+                    'type': 'disease',
+                    'node_type': 'disease'
+                })
+                node_ids.add(disease_node_id)
             
             # 8. FALLBACK: If no pathway-disease connections, connect proteins directly
             has_pathway_disease_links = any(
