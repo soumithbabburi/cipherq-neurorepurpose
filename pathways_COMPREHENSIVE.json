@@ -1,0 +1,821 @@
+{
+  "PPAR_SIGNALING": {
+    "name": "PPAR signaling pathway",
+    "category": "Metabolic",
+    "description": "Peroxisome proliferator-activated receptors regulate lipid and glucose metabolism",
+    "proteins": ["PPARG", "PPARA", "PPARD", "RXRA", "RXRB", "FABP1", "FABP2", "CPT1A", "CPT2", "ACOX1"],
+    "diseases": ["Diabetes", "Metabolic Syndrome", "Alzheimer's Disease", "Cardiovascular Disease", "Obesity"],
+    "source": "KEGG",
+    "relevance_score": 0.95
+  },
+  "INSULIN_SIGNALING": {
+    "name": "Insulin signaling pathway",
+    "category": "Metabolic",
+    "description": "Regulates glucose uptake and metabolism",
+    "proteins": ["INSR", "IRS1", "IRS2", "PIK3CA", "PIK3R1", "AKT1", "AKT2", "AKT3", "GSK3B", "MAPK1", "PRKAA1", "PRKAA2", "FOXO1", "MTOR", "GYS1"],
+    "diseases": ["Diabetes", "Metabolic Syndrome", "Alzheimer's Disease", "Obesity"],
+    "source": "KEGG",
+    "relevance_score": 0.95
+  },
+  "AMPK_SIGNALING": {
+    "name": "AMPK signaling pathway",
+    "category": "Metabolic",
+    "description": "Energy sensor regulating cellular metabolism",
+    "proteins": ["PRKAA1", "PRKAA2", "PRKAB1", "PRKAB2", "PRKAG1", "PRKAG2", "PRKAG3", "PPARGC1A", "SIRT1", "MTOR"],
+    "diseases": ["Diabetes", "Metabolic Syndrome", "Cancer", "Neurodegeneration", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "INCRETIN_PATHWAY": {
+    "name": "Incretin signaling pathway",
+    "category": "Metabolic",
+    "description": "GLP-1 and GIP mediated glucose regulation",
+    "proteins": ["GLP1R", "DPP4", "GIPR", "GCG", "PCSK1", "PCSK2"],
+    "diseases": ["Diabetes", "Obesity", "Metabolic Syndrome"],
+    "source": "KEGG",
+    "relevance_score": 0.92
+  },
+  "GLUCOSE_TRANSPORT": {
+    "name": "Glucose transport and metabolism",
+    "category": "Metabolic",
+    "description": "Cellular glucose uptake and transport",
+    "proteins": ["SLC5A2", "SLC5A1", "SLC2A1", "SLC2A2", "SLC2A4", "HK1", "HK2", "GCK", "G6PC"],
+    "diseases": ["Diabetes", "Metabolic Syndrome"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "LIPID_METABOLISM": {
+    "name": "Lipid metabolism pathway",
+    "category": "Metabolic",
+    "description": "Fatty acid synthesis and oxidation",
+    "proteins": ["PPARG", "PPARA", "PPARD", "FASN", "ACACA", "CPT1A", "CPT2", "ACOX1", "FABP4"],
+    "diseases": ["Obesity", "Metabolic Syndrome", "Cardiovascular Disease", "Diabetes"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "AMYLOID_PROCESSING": {
+    "name": "Amyloid precursor protein processing",
+    "category": "Neurological",
+    "description": "Processing of APP leading to beta-amyloid production",
+    "proteins": ["APP", "BACE1", "PSEN1", "PSEN2", "ADAM10", "ADAM17", "APH1A", "NCSTN"],
+    "diseases": ["Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.95
+  },
+  "TAU_PHOSPHORYLATION": {
+    "name": "Tau protein phosphorylation pathway",
+    "category": "Neurological",
+    "description": "Regulation of tau protein and neurofibrillary tangles",
+    "proteins": ["MAPT", "GSK3B", "CDK5", "MAPK1", "MARK1", "MARK2", "PPP2CA", "PIN1"],
+    "diseases": ["Alzheimer's Disease", "Frontotemporal Dementia", "Parkinson's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.95
+  },
+  "CHOLINERGIC_SIGNALING": {
+    "name": "Cholinergic neurotransmission",
+    "category": "Neurological",
+    "description": "Acetylcholine synthesis, release, and degradation",
+    "proteins": ["ACHE", "BCHE", "CHAT", "CHRM1", "CHRM2", "CHRM3", "CHRNA7", "CHRNA4", "SLC5A7"],
+    "diseases": ["Alzheimer's Disease", "Cognitive Impairment", "Myasthenia Gravis"],
+    "source": "KEGG",
+    "relevance_score": 0.92
+  },
+  "NEUROINFLAMMATION": {
+    "name": "Neuroinflammation pathway",
+    "category": "Neurological",
+    "description": "Inflammatory response in central nervous system",
+    "proteins": ["TNF", "IL1B", "IL6", "NFKB1", "PPARG", "TREM2", "NLRP3", "TLR4", "CD33", "APOE"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Multiple Sclerosis", "Stroke"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "OXIDATIVE_STRESS": {
+    "name": "Oxidative stress response",
+    "category": "Neurological",
+    "description": "Cellular response to reactive oxygen species",
+    "proteins": ["SOD1", "SOD2", "CAT", "GPX1", "NFE2L2", "HMOX1", "NQO1", "GCLC"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Aging", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "SYNAPTIC_PLASTICITY": {
+    "name": "Synaptic plasticity and LTP",
+    "category": "Neurological",
+    "description": "Long-term potentiation and memory formation",
+    "proteins": ["GRIN1", "GRIN2A", "GRIN2B", "CAMK2A", "CAMK2B", "CREB1", "BDNF", "NTRK2"],
+    "diseases": ["Alzheimer's Disease", "Cognitive Impairment", "Learning Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "MITOCHONDRIAL_DYSFUNCTION": {
+    "name": "Mitochondrial function and energy",
+    "category": "Metabolic",
+    "description": "Mitochondrial respiration and ATP production",
+    "proteins": ["MT-CO1", "MT-CO2", "MT-CYB", "NDUFS1", "SDHA", "COX4I1", "ATP5A1"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Diabetes", "Aging"],
+    "source": "KEGG",
+    "relevance_score": 0.87
+  },
+  "AUTOPHAGY": {
+    "name": "Autophagy pathway",
+    "category": "Cellular",
+    "description": "Cellular self-digestion and protein clearance",
+    "proteins": ["MTOR", "ATG5", "ATG7", "BECN1", "MAP1LC3A", "SQSTM1", "ULK1", "TFEB"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Cancer", "Aging"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "CHOLESTEROL_BIOSYNTHESIS": {
+    "name": "Cholesterol biosynthesis pathway",
+    "category": "Metabolic",
+    "description": "Synthesis of cholesterol from acetyl-CoA",
+    "proteins": ["HMGCR", "MVK", "PMVK", "MVD", "FDPS", "FDFT1", "SQLE", "DHCR7", "DHCR24"],
+    "diseases": ["Cardiovascular Disease", "Hypercholesterolemia", "Atherosclerosis", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.93
+  },
+  "CHOLESTEROL_TRANSPORT": {
+    "name": "Cholesterol transport and metabolism",
+    "category": "Metabolic",
+    "description": "Cellular cholesterol uptake and efflux",
+    "proteins": ["APOE", "ABCA1", "ABCG1", "LDLR", "LRP1", "SCARB1", "NPC1", "NPC2"],
+    "diseases": ["Alzheimer's Disease", "Cardiovascular Disease", "Atherosclerosis"],
+    "source": "KEGG",
+    "relevance_score": 0.92
+  },
+  "RENIN_ANGIOTENSIN": {
+    "name": "Renin-angiotensin system",
+    "category": "Cardiovascular",
+    "description": "Blood pressure and fluid balance regulation",
+    "proteins": ["ACE", "ACE2", "AGTR1", "AGTR2", "REN", "AGT", "CMA1"],
+    "diseases": ["Hypertension", "Heart Failure", "Kidney Disease", "Stroke"],
+    "source": "KEGG",
+    "relevance_score": 0.95
+  },
+  "INFLAMMATION": {
+    "name": "Inflammatory response pathway",
+    "category": "Immune",
+    "description": "Cellular inflammatory signaling",
+    "proteins": ["PTGS2", "PTGS1", "TNF", "IL1B", "IL6", "NFKB1", "NFKB2", "RELA", "IKBKB", "TLR4"],
+    "diseases": ["Arthritis", "Inflammatory Diseases", "Alzheimer's Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "APOPTOSIS": {
+    "name": "Apoptosis pathway",
+    "category": "Cellular",
+    "description": "Programmed cell death signaling",
+    "proteins": ["TP53", "BAX", "BCL2", "CASP3", "CASP8", "CASP9", "BID", "CYCS", "APAF1", "FAS", "FADD"],
+    "diseases": ["Cancer", "Neurodegeneration", "Alzheimer's Disease", "Stroke"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "MAPK_SIGNALING": {
+    "name": "MAPK/ERK signaling pathway",
+    "category": "Signaling",
+    "description": "Mitogen-activated protein kinase cascade",
+    "proteins": ["MAPK1", "MAPK3", "MAPK8", "MAPK14", "RAF1", "MAP2K1", "MAP2K2", "HRAS", "KRAS"],
+    "diseases": ["Cancer", "Inflammation", "Diabetes", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "PI3K_AKT": {
+    "name": "PI3K-Akt signaling pathway",
+    "category": "Signaling",
+    "description": "Cell survival and growth signaling",
+    "proteins": ["PIK3CA", "PIK3CB", "PIK3R1", "AKT1", "AKT2", "MTOR", "GSK3B", "FOXO1", "FOXO3", "MDM2", "CDKN1A"],
+    "diseases": ["Cancer", "Diabetes", "Alzheimer's Disease", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "WNT_SIGNALING": {
+    "name": "Wnt signaling pathway",
+    "category": "Signaling",
+    "description": "Developmental and cellular differentiation pathway",
+    "proteins": ["WNT1", "WNT3A", "CTNNB1", "GSK3B", "APC", "AXIN1", "DVL1", "FZD1"],
+    "diseases": ["Cancer", "Alzheimer's Disease", "Developmental Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "NOTCH_SIGNALING": {
+    "name": "Notch signaling pathway",
+    "category": "Signaling",
+    "description": "Cell fate determination and differentiation",
+    "proteins": ["NOTCH1", "NOTCH2", "NOTCH3", "JAG1", "DLL1", "PSEN1", "PSEN2", "ADAM10"],
+    "diseases": ["Cancer", "Alzheimer's Disease", "Developmental Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "HEDGEHOG_SIGNALING": {
+    "name": "Hedgehog signaling pathway",
+    "category": "Signaling",
+    "description": "Developmental patterning and tissue repair",
+    "proteins": ["SHH", "IHH", "PTCH1", "SMO", "GLI1", "GLI2", "GLI3"],
+    "diseases": ["Cancer", "Developmental Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.78
+  },
+  "JAK_STAT": {
+    "name": "JAK-STAT signaling pathway",
+    "category": "Signaling",
+    "description": "Cytokine signaling and immune response",
+    "proteins": ["JAK1", "JAK2", "JAK3", "TYK2", "STAT1", "STAT3", "STAT5A", "STAT5B"],
+    "diseases": ["Cancer", "Autoimmune Diseases", "Inflammation"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "TGFB_SIGNALING": {
+    "name": "TGF-beta signaling pathway",
+    "category": "Signaling",
+    "description": "Growth factor signaling and cell regulation",
+    "proteins": ["TGFB1", "TGFBR1", "TGFBR2", "SMAD2", "SMAD3", "SMAD4", "SMAD7"],
+    "diseases": ["Cancer", "Fibrosis", "Inflammation"],
+    "source": "KEGG",
+    "relevance_score": 0.83
+  },
+  "CALCIUM_SIGNALING": {
+    "name": "Calcium signaling pathway",
+    "category": "Signaling",
+    "description": "Calcium-mediated cellular signaling",
+    "proteins": ["CALM1", "CAMK2A", "CAMK2B", "CAMK4", "CACNA1C", "RYR1", "RYR2", "ATP2A2"],
+    "diseases": ["Cardiovascular Disease", "Neurological Disorders", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "DOPAMINERGIC_SIGNALING": {
+    "name": "Dopaminergic neurotransmission",
+    "category": "Neurological",
+    "description": "Dopamine synthesis, release, and signaling",
+    "proteins": ["DRD1", "DRD2", "DRD3", "DRD4", "DRD5", "TH", "DDC", "SLC6A3", "COMT", "MAO"],
+    "diseases": ["Parkinson's Disease", "Schizophrenia", "ADHD", "Addiction"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "SEROTONERGIC_SIGNALING": {
+    "name": "Serotonergic neurotransmission",
+    "category": "Neurological",
+    "description": "Serotonin synthesis and signaling",
+    "proteins": ["HTR1A", "HTR2A", "HTR3A", "TPH1", "TPH2", "SLC6A4", "MAOA", "MAOB"],
+    "diseases": ["Depression", "Anxiety", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "GABAERGIC_SIGNALING": {
+    "name": "GABAergic neurotransmission",
+    "category": "Neurological",
+    "description": "Inhibitory neurotransmission via GABA",
+    "proteins": ["GABRA1", "GABRA2", "GABRA5", "GABRB2", "GAD1", "GAD2", "SLC6A1"],
+    "diseases": ["Epilepsy", "Anxiety", "Alzheimer's Disease", "Sleep Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "GLUTAMATERGIC_SIGNALING": {
+    "name": "Glutamatergic neurotransmission",
+    "category": "Neurological",
+    "description": "Excitatory neurotransmission via glutamate",
+    "proteins": ["GRIN1", "GRIN2A", "GRIN2B", "GRIA1", "GRIA2", "GRM1", "GRM5", "SLC1A1", "SLC1A2"],
+    "diseases": ["Alzheimer's Disease", "Epilepsy", "Stroke", "Schizophrenia"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "BDNF_SIGNALING": {
+    "name": "BDNF-TrkB signaling pathway",
+    "category": "Neurological",
+    "description": "Brain-derived neurotrophic factor and neuroplasticity",
+    "proteins": ["BDNF", "NTRK2", "CREB1", "AKT1", "MAPK1", "CAMK2A"],
+    "diseases": ["Alzheimer's Disease", "Depression", "Cognitive Impairment"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "NEUROTROPHIN_SIGNALING": {
+    "name": "Neurotrophin signaling pathway",
+    "category": "Neurological",
+    "description": "Nerve growth factor signaling",
+    "proteins": ["NGF", "BDNF", "NTF3", "NTRK1", "NTRK2", "NTRK3", "NGFR"],
+    "diseases": ["Alzheimer's Disease", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.87
+  },
+  "CELL_CYCLE": {
+    "name": "Cell cycle regulation",
+    "category": "Cellular",
+    "description": "Cell division and proliferation control",
+    "proteins": ["CDK1", "CDK2", "CDK4", "CDK6", "CCND1", "CCNE1", "TP53", "RB1", "E2F1"],
+    "diseases": ["Cancer", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.83
+  },
+  "DNA_REPAIR": {
+    "name": "DNA damage repair pathway",
+    "category": "Cellular",
+    "description": "DNA damage detection and repair",
+    "proteins": ["TP53", "ATM", "ATR", "BRCA1", "BRCA2", "PARP1", "XRCC1", "RAD51"],
+    "diseases": ["Cancer", "Aging", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.84
+  },
+  "UBIQUITIN_PROTEASOME": {
+    "name": "Ubiquitin-proteasome system",
+    "category": "Cellular",
+    "description": "Protein degradation and quality control",
+    "proteins": ["UBE2D1", "UBB", "PSMA1", "PSMA2", "PSMB5", "UCHL1", "PARK2"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.86
+  },
+  "ER_STRESS": {
+    "name": "Endoplasmic reticulum stress response",
+    "category": "Cellular",
+    "description": "Unfolded protein response",
+    "proteins": ["EIF2AK3", "ERN1", "ATF6", "XBP1", "ATF4", "DDIT3", "HSPA5"],
+    "diseases": ["Alzheimer's Disease", "Diabetes", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "P53_PATHWAY": {
+    "name": "p53 signaling pathway",
+    "category": "Cellular",
+    "description": "Tumor suppressor and DNA damage response",
+    "proteins": ["TP53", "MDM2", "CDKN1A", "BAX", "PUMA", "NOXA", "GADD45A"],
+    "diseases": ["Cancer", "Aging", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.87
+  },
+  "NFKB_SIGNALING": {
+    "name": "NF-κB signaling pathway",
+    "category": "Immune",
+    "description": "Inflammatory and immune response regulation",
+    "proteins": ["NFKB1", "NFKB2", "RELA", "IKBKA", "IKBKB", "IKBKG", "TNF", "IL1B"],
+    "diseases": ["Inflammation", "Cancer", "Alzheimer's Disease", "Autoimmune Diseases"],
+    "source": "KEGG",
+    "relevance_score": 0.90
+  },
+  "COMPLEMENT_CASCADE": {
+    "name": "Complement system",
+    "category": "Immune",
+    "description": "Immune system protein cascade",
+    "proteins": ["C1QA", "C1QB", "C1QC", "C3", "C4A", "C5", "CFH", "CR1"],
+    "diseases": ["Alzheimer's Disease", "Autoimmune Diseases", "Infection"],
+    "source": "KEGG",
+    "relevance_score": 0.83
+  },
+  "COAGULATION_CASCADE": {
+    "name": "Blood coagulation pathway",
+    "category": "Cardiovascular",
+    "description": "Blood clotting and hemostasis",
+    "proteins": ["F2", "F7", "F9", "F10", "VWF", "SERPINE1", "PLAU", "PLG"],
+    "diseases": ["Stroke", "Thrombosis", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "CYTOCHROME_P450": {
+    "name": "Cytochrome P450 drug metabolism",
+    "category": "Metabolic",
+    "description": "Drug and xenobiotic metabolism",
+    "proteins": ["CYP3A4", "CYP2D6", "CYP2C9", "CYP2C19", "CYP1A2", "CYP2E1"],
+    "diseases": ["Drug Toxicity", "Drug Resistance"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "ABC_TRANSPORTERS": {
+    "name": "ABC transporter family",
+    "category": "Transport",
+    "description": "Drug efflux and multidrug resistance",
+    "proteins": ["ABCB1", "ABCC1", "ABCG2", "ABCC8", "ABCA1"],
+    "diseases": ["Cancer", "Drug Resistance", "Diabetes"],
+    "source": "KEGG",
+    "relevance_score": 0.78
+  },
+  "GLYCOLYSIS": {
+    "name": "Glycolysis and gluconeogenesis",
+    "category": "Metabolic",
+    "description": "Glucose breakdown for energy production",
+    "proteins": ["HK1", "HK2", "GCK", "PFKM", "PKM", "LDHA", "G6PC", "FBP1"],
+    "diseases": ["Diabetes", "Cancer", "Metabolic Syndrome"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "TCA_CYCLE": {
+    "name": "Citric acid cycle",
+    "category": "Metabolic",
+    "description": "Central metabolic pathway for energy production",
+    "proteins": ["CS", "ACO2", "IDH2", "OGDH", "SUCLA2", "SDHA", "FH", "MDH2"],
+    "diseases": ["Mitochondrial Diseases", "Cancer", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "OXIDATIVE_PHOSPHORYLATION": {
+    "name": "Oxidative phosphorylation",
+    "category": "Metabolic",
+    "description": "ATP synthesis via electron transport chain",
+    "proteins": ["MT-CO1", "MT-CO2", "MT-CYB", "NDUFS1", "SDHA", "COX4I1", "ATP5A1", "ATP5B"],
+    "diseases": ["Mitochondrial Diseases", "Alzheimer's Disease", "Parkinson's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "FATTY_ACID_METABOLISM": {
+    "name": "Fatty acid metabolism",
+    "category": "Metabolic",
+    "description": "Fatty acid synthesis and beta-oxidation",
+    "proteins": ["FASN", "ACACA", "CPT1A", "CPT2", "ACOX1", "HADHA", "ACSL1"],
+    "diseases": ["Obesity", "Diabetes", "Cardiovascular Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.83
+  },
+  "AMINO_ACID_METABOLISM": {
+    "name": "Amino acid metabolism",
+    "category": "Metabolic",
+    "description": "Amino acid synthesis and catabolism",
+    "proteins": ["GOT1", "GOT2", "BCAT1", "BCKDHA", "GLS", "GLUL"],
+    "diseases": ["Metabolic Disorders", "Cancer", "Neurological Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "VEGF_SIGNALING": {
+    "name": "VEGF signaling pathway",
+    "category": "Signaling",
+    "description": "Vascular endothelial growth factor signaling",
+    "proteins": ["VEGFA", "KDR", "FLT1", "NRP1", "PIK3CA", "AKT1", "MAPK1"],
+    "diseases": ["Cancer", "Cardiovascular Disease", "Diabetic Retinopathy"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "HYPOXIA_RESPONSE": {
+    "name": "Hypoxia response pathway",
+    "category": "Signaling",
+    "description": "Cellular adaptation to low oxygen",
+    "proteins": ["HIF1A", "EPAS1", "VHL", "VEGFA", "EPO", "LDHA"],
+    "diseases": ["Cancer", "Stroke", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "mTOR_SIGNALING": {
+    "name": "mTOR signaling pathway",
+    "category": "Signaling",
+    "description": "Nutrient sensing and protein synthesis regulation",
+    "proteins": ["MTOR", "RPTOR", "RICTOR", "AKT1", "TSC1", "TSC2", "RHEB", "RPS6KB1"],
+    "diseases": ["Cancer", "Diabetes", "Aging", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "CERAMIDE_SIGNALING": {
+    "name": "Ceramide and sphingolipid metabolism",
+    "category": "Metabolic",
+    "description": "Sphingolipid-mediated cell signaling",
+    "proteins": ["SMPD1", "ASAH1", "CERS1", "CERS2", "SGMS1", "SPHK1"],
+    "diseases": ["Alzheimer's Disease", "Diabetes", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "GLUCAGON_SIGNALING": {
+    "name": "Glucagon signaling pathway",
+    "category": "Metabolic",
+    "description": "Counter-regulatory hormone to insulin",
+    "proteins": ["GCGR", "GCG", "GNAS", "PRKACA", "CREB1", "G6PC", "PYGL"],
+    "diseases": ["Diabetes", "Hypoglycemia"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "THYROID_HORMONE": {
+    "name": "Thyroid hormone signaling",
+    "category": "Endocrine",
+    "description": "Thyroid hormone receptor signaling",
+    "proteins": ["THRA", "THRB", "DIO1", "DIO2", "DIO3"],
+    "diseases": ["Metabolic Disorders", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.77
+  },
+  "STEROID_HORMONE": {
+    "name": "Steroid hormone biosynthesis",
+    "category": "Endocrine",
+    "description": "Synthesis of steroid hormones",
+    "proteins": ["CYP11A1", "HSD3B1", "CYP17A1", "CYP19A1", "ESR1", "ESR2", "AR", "PGR"],
+    "diseases": ["Hormone-Dependent Cancers", "Metabolic Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.78
+  },
+  "CIRCADIAN_RHYTHM": {
+    "name": "Circadian rhythm pathway",
+    "category": "Regulatory",
+    "description": "Biological clock regulation",
+    "proteins": ["CLOCK", "ARNTL", "PER1", "PER2", "CRY1", "CRY2", "NR1D1"],
+    "diseases": ["Sleep Disorders", "Metabolic Syndrome", "Depression"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "CELL_ADHESION": {
+    "name": "Cell adhesion molecules",
+    "category": "Cellular",
+    "description": "Cell-cell and cell-matrix interactions",
+    "proteins": ["ICAM1", "VCAM1", "PECAM1", "CDH1", "CDH2", "ITGB1", "ITGA5"],
+    "diseases": ["Cancer", "Inflammation", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "EXTRACELLULAR_MATRIX": {
+    "name": "ECM-receptor interaction",
+    "category": "Cellular",
+    "description": "Extracellular matrix signaling",
+    "proteins": ["COL1A1", "COL3A1", "COL4A1", "FN1", "ITGB1", "ITGA1", "LAMA1"],
+    "diseases": ["Fibrosis", "Cancer", "Cardiovascular Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.76
+  },
+  "TIGHT_JUNCTION": {
+    "name": "Tight junction pathway",
+    "category": "Cellular",
+    "description": "Cell barrier and permeability regulation",
+    "proteins": ["TJP1", "TJP2", "OCLN", "CLDN1", "CLDN5", "F11R"],
+    "diseases": ["BBB Dysfunction", "Inflammatory Diseases", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "ADHERENS_JUNCTION": {
+    "name": "Adherens junction pathway",
+    "category": "Cellular",
+    "description": "Cell-cell adhesion and signaling",
+    "proteins": ["CDH1", "CDH2", "CTNNB1", "CTNNA1", "CTNND1", "ACTB"],
+    "diseases": ["Cancer", "Developmental Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.74
+  },
+  "CYTOSKELETON_REGULATION": {
+    "name": "Regulation of actin cytoskeleton",
+    "category": "Cellular",
+    "description": "Cell shape and movement regulation",
+    "proteins": ["ACTB", "ACTG1", "RHOA", "RAC1", "CDC42", "PAK1", "ROCK1"],
+    "diseases": ["Cancer", "Neuronal Migration Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.73
+  },
+  "FOCAL_ADHESION": {
+    "name": "Focal adhesion pathway",
+    "category": "Cellular",
+    "description": "Cell-matrix adhesion and signaling",
+    "proteins": ["PTK2", "SRC", "PXN", "VCL", "ITGB1", "ITGA5", "PAK1"],
+    "diseases": ["Cancer", "Fibrosis"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "LYSOSOME": {
+    "name": "Lysosomal pathway",
+    "category": "Cellular",
+    "description": "Lysosomal degradation and autophagy",
+    "proteins": ["CTSD", "LAMP1", "LAMP2", "ATP6V1A", "GBA", "HEXA", "GM2A"],
+    "diseases": ["Lysosomal Storage Diseases", "Alzheimer's Disease", "Parkinson's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.84
+  },
+  "PEROXISOME": {
+    "name": "Peroxisome pathway",
+    "category": "Metabolic",
+    "description": "Peroxisomal fatty acid oxidation",
+    "proteins": ["PEX5", "PEX7", "ACOX1", "CAT", "ABCD1"],
+    "diseases": ["Peroxisomal Disorders", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.72
+  },
+  "IMMUNE_RESPONSE": {
+    "name": "Innate immune response",
+    "category": "Immune",
+    "description": "Pathogen recognition and immune activation",
+    "proteins": ["TLR4", "TLR2", "MYD88", "TRAF6", "NFKB1", "IL1B", "TNF"],
+    "diseases": ["Infection", "Inflammation", "Sepsis"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "T_CELL_RECEPTOR": {
+    "name": "T cell receptor signaling",
+    "category": "Immune",
+    "description": "T cell activation and immune response",
+    "proteins": ["CD3E", "CD3D", "ZAP70", "LCK", "NFKB1", "NFAT5"],
+    "diseases": ["Autoimmune Diseases", "Immunodeficiency"],
+    "source": "KEGG",
+    "relevance_score": 0.78
+  },
+  "B_CELL_RECEPTOR": {
+    "name": "B cell receptor signaling",
+    "category": "Immune",
+    "description": "B cell activation and antibody production",
+    "proteins": ["CD19", "CD79A", "CD79B", "BTK", "NFKB1"],
+    "diseases": ["Autoimmune Diseases", "Lymphoma"],
+    "source": "KEGG",
+    "relevance_score": 0.77
+  },
+  "INTERFERON_SIGNALING": {
+    "name": "Interferon signaling pathway",
+    "category": "Immune",
+    "description": "Antiviral and immune response",
+    "proteins": ["IFNA1", "IFNB1", "IFNG", "JAK1", "STAT1", "IRF9"],
+    "diseases": ["Viral Infections", "Autoimmune Diseases"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "CHEMOKINE_SIGNALING": {
+    "name": "Chemokine signaling pathway",
+    "category": "Immune",
+    "description": "Chemotactic cytokine signaling",
+    "proteins": ["CCL2", "CCL5", "CXCL12", "CXCR4", "CCR2", "CCR5"],
+    "diseases": ["Inflammation", "Cancer", "HIV"],
+    "source": "KEGG",
+    "relevance_score": 0.79
+  },
+  "SIRT1_PATHWAY": {
+    "name": "Sirtuin signaling pathway",
+    "category": "Metabolic",
+    "description": "NAD-dependent deacetylase and longevity",
+    "proteins": ["SIRT1", "SIRT3", "SIRT6", "PPARGC1A", "FOXO1", "FOXO3", "TP53"],
+    "diseases": ["Aging", "Alzheimer's Disease", "Diabetes", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.87
+  },
+  "LONGEVITY_PATHWAY": {
+    "name": "Longevity regulating pathway",
+    "category": "Aging",
+    "description": "Mechanisms of lifespan extension",
+    "proteins": ["SIRT1", "FOXO1", "FOXO3", "MTOR", "IGF1", "IGF1R", "PRKAA1"],
+    "diseases": ["Aging", "Age-Related Diseases", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.85
+  },
+  "PROTEIN_FOLDING": {
+    "name": "Protein processing and folding",
+    "category": "Cellular",
+    "description": "Chaperone-mediated protein folding",
+    "proteins": ["HSP90AA1", "HSPA1A", "HSPA5", "HSP90AB1", "DNAJA1", "DNAJB1"],
+    "diseases": ["Neurodegenerative Diseases", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "RNA_PROCESSING": {
+    "name": "RNA splicing and processing",
+    "category": "Molecular",
+    "description": "mRNA processing and splicing",
+    "proteins": ["SNRPA", "SNRPB", "SF3B1", "U2AF1", "SRSF1", "HNRNPA1"],
+    "diseases": ["Cancer", "Neurological Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.72
+  },
+  "CHROMATIN_REMODELING": {
+    "name": "Chromatin remodeling",
+    "category": "Epigenetic",
+    "description": "Histone modification and gene regulation",
+    "proteins": ["HDAC1", "HDAC2", "KAT2A", "KAT2B", "EZH2", "SUZ12", "DNMT1"],
+    "diseases": ["Cancer", "Neurological Disorders", "Aging"],
+    "source": "KEGG",
+    "relevance_score": 0.78
+  },
+  "METHYLATION": {
+    "name": "DNA and histone methylation",
+    "category": "Epigenetic",
+    "description": "Epigenetic gene regulation",
+    "proteins": ["DNMT1", "DNMT3A", "DNMT3B", "TET1", "TET2", "EZH2"],
+    "diseases": ["Cancer", "Alzheimer's Disease", "Aging"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "MICROGLIAL_ACTIVATION": {
+    "name": "Microglial activation pathway",
+    "category": "Neurological",
+    "description": "Brain immune cell activation",
+    "proteins": ["TREM2", "CD33", "TLR4", "TNF", "IL1B", "IL6", "NLRP3", "TYROBP"],
+    "diseases": ["Alzheimer's Disease", "Parkinson's Disease", "Neuroinflammation"],
+    "source": "Custom",
+    "relevance_score": 0.92
+  },
+  "BLOOD_BRAIN_BARRIER": {
+    "name": "Blood-brain barrier integrity",
+    "category": "Neurological",
+    "description": "BBB maintenance and transport",
+    "proteins": ["TJP1", "OCLN", "CLDN5", "ABCB1", "ABCG2", "SLC2A1"],
+    "diseases": ["Alzheimer's Disease", "Stroke", "CNS Infections"],
+    "source": "Custom",
+    "relevance_score": 0.85
+  },
+  "IRON_METABOLISM": {
+    "name": "Iron metabolism pathway",
+    "category": "Metabolic",
+    "description": "Iron homeostasis and transport",
+    "proteins": ["TF", "TFRC", "FTH1", "FTL", "HFE", "SLC40A1"],
+    "diseases": ["Anemia", "Hemochromatosis", "Neurodegeneration"],
+    "source": "KEGG",
+    "relevance_score": 0.76
+  },
+  "COPPER_METABOLISM": {
+    "name": "Copper metabolism pathway",
+    "category": "Metabolic",
+    "description": "Copper homeostasis",
+    "proteins": ["ATP7A", "ATP7B", "CP", "MT1A"],
+    "diseases": ["Wilson's Disease", "Menkes Disease", "Alzheimer's Disease"],
+    "source": "KEGG",
+    "relevance_score": 0.74
+  },
+  "NITRIC_OXIDE": {
+    "name": "Nitric oxide signaling",
+    "category": "Signaling",
+    "description": "NO-mediated vasodilation and signaling",
+    "proteins": ["NOS1", "NOS2", "NOS3", "GUCY1A1", "PRKG1"],
+    "diseases": ["Cardiovascular Disease", "Hypertension", "Erectile Dysfunction"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "ENDOCANNABINOID": {
+    "name": "Endocannabinoid system",
+    "category": "Neurological",
+    "description": "Cannabinoid receptor signaling",
+    "proteins": ["CNR1", "CNR2", "FAAH", "MGLL", "DAGLA"],
+    "diseases": ["Pain", "Anxiety", "Inflammation", "Neurodegenerative Diseases"],
+    "source": "KEGG",
+    "relevance_score": 0.79
+  },
+  "OPIOID_SIGNALING": {
+    "name": "Opioid receptor signaling",
+    "category": "Neurological",
+    "description": "Endogenous opioid system",
+    "proteins": ["OPRM1", "OPRD1", "OPRK1", "POMC", "PENK", "PDYN"],
+    "diseases": ["Pain", "Addiction", "Depression"],
+    "source": "KEGG",
+    "relevance_score": 0.80
+  },
+  "HISTAMINE_SIGNALING": {
+    "name": "Histamine receptor signaling",
+    "category": "Immune",
+    "description": "Histamine-mediated signaling",
+    "proteins": ["HRH1", "HRH2", "HRH3", "HRH4", "HDC"],
+    "diseases": ["Allergies", "Inflammation", "Ulcers"],
+    "source": "KEGG",
+    "relevance_score": 0.75
+  },
+  "PROSTAGLANDIN_SYNTHESIS": {
+    "name": "Prostaglandin biosynthesis",
+    "category": "Immune",
+    "description": "Eicosanoid synthesis and inflammation",
+    "proteins": ["PTGS1", "PTGS2", "PTGES", "PTGDS", "TBXAS1", "PTGIS"],
+    "diseases": ["Inflammation", "Pain", "Cardiovascular Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.88
+  },
+  "LEUKOCYTE_MIGRATION": {
+    "name": "Leukocyte transendothelial migration",
+    "category": "Immune",
+    "description": "Immune cell trafficking",
+    "proteins": ["ICAM1", "VCAM1", "PECAM1", "ITGB2", "ITGAL", "RAC1"],
+    "diseases": ["Inflammation", "Autoimmune Diseases"],
+    "source": "KEGG",
+    "relevance_score": 0.77
+  },
+  "ANTIGEN_PRESENTATION": {
+    "name": "Antigen processing and presentation",
+    "category": "Immune",
+    "description": "MHC-mediated antigen presentation",
+    "proteins": ["HLA-A", "HLA-B", "HLA-C", "TAP1", "TAP2", "B2M"],
+    "diseases": ["Autoimmune Diseases", "Transplant Rejection", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.79
+  },
+  "GLYCEROPHOSPHOLIPID": {
+    "name": "Glycerophospholipid metabolism",
+    "category": "Metabolic",
+    "description": "Membrane lipid metabolism",
+    "proteins": ["CHKA", "PCYT1A", "PLA2G4A", "LPCAT1", "DGAT1"],
+    "diseases": ["Metabolic Disorders", "Neurological Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.73
+  },
+  "SPHINGOLIPID_METABOLISM": {
+    "name": "Sphingolipid metabolism",
+    "category": "Metabolic",
+    "description": "Sphingolipid synthesis and degradation",
+    "proteins": ["SMPD1", "SGMS1", "CERS1", "ASAH1", "SPHK1", "GBA"],
+    "diseases": ["Alzheimer's Disease", "Gaucher Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.82
+  },
+  "PURINE_METABOLISM": {
+    "name": "Purine metabolism",
+    "category": "Metabolic",
+    "description": "Nucleotide synthesis and degradation",
+    "proteins": ["HPRT1", "PRPS1", "ADSS", "AMPD1", "ADA", "PNP"],
+    "diseases": ["Gout", "Immunodeficiency", "Neurological Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.70
+  },
+  "PYRIMIDINE_METABOLISM": {
+    "name": "Pyrimidine metabolism",
+    "category": "Metabolic",
+    "description": "Nucleotide synthesis and degradation",
+    "proteins": ["CAD", "UMPS", "CTPS1", "DHODH", "TYMS"],
+    "diseases": ["Cancer", "Metabolic Disorders"],
+    "source": "KEGG",
+    "relevance_score": 0.70
+  },
+  "ONE_CARBON_METABOLISM": {
+    "name": "One-carbon metabolism",
+    "category": "Metabolic",
+    "description": "Folate cycle and methylation",
+    "proteins": ["MTHFR", "MTR", "DHFR", "TYMS", "SHMT1", "SHMT2"],
+    "diseases": ["Neural Tube Defects", "Cardiovascular Disease", "Cancer"],
+    "source": "KEGG",
+    "relevance_score": 0.76
+  }
+}
