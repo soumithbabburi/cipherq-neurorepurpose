@@ -189,7 +189,22 @@ class EvidenceGraphBuilder:
                 })
             
             logger.info(f"Added {len(protein_db_ids)} protein/gene nodes")
-            
+            # ===== FIX: Map JSON gene_symbols to DB IDs =====
+for gene_symbol, protein_id in protein_db_ids.items():
+    if protein_id is None:
+        try:
+            db_res = execute_query(
+                "SELECT id FROM proteins WHERE gene_symbol = %s LIMIT 1",
+                (gene_symbol,)
+            )
+            if db_res:
+                protein_db_ids[gene_symbol] = db_res[0]['id']
+                logger.info(f"Mapped JSON gene {gene_symbol} to DB protein_id {db_res[0]['id']}")
+            else:
+                logger.warning(f"No DB entry found for gene_symbol: {gene_symbol}")
+        except Exception as e:
+            logger.error(f"Error fetching DB ID for {gene_symbol}: {e}")
+
             # 4. GET PROTEIN → PATHWAY CONNECTIONS
             if protein_db_ids:
                 logger.info(f"Querying pathways for {len(protein_db_ids)} proteins...")
