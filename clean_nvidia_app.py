@@ -12045,72 +12045,64 @@ def render_molecular_docking_section():
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
-                        st.markdown(f"**Binding Affinity:** {pose['binding_affinity']:.1f} kcal/mol")
+                        st.markdown(f"**Binding Affinity:** {pose['binding_affinity']:.2f} kcal/mol")
                         st.markdown(f"**RMSD:** {pose['rmsd']:.2f} Å")
                         
-                        # Use professional docking interface for protein+ligand complex
-                        # Skip professional docking interface for now
-                        if True:  # Enable professional docking interface
-                            try:
-                                # Create pose data from the drug
-                                sdf_data = create_dynamic_sdf_data(selected_drug)
-                                if not sdf_data:
-                                    st.error(" **molecular Protein-Ligand Complex Unavailable**")
-                                    st.warning("Cannot generate molecular structure data for visualization. Real DiffDock SDF data required for protein-ligand complex display.")
-                                    return
-                                
-                                poses_data = [sdf_data]
-                                confidence_scores = [pose['confidence']]
-                                
-                                # Dynamic target resolution from graph or database
-                                # DON'T use session_state - use the target_protein already determined above!
-                                # target_protein variable is already set at line 11700-11750
-                                # Just use it directly!
-                                
-                                if not target_protein:
-                                    st.warning("No target protein available for visualization")
-                                else:
-                                    # Inline 3D visualization with correct target name
-                                    try:
-                                        import py3Dmol
-                                        import streamlit.components.v1 as components
-                                        
-                                        sdf_data = pose.get('sdf_data', create_dynamic_sdf_data(selected_drug))
-                                        
-                                        if sdf_data:
-                                            # Create viewer
-                                            view = py3Dmol.view(width=650, height=500)
-                                            
-                                            # Try to load protein PDB
-                                            pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
-                                            import glob
-                                            pdb_files = glob.glob(pdb_path)
-                                            
-                                            if pdb_files and os.path.exists(pdb_files[0]):
-                                                with open(pdb_files[0], 'r') as f:
-                                                    pdb_data = f.read()
-                                                view.addModel(pdb_data, 'pdb')
-                                                view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
-                                            
-                                            # Add drug ligand
-                                            view.addModel(sdf_data, 'sdf')
-                                            view.setStyle({'model': -1}, {
-                                                'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
-                                                'sphere': {'scale': 0.3}
-                                            })
-                                            
-                                            view.setBackgroundColor('white')
-                                            view.zoomTo()
-                                            
-                                            # Display with correct title
-                                            st.markdown(f"### 3D Docking: {selected_drug} → {target_protein}")
-                                            components.html(view._make_html(), height=500, width=650)
-                                            
-                                    except Exception as viz_err:
-                                        logger.warning(f"3D visualization error: {viz_err}")
+                        # 3D Visualization
+                        try:
+                            import py3Dmol
+                            import streamlit.components.v1 as components
                             
-                            except Exception as viz_error:
-                                logger.warning(f"Visualization setup error: {viz_error}")
+                            # Get SDF data
+                            sdf_data = pose.get('sdf_data')
+                            if not sdf_data:
+                                sdf_data = create_dynamic_sdf_data(selected_drug)
+                            
+                            if sdf_data and target_protein:
+                                # Create viewer
+                                view = py3Dmol.view(width=700, height=450)
+                                
+                                # Try to load protein PDB
+                                pdb_loaded = False
+                                try:
+                                    pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
+                                    import glob
+                                    pdb_files = glob.glob(pdb_path)
+                                    
+                                    if pdb_files and os.path.exists(pdb_files[0]):
+                                        with open(pdb_files[0], 'r') as f:
+                                            pdb_data = f.read()
+                                        view.addModel(pdb_data, 'pdb')
+                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
+                                        pdb_loaded = True
+                                except:
+                                    pass
+                                
+                                # Add drug ligand
+                                view.addModel(sdf_data, 'sdf')
+                                if pdb_loaded:
+                                    view.setStyle({'model': 1}, {
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
+                                        'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
+                                    })
+                                else:
+                                    view.setStyle({'model': 0}, {
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
+                                        'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
+                                    })
+                                
+                                view.setBackgroundColor('white')
+                                view.zoomTo()
+                                
+                                # Render
+                                st.markdown(f"**3D Structure: {selected_drug} → {target_protein}**")
+                                components.html(view._make_html(), height=450)
+                            else:
+                                st.info("3D visualization unavailable (no structure data)")
+                                
+                        except Exception as viz_err:
+                            logger.error(f"3D viz error: {viz_err}")
+                            st.info("3D visualization unavailable")
                     
                     with col2:
                         st.metric("Pose Rank", f"#{i+1}")
