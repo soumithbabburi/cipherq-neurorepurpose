@@ -11745,197 +11745,197 @@ def render_molecular_docking_section():
                             docking_result = {'success': False, 'error': str(dock_err)}
                     
                     logger.info(f"=== DOCKING DEBUG END ===")
-                        
+                    
                     if docking_result and docking_result.get('success'):
-                            # Get RAW NVIDIA results
-                            nvidia_poses = docking_result.get('poses', [])
-                            raw_confidences = docking_result.get('raw_nvidia_confidences', docking_result.get('confidence_scores', []))
+                        # Get RAW NVIDIA results
+                        nvidia_poses = docking_result.get('poses', [])
+                        raw_confidences = docking_result.get('raw_nvidia_confidences', docking_result.get('confidence_scores', []))
+                        
+                        logger.info(f"Got docking results: {len(nvidia_poses)} poses")
+                        logger.info(f"Raw NVIDIA confidences: {raw_confidences[:5]}")
+                        
+                        # Extract SDF content AND REAL binding affinities from pose dicts
+                        sdf_contents = []
+                        real_vina_affinities = []
+                        for pose in nvidia_poses:
+                            if isinstance(pose, dict):
+                                sdf = pose.get('sdf_content', '')
+                                vina_affinity = pose.get('binding_affinity', 0)
+                                sdf_contents.append(sdf)
+                                real_vina_affinities.append(vina_affinity)
+                            else:
+                                sdf_contents.append(pose)
+                                real_vina_affinities.append(0)
+                        
+                        logger.info(f"REAL Vina affinities: {real_vina_affinities[:5]}")
+                        
+                        # === USE molecular_docking_results_interface (WITH REAL AFFINITIES!) ===
+                        try:
+                            from molecular_docking_results_interface import calculate_docking_metrics
                             
-                            logger.info(f"Got docking results: {len(nvidia_poses)} poses")
-                            logger.info(f"Raw NVIDIA confidences: {raw_confidences[:5]}")
+                            logger.info("Using molecular_docking_results_interface with REAL Vina affinities")
                             
-                            # Extract SDF content AND REAL binding affinities from pose dicts
-                            sdf_contents = []
-                            real_vina_affinities = []
-                            for pose in nvidia_poses:
-                                if isinstance(pose, dict):
-                                    sdf = pose.get('sdf_content', '')
-                                    vina_affinity = pose.get('binding_affinity', 0)
-                                    sdf_contents.append(sdf)
-                                    real_vina_affinities.append(vina_affinity)
-                                else:
-                                    sdf_contents.append(pose)
-                                    real_vina_affinities.append(0)
+                            # Process with REAL affinities (not hardcoded formula!)
+                            pose_results = calculate_docking_metrics(
+                                confidence_scores=raw_confidences,
+                                poses_data=sdf_contents,
+                                use_ml_ranking=True,
+                                real_affinities=real_vina_affinities  # Pass REAL affinities from Vina!
+                            )
                             
-                            logger.info(f"REAL Vina affinities: {real_vina_affinities[:5]}")
+                            # Save SDF files and convert to app format
+                            import os
+                            output_dir = f"./diffdock_output/{selected_drug}"
+                            os.makedirs(output_dir, exist_ok=True)
                             
-                            # === USE molecular_docking_results_interface (WITH REAL AFFINITIES!) ===
+                            poses = []
+                            for i, pose_result in enumerate(pose_results):
+                                # Save SDF file
+                                if pose_result.sdf_content and len(pose_result.sdf_content) > 10:
+                                    sdf_path = os.path.join(output_dir, f"pose_{i}.sdf")
+                                    try:
+                                        with open(sdf_path, 'w') as f:
+                                            f.write(pose_result.sdf_content)
+                                        logger.info(f"Saved pose {i}")
+                                    except Exception as e:
+                                        logger.error(f"Could not save pose {i}: {e}")
+                                
+                                poses.append({
+                                    'confidence': pose_result.confidence,
+                                    'binding_affinity': pose_result.binding_affinity_kcal_mol,  # REAL!
+                                    'rmsd': pose_result.rmsd_angstrom,
+                                    'interaction_score': pose_result.interaction_score,
+                                    'sdf_data': pose_result.sdf_content,
+                                    'confidence_label': getattr(pose_result, 'quality_label', 'Unknown')
+                                })
+                            
+                            # Get affinities for PBPK
+                            binding_affinities = [p['binding_affinity'] for p in poses]
+                            
+                            logger.info(f"Processed {len(poses)} poses with REAL affinities")
+                            logger.info(f"REAL Affinities: {binding_affinities[:5]}")
+                            
+                        except ImportError as ie:
+                            logger.error(f"molecular_docking_results_interface not found: {ie}")
+                            st.error("molecular_docking_results_interface.py required")
+                            poses = []
+                            binding_affinities = []
+                        
+                        logger.info(f"Saved {len(poses)} SDF poses to {output_dir}")
+                        
+                        # === GENERATE DOCKING DESCRIPTION WITH GEMINI ===
+                        if binding_affinities:
+                            best_affinity = binding_affinities[0]
+                            
+                            st.markdown("---")
+                            st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
+                            
+                            logger.info("=" * 70)
+                            logger.info("🔍 GEMINI DESCRIPTION DEBUG")
+                            logger.info(f"🔍 Attempting description for: {selected_drug} → {target_protein}")
+                            logger.info(f"🔍 Binding affinity: {best_affinity} kcal/mol")
+                            
+                            # Check if file exists
+                            import os as os_module
+                            llm_file = os_module.path.join(os_module.getcwd(), 'llm_powered_descriptions.py')
+                            logger.info(f"🔍 LLM file path: {llm_file}")
+                            logger.info(f"🔍 LLM file exists: {os_module.path.exists(llm_file)}")
+                            
+                            # Check Gemini key
+                            gemini_key = os.getenv('GEMINI_API_KEY')
+                            logger.info(f"🔍 GEMINI_API_KEY set: {bool(gemini_key)}")
+                            if gemini_key:
+                                logger.info(f"🔍 Key preview: {gemini_key[:20]}...")
+                            else:
+                                logger.error("NO GEMINI_API_KEY FOUND IN ENVIRONMENT!")
+                            
                             try:
-                                from molecular_docking_results_interface import calculate_docking_metrics
+                                from llm_powered_descriptions import generate_docking_description_with_llm
+                                logger.info("Successfully imported llm_powered_descriptions")
                                 
-                                logger.info("Using molecular_docking_results_interface with REAL Vina affinities")
-                                
-                                # Process with REAL affinities (not hardcoded formula!)
-                                pose_results = calculate_docking_metrics(
-                                    confidence_scores=raw_confidences,
-                                    poses_data=sdf_contents,
-                                    use_ml_ranking=True,
-                                    real_affinities=real_vina_affinities  # Pass REAL affinities from Vina!
+                                description = generate_docking_description_with_llm(
+                                    drug_name=selected_drug,
+                                    target_protein=target_protein,
+                                    binding_affinity=best_affinity,
+                                    disease_name=disease_name
                                 )
                                 
-                                # Save SDF files and convert to app format
-                                import os
-                                output_dir = f"./diffdock_output/{selected_drug}"
-                                os.makedirs(output_dir, exist_ok=True)
-                                
-                                poses = []
-                                for i, pose_result in enumerate(pose_results):
-                                    # Save SDF file
-                                    if pose_result.sdf_content and len(pose_result.sdf_content) > 10:
-                                        sdf_path = os.path.join(output_dir, f"pose_{i}.sdf")
-                                        try:
-                                            with open(sdf_path, 'w') as f:
-                                                f.write(pose_result.sdf_content)
-                                            logger.info(f"Saved pose {i}")
-                                        except Exception as e:
-                                            logger.error(f"Could not save pose {i}: {e}")
-                                    
-                                    poses.append({
-                                        'confidence': pose_result.confidence,
-                                        'binding_affinity': pose_result.binding_affinity_kcal_mol,  # REAL!
-                                        'rmsd': pose_result.rmsd_angstrom,
-                                        'interaction_score': pose_result.interaction_score,
-                                        'sdf_data': pose_result.sdf_content,
-                                        'confidence_label': getattr(pose_result, 'quality_label', 'Unknown')
-                                    })
-                                
-                                # Get affinities for PBPK
-                                binding_affinities = [p['binding_affinity'] for p in poses]
-                                
-                                logger.info(f"Processed {len(poses)} poses with REAL affinities")
-                                logger.info(f"REAL Affinities: {binding_affinities[:5]}")
+                                logger.info(f"Generated description: {description[:150]}...")
+                                st.markdown(description)
+                                logger.info("=" * 70)
                                 
                             except ImportError as ie:
-                                logger.error(f"molecular_docking_results_interface not found: {ie}")
-                                st.error("molecular_docking_results_interface.py required")
-                                poses = []
-                                binding_affinities = []
+                                logger.error(f"IMPORT ERROR: {ie}")
+                                logger.error("=" * 70)
+                                st.warning("llm_powered_descriptions.py not found - using fallback")
+                                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                            except Exception as desc_error:
+                                logger.error(f"DESCRIPTION ERROR: {desc_error}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                                logger.error("=" * 70)
+                                # Simple fallback with actual data
+                                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                        
+                    else:
+                        # DiffDock failed - try AutoDock Vina fallback
+                        error = docking_result.get('error', 'Unknown error')
+                        logger.error(f"DiffDock failed for {selected_drug}")
+                        logger.error(f"Error: {error}")
+                        logger.error(f"Full result: {docking_result}")
                             
-                            logger.info(f"Saved {len(poses)} SDF poses to {output_dir}")
+                        st.warning(f"⚠️ NVIDIA DiffDock failed for {selected_drug}")
+                        st.info(f"**Error**: {error}")
                             
-                            # === GENERATE DOCKING DESCRIPTION WITH GEMINI ===
-                            if binding_affinities:
-                                best_affinity = binding_affinities[0]
+                        # Try AutoDock Vina fallback
+                        if VINA_FALLBACK_AVAILABLE:
+                            st.info("🔄 **Switching to AutoDock Vina fallback...**")
+                            logger.info(f"Attempting AutoDock Vina fallback for {selected_drug}")
                                 
-                                st.markdown("---")
-                                st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                                
-                                logger.info("=" * 70)
-                                logger.info("🔍 GEMINI DESCRIPTION DEBUG")
-                                logger.info(f"🔍 Attempting description for: {selected_drug} → {target_protein}")
-                                logger.info(f"🔍 Binding affinity: {best_affinity} kcal/mol")
-                                
-                                # Check if file exists
-                                import os as os_module
-                                llm_file = os_module.path.join(os_module.getcwd(), 'llm_powered_descriptions.py')
-                                logger.info(f"🔍 LLM file path: {llm_file}")
-                                logger.info(f"🔍 LLM file exists: {os_module.path.exists(llm_file)}")
-                                
-                                # Check Gemini key
-                                gemini_key = os.getenv('GEMINI_API_KEY')
-                                logger.info(f"🔍 GEMINI_API_KEY set: {bool(gemini_key)}")
-                                if gemini_key:
-                                    logger.info(f"🔍 Key preview: {gemini_key[:20]}...")
-                                else:
-                                    logger.error("NO GEMINI_API_KEY FOUND IN ENVIRONMENT!")
-                                
-                                try:
-                                    from llm_powered_descriptions import generate_docking_description_with_llm
-                                    logger.info("Successfully imported llm_powered_descriptions")
-                                    
-                                    description = generate_docking_description_with_llm(
+                            try:
+                                with st.spinner("Running AutoDock Vina..."):
+                                    vina_result = run_autodock_vina_docking(
                                         drug_name=selected_drug,
-                                        target_protein=target_protein,
-                                        binding_affinity=best_affinity,
-                                        disease_name=disease_name
+                                        target_protein=target_protein
                                     )
                                     
-                                    logger.info(f"Generated description: {description[:150]}...")
-                                    st.markdown(description)
-                                    logger.info("=" * 70)
-                                    
-                                except ImportError as ie:
-                                    logger.error(f"IMPORT ERROR: {ie}")
-                                    logger.error("=" * 70)
-                                    st.warning("llm_powered_descriptions.py not found - using fallback")
-                                    strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                    st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
-                                except Exception as desc_error:
-                                    logger.error(f"DESCRIPTION ERROR: {desc_error}")
-                                    import traceback
-                                    logger.error(traceback.format_exc())
-                                    logger.error("=" * 70)
-                                    # Simple fallback with actual data
-                                    strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                    st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
-                            
-                        else:
-                            # DiffDock failed - try AutoDock Vina fallback
-                            error = docking_result.get('error', 'Unknown error')
-                            logger.error(f"DiffDock failed for {selected_drug}")
-                            logger.error(f"Error: {error}")
-                            logger.error(f"Full result: {docking_result}")
-                            
-                            st.warning(f"⚠️ NVIDIA DiffDock failed for {selected_drug}")
-                            st.info(f"**Error**: {error}")
-                            
-                            # Try AutoDock Vina fallback
-                            if VINA_FALLBACK_AVAILABLE:
-                                st.info("🔄 **Switching to AutoDock Vina fallback...**")
-                                logger.info(f"Attempting AutoDock Vina fallback for {selected_drug}")
-                                
-                                try:
-                                    with st.spinner("Running AutoDock Vina..."):
-                                        vina_result = run_autodock_vina_docking(
-                                            drug_name=selected_drug,
-                                            target_protein=target_protein
-                                        )
-                                    
-                                    if vina_result and vina_result.get('success'):
-                                        st.success(f"✅ AutoDock Vina docking completed successfully!")
-                                        poses = vina_result.get('poses', [])
-                                        logger.info(f"AutoDock Vina generated {len(poses)} poses")
+                                if vina_result and vina_result.get('success'):
+                                    st.success(f"✅ AutoDock Vina docking completed successfully!")
+                                    poses = vina_result.get('poses', [])
+                                    logger.info(f"AutoDock Vina generated {len(poses)} poses")
                                         
-                                        # Process Vina results
-                                        binding_affinities = [p.get('binding_affinity', 0) for p in poses]
-                                        logger.info(f"Vina affinities: {binding_affinities[:5]}")
+                                    # Process Vina results
+                                    binding_affinities = [p.get('binding_affinity', 0) for p in poses]
+                                    logger.info(f"Vina affinities: {binding_affinities[:5]}")
                                         
-                                        # Show Vina docking description
-                                        if binding_affinities:
-                                            best_affinity = binding_affinities[0]
-                                            st.markdown("---")
-                                            st.markdown(f"### AutoDock Vina Analysis: {selected_drug} → {target_protein}")
-                                            strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                            st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
-                                    else:
-                                        vina_error = vina_result.get('error', 'Unknown error') if vina_result else 'No result returned'
-                                        logger.error(f"AutoDock Vina also failed: {vina_error}")
-                                        st.error(f"❌ AutoDock Vina fallback also failed")
-                                        st.warning(f"**Error**: {vina_error}")
-                                        poses = []
-                                        
-                                except Exception as vina_err:
-                                    logger.error(f"AutoDock Vina fallback exception: {vina_err}")
-                                    import traceback
-                                    logger.error(traceback.format_exc())
-                                    st.error(f"❌ AutoDock Vina fallback failed with exception")
-                                    st.warning(f"**Error**: {str(vina_err)}")
+                                    # Show Vina docking description
+                                    if binding_affinities:
+                                        best_affinity = binding_affinities[0]
+                                        st.markdown("---")
+                                        st.markdown(f"### AutoDock Vina Analysis: {selected_drug} → {target_protein}")
+                                        strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                                        st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                                else:
+                                    vina_error = vina_result.get('error', 'Unknown error') if vina_result else 'No result returned'
+                                    logger.error(f"AutoDock Vina also failed: {vina_error}")
+                                    st.error(f"❌ AutoDock Vina fallback also failed")
+                                    st.warning(f"**Error**: {vina_error}")
                                     poses = []
-                            else:
-                                st.error(f"❌ Molecular docking failed for {selected_drug}")
-                                st.warning("**AutoDock Vina fallback not available**")
-                                st.info("💡 **Possible causes**:\n- Target protein structure unavailable\n- Invalid drug SMILES\n- DiffDock service unavailable\n- autodock_vina.py module missing")
+                                        
+                            except Exception as vina_err:
+                                logger.error(f"AutoDock Vina fallback exception: {vina_err}")
+                                import traceback
+                                logger.error(traceback.format_exc())
+                                st.error(f"❌ AutoDock Vina fallback failed with exception")
+                                st.warning(f"**Error**: {str(vina_err)}")
                                 poses = []
+                        else:
+                            st.error(f"❌ Molecular docking failed for {selected_drug}")
+                            st.warning("**AutoDock Vina fallback not available**")
+                            st.info("💡 **Possible causes**:\n- Target protein structure unavailable\n- Invalid drug SMILES\n- DiffDock service unavailable\n- autodock_vina.py module missing")
+                            poses = []
                 else:
                     # Docking service not available - try AutoDock Vina fallback
                     logger.warning(f"Docking service not available for {selected_drug}")
