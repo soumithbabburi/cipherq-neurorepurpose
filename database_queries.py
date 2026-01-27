@@ -41,7 +41,7 @@ def get_drug_targets(drug_name: str, limit: int = 10) -> List[Dict]:
             FROM drug_protein_interactions dpi
             JOIN drugs d ON d.id = dpi.drug_id
             JOIN proteins p ON p.id = dpi.protein_id
-            WHERE d.name = %s
+            WHERE LOWER(d.name) = LOWER(%s)
             ORDER BY dpi.confidence_score DESC
             LIMIT %s
         """, (drug_name, limit))
@@ -71,7 +71,7 @@ def get_drug_by_name(drug_name: str) -> Optional[Dict]:
         cur.execute("""
             SELECT *
             FROM drugs
-            WHERE name = %s
+            WHERE LOWER(name) = LOWER(%s)
             LIMIT 1
         """, (drug_name,))
         
@@ -154,7 +154,7 @@ def get_interaction_count(drug_name: str) -> int:
             SELECT COUNT(*)
             FROM drug_protein_interactions dpi
             JOIN drugs d ON d.id = dpi.drug_id
-            WHERE d.name = %s
+            WHERE LOWER(d.name) = LOWER(%s)
         """, (drug_name,))
         
         count = cur.fetchone()[0]
