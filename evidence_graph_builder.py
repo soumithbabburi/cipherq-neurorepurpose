@@ -1,16 +1,38 @@
 """
 BioCypher Evidence Graph Builder - FIXED VERSION
 Properly connects: Drugs → Proteins/Genes → Pathways → Disease
-NO HARDCODING - All from database
+Checks drug_interactions.json FIRST, then database
 """
 import pandas as pd
 import logging
 import os
 import sys
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
+
+# Load curated interactions
+_CURATED_INTERACTIONS = None
+
+def load_curated_interactions():
+    """Load curated interactions from JSON"""
+    global _CURATED_INTERACTIONS
+    if _CURATED_INTERACTIONS is not None:
+        return
+    try:
+        if os.path.exists('drug_interactions.json'):
+            with open('drug_interactions.json', 'r') as f:
+                _CURATED_INTERACTIONS = json.load(f)
+            logger.info(f"✅ Loaded curated interactions for {len(_CURATED_INTERACTIONS)} drugs")
+        else:
+            _CURATED_INTERACTIONS = {}
+    except:
+        _CURATED_INTERACTIONS = {}
+
+load_curated_interactions()
+
 
 class EvidenceGraphBuilder:
     """Build evidence graphs using proper BioCypher structure"""
