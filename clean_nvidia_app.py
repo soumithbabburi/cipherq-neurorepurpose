@@ -11879,54 +11879,20 @@ def render_molecular_docking_section():
                             st.markdown("---")
                             st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
                             
-                            logger.info("=" * 70)
-                            logger.info("🔍 GEMINI DESCRIPTION DEBUG")
-                            logger.info(f"🔍 Attempting description for: {selected_drug} → {target_protein}")
-                            logger.info(f"🔍 Binding affinity: {best_affinity} kcal/mol")
-                            
-                            # Check if file exists
-                            import os as os_module
-                            llm_file = os_module.path.join(os_module.getcwd(), 'llm_powered_descriptions.py')
-                            logger.info(f"🔍 LLM file path: {llm_file}")
-                            logger.info(f"🔍 LLM file exists: {os_module.path.exists(llm_file)}")
-                            
-                            # Check Gemini key
-                            gemini_key = os.getenv('GEMINI_API_KEY')
-                            logger.info(f"🔍 GEMINI_API_KEY set: {bool(gemini_key)}")
-                            if gemini_key:
-                                logger.info(f"🔍 Key preview: {gemini_key[:20]}...")
-                            else:
-                                logger.error("NO GEMINI_API_KEY FOUND IN ENVIRONMENT!")
-                            
+                            # Generate description using Groq
                             try:
                                 from llm_powered_descriptions import generate_docking_description_with_llm
-                                logger.info("Successfully imported llm_powered_descriptions")
-                                
                                 description = generate_docking_description_with_llm(
                                     drug_name=selected_drug,
                                     target_protein=target_protein,
                                     binding_affinity=best_affinity,
                                     disease_name=disease_name
                                 )
-                                
-                                logger.info(f"Generated description: {description[:150]}...")
                                 st.markdown(description)
-                                logger.info("=" * 70)
-                                
-                            except ImportError as ie:
-                                logger.error(f"IMPORT ERROR: {ie}")
-                                logger.error("=" * 70)
-                                st.warning("llm_powered_descriptions.py not found - using fallback")
-                                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
                             except Exception as desc_error:
-                                logger.error(f"DESCRIPTION ERROR: {desc_error}")
-                                import traceback
-                                logger.error(traceback.format_exc())
-                                logger.error("=" * 70)
-                                # Simple fallback with actual data
+                                logger.warning(f"LLM description failed: {desc_error}")
                                 strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity} kcal/mol)")
+                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
                         
                     else:
                         # DiffDock failed - silently switch to AutoDock Vina
@@ -12061,6 +12027,50 @@ def render_molecular_docking_section():
                 st.warning("No docking poses generated")
                 return
             
+            # === FETCH PROTEIN PDB ONCE (before pose loop) ===
+            protein_pdb_data = None
+            try:
+                import requests
+                pdb_ids = {
+                    'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
+                    'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
+                    'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK',
+                    'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2'
+                }
+                pdb_id = pdb_ids.get(target_protein.upper())
+                
+                if pdb_id:
+                    pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+                    resp = requests.get(pdb_url, timeout=10)
+                    if resp.status_code == 200:
+                        protein_pdb_data = resp.text
+                        logger.info(f"✅ Fetched {target_protein} from RCSB PDB ({pdb_id})")
+                    else:
+                        logger.warning(f"PDB fetch returned {resp.status_code}")
+                else:
+                    logger.warning(f"No PDB ID mapped for {target_protein}")
+            except Exception as fetch_err:
+                logger.warning(f"Could not fetch PDB: {fetch_err}")
+            
+            # === SHOW DESCRIPTION AT TOP ===
+            st.markdown(f"**Docking Summary:**")
+            try:
+                from llm_powered_descriptions import generate_docking_description_with_llm
+                best_affinity = valid_poses[0]['binding_affinity']
+                description = generate_docking_description_with_llm(
+                    drug_name=selected_drug,
+                    target_protein=target_protein,
+                    binding_affinity=best_affinity,
+                    disease_name=disease_name
+                )
+                st.info(description)
+            except Exception as desc_err:
+                logger.warning(f"Groq description failed: {desc_err}")
+                # Show fallback description so user sees SOMETHING
+                best_affinity = valid_poses[0]['binding_affinity']
+                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
+                st.info(f"{selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
+            
             st.markdown(f"**Docking poses for {selected_drug}:**")
             
             for i, pose in enumerate(valid_poses):
@@ -12088,48 +12098,13 @@ def render_molecular_docking_section():
                                 # Create viewer
                                 view = py3Dmol.view(width=700, height=450)
                                 
-                                # Try to load protein PDB
-                                pdb_loaded = False
-                                pdb_data = None
-                                
-                                try:
-                                    # Try cache first
-                                    pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
-                                    import glob
-                                    pdb_files = glob.glob(pdb_path)
-                                    
-                                    if pdb_files and os.path.exists(pdb_files[0]):
-                                        with open(pdb_files[0], 'r') as f:
-                                            pdb_data = f.read()
-                                        logger.info(f"✅ Loaded {target_protein} from cache")
-                                except:
-                                    pass
-                                
-                                # If not in cache, try RCSB PDB
-                                if not pdb_data:
-                                    try:
-                                        import requests
-                                        pdb_ids = {
-                                            'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
-                                            'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
-                                            'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK'
-                                        }
-                                        pdb_id = pdb_ids.get(target_protein.upper())
-                                        
-                                        if pdb_id:
-                                            pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
-                                            resp = requests.get(pdb_url, timeout=10)
-                                            if resp.status_code == 200:
-                                                pdb_data = resp.text
-                                                logger.info(f"✅ Fetched {target_protein} from RCSB ({pdb_id})")
-                                    except Exception as fetch_err:
-                                        logger.warning(f"Could not fetch PDB: {fetch_err}")
-                                
-                                # Add protein if loaded
-                                if pdb_data:
-                                    view.addModel(pdb_data, 'pdb')
+                                # Use pre-fetched protein PDB (fetched before loop)
+                                if protein_pdb_data:
+                                    view.addModel(protein_pdb_data, 'pdb')
                                     view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
                                     pdb_loaded = True
+                                else:
+                                    pdb_loaded = False
                                 
                                 # Add drug ligand
                                 view.addModel(sdf_data, 'sdf')
@@ -12147,15 +12122,18 @@ def render_molecular_docking_section():
                                 view.setBackgroundColor('white')
                                 view.zoomTo()
                                 
-                                # Render
-                                st.markdown(f"**3D Structure: {selected_drug} → {target_protein}**")
+                                # Display
+                                if pdb_loaded:
+                                    st.markdown(f"**{selected_drug} bound to {target_protein} (PDB structure)**")
+                                else:
+                                    st.markdown(f"**{selected_drug} structure**")
+                                
                                 components.html(view._make_html(), height=450)
                             else:
-                                st.info("3D visualization unavailable (no structure data)")
+                                st.info("Structure unavailable")
                                 
                         except Exception as viz_err:
-                            logger.error(f"3D viz error: {viz_err}")
-                            st.info("3D visualization unavailable")
+                            logger.error(f"Viz error: {viz_err}")
                     
                     with col2:
                         st.metric("Pose Rank", f"#{i+1}")
