@@ -142,6 +142,18 @@ def run_computational_fallback(smiles: str, drug_name: str,
         
         logger.info(f"Molecular properties: MW={mw:.1f}, LogP={logp:.2f}, HBD={hbd}, HBA={hba}")
         
+        # Generate 3D conformation for SDF
+        try:
+            from rdkit.Chem import AllChem
+            mol_3d = Chem.AddHs(mol)
+            AllChem.EmbedMolecule(mol_3d, randomSeed=42)
+            AllChem.MMFFOptimizeMolecule(mol_3d)
+            sdf_data = Chem.MolToMolBlock(mol_3d)
+            logger.info("✅ Generated 3D SDF structure")
+        except:
+            sdf_data = None
+            logger.warning("Could not generate 3D structure")
+        
         # Estimate binding affinity based on properties
         # More favorable properties = better (more negative) binding
         base_affinity = -6.0
@@ -185,7 +197,7 @@ def run_computational_fallback(smiles: str, drug_name: str,
                 'binding_affinity': round(affinity, 2),
                 'rmsd': round(rmsd, 2),
                 'confidence': max(0.3, 0.9 - (i * 0.08)),
-                'sdf_data': f'<SDF_PLACEHOLDER_POSE_{i+1}>',
+                'sdf_data': sdf_data,  # Use real SDF data!
                 'source': 'computational_estimation'
             })
         
