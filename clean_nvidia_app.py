@@ -9461,25 +9461,39 @@ def create_network_from_biocypher(nodes_df, edges_df, disease_name):
         
         nodes_list.append(node_data)
     
-    # Convert edges DataFrame to ECharts format WITH LABELS
+    # Convert edges DataFrame to ECharts format WITH SHORT CLEAR LABELS
     links_list = []
     for _, edge in edges_df.iterrows():
-        # Get relationship type
-        relationship = edge.get('label', edge.get('edge_type', 'RELATED_TO'))
+        # Get relationship type and make it SHORT
+        relationship = edge.get('label', edge.get('edge_type', 'RELATED'))
+        
+        # Shorten labels for readability
+        label_map = {
+            'TARGETS': 'targets',
+            'PARTICIPATES_IN': 'participates in',
+            'ASSOCIATED_WITH': 'linked to',
+            'REGULATES': 'regulates',
+            'INTERACTS_WITH': 'interacts'
+        }
+        
+        display_label = label_map.get(relationship, relationship.lower())
         
         link_data = {
             'source': str(edge['source']),
             'target': str(edge['target']),
             'label': {
-                'show': True,  # SHOW LABELS!
-                'formatter': relationship,
-                'fontSize': 9,
-                'color': '#64748B'
+                'show': True,
+                'formatter': display_label,
+                'fontSize': 10,
+                'color': '#475569',
+                'backgroundColor': '#ffffff',
+                'padding': [2, 4],
+                'borderRadius': 3
             },
             'lineStyle': {
-                'width': 2.5 if 'TARGETS' in relationship else 2,
+                'width': 2.5 if relationship == 'TARGETS' else 2,
                 'opacity': 0.7,
-                'curveness': 0.2,
+                'curveness': 0.3,
                 'color': '#94A3B8'
             }
         }
