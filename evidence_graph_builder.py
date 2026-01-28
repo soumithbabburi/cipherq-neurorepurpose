@@ -13,14 +13,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# Load curated interactions and pathways
+# Load curated interactions and pathways and genes
 _CURATED_INTERACTIONS = None
 _PATHWAYS = None
 _PROTEIN_PATHWAYS = None
+_GENES = None
 
 def load_curated_data():
-    """Load curated interactions and pathway data from JSON"""
-    global _CURATED_INTERACTIONS, _PATHWAYS, _PROTEIN_PATHWAYS
+    """Load curated interactions, pathway data, and official genes from JSON"""
+    global _CURATED_INTERACTIONS, _PATHWAYS, _PROTEIN_PATHWAYS, _GENES
     
     if _CURATED_INTERACTIONS is not None:
         return
@@ -36,8 +37,8 @@ def load_curated_data():
         _CURATED_INTERACTIONS = {}
     
     try:
-        if os.path.exists('pathways_COMPREHENSIVE.json'):
-            with open('pathways_COMPREHENSIVE.json', 'r') as f:
+        if os.path.exists('pathways.json'):
+            with open('pathways.json', 'r') as f:
                 _PATHWAYS = json.load(f)
             logger.info(f"✅ Loaded {len(_PATHWAYS)} pathways")
         else:
@@ -46,14 +47,24 @@ def load_curated_data():
         _PATHWAYS = {}
     
     try:
-        if os.path.exists('protein_pathways_COMPREHENSIVE.json'):
-            with open('protein_pathways_COMPREHENSIVE.json', 'r') as f:
+        if os.path.exists('protein_pathways.json'):
+            with open('protein_pathways.json', 'r') as f:
                 _PROTEIN_PATHWAYS = json.load(f)
             logger.info(f"✅ Loaded protein-pathway mappings")
         else:
             _PROTEIN_PATHWAYS = {}
     except:
         _PROTEIN_PATHWAYS = {}
+    
+    try:
+        if os.path.exists('genes.json'):
+            with open('genes.json', 'r') as f:
+                _GENES = json.load(f)
+            logger.info(f"✅ Loaded {len(_GENES)} official HGNC genes")
+        else:
+            _GENES = {}
+    except:
+        _GENES = {}
 
 load_curated_data()
 
@@ -104,14 +115,23 @@ class EvidenceGraphBuilder:
                     logger.info(f"✅ {drug_name} found in JSON with {len(_CURATED_INTERACTIONS[drug_lower])} targets")
                     
                     for target in _CURATED_INTERACTIONS[drug_lower]:
+                        gene_symbol = target['gene_symbol']
+                        
+                        # Get official protein name from genes.json if available
+                        protein_name = target.get('protein_name', gene_symbol)
+                        if _GENES and gene_symbol in _GENES:
+                            official_name = _GENES[gene_symbol].get('name', protein_name)
+                            if official_name and official_name != gene_symbol:
+                                protein_name = official_name
+                        
                         interactions.append({
                             'drug_name': drug_name,
                             'protein_id': None,  # Not from DB
-                            'gene_symbol': target['gene_symbol'],
-                            'protein_name': target['protein_name'],
+                            'gene_symbol': gene_symbol,
+                            'protein_name': protein_name,
                             'protein_function': '',
                             'confidence_score': target['confidence_score'],
-                            'interaction_type': 'target',
+                            'interaction_type': target.get('interaction_type', 'target'),
                             'binding_affinity': target.get('binding_affinity')
                         })
             
