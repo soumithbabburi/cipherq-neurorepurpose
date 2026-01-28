@@ -11768,35 +11768,37 @@ def render_molecular_docking_section():
                         drug_edges = edges_df[edges_df['source'] == drug_id]
                         
                         if len(drug_edges) > 0:
-                            # Get first target from graph
-                            target_id = drug_edges.iloc[0]['target']
+                            # SORT by confidence and get HIGHEST confidence target!
+                            if 'confidence' in drug_edges.columns:
+                                drug_edges_sorted = drug_edges.sort_values('confidence', ascending=False)
+                                target_id = drug_edges_sorted.iloc[0]['target']
+                                confidence = drug_edges_sorted.iloc[0]['confidence']
+                            else:
+                                target_id = drug_edges.iloc[0]['target']
+                                confidence = 0.8
+                            
                             target_row = nodes_df[nodes_df['id'] == target_id]
                             if len(target_row) > 0:
                                 target_protein = target_row.iloc[0]['name']
-                                st.success(f"Using target from network graph: **{target_protein}**")
-                                logger.info(f"Using BioCypher graph target: {target_protein}")
+                                st.success(f"Using HIGHEST confidence target from graph: **{target_protein}** (confidence: {confidence:.2f})")
+                                logger.info(f"Using BioCypher graph target: {target_protein} with confidence {confidence}")
                     
-                    # Fallback: Get from drug data or database
+                    # Fallback: Get from JSON drug_interactions directly
                     if not target_protein:
-                        # Try to get from database directly (more reliable than session data)
                         try:
-                            from database_utils import execute_query
-                            target_result = execute_query("""
-                                SELECT p.gene_symbol, p.name
-                                FROM drugs d
-                                JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
-                                JOIN proteins p ON p.id = dpi.protein_id
-                                WHERE LOWER(d.name) = LOWER(%s)
-                                ORDER BY dpi.confidence_score DESC NULLS LAST
-                                LIMIT 1
-                            """, (selected_drug,))
+                            from database_queries import get_drug_targets
+                            targets = get_drug_targets(selected_drug)
                             
-                            if target_result:
-                                target_protein = target_result[0]['gene_symbol']
-                                st.info(f"Using target from database: **{target_protein}**")
-                                logger.info(f"Got target from database: {target_protein}")
+                            if targets:
+                                # Sort by confidence and get top target
+                                sorted_targets = sorted(targets, key=lambda x: x['confidence_score'], reverse=True)
+                                target_protein = sorted_targets[0]['gene_symbol']
+                                st.info(f"Using top target from JSON: **{target_protein}**")
+                                logger.info(f"Got target from JSON: {target_protein}")
+                            else:
+                                target_protein = None
                         except Exception as e:
-                            logger.warning(f"Could not get target from database: {e}")
+                            logger.warning(f"Could not get target from JSON: {e}")
                             target_protein = None
                     
                     # Final fallback
