@@ -9305,24 +9305,22 @@ def get_alzheimer_mechanism_explanation(drug_name: str, target_protein: str) -> 
 
 def generate_network_explanation(nodes_df, edges_df, disease_name):
     """
-    Generate intelligent explanation using LLM based on actual graph data.
-    NO HARDCODING - analyzes real connections and generates contextual explanation.
+    Generate intelligent explanation using Groq based on actual graph data.
     """
     import pandas as pd
     import logging
-    import os
     
     logger = logging.getLogger(__name__)
     
     # Extract network components
-    drugs = nodes_df[nodes_df['label'] == 'Drug']['name'].tolist()
-    proteins = nodes_df[nodes_df['label'] == 'Protein']['name'].tolist()
+    drugs = nodes_df[nodes_df['type'] == 'drug']['name'].tolist()
+    proteins = nodes_df[nodes_df['type'] == 'protein']['name'].tolist()
+    pathways = nodes_df[nodes_df['type'] == 'pathway']['name'].tolist() if 'pathway' in nodes_df['type'].values else []
     
     # Analyze connections
     drug_connections = {}
     for drug in drugs:
         drug_id = f"DRUG_{drug.replace(' ', '_').upper()}"
-        # Find all proteins this drug targets
         drug_edges = edges_df[edges_df['source'] == drug_id]
         targets = []
         for _, edge in drug_edges.iterrows():
@@ -9332,54 +9330,44 @@ def generate_network_explanation(nodes_df, edges_df, disease_name):
                 targets.append(target_name[0])
         drug_connections[drug] = targets
     
-    # Try to use Gemini API for intelligent, context-aware explanation
+    # Use Groq for intelligent explanation
     try:
-        import requests
-        import os
+        from groq import Groq
+        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         
-        api_key = os.getenv('GEMINI_API_KEY')
+        drug_target_text = '\n'.join([f'- {drug}: {", ".join(targets[:5])}' for drug, targets in drug_connections.items()])
         
-        if api_key:
-            # Create prompt with ONLY actual graph data
-            drug_target_text = '\n'.join([f'- {drug}: {", ".join(targets)}' for drug, targets in drug_connections.items()])
-            
-            prompt = f"""You are analyzing a drug repurposing network for {disease_name}.
+        prompt = f"""Analyze this drug repurposing evidence graph for {disease_name}.
 
-Here are the ACTUAL drug-protein connections from the database:
+Drug-Protein Connections:
 {drug_target_text}
 
-Explain in 2-3 sentences PER DRUG how targeting these specific proteins could be therapeutic for {disease_name}. Be factual and scientific. Focus on the biological mechanisms of these exact proteins."""
+Pathways involved: {len(pathways)} biological pathways
 
-            # Call Gemini API
-            response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }]
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                explanation = result['candidates'][0]['content']['parts'][0]['text']
-                logger.info("Generated explanation using Gemini API")
-                return explanation
-            else:
-                logger.warning(f"Gemini API returned {response.status_code}")
-            
+Explain in 3-4 sentences how these drugs and protein targets connect to {disease_name} treatment. Be scientific and specific about mechanisms."""
+        
+        response = groq_client.chat.completions.create(
+            model="mixtral-8x7b-32768",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=400,
+            temperature=0.7
+        )
+        
+        explanation = response.choices[0].message.content.strip()
+        logger.info("✅ Generated network explanation using Groq")
+        return explanation
+        
     except Exception as e:
-        logger.info(f"Gemini API unavailable, using simple description: {e}")
+        logger.warning(f"Groq explanation failed: {e}")
     
-    # Fallback: Just list the connections
-    explanation = f"**Network: {len(drugs)} Drugs → {len(proteins)} Targets → {disease_name}**\n\n"
+    # Fallback: Show connection summary
+    explanation = f"**Evidence Network:** {len(drugs)} drugs targeting {len(proteins)} proteins across {len(pathways)} biological pathways relevant to {disease_name}.\n\n"
     
-    for drug, targets in drug_connections.items():
-        explanation += f"• **{drug}** → {', '.join(targets)}\n"
-    
-    explanation += f"\n*Graph shows {len(edges_df)} validated drug-protein interactions from database.*"
+    for drug, targets in list(drug_connections.items())[:5]:
+        explanation += f"• **{drug}** → {', '.join(targets[:3])}"
+        if len(targets) > 3:
+            explanation += f" (+{len(targets)-3} more)"
+        explanation += "\n"
     
     return explanation
 
