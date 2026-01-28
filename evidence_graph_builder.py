@@ -114,9 +114,16 @@ class EvidenceGraphBuilder:
                 drug_lower = drug_name.lower()
                 
                 if drug_lower in _CURATED_INTERACTIONS:
-                    logger.info(f"✅ {drug_name} found in JSON with {len(_CURATED_INTERACTIONS[drug_lower])} targets")
+                    all_targets = _CURATED_INTERACTIONS[drug_lower]
+                    logger.info(f"✅ {drug_name} found in JSON with {len(all_targets)} targets")
                     
-                    for target in _CURATED_INTERACTIONS[drug_lower]:
+                    # SORT by confidence and take TOP 5 only!
+                    sorted_targets = sorted(all_targets, key=lambda x: x['confidence_score'], reverse=True)
+                    top_targets = sorted_targets[:5]
+                    
+                    logger.info(f"   Using top {len(top_targets)} targets (confidence: {top_targets[0]['confidence_score']:.2f} to {top_targets[-1]['confidence_score']:.2f})")
+                    
+                    for target in top_targets:
                         gene_symbol = target['gene_symbol']
                         
                         # Get official protein name from genes.json if available
@@ -266,16 +273,28 @@ class EvidenceGraphBuilder:
                     node_ids.add(disease_node_id)
                 
                 # Connect pathways to disease using JSON pathway data
+                pathway_disease_connections = 0
+                
                 for pathway_id, pathway_info in pathway_nodes_added.items():
                     pathway_diseases = pathway_info.get('diseases', [])
+                    pathway_name = pathway_info.get('name', '')
                     relevance_score = pathway_info.get('relevance_score', 0.7)
                     
                     # Check if this pathway is relevant to the target disease
                     disease_match = False
-                    for disease_item in pathway_diseases:  # Changed from 'pd' to 'disease_item'
+                    
+                    # Match against pathway's disease list
+                    for disease_item in pathway_diseases:
                         if disease_name.lower() in disease_item.lower() or disease_item.lower() in disease_name.lower():
                             disease_match = True
                             break
+                    
+                    # Also check pathway NAME for disease keywords
+                    if not disease_match:
+                        disease_keywords = disease_name.lower().split()
+                        pathway_lower = pathway_name.lower()
+                        if any(keyword in pathway_lower for keyword in disease_keywords if len(keyword) > 3):
+                            disease_match = True
                     
                     if disease_match:
                         pathway_node_id = f"PATHWAY_{pathway_id}"
@@ -286,8 +305,9 @@ class EvidenceGraphBuilder:
                             'confidence': relevance_score,
                             'edge_type': 'pathway_disease'
                         })
+                        pathway_disease_connections += 1
                 
-                logger.info(f"Connected {sum(1 for e in edges if e.get('edge_type')=='pathway_disease')} pathways to disease")
+                logger.info(f"Connected {pathway_disease_connections} pathways to {disease_name}")
             else:
                 logger.warning("No pathway data loaded from JSON")
             
