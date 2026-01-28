@@ -9571,81 +9571,92 @@ def render_biocypher_network_section():
     st.markdown(f"**Biological evidence chains for {disease_name} drug repurposing**")
     
     if 'selected_drugs' in st.session_state and st.session_state.selected_drugs:
+        recommended_drugs = st.session_state.selected_drugs[:3]  # Top 3 drugs
+        
+        # === ADD DRUG SELECTOR ===
+        st.markdown("---")
+        st.markdown("**Select drug to view evidence graph:**")
+        
+        drug_options = [drug['name'] for drug in recommended_drugs if isinstance(drug, dict) and 'name' in drug]
+        
+        if not drug_options:
+            st.warning("No drugs available for evidence graph")
+            return
+        
+        selected_drug_for_evidence = st.selectbox(
+            "Choose drug:",
+            options=drug_options,
+            help="Select which drug's evidence pathway you want to visualize"
+        )
+        
+        st.info(f"Showing complete evidence chain for: **{selected_drug_for_evidence}**")
+        
+        # Build graph for ONLY the selected drug (not all 3!)
+        drugs_to_analyze = [selected_drug_for_evidence]
+        
         try:
-            # Get ACTUAL recommended drugs from session state
-            recommended_drugs = st.session_state.selected_drugs[:3]  # Top 3 drugs
-            
-            # Debug info for troubleshooting
-            logger.info(f"BioCypher network rendering with {len(recommended_drugs)} drugs for {disease_name}")
-            
             # Initialize BioCypher Evidence Graph Builder
             if BIOCYPHER_AVAILABLE:
                 try:
                     biocypher = EvidenceGraphBuilder()
                     
-                    # Extract drug names from recommendations
-                    drug_names = [
-                        drug['name'] for drug in recommended_drugs 
-                        if isinstance(drug, dict) and 'name' in drug
-                    ]
+                    # Build graph for ONLY the selected drug
+                    logger.info(f"Building evidence graph for {selected_drug_for_evidence} and {disease_name}")
                     
-                    if drug_names:
-                        logger.info(f"Building evidence graph for {len(drug_names)} drugs and {disease_name}")
+                    # Build knowledge graph (JSON only)
+                    nodes_df, edges_df = biocypher.build_evidence_graph(drugs_to_analyze, disease_name)
+                    
+                    if len(nodes_df) > 0 and len(edges_df) > 0:
+                        # Get summary metrics
+                        metrics = biocypher.get_summary_metrics(nodes_df, edges_df)
                         
-                        # Build knowledge graph from database (CORRECT method call)
-                        nodes_df, edges_df = biocypher.build_evidence_graph(drug_names, disease_name)
+                        logger.info(f"BioCypher graph built: {metrics['total_nodes']} nodes, {metrics['total_edges']} edges")
+                        st.success(f"Knowledge graph: {metrics['total_nodes']} entities, {metrics['total_edges']} relationships")
                         
-                        if len(nodes_df) > 0 and len(edges_df) > 0:
-                            # Get summary metrics
-                            metrics = biocypher.get_summary_metrics(nodes_df, edges_df)
+                        # Store graph data for visualization
+                        st.session_state['biocypher_nodes'] = nodes_df
+                        st.session_state['biocypher_edges'] = edges_df
+                        st.session_state['biocypher_metrics'] = metrics
+                        
+                        # === RENDER NETWORK VISUALIZATION ===
+                        st.markdown("---")
+                        st.markdown("### Interactive Drug-Target-Disease Network")
+                        
+                        try:
+                            # Convert BioCypher data to ECharts format
+                            network_data = create_network_from_biocypher(nodes_df, edges_df, disease_name)
                             
-                            logger.info(f"BioCypher graph built: {metrics['total_nodes']} nodes, {metrics['total_edges']} edges")
-                            st.success(f"Knowledge graph: {metrics['total_nodes']} entities, {metrics['total_edges']} relationships")
-                            
-                            # Store graph data for visualization
-                            st.session_state['biocypher_nodes'] = nodes_df
-                            st.session_state['biocypher_edges'] = edges_df
-                            st.session_state['biocypher_metrics'] = metrics
-                            
-                            # === RENDER NETWORK VISUALIZATION ===
-                            st.markdown("---")
-                            st.markdown("### Interactive Drug-Target-Disease Network")
-                            
-                            try:
-                                # Convert BioCypher data to ECharts format
-                                network_data = create_network_from_biocypher(nodes_df, edges_df, disease_name)
-                                
-                                if network_data:
-                                    if ECHARTS_AVAILABLE:
-                                        try:
-                                            from stable_echarts_renderer import render_echarts_html
-                                            render_echarts_html(network_data, key="biocypher_network", height_px=600)
-                                            
-                                            # Show network metrics
-                                            col1, col2, col3 = st.columns(3)
-                                            with col1:
-                                                st.metric("Drugs", metrics['drug_count'])
-                                            with col2:
-                                                st.metric("Targets", metrics['target_count'])
-                                            with col3:
-                                                st.metric("Connections", metrics['total_edges'])
-                                            
-                                            logger.info(f"Network visualization rendered successfully")
-                                            
-                                        except ImportError as e:
-                                            logger.warning(f"stable_echarts_renderer not found: {e}")
-                                            st.info("📝 Install stable_echarts_renderer.py for network visualization")
-                                    else:
-                                        st.warning("streamlit-echarts not installed")
-                                        st.code("pip install streamlit-echarts")
+                            if network_data:
+                                if ECHARTS_AVAILABLE:
+                                    try:
+                                        from stable_echarts_renderer import render_echarts_html
+                                        render_echarts_html(network_data, key="biocypher_network", height_px=600)
+                                        
+                                        # Show network metrics
+                                        col1, col2, col3 = st.columns(3)
+                                        with col1:
+                                            st.metric("Drugs", metrics['drug_count'])
+                                        with col2:
+                                            st.metric("Targets", metrics['target_count'])
+                                        with col3:
+                                            st.metric("Connections", metrics['total_edges'])
+                                        
+                                        logger.info(f"Network visualization rendered successfully")
+                                        
+                                    except ImportError as e:
+                                        logger.warning(f"stable_echarts_renderer not found: {e}")
+                                        st.info("📝 Install stable_echarts_renderer.py for network visualization")
                                 else:
-                                    st.warning("Could not create network visualization data")
-                                    
-                            except Exception as viz_error:
-                                logger.error(f"Network visualization error: {viz_error}")
-                                st.error(f"Network rendering failed: {viz_error}")
-                                import traceback
-                                logger.error(traceback.format_exc())
+                                    st.warning("streamlit-echarts not installed")
+                                    st.code("pip install streamlit-echarts")
+                            else:
+                                st.warning("Could not create network visualization data")
+                                
+                        except Exception as viz_error:
+                            logger.error(f"Network visualization error: {viz_error}")
+                            st.error(f"Network rendering failed: {viz_error}")
+                            import traceback
+                            logger.error(traceback.format_exc())
                             
                             # === ALWAYS SHOW NETWORK EXPLANATION (outside try block) ===
                             st.markdown("---")
@@ -9740,14 +9751,11 @@ def render_biocypher_network_section():
                                 import traceback
                                 logger.error(traceback.format_exc())
                                 st.warning("Could not display pathway details")
-                            
-                        else:
-                            st.warning("No evidence found in database for selected drugs")
-                            logger.warning(f"BioCypher returned empty graph: {len(nodes_df)} nodes, {len(edges_df)} edges")
+                    
                     else:
-                        st.warning("No valid drug names found for BioCypher analysis")
-                        logger.warning("Drug names extraction failed from recommended_drugs")
-                            
+                        st.warning(f"No evidence graph generated for {selected_drug_for_evidence}")
+                        logger.warning(f"BioCypher returned empty graph: {len(nodes_df) if 'nodes_df' in locals() else 0} nodes")
+                        
                 except Exception as biocypher_error:
                     st.error(f"BioCypher processing error: {biocypher_error}")
                     logger.error(f"BioCypher error: {biocypher_error}")
