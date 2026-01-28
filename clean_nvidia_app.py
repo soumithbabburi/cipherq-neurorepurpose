@@ -78,18 +78,9 @@ def get_db_connection():
         return None
 
 def execute_db(sql: str, params: tuple = None) -> list:
-    """Execute SQL query and return list of dictionaries"""
-    try:
-        conn = get_db_connection()
-        if conn is None:
-            return []
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            results = cur.fetchall()
-            return [dict(row) for row in results]
-    except Exception as e:
-        st.error(f"Query execution failed: {e}")
-        return []
+    """DATABASE REMOVED - Returns empty list"""
+    logger.warning("execute_db called but database removed! Returning empty.")
+    return []
 
 @st.cache_data(ttl=3600)
 def get_drugs_by_category(category: str, limit: int = 10) -> list:
@@ -9472,17 +9463,22 @@ def create_network_from_biocypher(nodes_df, edges_df, disease_name):
             'label': {
                 'show': True,
                 'formatter': display_label,
-                'fontSize': 10,
-                'color': '#475569',
-                'backgroundColor': '#ffffff',
+                'fontSize': 9,
+                'position': 'middle',  # Keep label centered on edge!
+                'color': '#64748B',
+                'backgroundColor': 'rgba(255,255,255,0.9)',
                 'padding': [2, 4],
-                'borderRadius': 3
+                'borderRadius': 2
             },
             'lineStyle': {
                 'width': 2.5 if relationship == 'TARGETS' else 2,
                 'opacity': 0.7,
-                'curveness': 0.3,
+                'curveness': 0.2,
                 'color': '#94A3B8'
+            },
+            'emphasis': {
+                'lineStyle': {'width': 3},
+                'label': {'show': True, 'fontSize': 10}
             }
         }
         
@@ -12545,10 +12541,33 @@ Loss in binding strength: {abs(affinity_improvement):.1f} kcal/mol
 
 def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context: str) -> float:
     """
-    Calculate evidence-based confidence score - NO HARDCODING
-    Uses actual database data for drug-protein-pathway-disease connections
+    Calculate evidence-based confidence score - JSON ONLY (NO DATABASE!)
+    Uses drug_interactions.json, drugs.json, protein_pathways.json
     """
+    from database_queries import get_drug_info, get_drug_targets, get_gene_pathways
+    import json
+    
     score = 0.0
+    
+    # Try to find drug with flexible name matching
+    # "Pioglitazone" should match "pioglitazone hydrochloride"
+    drug_lower = drug_name.lower()
+    
+    # Load drugs.json for properties
+    try:
+        with open('drugs.json', 'r') as f:
+            all_drugs = json.load(f)
+        
+        # Find drug by partial match
+        matched_drug_key = None
+        for drug_key in all_drugs.keys():
+            if drug_lower in drug_key or drug_key in drug_lower:
+                matched_drug_key = drug_key
+                break
+        
+        drug_info = all_drugs.get(matched_drug_key) if matched_drug_key else None
+    except:
+        drug_info = None
     
     # Component 1: Protein interaction evidence (max 0.30)
     if targets and len(targets) > 0:
@@ -12556,70 +12575,53 @@ def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context
         med_conf = [t for t in targets if 0.6 <= t.get('confidence_score', 0) <= 0.8]
         score += min(0.30, len(high_conf) * 0.05 + len(med_conf) * 0.02)
     
-    # Component 2: Molecular properties (max 0.25)
-    try:
-        sql = "SELECT qed_score, lipinski_violations FROM drugs WHERE LOWER(name) = LOWER(%s)"
-        results = execute_db(sql, (drug_name,))
-        if results and results[0]:
-            qed = results[0].get('qed_score')
-            violations = results[0].get('lipinski_violations', 0)
-            
-            if qed:
-                score += min(0.10, float(qed) * 0.10)
-            
-            if violations == 0:
-                score += 0.10
-            elif violations == 1:
-                score += 0.05
-    except Exception as e:
-        logger.warning(f"Property scoring failed for {drug_name}: {e}")
-        score += 0.05
+    # Component 2: Molecular properties from drugs.json (max 0.25)
+    if drug_info:
+        qed = drug_info.get('qed_score')
+        violations = drug_info.get('lipinski_violations', 0)
+        
+        if qed:
+            score += min(0.10, float(qed) * 0.10)
+        
+        if violations == 0:
+            score += 0.10
+        elif violations == 1:
+            score += 0.05
+    else:
+        score += 0.05  # Default if no data
     
-    # Component 3: Clinical evidence (max 0.25)
-    try:
-        sql = "SELECT fda_status, therapeutic_category FROM drugs WHERE LOWER(name) = LOWER(%s)"
-        results = execute_db(sql, (drug_name,))
-        if results and results[0]:
-            fda_status = str(results[0].get('fda_status', '')).lower()
-            category = str(results[0].get('therapeutic_category', '')).lower()
-            
-            if 'approved' in fda_status:
-                score += 0.15
-            elif 'phase 3' in fda_status or 'phase iii' in fda_status:
-                score += 0.10
-            elif 'phase 2' in fda_status or 'phase ii' in fda_status:
-                score += 0.05
-            
-            disease_lower = disease_context.lower()
-            if any(term in category for term in disease_lower.split()):
-                score += 0.10
-            elif any(term in disease_lower for term in category.split()):
-                score += 0.05
-    except Exception as e:
-        logger.warning(f"Clinical scoring failed for {drug_name}: {e}")
+    # Component 3: Clinical evidence - FDA approved (max 0.25)
+    if drug_info:
+        if drug_info.get('approved'):
+            score += 0.15  # FDA approved
+        score += 0.10  # Default clinical score
+    else:
         score += 0.03
     
-    # Component 4: Pathway relevance (max 0.20)
-    try:
-        sql = """
-            SELECT COUNT(DISTINCT pp.pathway_name) 
-            FROM drug_protein_interactions dpi
-            JOIN drugs d ON d.id = dpi.drug_id
-            JOIN proteins p ON p.id = dpi.protein_id
-            JOIN protein_pathways pp ON pp.protein_id = p.id
-            WHERE LOWER(d.name) = LOWER(%s)
-        """
-        results = execute_db(sql, (drug_name,))
-        if results and results[0]:
-            pathway_count = list(results[0].values())[0] if results[0] else 0
-            if pathway_count >= 3:
-                score += 0.15
-            elif pathway_count >= 1:
-                score += 0.08
-            else:
-                score += 0.02
-    except Exception as e:
-        logger.warning(f"Pathway scoring failed for {drug_name}: {e}")
+    # Component 4: Pathway relevance from protein_pathways.json (max 0.20)
+    pathway_count = 0
+    if targets:
+        try:
+            with open('protein_pathways.json', 'r') as f:
+                protein_pathways = json.load(f)
+            
+            # Count unique pathways for this drug's targets
+            all_pathways = set()
+            for target in targets:
+                gene = target.get('gene_symbol', '')
+                if gene in protein_pathways:
+                    all_pathways.update(protein_pathways[gene])
+            
+            pathway_count = len(all_pathways)
+        except Exception as e:
+            logger.warning(f"Pathway scoring failed for {drug_name}: {e}")
+            pathway_count = 0
+    
+    if pathway_count >= 3:
+        score += 0.15
+    elif pathway_count >= 1:
+        score += 0.08
+    else:
         score += 0.02
     
     return round(min(1.0, max(0.0, score)), 3)
