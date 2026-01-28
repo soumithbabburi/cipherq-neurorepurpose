@@ -1,79 +1,61 @@
-#!/usr/bin/env python3
 """
-DYNAMIC NETWORK BUILDER - DATABASE-POWERED VERSION
-Queries drug_protein_interactions table for REAL gene symbols
-Shows: DRUG → GENE → PROTEIN → PATHWAY → DISEASE
+DYNAMIC NETWORK BUILDER - JSON ONLY VERSION
+NO DATABASE - uses drug_interactions.json, genes.json, protein_pathways.json
 """
 
 import logging
-import psycopg2
+import json
 from typing import List, Dict, Any, Set
 
 logger = logging.getLogger(__name__)
 
-def get_db_connection():
-    """Get database connection"""
-    try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="cipherq_repurpose",
-            user="babburisoumith",
-            password=""
-        )
-        return conn
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        return None
-
-
 def get_drug_protein_targets(drug_name: str) -> List[str]:
     """
-    Query drug_protein_interactions table for REAL gene symbols.
-    Uses ILIKE for case-insensitive matching.
+    Get gene symbols from drug_interactions.json
     """
-    conn = get_db_connection()
-    if not conn:
-        return []
-    
     try:
-        cur = conn.cursor()
-        # Use ILIKE for case-insensitive matching to avoid 'Losartan' vs 'LOSARTAN' issues
-        cur.execute("""
-            SELECT p.gene_symbol 
-            FROM drug_protein_interactions dpi
-            JOIN drugs d ON d.id = dpi.drug_id
-            JOIN proteins p ON p.id = dpi.protein_id
-            WHERE d.name ILIKE %s
-            ORDER BY dpi.confidence_score DESC
-            LIMIT 5
-        """, (drug_name,))
+        with open('drug_interactions.json', 'r') as f:
+            interactions = json.load(f)
         
-        targets = [row[0] for row in cur.fetchall()]
-        cur.close()
+        # Flexible matching
+        drug_lower = drug_name.lower()
+        targets = None
+        
+        # Try exact match
+        if drug_lower in interactions:
+            targets = interactions[drug_lower]
+        else:
+            # Try partial match
+            for key in interactions.keys():
+                if drug_lower in key or key in drug_lower:
+                    targets = interactions[key]
+                    break
         
         if targets:
-            logger.info(f"✅ Database targets for {drug_name}: {targets}")
+            # Return top 5 gene symbols
+            sorted_targets = sorted(targets, key=lambda x: x.get('confidence_score', 0), reverse=True)
+            gene_symbols = [t['gene_symbol'] for t in sorted_targets[:5]]
+            logger.info(f"✅ Targets for {drug_name}: {gene_symbols}")
+            return gene_symbols
         else:
             logger.warning(f"⚠️ No targets found for {drug_name}")
+            return []
             
-        return targets
     except Exception as e:
         logger.error(f"❌ Query failed for {drug_name}: {e}")
         return []
-    finally:
-        conn.close() # Ensure connection always closes
 
 
 def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_disease: str = None) -> Dict:
     """
     Build knowledge graph: DRUG → GENE → PROTEIN → PATHWAY → DISEASE
-    Uses REAL gene symbols from database and optimized connection handling.
+    Uses JSON files only
     """
     
     if target_disease is None:
         target_disease = 'Alzheimer\'s Disease'
     
-    logger.info(f"🧬 Building network for {target_disease} using DATABASE gene symbols")
+    logger.info(f"🧬 Building network for {target_disease} using JSON files")
     
     nodes = []
     links = []
@@ -96,7 +78,7 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
             })
             node_ids.add(drug_id)
     
-    # 2. GENE NODES (Gathering from DB)
+    # 2. GENE NODES (from JSON)
     gene_set = set()
     drug_gene_links = []
     
@@ -122,27 +104,22 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
                 "target": gene_id,
                 "lineStyle": {"width": 2.5, "color": "#9B59B6", "type": "solid"},
                 "label": {"show": True, "formatter": "targets"},
-                "mechanism": f"{drug_name} targets protein encoded by {gene}"
+                "mechanism": f"{drug_name} targets {gene}"
             })
 
-    # 3. PROTEIN NODES (Optimized query - one connection for all genes)
+    # 3. PROTEIN NODES (from genes.json)
     gene_protein_links = []
     protein_set = set()
     
-    conn = get_db_connection()
-    if not conn:
-        logger.error("Network builder stopped: No DB connection")
-        return {"error": "Database unavailable"}
-
     try:
-        cur = conn.cursor()
+        with open('genes.json', 'r') as f:
+            genes_data = json.load(f)
+        
         for gene in gene_set:
-            # Query using the already open cursor for efficiency
-            cur.execute("SELECT name FROM proteins WHERE gene_symbol = %s LIMIT 1", (gene,))
-            row = cur.fetchone()
-            protein_name = row[0] if row and row[0] else gene
+            gene_info = genes_data.get(gene.upper(), {})
+            protein_name = gene_info.get('name', gene)
             
-            protein_id = f"protein_{protein_name}"
+            protein_id = f"protein_{gene}"
             if protein_id not in node_ids:
                 nodes.append({
                     "id": protein_id,
@@ -153,7 +130,7 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
                     "label": {"show": True, "fontSize": 11}
                 })
                 node_ids.add(protein_id)
-                protein_set.add(protein_name)
+                protein_set.add(gene)
             
             gene_protein_links.append({
                 "source": f"gene_{gene}",
@@ -162,13 +139,10 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
                 "label": {"show": False},
                 "mechanism": f"{gene} encodes {protein_name}"
             })
-        cur.close()
     except Exception as e:
-        logger.warning(f"Protein resolution loop failed: {e}")
-    finally:
-        conn.close() # Close once at the very end
+        logger.warning(f"Could not load genes.json: {e}")
     
-    # 4. PATHWAY NODES (Logic based on disease type)
+    # 4. PATHWAY NODES (based on disease)
     pathways = []
     lower_disease = target_disease.lower()
     if 'alzheimer' in lower_disease or 'dementia' in lower_disease:
@@ -177,8 +151,8 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
         pathways = ['Renin-Angiotensin system', 'Adrenergic signaling', 'Lipid metabolism']
     elif 'diabetes' in lower_disease:
         pathways = ['Glucose metabolism', 'Insulin signaling', 'PPAR signaling']
-    elif 'cancer' in lower_disease:
-        pathways = ['Cell cycle', 'Tyrosine kinase signaling', 'Apoptosis']
+    elif 'parkinson' in lower_disease:
+        pathways = ['Dopaminergic signaling', 'GABA signaling', 'Neuroinflammation']
     else:
         pathways = ['Therapeutic pathway', 'Drug mechanism']
     
@@ -232,6 +206,8 @@ def create_dynamic_drug_target_network(recommended_drugs: List[Dict], target_dis
     links.extend(gene_protein_links)
     links.extend(protein_pathway_links)
     links.extend(pathway_disease_links)
+    
+    logger.info(f"✅ Built network: {len(nodes)} nodes, {len(links)} links")
     
     return {
         "graph_data": {"nodes": nodes, "links": links},
