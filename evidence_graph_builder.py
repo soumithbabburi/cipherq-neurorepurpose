@@ -204,15 +204,32 @@ class EvidenceGraphBuilder:
                 
                 # Add drug → protein edge
                 drug_id = f"DRUG_{drug_name.replace(' ', '_').replace('-', '_').upper()}"
+                
+                # DEBUG: Make sure drug_id exists in node_ids
+                if drug_id not in node_ids:
+                    logger.warning(f"Drug ID {drug_id} not in node_ids! Adding it now...")
+                    # Add missing drug node
+                    nodes.append({
+                        'id': drug_id,
+                        'label': 'Drug',
+                        'name': drug_name,
+                        'type': 'drug',
+                        'node_type': 'drug'
+                    })
+                    node_ids.add(drug_id)
+                
                 edges.append({
                     'source': drug_id,
                     'target': protein_node_id,
-                    'label': interaction_type.upper(),
+                    'label': 'TARGETS',
                     'confidence': float(confidence) if confidence else 0.8,
                     'edge_type': 'drug_protein'
                 })
+                
+                logger.debug(f"Added edge: {drug_id} → {protein_node_id}")
             
             logger.info(f"Added {len(protein_db_ids)} protein/gene nodes")
+            logger.info(f"Added {sum(1 for e in edges if e.get('edge_type')=='drug_protein')} drug-protein edges")
             
             # 4. GET PROTEIN → PATHWAY CONNECTIONS FROM JSON
             logger.info(f"Getting pathways for {len(protein_genes)} proteins from JSON...")
