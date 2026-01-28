@@ -9407,29 +9407,40 @@ def create_network_from_biocypher(nodes_df, edges_df, disease_name):
     
     logger.info(f"Converting BioCypher data: {len(nodes_df)} nodes, {len(edges_df)} edges")
     
-    # Create categories for legend
+    # Create categories for legend with distinct colors
     categories = [
-        {'name': 'Drug', 'itemStyle': {'color': '#4ecdc4'}},
-        {'name': 'Protein/Target', 'itemStyle': {'color': '#95e1d3'}},
-        {'name': 'Disease', 'itemStyle': {'color': '#ff6b6b'}}
+        {'name': 'Drug', 'itemStyle': {'color': '#3B82F6'}},  # Blue
+        {'name': 'Protein/Target', 'itemStyle': {'color': '#10B981'}},  # Green
+        {'name': 'Pathway', 'itemStyle': {'color': '#F59E0B'}},  # Orange
+        {'name': 'Disease', 'itemStyle': {'color': '#EF4444'}}  # Red
     ]
     
     # Convert nodes DataFrame to ECharts format
     nodes_list = []
     for _, node in nodes_df.iterrows():
-        # Determine category
-        if node['label'] == 'Drug':
+        # Determine category and styling based on node type
+        node_type = node.get('type', node.get('label', '')).lower()
+        
+        if 'drug' in node_type:
             category = 0
-            size = 40
-            color = '#4ecdc4'
-        elif node['label'] == 'Protein':
+            size = 45
+            color = '#3B82F6'  # Blue
+        elif 'protein' in node_type or 'gene' in node_type:
+            category = 1
+            size = 35
+            color = '#10B981'  # Green
+        elif 'pathway' in node_type:
+            category = 2
+            size = 30
+            color = '#F59E0B'  # Orange
+        elif 'disease' in node_type:
+            category = 3
+            size = 55
+            color = '#EF4444'  # Red
+        else:
             category = 1
             size = 30
-            color = '#95e1d3'
-        else:  # Disease
-            category = 2
-            size = 50
-            color = '#ff6b6b'
+            color = '#9CA3AF'  # Gray fallback
         
         node_data = {
             'id': str(node['id']),
@@ -9438,7 +9449,8 @@ def create_network_from_biocypher(nodes_df, edges_df, disease_name):
             'category': category,
             'label': {
                 'show': True,
-                'fontSize': 11 if category == 2 else 10
+                'fontSize': 12 if category == 3 else 11,
+                'fontWeight': 'bold' if category in [0, 3] else 'normal'
             },
             'itemStyle': {
                 'color': color,
@@ -9449,17 +9461,26 @@ def create_network_from_biocypher(nodes_df, edges_df, disease_name):
         
         nodes_list.append(node_data)
     
-    # Convert edges DataFrame to ECharts format
+    # Convert edges DataFrame to ECharts format WITH LABELS
     links_list = []
     for _, edge in edges_df.iterrows():
+        # Get relationship type
+        relationship = edge.get('label', edge.get('edge_type', 'RELATED_TO'))
+        
         link_data = {
             'source': str(edge['source']),
             'target': str(edge['target']),
-            'label': {'show': False},
+            'label': {
+                'show': True,  # SHOW LABELS!
+                'formatter': relationship,
+                'fontSize': 9,
+                'color': '#64748B'
+            },
             'lineStyle': {
-                'width': 2 if edge.get('label') == 'TARGETS' else 1,
-                'opacity': 0.6,
-                'curveness': 0.2
+                'width': 2.5 if 'TARGETS' in relationship else 2,
+                'opacity': 0.7,
+                'curveness': 0.2,
+                'color': '#94A3B8'
             }
         }
         
@@ -12000,6 +12021,17 @@ def render_molecular_docking_section():
             # More negative = stronger binding = better
             # Typical range: -12 to -5 kcal/mol for good binders
             
+            # === SAVE DOCKING RESULTS FOR PBPK ===
+            if poses and len(poses) > 0:
+                st.session_state.docking_results = {
+                    'drug_name': selected_drug,
+                    'target_protein': target_protein,
+                    'poses': poses,
+                    'binding_affinities': [p.get('binding_affinity', 0) for p in poses],
+                    'method': 'AutoDock Vina' if VINA_FALLBACK_AVAILABLE else 'NVIDIA DiffDock'
+                }
+                logger.info(f"✅ Saved docking results for PBPK: {selected_drug} with {len(poses)} poses")
+            
             high_conf_poses = []
             moderate_conf_poses = []
             low_conf_poses = []
@@ -12052,8 +12084,9 @@ def render_molecular_docking_section():
             except Exception as fetch_err:
                 logger.warning(f"Could not fetch PDB: {fetch_err}")
             
-            # === SHOW DESCRIPTION AT TOP ===
-            st.markdown(f"**Docking Summary:**")
+            # === SHOW GROQ DESCRIPTION AT TOP ===
+            st.markdown("---")
+            st.markdown(f"### 💡 Molecular Docking Insights")
             try:
                 from llm_powered_descriptions import generate_docking_description_with_llm
                 best_affinity = valid_poses[0]['binding_affinity']
@@ -12063,15 +12096,20 @@ def render_molecular_docking_section():
                     binding_affinity=best_affinity,
                     disease_name=disease_name
                 )
-                st.info(description)
+                st.success(description)
+                logger.info("✅ Groq description displayed successfully")
             except Exception as desc_err:
-                logger.warning(f"Groq description failed: {desc_err}")
-                # Show fallback description so user sees SOMETHING
+                logger.error(f"⚠️ Groq description failed: {desc_err}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # Show fallback
                 best_affinity = valid_poses[0]['binding_affinity']
                 strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
                 st.info(f"{selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
+                st.warning("💡 AI description unavailable - check GROQ_API_KEY is set in Streamlit secrets")
             
-            st.markdown(f"**Docking poses for {selected_drug}:**")
+            st.markdown("---")
+            st.markdown(f"### Binding Poses")
             
             for i, pose in enumerate(valid_poses):
                 conf_label = pose.get('confidence_label', 'Unknown')
