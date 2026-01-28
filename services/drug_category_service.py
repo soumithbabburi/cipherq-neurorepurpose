@@ -1,75 +1,65 @@
+import pandas as pd
 import json
+import logging
+from typing import Dict, List, Tuple, Optional
 
-def load_data(drugs_path, interactions_path):
-    """Loads drug and interaction data from JSON files."""
-    with open(drugs_path, 'r') as f:
-        drugs_data = json.load(f)
-    
-    with open(interactions_path, 'r') as f:
-        interactions_data = json.load(f)
-        
-    return drugs_data, interactions_data
+logger = logging.getLogger(__name__)
 
-def get_comprehensive_drug_profile(drug_name, drugs_data, interactions_data):
-    """
-    Combines molecular properties and protein interaction data for a specific drug.
-    """
-    # Normalize drug name for lookup
-    drug_key = drug_name.lower()
-    
-    # Retrieve base molecular properties from drugs.json
-    # Examples in data: '1,2-benzodiazepine', 'abacavir', 'abemaciclib'
-    drug_info = drugs_data.get(drug_key)
-    
-    if not drug_info:
-        return f"Drug '{drug_name}' not found in database."
+class DrugCategoryService:
+    def __init__(self):
+        self.therapeutic_taxonomy = {
+            'Cardiovascular': {'relevance_score': 0.72},
+            'Metabolic': {'relevance_score': 0.68},
+            'Anti-inflammatory': {'relevance_score': 0.65},
+            'Neuroprotective': {'relevance_score': 0.78},
+            'Psychiatric': {'relevance_score': 0.61},
+            'Antibiotic_Repurposed': {'relevance_score': 0.58},
+            'Other': {'relevance_score': 0.45}
+        }
+        self.gene_metadata = {}
+        self._load_tsv_metadata()
 
-    # Retrieve interaction/target data from drug_interactions.json
-    # Examples in data: 'neratinib', 'imatinib', 'cisplatin'
-    interactions = interactions_data.get(drug_key, [])
+    def _load_tsv_metadata(self):
+        """Loads the functional categories from the TSV file"""
+        try:
+            # Note: keeping the name exactly as 'categories (1).tsv' as requested
+            df = pd.read_csv('categories (1).tsv', sep='\t')
+            # Map Gene Symbol -> List of functional categories (e.g. 'DPP4' -> ['PROTEASE'])
+            self.gene_metadata = df.groupby('name')['name-2'].apply(set).to_dict()
+            logger.info(f"Successfully mapped {len(self.gene_metadata)} genes from TSV")
+        except Exception as e:
+            logger.error(f"Error loading TSV: {e}")
+            self.gene_metadata = {}
 
-    # Compile the final profile
-    profile = {
-        "name": drug_info.get("name"),
-        "molecular_details": {
-            "smiles": drug_info.get("smiles"),
-            "molecular_weight": drug_info.get("molecular_weight"),
-            "log_p": drug_info.get("log_p"),
-            "hbd": drug_info.get("hbd"),
-            "hba": drug_info.get("hba"),
-            "rotatable_bonds": drug_info.get("rotatable_bonds"),
-            "approved": drug_info.get("approved"),
-            "source": drug_info.get("source")
-        },
-        "interactions": []
-    }
+    def categorize_by_genes(self, gene_symbols: List[str]) -> Tuple[str, str]:
+        """
+        The core logic that solves the 'No Diabetic Drugs' issue.
+        It uses the gene targets to determine the therapeutic category.
+        """
+        # Get functional classes from TSV for these genes
+        functional_classes = set()
+        for gene in gene_symbols:
+            if gene in self.gene_metadata:
+                functional_classes.update(self.gene_metadata[gene])
 
-    # Add interaction details such as gene symbol and binding affinity
-    for inter in interactions:
-        profile["interactions"].append({
-            "target_gene": inter.get("gene_symbol"),
-            "protein_name": inter.get("protein_name"),
-            "binding_affinity": inter.get("binding_affinity"),
-            "confidence": inter.get("confidence_score"),
-            "type": inter.get("interaction_type")
-        })
+        # 1. METABOLIC LOGIC (Diabetes/Obesity)
+        metabolic_markers = {'DPP4', 'PPARG', 'ABCC8', 'KCNJ11', 'SLC5A2', 'PRKAA1', 'PRKAA2', 'GLP1R'}
+        if any(g in metabolic_markers for g in gene_symbols):
+            return 'Metabolic', 'Diabetes/Insulin Regulator'
 
-    return profile
+        # 2. CARDIOVASCULAR LOGIC
+        if 'ION CHANNEL' in functional_classes or any(g.startswith(('ADR', 'ACE', 'KCN')) for g in gene_symbols):
+            return 'Cardiovascular', 'Blood Pressure/Ion Channel'
 
-# --- Example Usage ---
-# Path to your uploaded files
-DRUGS_FILE = 'drugs.json'
-INTERACTIONS_FILE = 'drug_interactions.json'
+        # 3. ANTI-INFLAMMATORY LOGIC
+        if 'PROTEASE' in functional_classes or any(g in {'PTGS2', 'PTGS1', 'TNF', 'IL1B'} for g in gene_symbols):
+            return 'Anti-inflammatory', 'NSAID/Inflammation'
 
-try:
-    drugs, interactions = load_data(DRUGS_FILE, INTERACTIONS_FILE)
-    
-    # Example: Look up "Neratinib"
-    # Neratinib targets include KDR, ERBB2, and EGFR
-    drug_to_search = "neratinib"
-    result = get_comprehensive_drug_profile(drug_to_search, drugs, interactions)
-    
-    print(json.dumps(result, indent=2))
+        # 4. PSYCHIATRIC LOGIC
+        if 'G PROTEIN COUPLED RECEPTOR' in functional_classes and any(g.startswith(('HTR', 'DRD')) for g in gene_symbols):
+            return 'Psychiatric', 'Neurotransmitter Modulator'
 
-except FileNotFoundError as e:
-    print(f"Error: Ensure {DRUGS_FILE} and {INTERACTIONS_FILE} are in the directory.")
+        return 'Other', 'Experimental'
+
+# Global instance
+drug_category_service = DrugCategoryService()
