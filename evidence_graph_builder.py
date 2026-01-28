@@ -77,18 +77,20 @@ class EvidenceGraphBuilder:
     
     def build_evidence_graph(self, drug_names: list, disease_name: str):
         """
-        Build complete graph: Drugs → Proteins → Genes → Pathways → Disease
-        Uses actual database connections - NO HARDCODING
+        Build complete graph: Drugs → Proteins → Pathways → Disease
+        Uses JSON files ONLY - NO DATABASE
         """
         
         try:
-            from database_utils import execute_query
+            # Load JSON data
+            load_curated_data()
             
             nodes = []
             edges = []
             node_ids = set()
             
             logger.info(f"Building graph for {len(drug_names)} drugs and disease: {disease_name}")
+            logger.info(f"Drug names to search: {drug_names}")
             
             # 1. ADD DRUG NODES
             for drug in drug_names:
@@ -137,58 +139,29 @@ class EvidenceGraphBuilder:
             
             logger.info(f"Found {len(interactions)} interactions from JSON")
             
-            # If no JSON data, try database
+            # If no JSON data, return error explaining the issue
             if len(interactions) == 0:
-                logger.info("No JSON data found, querying database...")
+                logger.error(f"No interactions found in JSON for drugs: {drug_names}")
+                logger.error(f"JSON file has these drugs: {list(_CURATED_INTERACTIONS.keys())[:20]}")
+                logger.error(f"Searched for (lowercase): {[d.lower() for d in drug_names]}")
                 
-                from database_utils import execute_query
-                
-                # Check if drugs exist
-                drug_check = execute_query("""
-                    SELECT name FROM drugs WHERE LOWER(name) = ANY(ARRAY[%s])
-                """, ([d.lower() for d in drug_names],))
-                
-                drugs_found = [d['name'] for d in drug_check]
-                
-                if not drugs_found:
-                    logger.error("Drugs not found in database OR JSON!")
-                    return pd.DataFrame([{
-                        'id': 'ERROR',
-                        'label': 'Error',
-                        'name': f'No drugs found. Searched: {drug_names}',
-                        'type': 'error'
-                    }]), pd.DataFrame()
-                
-                interactions = execute_query("""
-                    SELECT 
-                        d.name as drug_name,
-                        p.id as protein_id,
-                        p.gene_symbol,
-                        p.name as protein_name,
-                        p.function as protein_function,
-                        dpi.confidence_score,
-                        dpi.interaction_type,
-                        dpi.binding_affinity
-                    FROM drugs d
-                    JOIN drug_protein_interactions dpi ON d.id = dpi.drug_id
-                    JOIN proteins p ON p.id = dpi.protein_id
-                    WHERE LOWER(d.name) = ANY(ARRAY[%s])
-                    ORDER BY dpi.confidence_score DESC NULLS LAST
-                    LIMIT 200
-                """, ([d.lower() for d in drugs_found],))
+                return pd.DataFrame([{
+                    'id': 'ERROR',
+                    'label': 'Error',
+                    'name': f'No drug-protein data found in JSON for: {", ".join(drug_names)}',
+                    'type': 'error'
+                }]), pd.DataFrame()
             
             if not interactions:
-                logger.warning(f"No interactions found for drugs: {drugs_found}")
-                # Try to find ANY interactions for these drugs
-                basic_drug_info = execute_query("""
-                    SELECT d.name, d.mechanism_of_action, d.drug_class
-                    FROM drugs d
-                    WHERE LOWER(d.name) = ANY(ARRAY[%s])
-                """, ([d.lower() for d in drugs_found],))
-                
-                logger.info(f"Found basic info for {len(basic_drug_info)} drugs but no interactions")
+                logger.warning(f"No interactions found in JSON")
+                return pd.DataFrame([{
+                    'id': 'ERROR',
+                    'label': 'Error',
+                    'name': f'No interactions in JSON',
+                    'type': 'error'
+                }]), pd.DataFrame()
             
-            logger.info(f"Found {len(interactions)} drug-protein interactions")
+            logger.info(f"Found {len(interactions)} drug-protein interactions from JSON")
             
             protein_db_ids = {}
             protein_genes = {}
@@ -317,137 +290,9 @@ class EvidenceGraphBuilder:
                 logger.info(f"Connected {sum(1 for e in edges if e.get('edge_type')=='pathway_disease')} pathways to disease")
             else:
                 logger.warning("No pathway data loaded from JSON")
-                pathway_nodes_added = {}
             
-            # If no JSON pathways, try database as fallback
-            if not pathway_nodes_added and protein_db_ids:
-                logger.info(f"Querying pathways for {len(protein_db_ids)} proteins...")
-                
-                pathway_rows = execute_query("""
-                    SELECT DISTINCT 
-                        p.gene_symbol,
-                        pw.id as pathway_id,
-                        pw.name as pathway_name,
-                        pw.pathway_source,
-                        pw.pathway_category,
-                        ppm.role as protein_role
-                    FROM protein_pathway_members ppm
-                    JOIN proteins p ON ppm.protein_id = p.id
-                    JOIN pathways pw ON ppm.pathway_id = pw.id
-                    WHERE ppm.protein_id = ANY(%s)
-                    ORDER BY pw.pathway_source, pw.name
-                    LIMIT 100
-                """, (list(protein_db_ids.values()),))
-                
-                logger.info(f"Found {len(pathway_rows)} protein-pathway connections")
-                
-                pathway_db_ids = {}
-                
-                # 5. ADD PATHWAY NODES
-                for row in pathway_rows:
-                    gene = row['gene_symbol']
-                    pw_id = row['pathway_id']
-                    pw_name = row['pathway_name']
-                    pw_source = row.get('pathway_source', 'Database')
-                    pw_category = row.get('pathway_category', '')
-                    protein_role = row.get('protein_role', '')
-                    
-                    pathway_node_id = f"PATHWAY_{pw_id}"
-                    
-                    if pathway_node_id not in node_ids:
-                        display_name = f"{pw_name}"
-                        if pw_category:
-                            display_name += f" ({pw_category})"
-                        
-                        nodes.append({
-                            'id': pathway_node_id,
-                            'label': 'Pathway',
-                            'name': pw_name,
-                            'display_name': display_name,
-                            'source': pw_source,
-                            'category': pw_category,
-                            'type': 'pathway',
-                            'node_type': 'pathway'
-                        })
-                        node_ids.add(pathway_node_id)
-                        pathway_db_ids[pw_id] = pw_name
-                    
-                    # Add protein → pathway edge
-                    protein_node_id = f"PROTEIN_{gene}"
-                    if protein_node_id in node_ids:
-                        edges.append({
-                            'source': protein_node_id,
-                            'target': pathway_node_id,
-                            'label': 'PARTICIPATES_IN',
-                            'confidence': 0.85,
-                            'role': protein_role,
-                            'edge_type': 'protein_pathway'
-                        })
-                
-                logger.info(f"Added {len(pathway_db_ids)} pathway nodes")
-                
-                # 6. CONNECT PATHWAYS → DISEASE
-                logger.info(f"Querying disease associations for: {disease_name}")
-                
-                # First, find the disease in database
-                disease_rows = execute_query("""
-                    SELECT id, name, disease_category
-                    FROM diseases
-                    WHERE name ILIKE %s
-                    OR disease_category ILIKE %s
-                    LIMIT 5
-                """, (f"%{disease_name}%", f"%{disease_name}%"))
-                
-                disease_node_id = f"DISEASE_{disease_name.replace(' ', '_').replace('-', '_').upper()}"
-                disease_db_id = None
-                disease_category = None
-                
-                if disease_rows:
-                    disease_db_id = disease_rows[0]['id']
-                    disease_name_db = disease_rows[0]['name']
-                    disease_category = disease_rows[0].get('disease_category')
-                    logger.info(f"Found disease in database: {disease_name_db} (ID: {disease_db_id})")
-                    
-                    # Query pathway-disease associations
-                    if pathway_db_ids:
-                        pw_disease_rows = execute_query("""
-                            SELECT 
-                                pda.pathway_id,
-                                pda.relevance_score,
-                                pda.evidence_source,
-                                pw.name as pathway_name
-                            FROM pathway_disease_associations pda
-                            JOIN pathways pw ON pda.pathway_id = pw.id
-                            WHERE pda.disease_id = %s
-                            AND pda.pathway_id = ANY(%s)
-                            ORDER BY pda.relevance_score DESC NULLS LAST
-                            LIMIT 50
-                        """, (disease_db_id, list(pathway_db_ids.keys())))
-                        
-                        logger.info(f"Found {len(pw_disease_rows)} pathway-disease associations")
-                        
-                        # Add pathway → disease edges
-                        for row in pw_disease_rows:
-                            pw_id = row['pathway_id']
-                            relevance = row.get('relevance_score', 0.75)
-                            evidence = row.get('evidence_source', 'Database')
-                            
-                            pathway_node_id = f"PATHWAY_{pw_id}"
-                            if pathway_node_id in node_ids:
-                                edges.append({
-                                    'source': pathway_node_id,
-                                    'target': disease_node_id,
-                                    'label': 'IMPLICATED_IN',
-                                    'confidence': float(relevance) if relevance else 0.75,
-                                    'evidence': evidence,
-                                    'edge_type': 'pathway_disease'
-                                })
-                    else:
-                        logger.warning("No pathways to connect to disease")
-                else:
-                    logger.warning(f"Disease '{disease_name}' not found in database")
-            else:
-                logger.warning("No proteins found, cannot query pathways")
+            # NO DATABASE FALLBACK - JSON ONLY!
+            # All pathway and disease data comes from JSON files
             
             # 7. ADD DISEASE NODE (if not already added)
             disease_node_id = f"DISEASE_{disease_name.replace(' ', '_').replace('-', '_').upper()}"
@@ -473,52 +318,11 @@ class EvidenceGraphBuilder:
                 e.get('edge_type') == 'pathway_disease' for e in edges
             )
             
-            if not has_pathway_disease_links and protein_genes:
-                logger.info("No pathway-disease links found, using direct protein-disease associations")
-                
-                # Query direct protein-disease associations
-                gene_disease_rows = execute_query("""
-                    SELECT 
-                        p.gene_symbol,
-                        gda.association_score,
-                        gda.evidence_source
-                    FROM gene_disease_associations gda
-                    JOIN proteins p ON gda.gene_id = p.id
-                    WHERE gda.disease_id = %s
-                    AND p.id = ANY(%s)
-                    LIMIT 30
-                """, (disease_db_id if disease_db_id else 0, list(protein_db_ids.values())))
-                
-                if gene_disease_rows:
-                    logger.info(f"Found {len(gene_disease_rows)} direct gene-disease associations")
-                    for row in gene_disease_rows:
-                        gene = row['gene_symbol']
-                        score = row.get('association_score', 0.7)
-                        evidence = row.get('evidence_source', 'Database')
-                        
-                        protein_node_id = f"PROTEIN_{gene}"
-                        if protein_node_id in node_ids:
-                            edges.append({
-                                'source': protein_node_id,
-                                'target': disease_node_id,
-                                'label': 'ASSOCIATED_WITH',
-                                'confidence': float(score) if score else 0.7,
-                                'evidence': evidence,
-                                'edge_type': 'protein_disease'
-                            })
-                else:
-                    # Ultimate fallback: connect all proteins to disease with low confidence
-                    logger.warning("No direct associations found, using inference")
-                    for gene in list(protein_genes.keys())[:10]:
-                        protein_node_id = f"PROTEIN_{gene}"
-                        edges.append({
-                            'source': protein_node_id,
-                            'target': disease_node_id,
-                            'label': 'POTENTIAL_TARGET',
-                            'confidence': 0.5,
-                            'evidence': 'Inferred',
-                            'edge_type': 'protein_disease_inferred'
-                        })
+            # NO DATABASE FALLBACK - all connections from JSON!
+            # Pathway-disease links already added from pathways.json
+            
+            # Also need to define disease_category variable
+            disease_category = None
             
             # 9. CONVERT TO DATAFRAMES
             nodes_df = pd.DataFrame(nodes)
