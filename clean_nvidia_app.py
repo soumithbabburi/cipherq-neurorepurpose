@@ -17,8 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 import requests
 import networkx as nx
-import psycopg2
-from psycopg2.extras import RealDictCursor
+# psycopg2 REMOVED - JSON only!
 
 # Configuration management
 try:
