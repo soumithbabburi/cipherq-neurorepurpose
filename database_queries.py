@@ -1,229 +1,121 @@
 """
-Database Queries Module
-Checks drug_interactions.json FIRST, then falls back to database
+Database Queries - JSON ONLY VERSION
+NO PostgreSQL - uses only JSON files
 """
-import logging
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from typing import List, Dict, Optional
+
 import json
+import logging
 import os
 
 logger = logging.getLogger(__name__)
 
-# Load curated interactions from JSON file
-_CURATED_INTERACTIONS = None
+# ===== LOAD ALL JSON FILES =====
+_DRUG_INTERACTIONS = None
+_PATHWAYS = None
+_PROTEIN_PATHWAYS = None
+_DRUGS = None
+_GENES = None
 
-def load_curated_interactions():
-    """Load curated drug-protein interactions from JSON file"""
-    global _CURATED_INTERACTIONS
+def load_all_data():
+    """Load all JSON files"""
+    global _DRUG_INTERACTIONS, _PATHWAYS, _PROTEIN_PATHWAYS, _DRUGS, _GENES
     
-    if _CURATED_INTERACTIONS is not None:
+    if _DRUG_INTERACTIONS is not None:
         return
     
+    # Load drug interactions
     try:
-        if os.path.exists('drug_interactions.json'):
-            with open('drug_interactions.json', 'r') as f:
-                _CURATED_INTERACTIONS = json.load(f)
-            logger.info(f"✅ Loaded curated interactions for {len(_CURATED_INTERACTIONS)} drugs")
-        else:
-            _CURATED_INTERACTIONS = {}
-            logger.warning("drug_interactions.json not found - using database only")
-    except Exception as e:
-        logger.error(f"Failed to load curated interactions: {e}")
-        _CURATED_INTERACTIONS = {}
-
-# Load on import
-load_curated_interactions()
-
-
-def get_db_connection():
-    """Get PostgreSQL connection"""
-    try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="cipherq_repurpose",
-            user="babburisoumith",
-            password=""
-        )
-        return conn
-    except Exception as e:
-        logger.error(f"DB connection failed: {e}")
-        return None
-
-
-def get_drug_targets(drug_name: str, limit: int = 10) -> List[Dict]:
-    """
-    Get targets from JSON first, fallback to database
-    """
+        with open('drug_interactions.json', 'r') as f:
+            _DRUG_INTERACTIONS = json.load(f)
+        logger.info(f"✅ Loaded {len(_DRUG_INTERACTIONS)} drugs with interactions")
+    except:
+        _DRUG_INTERACTIONS = {}
+        logger.warning("drug_interactions.json not found")
     
-    # CHECK JSON FIRST
-    if _CURATED_INTERACTIONS:
-        drug_name_lower = drug_name.lower()
-        if drug_name_lower in _CURATED_INTERACTIONS:
-            targets = _CURATED_INTERACTIONS[drug_name_lower]
-            logger.info(f"✅ {drug_name} targets from JSON: {[t['gene_symbol'] for t in targets[:limit]]}")
-            return targets[:limit]
+    # Load pathways
+    try:
+        with open('pathways.json', 'r') as f:
+            _PATHWAYS = json.load(f)
+        logger.info(f"✅ Loaded {len(_PATHWAYS)} pathways")
+    except:
+        _PATHWAYS = {}
+        logger.warning("pathways.json not found")
     
-    # FALLBACK TO DATABASE
+    # Load protein-pathway mappings
     try:
-        conn = get_db_connection()
-        if not conn:
-            return []
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT 
-                p.gene_symbol,
-                p.name as protein_name,
-                dpi.confidence_score,
-                dpi.interaction_type,
-                dpi.binding_affinity
-            FROM drug_protein_interactions dpi
-            JOIN drugs d ON d.id = dpi.drug_id
-            JOIN proteins p ON p.id = dpi.protein_id
-            WHERE LOWER(d.name) = LOWER(%s)
-            ORDER BY dpi.confidence_score DESC
-            LIMIT %s
-        """, (drug_name, limit))
-        
-        results = [dict(row) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        
-        if results:
-            logger.info(f"✅ {drug_name} targets from DB: {[r['gene_symbol'] for r in results]}")
-        
-        return results
-        
-    except Exception as e:
-        logger.error(f"get_drug_targets error: {e}")
-        return []
-
-
-def get_drug_by_name(drug_name: str) -> Optional[Dict]:
-    """Get drug info from database"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return None
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT *
-            FROM drugs
-            WHERE LOWER(name) = LOWER(%s)
-            LIMIT 1
-        """, (drug_name,))
-        
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        return dict(row) if row else None
-        
-    except Exception as e:
-        logger.error(f"get_drug_by_name error: {e}")
-        return None
-
-
-def get_drugs_by_category(category: str, limit: int = 50) -> List[Dict]:
-    """Get drugs by category"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return []
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT *
-            FROM drugs
-            WHERE therapeutic_category = %s
-            ORDER BY name
-            LIMIT %s
-        """, (category, limit))
-        
-        results = [dict(row) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        
-        return results
-        
-    except Exception as e:
-        logger.error(f"get_drugs_by_category error: {e}")
-        return []
-
-
-def search_drugs_by_query(query: str, limit: int = 20) -> List[Dict]:
-    """Search drugs by query"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return []
-        
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        pattern = f"%{query}%"
-        cur.execute("""
-            SELECT *
-            FROM drugs
-            WHERE name ILIKE %s
-               OR original_indication ILIKE %s
-               OR drug_class ILIKE %s
-            LIMIT %s
-        """, (pattern, pattern, pattern, limit))
-        
-        results = [dict(row) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        
-        return results
-        
-    except Exception as e:
-        logger.error(f"search_drugs error: {e}")
-        return []
-
-
-def get_interaction_count(drug_name: str) -> int:
-    """Get number of protein interactions for a drug"""
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return 0
-        
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM drug_protein_interactions dpi
-            JOIN drugs d ON d.id = dpi.drug_id
-            WHERE LOWER(d.name) = LOWER(%s)
-        """, (drug_name,))
-        
-        count = cur.fetchone()[0]
-        cur.close()
-        conn.close()
-        
-        return count
-        
-    except Exception as e:
-        logger.error(f"get_interaction_count error: {e}")
-        return 0
-
-
-def get_disease_targets(disease_name: str, limit: int = 10) -> List[str]:
-    """Get common protein targets for a disease"""
-    # Simplified - returns common targets based on disease type
-    disease_targets = {
-        'Alzheimer': ['ACHE', 'BCHE', 'NMDA', 'APP', 'MAPT'],
-        'Diabetes': ['PPARG', 'DPP4', 'SGLT2', 'GLP1R', 'AMPK'],
-        'Cardiovascular': ['ACE', 'ADRB1', 'HMGCR', 'AGTR1'],
-        'Cancer': ['ABL1', 'EGFR', 'ERBB2', 'KIT'],
-    }
+        with open('protein_pathways.json', 'r') as f:
+            _PROTEIN_PATHWAYS = json.load(f)
+        logger.info(f"✅ Loaded {len(_PROTEIN_PATHWAYS)} protein-pathway mappings")
+    except:
+        _PROTEIN_PATHWAYS = {}
+        logger.warning("protein_pathways.json not found")
     
-    for key, targets in disease_targets.items():
-        if key.lower() in disease_name.lower():
-            return targets[:limit]
+    # Load drugs metadata
+    try:
+        with open('drugs.json', 'r') as f:
+            _DRUGS = json.load(f)
+        logger.info(f"✅ Loaded {len(_DRUGS)} drugs with metadata")
+    except:
+        _DRUGS = {}
+        logger.warning("drugs.json not found")
     
+    # Load official genes
+    try:
+        with open('genes.json', 'r') as f:
+            _GENES = json.load(f)
+        logger.info(f"✅ Loaded {len(_GENES)} official HGNC genes")
+    except:
+        _GENES = {}
+        logger.warning("genes.json not found")
+
+load_all_data()
+
+# ===== QUERY FUNCTIONS =====
+
+def get_drug_targets(drug_name: str):
+    """Get protein targets for a drug"""
+    load_all_data()
+    return _DRUG_INTERACTIONS.get(drug_name.lower(), [])
+
+def get_drug_info(drug_name: str):
+    """Get drug metadata (SMILES, properties)"""
+    load_all_data()
+    return _DRUGS.get(drug_name.lower())
+
+def get_gene_info(gene_symbol: str):
+    """Get official gene information from HGNC"""
+    load_all_data()
+    return _GENES.get(gene_symbol.upper())
+
+def search_drugs(query: str, limit: int = 50):
+    """Search drugs by name"""
+    load_all_data()
+    query_lower = query.lower()
+    
+    results = []
+    for drug_key, drug_data in _DRUGS.items():
+        if query_lower in drug_key or query_lower in drug_data.get('name', '').lower():
+            results.append(drug_data)
+            if len(results) >= limit:
+                break
+    
+    return results
+
+def get_pathway_info(pathway_id: str):
+    """Get pathway details"""
+    load_all_data()
+    return _PATHWAYS.get(pathway_id)
+
+def get_gene_pathways(gene_symbol: str):
+    """Get pathways for a gene"""
+    load_all_data()
+    return _PROTEIN_PATHWAYS.get(gene_symbol.upper(), [])
+
+# ===== NO DATABASE - ALL JSON =====
+def execute_query(*args, **kwargs):
+    """Removed - use JSON files instead"""
+    logger.error("execute_query called but database removed! Use JSON functions instead")
     return []
 
-
-__all__ = ['get_drug_targets', 'get_drug_by_name', 'get_drugs_by_category', 'search_drugs_by_query', 'get_interaction_count', 'get_disease_targets']
+print("✅ Database queries module loaded - JSON ONLY (no PostgreSQL)")
+print(f"   Loaded: drugs, genes, interactions, pathways, protein_pathways")
