@@ -104,26 +104,43 @@ class EvidenceGraphBuilder:
                 })
                 node_ids.add(drug_id)
             
-            # 2. GET DRUG → PROTEIN INTERACTIONS (JSON FIRST, THEN DATABASE)
-            logger.info("Getting drug-protein interactions...")
+            # 2. GET DRUG → PROTEIN INTERACTIONS (JSON ONLY)
+            logger.info("Getting drug-protein interactions from JSON...")
             
             interactions = []
             
-            # First, try to get from JSON
+            # Try to get from JSON with FLEXIBLE name matching
             for drug_name in drug_names:
                 drug_lower = drug_name.lower()
                 
+                # Try exact match first
                 if drug_lower in _CURATED_INTERACTIONS:
-                    all_targets = _CURATED_INTERACTIONS[drug_lower]
-                    logger.info(f"✅ {drug_name} found in JSON with {len(all_targets)} targets")
-                    
-                    # SORT by confidence and take TOP 5 only!
-                    sorted_targets = sorted(all_targets, key=lambda x: x['confidence_score'], reverse=True)
-                    top_targets = sorted_targets[:5]
-                    
-                    logger.info(f"   Using top {len(top_targets)} targets (confidence: {top_targets[0]['confidence_score']:.2f} to {top_targets[-1]['confidence_score']:.2f})")
-                    
-                    for target in top_targets:
+                    targets_found = _CURATED_INTERACTIONS[drug_lower]
+                    logger.info(f"✅ {drug_name} EXACT match in JSON")
+                else:
+                    # Try partial match: "Pioglitazone" matches "pioglitazone hydrochloride"
+                    targets_found = None
+                    for json_key in _CURATED_INTERACTIONS.keys():
+                        if drug_lower in json_key or json_key in drug_lower:
+                            targets_found = _CURATED_INTERACTIONS[json_key]
+                            logger.info(f"✅ {drug_name} PARTIAL match: '{json_key}'")
+                            break
+                
+                if not targets_found:
+                    logger.warning(f"⚠️ {drug_name} NOT FOUND in JSON!")
+                    logger.warning(f"   Available drugs (sample): {list(_CURATED_INTERACTIONS.keys())[:10]}")
+                    continue
+                
+                all_targets = targets_found
+                logger.info(f"   Found {len(all_targets)} targets for {drug_name}")
+                
+                # SORT by confidence and take TOP 5 only!
+                sorted_targets = sorted(all_targets, key=lambda x: x['confidence_score'], reverse=True)
+                top_targets = sorted_targets[:5]
+                
+                logger.info(f"   Using top {len(top_targets)} targets (confidence: {top_targets[0]['confidence_score']:.2f} to {top_targets[-1]['confidence_score']:.2f})")
+                
+                for target in top_targets:
                         gene_symbol = target['gene_symbol']
                         
                         # Get official protein name from genes.json if available
