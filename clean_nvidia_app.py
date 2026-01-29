@@ -81,35 +81,44 @@ def execute_db(sql: str, params: tuple = None) -> list:
     logger.warning("execute_db called but database removed! Returning empty.")
     return []
 
-@st.cache_data(ttl=3600)
 def get_drugs_by_category(category: str, limit: int = 10) -> list:
-    """Get drugs from database by category"""
-    sql = """
-    SELECT name, therapeutic_category, drug_class, fda_status, 
-           molecular_weight, qed_score, mechanism_of_action
-    FROM drugs
-    WHERE therapeutic_category ILIKE %s
-    ORDER BY qed_score DESC NULLS LAST
-    LIMIT %s
-    """
-    return execute_db(sql, (f'%{category}%', limit))
+    """Get drugs by category using drug_categorizer - NO DATABASE!"""
+    try:
+        from services.drug_categorizer import get_drug_categorizer
+        categorizer = get_drug_categorizer()
+        drugs = categorizer.get_drugs_by_category(category, limit=limit)
+        return drugs
+    except Exception as e:
+        logger.error(f"Categorizer error: {e}")
+        return []
 
-@st.cache_data(ttl=3600)
+
 def search_drugs_by_query(query: str, limit: int = 15) -> list:
-    """Search drugs by query string"""
-    sql = """
-    SELECT name, therapeutic_category, drug_class, fda_status,
-           mechanism_of_action, qed_score
-    FROM drugs
-    WHERE name ILIKE %s 
-       OR therapeutic_category ILIKE %s
-       OR drug_class ILIKE %s
-       OR mechanism_of_action ILIKE %s
-    ORDER BY qed_score DESC NULLS LAST
-    LIMIT %s
-    """
-    query_pattern = f'%{query}%'
-    return execute_db(sql, (query_pattern, query_pattern, query_pattern, query_pattern, limit))
+    """Search drugs by query string - USES CATEGORIZER, NOT DATABASE"""
+    try:
+        from services.drug_categorizer import get_drug_categorizer
+        categorizer = get_drug_categorizer()
+        
+        # Try to match query to a category
+        query_lower = query.lower()
+        
+        if 'diabet' in query_lower:
+            return categorizer.get_drugs_by_category('Diabetic', limit=limit)
+        elif 'cardio' in query_lower or 'heart' in query_lower:
+            return categorizer.get_drugs_by_category('Cardiovascular', limit=limit)
+        elif 'parkinson' in query_lower:
+            return categorizer.get_drugs_by_category('Parkinsons', limit=limit)
+        elif 'alzheimer' in query_lower:
+            return categorizer.get_drugs_by_category('Alzheimers', limit=limit)
+        elif 'cancer' in query_lower:
+            return categorizer.get_drugs_by_category('Cancer', limit=limit)
+        else:
+            # Return general drugs
+            return categorizer.get_drugs_by_category('General', limit=limit)
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        return []
+
 
 @st.cache_data(ttl=3600)
 def get_drug_protein_interactions(drug_name: str) -> list:
