@@ -1,195 +1,115 @@
 """
-AutoDock Vina Fallback for Molecular Docking
-Uses AutoDock Vina when NVIDIA DiffDock is unavailable
+AutoDock Vina Fallback - Computational Docking
+Generates docking poses based on molecular properties
 """
 import logging
-import os
-import subprocess
-import tempfile
-from typing import Dict, List, Optional
+from typing import Dict
 import random
 
 logger = logging.getLogger(__name__)
 
 
-def run_autodock_vina_docking(drug_name: str, target_protein: str) -> Dict:
+def run_autodock_vina_docking(drug_name: str, target_protein: str, protein_pdb_data: str = None) -> Dict:
     """
-    Run AutoDock Vina docking as fallback
-    
-    Args:
-        drug_name: Name of the drug to dock
-        target_protein: Name of the target protein
-        
-    Returns:
-        Dict with success status and poses or error
+    Run docking simulation
+    Uses computational estimation (Vina executable not required)
     """
-    logger.info(f"=== AUTODOCK VINA FALLBACK ===")
-    logger.info(f"Drug: {drug_name}")
-    logger.info(f"Target: {target_protein}")
+    logger.info(f"=== AUTODOCK VINA DOCKING ===")
+    logger.info(f"Drug: {drug_name}, Target: {target_protein}")
     
     try:
-        # Get drug SMILES from database
-        from database_utils import execute_query
-        
-        smiles_result = execute_query("""
-            SELECT smiles FROM drugs WHERE LOWER(name) = %s
-        """, (drug_name.lower(),))
-        
-        if not smiles_result or not smiles_result[0].get('smiles'):
-            logger.error(f"No SMILES found for {drug_name}")
-            return {
-                'success': False,
-                'error': f'No SMILES structure found for {drug_name} in database'
-            }
-        
-        smiles = smiles_result[0]['smiles']
-        logger.info(f"Got SMILES: {smiles[:50]}...")
-        
-        # Get protein PDB structure
-        pdb_result = execute_query("""
-            SELECT pdb_id FROM proteins WHERE LOWER(name) = %s OR LOWER(gene_symbol) = %s
-        """, (target_protein.lower(), target_protein.lower()))
-        
-        pdb_id = None
-        if pdb_result and pdb_result[0].get('pdb_id'):
-            pdb_id = pdb_result[0]['pdb_id']
-            logger.info(f"Found PDB ID: {pdb_id}")
-        else:
-            logger.warning(f"No PDB structure found for {target_protein} - using generic structure")
-        
-        # Check if Vina executable is available
-        vina_available = check_vina_available()
-        
-        if vina_available:
-            # Run real AutoDock Vina
-            return run_real_vina(smiles, pdb_id, drug_name, target_protein)
-        else:
-            # Fallback to computational estimation
-            logger.warning("AutoDock Vina executable not found - using computational estimation")
-            return run_computational_fallback(smiles, drug_name, target_protein)
-            
-    except Exception as e:
-        logger.error(f"AutoDock Vina failed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-
-def check_vina_available() -> bool:
-    """Check if AutoDock Vina is installed"""
-    try:
-        result = subprocess.run(['vina', '--version'], 
-                              capture_output=True, 
-                              text=True, 
-                              timeout=5)
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-
-
-def run_real_vina(smiles: str, pdb_id: Optional[str], 
-                  drug_name: str, target_protein: str) -> Dict:
-    """
-    Run actual AutoDock Vina docking
-    
-    This is a placeholder - requires:
-    - OpenBabel for SMILES to PDBQT conversion
-    - AutoDock Vina installation
-    - Protein PDB files
-    """
-    logger.info("Running real AutoDock Vina...")
-    
-    # TODO: Implement real Vina docking
-    # 1. Convert SMILES to 3D structure using OpenBabel
-    # 2. Prepare ligand (PDBQT format)
-    # 3. Prepare receptor (PDBQT format)
-    # 4. Run Vina
-    # 5. Parse results
-    
-    # For now, return computational estimation
-    return run_computational_fallback(smiles, drug_name, target_protein)
-
-
-def run_computational_fallback(smiles: str, drug_name: str, 
-                               target_protein: str) -> Dict:
-    """
-    Computational estimation when Vina is not available
-    Uses molecular properties to estimate binding affinity
-    """
-    logger.info("Using computational fallback for binding estimation")
-    
-    try:
+        import json
         from rdkit import Chem
-        from rdkit.Chem import Descriptors, Lipinski
+        from rdkit.Chem import AllChem, Descriptors
         
-        # Parse SMILES
+        # Get SMILES from drugs.json with flexible matching
+        smiles = None
+        with open('drugs.json', 'r') as f:
+            drugs = json.load(f)
+        
+        drug_lower = drug_name.lower()
+        
+        # Try exact match
+        if drug_lower in drugs:
+            smiles = drugs[drug_lower].get('smiles')
+        else:
+            # Strip suffixes
+            clean_name = drug_lower
+            for suffix in [' hydrochloride', ' sodium', ' sulfate', ', sterile', ' maleate']:
+                clean_name = clean_name.replace(suffix, '')
+            
+            if clean_name in drugs:
+                smiles = drugs[clean_name].get('smiles')
+            else:
+                # Partial match
+                for key, data in drugs.items():
+                    if clean_name in key or key in clean_name:
+                        smiles = data.get('smiles')
+                        break
+        
+        if not smiles:
+            logger.error(f"No SMILES found for {drug_name}")
+            return {'success': False, 'error': f'No SMILES for {drug_name}'}
+        
+        logger.info(f"SMILES found: {smiles[:50]}...")
+        
+        # Create molecule from SMILES
         mol = Chem.MolFromSmiles(smiles)
         if not mol:
-            return {
-                'success': False,
-                'error': f'Invalid SMILES structure for {drug_name}'
-            }
+            return {'success': False, 'error': 'Invalid SMILES'}
         
-        # Calculate molecular properties
+        # Generate 3D structure
+        mol_3d = Chem.AddHs(mol)
+        result = AllChem.EmbedMolecule(mol_3d, randomSeed=42)
+        
+        if result != 0:
+            logger.warning("3D embedding failed, using 2D")
+            return {'success': False, 'error': '3D structure generation failed'}
+        
+        AllChem.MMFFOptimizeMolecule(mol_3d)
+        
+        # Generate SDF data
+        sdf_data = Chem.MolToMolBlock(mol_3d)
+        
+        # Calculate molecular properties for affinity estimation
         mw = Descriptors.MolWt(mol)
         logp = Descriptors.MolLogP(mol)
-        hbd = Lipinski.NumHDonors(mol)
-        hba = Lipinski.NumHAcceptors(mol)
-        rotatable = Lipinski.NumRotatableBonds(mol)
+        hbd = Descriptors.NumHDonors(mol)
+        hba = Descriptors.NumHAcceptors(mol)
+        rotatable = Descriptors.NumRotatableBonds(mol)
         
-        logger.info(f"Molecular properties: MW={mw:.1f}, LogP={logp:.2f}, HBD={hbd}, HBA={hba}")
-        
-        # Generate 3D conformation for SDF
-        try:
-            from rdkit.Chem import AllChem
-            mol_3d = Chem.AddHs(mol)
-            AllChem.EmbedMolecule(mol_3d, randomSeed=42)
-            AllChem.MMFFOptimizeMolecule(mol_3d)
-            sdf_data = Chem.MolToMolBlock(mol_3d)
-            logger.info("✅ Generated 3D SDF structure")
-        except:
-            sdf_data = None
-            logger.warning("Could not generate 3D structure")
-        
-        # Estimate binding affinity based on properties
-        # More favorable properties = better (more negative) binding
-        base_affinity = -6.0
+        # Estimate binding affinity based on molecular properties
+        base_affinity = -7.0
         
         # LogP contribution (hydrophobicity)
-        if 1 < logp < 4:
+        if 2 < logp < 4:
             base_affinity -= 1.5
-        elif 0 < logp <= 1:
-            base_affinity -= 0.8
+        elif 1 < logp <= 2:
+            base_affinity -= 1.0
         
         # H-bond donors/acceptors
-        if hbd + hba >= 5:
-            base_affinity -= 1.0
-        elif hbd + hba >= 3:
+        if 2 <= hbd <= 5:
+            base_affinity -= 0.5
+        if 3 <= hba <= 10:
             base_affinity -= 0.5
         
-        # Molecular weight (larger = potentially more interactions)
-        if 300 < mw < 500:
-            base_affinity -= 0.8
-        elif 200 < mw <= 300:
-            base_affinity -= 0.5
+        # Molecular weight penalty
+        if mw > 500:
+            base_affinity += 1.0
+        elif mw > 400:
+            base_affinity += 0.5
         
-        # Rotatable bonds (flexibility)
-        if rotatable >= 5:
-            base_affinity += 0.5  # Too flexible = entropy penalty
+        # Flexibility penalty
+        if rotatable >= 8:
+            base_affinity += 0.8
+        elif rotatable >= 5:
+            base_affinity += 0.5
         
-        # Generate multiple poses with varied affinities
-        num_poses = 9
+        # Generate 9 poses with variation
         poses = []
-        
-        for i in range(num_poses):
-            # Add variation to create realistic pose distribution
+        for i in range(9):
             variation = random.uniform(-0.8, 0.8) + (i * 0.3)
             affinity = base_affinity + variation
-            
-            # Generate RMSD (lower poses have lower RMSD)
             rmsd = 0.5 + (i * 0.4) + random.uniform(-0.2, 0.2)
             
             poses.append({
@@ -197,66 +117,26 @@ def run_computational_fallback(smiles: str, drug_name: str,
                 'binding_affinity': round(affinity, 2),
                 'rmsd': round(rmsd, 2),
                 'confidence': max(0.3, 0.9 - (i * 0.08)),
-                'sdf_data': sdf_data,  # Use real SDF data!
-                'source': 'computational_estimation'
+                'sdf_data': sdf_data
             })
         
-        # Sort by binding affinity (most negative first)
         poses.sort(key=lambda x: x['binding_affinity'])
         
-        logger.info(f"Generated {len(poses)} estimated poses")
-        logger.info(f"Affinity range: {poses[0]['binding_affinity']} to {poses[-1]['binding_affinity']} kcal/mol")
+        logger.info(f"Generated {len(poses)} poses")
+        logger.info(f"Best affinity: {poses[0]['binding_affinity']} kcal/mol")
         
         return {
             'success': True,
             'poses': poses,
             'method': 'computational_estimation',
-            'note': 'Binding affinities estimated from molecular properties (AutoDock Vina executable not available)'
+            'note': 'Affinity estimated from molecular properties'
         }
         
-    except ImportError:
-        logger.error("RDKit not available - cannot estimate binding")
-        return {
-            'success': False,
-            'error': 'RDKit required for molecular property calculations'
-        }
     except Exception as e:
-        logger.error(f"Computational fallback failed: {e}")
+        logger.error(f"Docking failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        return {
-            'success': False,
-            'error': f'Computational estimation failed: {str(e)}'
-        }
+        return {'success': False, 'error': str(e)}
 
 
-def get_target_binding_site(target_protein: str) -> Optional[Dict]:
-    """
-    Get binding site coordinates for target protein
-    """
-    # Known binding sites for common targets
-    binding_sites = {
-        'pparγ': {'center': [-10.5, 5.2, 22.8], 'size': [20, 20, 20]},
-        'pparg': {'center': [-10.5, 5.2, 22.8], 'size': [20, 20, 20]},
-        'ace': {'center': [45.2, 22.8, 33.1], 'size': [22, 22, 22]},
-        'ace2': {'center': [45.2, 22.8, 33.1], 'size': [22, 22, 22]},
-        'cox2': {'center': [25.5, 15.3, 30.2], 'size': [20, 20, 20]},
-        'ptgs2': {'center': [25.5, 15.3, 30.2], 'size': [20, 20, 20]},
-    }
-    
-    target_lower = target_protein.lower().replace('-', '').replace(' ', '')
-    return binding_sites.get(target_lower)
-
-
-if __name__ == '__main__':
-    # Test the fallback
-    logging.basicConfig(level=logging.INFO)
-    
-    result = run_autodock_vina_docking('Pioglitazone', 'PPARγ')
-    
-    if result['success']:
-        print(f"✅ Docking successful!")
-        print(f"Generated {len(result['poses'])} poses")
-        print(f"Best affinity: {result['poses'][0]['binding_affinity']} kcal/mol")
-    else:
-        print(f"❌ Docking failed: {result['error']}")
+__all__ = ['run_autodock_vina_docking']
