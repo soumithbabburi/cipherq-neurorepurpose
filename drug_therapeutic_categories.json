@@ -1,12 +1,12 @@
 {
   "angiotensin ii": [
-    "Cardiovascular"
+    "General"
   ],
   "neratinib": [
-    "Cancer"
+    "General"
   ],
   "imatinib": [
-    "Cancer"
+    "General"
   ],
   "clodronic acid": [
     "General"
@@ -39,11 +39,10 @@
     "General"
   ],
   "remoxipride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "dactinomycin": [
-    "Cancer"
+    "General"
   ],
   "amlodipine besylate": [
     "General"
@@ -52,7 +51,7 @@
     "General"
   ],
   "nabumetone": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "vasopressin tannate": [
     "General"
@@ -76,20 +75,20 @@
     "General"
   ],
   "selumetinib": [
-    "Cancer"
+    "General"
   ],
   "mesalamine": [
     "Diabetic",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "gilteritinib": [
-    "Cancer"
+    "General"
   ],
   "mitoxantrone": [
     "General"
   ],
   "ibrutinib": [
-    "Cancer"
+    "General"
   ],
   "palbociclib": [
     "General"
@@ -98,10 +97,10 @@
     "General"
   ],
   "ceritinib": [
-    "Cancer"
+    "General"
   ],
   "phenylephrine": [
-    "Cancer"
+    "General"
   ],
   "methylprednisolone sodium succinate": [
     "General"
@@ -119,19 +118,19 @@
     "General"
   ],
   "everolimus": [
-    "Cancer"
+    "General"
   ],
   "clindamycin hydrochloride": [
     "General"
   ],
   "desipramine": [
-    "Cancer"
+    "General"
   ],
   "sertindole": [
     "General"
   ],
   "nepafenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "fulvestrant": [
     "General"
@@ -146,13 +145,13 @@
     "General"
   ],
   "insulin, regular, human": [
-    "Cancer"
+    "General"
   ],
   "alprostadil": [
     "General"
   ],
   "chlorambucil": [
-    "Cancer"
+    "General"
   ],
   "cytarabine": [
     "General"
@@ -167,11 +166,10 @@
     "Alzheimers"
   ],
   "chlorprothixene": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "thioridazine": [
-    "Psychiatric"
+    "General"
   ],
   "tolvaptan": [
     "General"
@@ -186,7 +184,7 @@
     "General"
   ],
   "nefazodone": [
-    "Cancer"
+    "General"
   ],
   "halazepam": [
     "General"
@@ -201,24 +199,22 @@
     "General"
   ],
   "axitinib": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "naltrexone hydrochloride": [
-    "General"
+    "Pain"
   ],
   "lactose": [
     "General"
   ],
   "ergotamine": [
-    "Psychiatric"
+    "General"
   ],
   "azithromycin": [
-    "Cancer"
+    "General"
   ],
   "methylergonovine": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "indapamide": [
     "General"
@@ -227,13 +223,13 @@
     "Diabetic"
   ],
   "carboplatin": [
-    "Cancer"
+    "General"
   ],
   "terazosin hydrochloride": [
     "General"
   ],
   "ramipril": [
-    "Cardiovascular"
+    "General"
   ],
   "histamine": [
     "General"
@@ -251,14 +247,13 @@
     "General"
   ],
   "minaprine": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "ascorbic acid": [
     "General"
   ],
   "methacholine chloride": [
-    "Cancer"
+    "General"
   ],
   "phenobarbital": [
     "General"
@@ -279,13 +274,13 @@
     "General"
   ],
   "diazoxide": [
-    "Diabetic"
+    "General"
   ],
   "amikacin": [
     "General"
   ],
   "triparanol": [
-    "Diabetic"
+    "General"
   ],
   "thymol iodide": [
     "General"
@@ -303,10 +298,10 @@
     "General"
   ],
   "sapanisertib": [
-    "Cancer"
+    "General"
   ],
   "ledipasvir": [
-    "Cancer"
+    "General"
   ],
   "pamidronate": [
     "General"
@@ -330,13 +325,13 @@
     "General"
   ],
   "gemfibrozil": [
-    "Diabetic"
+    "General"
   ],
   "ticlopidine": [
     "General"
   ],
   "tannic acid": [
-    "Cancer"
+    "General"
   ],
   "triclosan": [
     "General"
@@ -369,10 +364,10 @@
     "General"
   ],
   "abemaciclib": [
-    "Cancer"
+    "General"
   ],
   "erlotinib": [
-    "Cancer"
+    "General"
   ],
   "bithionol": [
     "General"
@@ -384,7 +379,7 @@
     "General"
   ],
   "cobimetinib": [
-    "Cancer"
+    "General"
   ],
   "apomorphine": [
     "Parkinsons"
@@ -393,10 +388,10 @@
     "General"
   ],
   "butalbital": [
-    "Psychiatric"
+    "General"
   ],
   "erythromycin": [
-    "Cancer"
+    "General"
   ],
   "triazolam": [
     "General"
@@ -411,7 +406,7 @@
     "General"
   ],
   "pembrolizumab": [
-    "Cancer"
+    "General"
   ],
   "benzquinamide": [
     "General"
@@ -423,7 +418,7 @@
     "General"
   ],
   "ethacrynic acid": [
-    "Cancer"
+    "General"
   ],
   "dequalinium": [
     "General"
@@ -447,13 +442,13 @@
     "General"
   ],
   "nilotinib": [
-    "Cancer"
+    "General"
   ],
   "misoprostol": [
     "General"
   ],
   "olaparib": [
-    "Cancer"
+    "General"
   ],
   "doxacurium chloride": [
     "General"
@@ -462,7 +457,7 @@
     "General"
   ],
   "reserpine": [
-    "Alzheimers"
+    "General"
   ],
   "lorazepam": [
     "General"
@@ -477,7 +472,7 @@
     "Parkinsons"
   ],
   "ivosidenib": [
-    "Cancer"
+    "General"
   ],
   "clozapine": [
     "General"
@@ -489,7 +484,7 @@
     "General"
   ],
   "voriconazole": [
-    "Cancer"
+    "General"
   ],
   "pentoxifylline": [
     "General"
@@ -498,7 +493,7 @@
     "General"
   ],
   "pexidartinib hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "chlordiazepoxide": [
     "General"
@@ -516,7 +511,7 @@
     "General"
   ],
   "nelfinavir": [
-    "Cancer"
+    "General"
   ],
   "lithium": [
     "General"
@@ -525,7 +520,7 @@
     "General"
   ],
   "sufentanil": [
-    "General"
+    "Pain"
   ],
   "protokylol hydrochloride": [
     "Cardiovascular"
@@ -534,7 +529,7 @@
     "General"
   ],
   "mepivacaine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "ethchlorvynol": [
     "General"
@@ -555,7 +550,6 @@
     "General"
   ],
   "sulpiride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "chlormezanone": [
@@ -574,10 +568,10 @@
     "General"
   ],
   "crizotinib": [
-    "Cancer"
+    "General"
   ],
   "oxyphenbutazone": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "methylphenidate hydrochloride": [
     "General"
@@ -589,7 +583,7 @@
     "General"
   ],
   "clofazimine": [
-    "Cancer"
+    "General"
   ],
   "quetiapine fumarate": [
     "General"
@@ -607,7 +601,7 @@
     "General"
   ],
   "quazepam": [
-    "Psychiatric"
+    "General"
   ],
   "cefoxitin sodium": [
     "General"
@@ -616,13 +610,12 @@
     "General"
   ],
   "indocyanine green acid form": [
-    "Cancer"
+    "General"
   ],
   "metipranolol": [
     "Cardiovascular"
   ],
   "domperidone": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "dinoprost tromethamine": [
@@ -644,13 +637,13 @@
     "General"
   ],
   "eszopiclone": [
-    "Psychiatric"
+    "General"
   ],
   "melatonin": [
     "General"
   ],
   "labetalol": [
-    "Cardiovascular"
+    "General"
   ],
   "cenobamate": [
     "General"
@@ -659,7 +652,7 @@
     "General"
   ],
   "masoprocol": [
-    "Cancer"
+    "General"
   ],
   "vincristine sulfate": [
     "General"
@@ -674,7 +667,7 @@
     "General"
   ],
   "tetracycline": [
-    "Cardiovascular"
+    "General"
   ],
   "pyrazinamide": [
     "General"
@@ -683,7 +676,7 @@
     "General"
   ],
   "mecasermin": [
-    "Cancer"
+    "General"
   ],
   "norgestimate": [
     "General"
@@ -692,10 +685,10 @@
     "General"
   ],
   "rucaparib": [
-    "Cancer"
+    "General"
   ],
   "maraviroc": [
-    "General"
+    "Pain"
   ],
   "risankizumab": [
     "General"
@@ -707,22 +700,22 @@
     "General"
   ],
   "allopurinol": [
-    "Cancer"
+    "General"
   ],
   "estrogen": [
     "General"
   ],
   "mepazine acetate": [
-    "Diabetic"
+    "General"
   ],
   "dihydroergotamine mesylate": [
-    "Alzheimers"
+    "General"
   ],
   "enfortumab vedotin-ejfv": [
-    "Cancer"
+    "General"
   ],
   "paricalcitol": [
-    "Cancer"
+    "General"
   ],
   "rituximab": [
     "General"
@@ -731,7 +724,7 @@
     "General"
   ],
   "dolutegravir sodium": [
-    "Cancer"
+    "General"
   ],
   "macimorelin acetate": [
     "General"
@@ -740,10 +733,10 @@
     "General"
   ],
   "panitumumab": [
-    "Cancer"
+    "General"
   ],
   "zopiclone": [
-    "Psychiatric"
+    "General"
   ],
   "succimer": [
     "General"
@@ -755,8 +748,7 @@
     "General"
   ],
   "benztropine": [
-    "Parkinsons",
-    "Alzheimers"
+    "Parkinsons"
   ],
   "mequitazine": [
     "General"
@@ -771,25 +763,24 @@
     "General"
   ],
   "mechlorethamine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "atorvastatin calcium trihydrate": [
-    "Cardiovascular"
+    "General"
   ],
   "neratinib maleate": [
-    "Cancer"
+    "General"
   ],
   "thyrotropin-releasing hormone": [
     "General"
   ],
   "interferon alfa": [
-    "Cancer"
+    "General"
   ],
   "niacin": [
     "General"
   ],
   "tivozanib": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "pentobarbital sodium": [
@@ -799,7 +790,7 @@
     "General"
   ],
   "methylparaben": [
-    "Cancer"
+    "General"
   ],
   "tretinoin": [
     "General"
@@ -829,26 +820,25 @@
     "General"
   ],
   "bromperidol": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "fluorometholone": [
     "General"
   ],
   "calcipotriene": [
-    "Cancer"
+    "General"
   ],
   "vemurafenib": [
-    "Cancer"
+    "General"
   ],
   "aprepitant": [
     "General"
   ],
   "midostaurin": [
-    "Cancer"
+    "General"
   ],
   "methylnaltrexone": [
-    "General"
+    "Pain"
   ],
   "tocainide hydrochloride": [
     "General"
@@ -857,7 +847,7 @@
     "General"
   ],
   "desvenlafaxine succinate": [
-    "Cancer"
+    "General"
   ],
   "epinephrine bitartrate": [
     "General"
@@ -878,7 +868,7 @@
     "General"
   ],
   "norepinephrine": [
-    "Cardiovascular"
+    "General"
   ],
   "probenecid": [
     "General"
@@ -896,7 +886,7 @@
     "General"
   ],
   "meclofenamate": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "tolcapone": [
     "Parkinsons"
@@ -920,10 +910,10 @@
     "General"
   ],
   "lapatinib": [
-    "Cancer"
+    "General"
   ],
   "propafenone": [
-    "Cancer"
+    "General"
   ],
   "thiopental sodium": [
     "General"
@@ -932,16 +922,16 @@
     "General"
   ],
   "larotrectinib sulfate": [
-    "Cancer"
+    "General"
   ],
   "vinblastine sulfate": [
     "General"
   ],
   "sunitinib": [
-    "Cancer"
+    "General"
   ],
   "fenfluramine hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "diethylstilbestrol": [
     "General"
@@ -950,26 +940,25 @@
     "General"
   ],
   "phenazopyridine hydrochloride": [
-    "Alzheimers"
+    "General"
   ],
   "anagrelide hydrochloride": [
     "General"
   ],
   "brexpiprazole": [
-    "Psychiatric",
-    "Cancer"
+    "General"
   ],
   "catechin": [
-    "Alzheimers"
+    "General"
   ],
   "trypan blue": [
     "General"
   ],
   "carvedilol": [
-    "Cancer"
+    "General"
   ],
   "doxepin hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "varenicline": [
     "General"
@@ -987,11 +976,10 @@
     "General"
   ],
   "asenapine maleate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "halcinonide": [
-    "Cancer"
+    "General"
   ],
   "sodium chloride": [
     "General"
@@ -1006,7 +994,7 @@
     "General"
   ],
   "buspirone hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "zafirlukast": [
     "General"
@@ -1015,14 +1003,13 @@
     "General"
   ],
   "clebopride": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "dasatinib anhydrous": [
-    "Cancer"
+    "General"
   ],
   "ruxolitinib": [
-    "Cancer"
+    "General"
   ],
   "docetaxel anhydrous": [
     "General"
@@ -1049,10 +1036,10 @@
     "General"
   ],
   "pazopanib": [
-    "Cancer"
+    "General"
   ],
   "venlafaxine hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "canagliflozin": [
     "Diabetic"
@@ -1094,7 +1081,7 @@
     "General"
   ],
   "nandrolone decanoate": [
-    "Cancer"
+    "General"
   ],
   "nadolol": [
     "Cardiovascular"
@@ -1115,19 +1102,19 @@
     "Parkinsons"
   ],
   "tolterodine": [
-    "Alzheimers"
+    "General"
   ],
   "chlordiazepoxide hydrochloride": [
     "General"
   ],
   "alprazolam": [
-    "Psychiatric"
+    "General"
   ],
   "midazolam hydrochloride": [
     "General"
   ],
   "isoflurane": [
-    "Psychiatric"
+    "General"
   ],
   "cephalothin sodium": [
     "General"
@@ -1208,7 +1195,7 @@
     "General"
   ],
   "paritaprevir": [
-    "Cancer"
+    "General"
   ],
   "oxtriphylline": [
     "General"
@@ -1226,13 +1213,13 @@
     "General"
   ],
   "fostamatinib": [
-    "Cancer"
-  ],
-  "naldemedine": [
     "General"
   ],
+  "naldemedine": [
+    "Pain"
+  ],
   "dicyclomine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "dihydrostreptomycin sulfate": [
     "General"
@@ -1253,7 +1240,7 @@
     "General"
   ],
   "clothiapine": [
-    "Psychiatric"
+    "General"
   ],
   "relebactam": [
     "General"
@@ -1268,7 +1255,7 @@
     "General"
   ],
   "floxacillin": [
-    "Cancer"
+    "General"
   ],
   "baloxavir": [
     "General"
@@ -1289,7 +1276,7 @@
     "General"
   ],
   "alpelisib": [
-    "Cancer"
+    "General"
   ],
   "sorafenib": [
     "General"
@@ -1301,7 +1288,7 @@
     "General"
   ],
   "mefloquine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "chlorpromazine hydrochloride": [
     "General"
@@ -1316,13 +1303,13 @@
     "Parkinsons"
   ],
   "nortriptyline hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "pyrithione": [
     "Diabetic"
   ],
   "trifluoperazine hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "chlorpromazine": [
     "General"
@@ -1337,7 +1324,7 @@
     "General"
   ],
   "colchiceine": [
-    "Cancer"
+    "General"
   ],
   "niclosamide": [
     "General"
@@ -1349,7 +1336,7 @@
     "General"
   ],
   "nilutamide": [
-    "Cancer"
+    "General"
   ],
   "levonorgestrel": [
     "General"
@@ -1382,7 +1369,7 @@
     "General"
   ],
   "doxorubicin hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "oxybenzone": [
     "General"
@@ -1400,13 +1387,13 @@
     "General"
   ],
   "cyproterone acetate": [
-    "Cancer"
+    "General"
   ],
   "naproxen sodium": [
     "General"
   ],
   "methylergonovine maleate": [
-    "Parkinsons"
+    "General"
   ],
   "docusate": [
     "General"
@@ -1421,10 +1408,10 @@
     "General"
   ],
   "etidronic acid": [
-    "Cancer"
+    "General"
   ],
   "dienestrol": [
-    "Cardiovascular"
+    "General"
   ],
   "benzbromarone": [
     "General"
@@ -1442,13 +1429,13 @@
     "General"
   ],
   "diflunisal": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "anthralin": [
     "General"
   ],
   "bronopol": [
-    "Cancer"
+    "General"
   ],
   "cinnarizine": [
     "General"
@@ -1460,7 +1447,7 @@
     "General"
   ],
   "fenretinide": [
-    "Cancer"
+    "General"
   ],
   "valrubicin": [
     "General"
@@ -1484,26 +1471,25 @@
     "General"
   ],
   "tepotinib": [
-    "Cancer"
+    "General"
   ],
   "cabozantinib s-malate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "ibutamoren": [
     "General"
   ],
   "regorafenib": [
-    "Cancer"
+    "General"
   ],
   "guanadrel sulfate": [
     "General"
   ],
   "promazine hydrochloride": [
-    "Parkinsons"
+    "General"
   ],
   "nifedipine": [
-    "Cancer"
+    "General"
   ],
   "ribavirin": [
     "General"
@@ -1515,7 +1501,7 @@
     "General"
   ],
   "prasterone": [
-    "Cancer"
+    "General"
   ],
   "interleukin-11": [
     "General"
@@ -1530,7 +1516,7 @@
     "General"
   ],
   "tolmetin sodium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "atropine": [
     "General"
@@ -1542,7 +1528,7 @@
     "General"
   ],
   "venetoclax": [
-    "Cancer"
+    "General"
   ],
   "mannitol": [
     "General"
@@ -1551,10 +1537,10 @@
     "General"
   ],
   "propofol": [
-    "Psychiatric"
+    "General"
   ],
   "dextroamphetamine sulfate": [
-    "Parkinsons"
+    "General"
   ],
   "rofecoxib": [
     "General"
@@ -1590,13 +1576,13 @@
     "General"
   ],
   "irinotecan hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "inositol": [
-    "Cancer"
+    "General"
   ],
   "astemizole": [
-    "Cancer"
+    "General"
   ],
   "ranitidine hydrochloride": [
     "General"
@@ -1608,7 +1594,7 @@
     "General"
   ],
   "progestin": [
-    "Cancer"
+    "General"
   ],
   "erenumab": [
     "General"
@@ -1620,16 +1606,16 @@
     "Parkinsons"
   ],
   "cemiplimab-rwlc": [
-    "Cancer"
+    "General"
   ],
   "infigratinib": [
     "General"
   ],
   "ipilimumab": [
-    "Cancer"
+    "General"
   ],
   "diclofenac sodium": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "losartan potassium": [
     "General"
@@ -1665,7 +1651,7 @@
     "General"
   ],
   "bepridil": [
-    "Cancer"
+    "General"
   ],
   "felodipine": [
     "Cardiovascular"
@@ -1680,7 +1666,7 @@
     "General"
   ],
   "nivolumab": [
-    "Cancer"
+    "General"
   ],
   "migalastat": [
     "General"
@@ -1692,10 +1678,10 @@
     "General"
   ],
   "ribociclib": [
-    "Cancer"
+    "General"
   ],
   "upadacitinib": [
-    "Cancer"
+    "General"
   ],
   "efgartigimod alfa": [
     "General"
@@ -1707,10 +1693,10 @@
     "General"
   ],
   "thiotepa": [
-    "Cancer"
+    "General"
   ],
   "gabapentin": [
-    "General"
+    "Pain"
   ],
   "acyclovir": [
     "General"
@@ -1725,25 +1711,25 @@
     "General"
   ],
   "avelumab": [
-    "Cancer"
+    "General"
   ],
   "spironolactone": [
     "General"
   ],
   "etoposide": [
-    "Cancer"
+    "General"
   ],
   "velpatasvir": [
-    "Cancer"
+    "General"
   ],
   "ondansetron hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "tapentadol": [
     "General"
   ],
   "olutasidenib": [
-    "Cancer"
+    "General"
   ],
   "triamcinolone": [
     "General"
@@ -1755,13 +1741,13 @@
     "General"
   ],
   "arsenic trioxide": [
-    "Cancer"
+    "General"
   ],
   "valproic acid": [
     "General"
   ],
   "vismodegib": [
-    "Cancer"
+    "General"
   ],
   "pyrilamine maleate": [
     "General"
@@ -1782,7 +1768,7 @@
     "General"
   ],
   "methysergide maleate": [
-    "Psychiatric"
+    "General"
   ],
   "ethopropazine hydrochloride": [
     "Alzheimers"
@@ -1803,22 +1789,22 @@
     "General"
   ],
   "loperamide": [
-    "General"
+    "Pain"
   ],
   "dextroamphetamine adipate": [
     "Parkinsons"
   ],
   "somatropin (recombinant dna origin)": [
-    "Cancer"
+    "General"
   ],
   "hydromorphone hydrochloride": [
-    "General"
+    "Pain"
   ],
   "norelgestromin": [
     "General"
   ],
   "trofinetide": [
-    "Cancer"
+    "General"
   ],
   "nonacog alfa": [
     "General"
@@ -1830,13 +1816,13 @@
     "Parkinsons"
   ],
   "interferon alfa-2b": [
-    "Cancer"
+    "General"
   ],
   "bleomycin": [
-    "Cancer"
+    "General"
   ],
   "anileridine hydrochloride": [
-    "General"
+    "Pain"
   ],
   "ponesimod": [
     "General"
@@ -1878,13 +1864,13 @@
     "Alzheimers"
   ],
   "ergoloid mesylates, usp": [
-    "Parkinsons"
+    "General"
   ],
   "amlexanox": [
     "General"
   ],
   "estazolam": [
-    "Psychiatric"
+    "General"
   ],
   "flumethasone pivalate": [
     "General"
@@ -1896,7 +1882,7 @@
     "Diabetic"
   ],
   "golimumab": [
-    "Cancer"
+    "General"
   ],
   "hydroxyurea": [
     "General"
@@ -1908,13 +1894,13 @@
     "General"
   ],
   "mesoridazine": [
-    "Psychiatric"
+    "General"
   ],
   "mephobarbital": [
-    "Psychiatric"
+    "General"
   ],
   "methysergide": [
-    "Psychiatric"
+    "General"
   ],
   "milrinone": [
     "General"
@@ -1923,15 +1909,13 @@
     "General"
   ],
   "pentazocine": [
-    "Cancer"
+    "Pain"
   ],
   "secretin": [
     "General"
   ],
   "thiethylperazine": [
-    "Psychiatric",
-    "Parkinsons",
-    "Alzheimers"
+    "Parkinsons"
   ],
   "tirofiban": [
     "General"
@@ -1952,7 +1936,7 @@
     "General"
   ],
   "dimenhydrinate": [
-    "Cancer"
+    "General"
   ],
   "pergolide mesylate": [
     "Parkinsons"
@@ -1961,7 +1945,7 @@
     "General"
   ],
   "alfuzosin hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "phenylephrine bitartrate": [
     "General"
@@ -1970,13 +1954,13 @@
     "Alzheimers"
   ],
   "hexobarbital": [
-    "Psychiatric"
+    "General"
   ],
   "lofexidine": [
-    "Cancer"
+    "General"
   ],
   "methadyl acetate": [
-    "General"
+    "Pain"
   ],
   "methoxamine": [
     "General"
@@ -1988,7 +1972,6 @@
     "Cardiovascular"
   ],
   "prochlorperazine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "sumatriptan": [
@@ -2013,7 +1996,7 @@
     "General"
   ],
   "rozanolixizumab": [
-    "Cancer"
+    "General"
   ],
   "secobarbital sodium": [
     "General"
@@ -2034,7 +2017,7 @@
     "General"
   ],
   "interferon gamma-1b": [
-    "Cancer"
+    "General"
   ],
   "zidovudine": [
     "General"
@@ -2061,7 +2044,7 @@
     "General"
   ],
   "levorphanol": [
-    "General"
+    "Pain"
   ],
   "siltuximab": [
     "General"
@@ -2070,7 +2053,7 @@
     "General"
   ],
   "lenvatinib mesylate": [
-    "Cancer"
+    "General"
   ],
   "chloramphenicol": [
     "General"
@@ -2100,7 +2083,7 @@
     "General"
   ],
   "methoxyflurane": [
-    "Psychiatric"
+    "General"
   ],
   "roxadustat": [
     "General"
@@ -2115,7 +2098,7 @@
     "General"
   ],
   "sulfacetamide": [
-    "Cancer"
+    "General"
   ],
   "trifluridine": [
     "General"
@@ -2169,7 +2152,7 @@
     "General"
   ],
   "polatuzumab vedotin": [
-    "Cancer"
+    "General"
   ],
   "lusutrombopag": [
     "General"
@@ -2178,7 +2161,7 @@
     "General"
   ],
   "amifostine anhydrous": [
-    "Cancer"
+    "General"
   ],
   "fospropofol disodium": [
     "General"
@@ -2187,7 +2170,7 @@
     "General"
   ],
   "ponatinib": [
-    "Cancer"
+    "General"
   ],
   "fesoterodine": [
     "Alzheimers"
@@ -2199,10 +2182,9 @@
     "General"
   ],
   "aminosalicylic acid": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "asenapine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "brinzolamide": [
@@ -2233,7 +2215,7 @@
     "General"
   ],
   "capmatinib": [
-    "Parkinsons"
+    "General"
   ],
   "relugolix": [
     "General"
@@ -2266,13 +2248,13 @@
     "General"
   ],
   "candoxatril": [
-    "Cardiovascular"
+    "General"
   ],
   "momelotinib": [
-    "Cancer"
+    "General"
   ],
   "bromocriptine": [
-    "Psychiatric"
+    "General"
   ],
   "asciminib": [
     "General"
@@ -2287,7 +2269,7 @@
     "Cardiovascular"
   ],
   "formoterol fumarate": [
-    "Cancer"
+    "General"
   ],
   "ziconotide": [
     "General"
@@ -2308,7 +2290,7 @@
     "General"
   ],
   "cabergoline": [
-    "Psychiatric"
+    "General"
   ],
   "tucatinib": [
     "General"
@@ -2323,16 +2305,16 @@
     "General"
   ],
   "flumazenil": [
-    "Psychiatric"
+    "General"
   ],
   "lecanemab": [
-    "Alzheimers"
+    "General"
   ],
   "lonafarnib": [
     "General"
   ],
   "isoxsuprine hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "betahistine": [
     "General"
@@ -2341,10 +2323,10 @@
     "Diabetic"
   ],
   "filgotinib": [
-    "Cancer"
+    "General"
   ],
   "carbetocin": [
-    "Cancer"
+    "General"
   ],
   "ciprofibrate": [
     "Diabetic"
@@ -2362,7 +2344,7 @@
     "General"
   ],
   "trihexyphenidyl": [
-    "Alzheimers"
+    "General"
   ],
   "dothiepin": [
     "General"
@@ -2383,16 +2365,16 @@
     "General"
   ],
   "avapritinib": [
-    "Cancer"
+    "General"
   ],
   "entrectinib": [
-    "Cancer"
+    "General"
   ],
   "glycyrrhizic acid": [
     "General"
   ],
   "argipressin": [
-    "Cancer"
+    "General"
   ],
   "physostigmine salicylate": [
     "Alzheimers"
@@ -2404,7 +2386,7 @@
     "General"
   ],
   "rosiglitazone": [
-    "Cancer"
+    "General"
   ],
   "vonoprazan fumarate": [
     "General"
@@ -2413,7 +2395,7 @@
     "General"
   ],
   "odevixibat": [
-    "Cancer"
+    "General"
   ],
   "crisaborole": [
     "General"
@@ -2431,7 +2413,7 @@
     "General"
   ],
   "dostarlimab": [
-    "Cancer"
+    "General"
   ],
   "imiquimod": [
     "General"
@@ -2440,34 +2422,34 @@
     "General"
   ],
   "alectinib": [
-    "Cancer"
+    "General"
   ],
   "durvalumab": [
-    "Cancer"
+    "General"
   ],
   "tisagenlecleucel": [
     "General"
   ],
   "ripretinib": [
-    "Cancer"
+    "General"
   ],
   "sulthiame": [
     "General"
   ],
   "sotorasib": [
-    "Cancer"
+    "General"
   ],
   "topotecan hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "tirofiban hydrochloride": [
     "General"
   ],
   "chlorpheniramine polistirex": [
-    "Cancer"
+    "General"
   ],
   "quizartinib": [
-    "Cancer"
+    "General"
   ],
   "medroxyprogesterone": [
     "General"
@@ -2476,11 +2458,9 @@
     "General"
   ],
   "acetophenazine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "loxapine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "incobotulinumtoxina": [
@@ -2490,17 +2470,15 @@
     "General"
   ],
   "dihydroergocristine": [
-    "Parkinsons",
-    "Alzheimers"
+    "Parkinsons"
   ],
   "prilocaine": [
-    "Cancer"
+    "General"
   ],
   "binimetinib": [
-    "Cancer"
+    "General"
   ],
   "trazodone": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "glasdegib": [
@@ -2516,22 +2494,22 @@
     "General"
   ],
   "enzalutamide": [
-    "Cancer"
+    "General"
   ],
   "metyrosine": [
-    "Parkinsons"
+    "General"
   ],
   "febuxostat": [
     "General"
   ],
   "testosterone propionate": [
-    "Cancer"
+    "General"
   ],
   "glofitamab": [
     "General"
   ],
   "clorazepate": [
-    "Psychiatric"
+    "General"
   ],
   "dorzolamide": [
     "General"
@@ -2543,13 +2521,13 @@
     "General"
   ],
   "methylprednisolone": [
-    "Cancer"
+    "General"
   ],
   "pioglitazone hydrochloride": [
     "General"
   ],
   "samidorphan l-malate": [
-    "General"
+    "Pain"
   ],
   "podofilox": [
     "General"
@@ -2579,13 +2557,13 @@
     "General"
   ],
   "romidepsin": [
-    "Cancer"
+    "General"
   ],
   "sodium oxybate": [
     "General"
   ],
   "suprofen": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "aripiprazole lauroxil": [
     "General"
@@ -2612,7 +2590,7 @@
     "General"
   ],
   "phentolamine mesylate": [
-    "Cancer"
+    "General"
   ],
   "tricetin": [
     "General"
@@ -2633,7 +2611,7 @@
     "General"
   ],
   "vilazodone hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "atenolol": [
     "General"
@@ -2645,10 +2623,10 @@
     "General"
   ],
   "meclizine": [
-    "Cancer"
+    "General"
   ],
   "camptothecin": [
-    "Cancer"
+    "General"
   ],
   "gemcitabine": [
     "General"
@@ -2657,7 +2635,7 @@
     "General"
   ],
   "temozolomide": [
-    "Cancer"
+    "General"
   ],
   "medroxyprogesterone acetate": [
     "General"
@@ -2669,28 +2647,28 @@
     "General"
   ],
   "bortezomib": [
-    "Cancer"
+    "General"
   ],
   "selinexor": [
-    "Cancer"
+    "General"
   ],
   "fedratinib": [
-    "Cancer"
+    "General"
   ],
   "copanlisib": [
-    "Cancer"
+    "General"
   ],
   "ibandronate": [
     "General"
   ],
   "nefazodone hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "ethoxzolamide": [
     "General"
   ],
   "vitamin b6": [
-    "Parkinsons"
+    "General"
   ],
   "peginterferon alfa-2a": [
     "General"
@@ -2699,7 +2677,7 @@
     "General"
   ],
   "levomilnacipran hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "niraparib": [
     "General"
@@ -2708,7 +2686,7 @@
     "General"
   ],
   "tegaserod maleate": [
-    "Cancer"
+    "General"
   ],
   "phenindione": [
     "General"
@@ -2759,7 +2737,7 @@
     "General"
   ],
   "tolazamide": [
-    "Diabetic"
+    "General"
   ],
   "glipizide": [
     "General"
@@ -2801,7 +2779,7 @@
     "General"
   ],
   "trovafloxacin mesylate": [
-    "Diabetic"
+    "General"
   ],
   "mafenide": [
     "General"
@@ -2852,7 +2830,7 @@
     "General"
   ],
   "propafenone hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "proparacaine hydrochloride": [
     "General"
@@ -2861,31 +2839,31 @@
     "General"
   ],
   "simeprevir sodium": [
-    "Cancer"
+    "General"
   ],
   "eslicarbazepine acetate": [
     "General"
   ],
   "desvenlafaxine fumarate": [
-    "Psychiatric"
+    "General"
   ],
   "cangrelor tetrasodium": [
     "General"
   ],
   "sonidegib": [
-    "Cancer"
+    "General"
   ],
   "fruquintinib": [
-    "Cancer"
+    "General"
   ],
   "samidorphan": [
-    "General"
+    "Pain"
   ],
   "ketoprofen": [
     "General"
   ],
   "elbasvir": [
-    "Cancer"
+    "General"
   ],
   "ertugliflozin": [
     "Diabetic"
@@ -2897,7 +2875,7 @@
     "General"
   ],
   "benzydamine hydrochloride": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "cefodizime": [
     "General"
@@ -2915,10 +2893,10 @@
     "General"
   ],
   "zanubrutinib": [
-    "Cancer"
+    "General"
   ],
   "nitrendipine": [
-    "Cardiovascular"
+    "General"
   ],
   "serdexmethylphenidate chloride": [
     "Parkinsons"
@@ -2927,7 +2905,7 @@
     "General"
   ],
   "trichlorfon": [
-    "Cancer"
+    "General"
   ],
   "oteseconazole": [
     "General"
@@ -2936,25 +2914,25 @@
     "Diabetic"
   ],
   "sulfisoxazole": [
-    "Cancer"
+    "General"
   ],
   "meclofenamate sodium": [
     "General"
   ],
   "rutin": [
-    "Cancer"
+    "General"
   ],
   "permethrin": [
     "General"
   ],
   "iodoquinol": [
-    "Cancer"
+    "General"
   ],
   "riboflavin": [
-    "Cancer"
+    "General"
   ],
   "olsalazine": [
-    "Cancer"
+    "General"
   ],
   "pralidoxime cation": [
     "Alzheimers"
@@ -2987,7 +2965,6 @@
     "General"
   ],
   "bromocriptine mesylate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "dexmedetomidine hydrochloride": [
@@ -3006,7 +2983,7 @@
     "General"
   ],
   "loratadine": [
-    "Cancer"
+    "General"
   ],
   "phenacetin": [
     "General"
@@ -3024,19 +3001,19 @@
     "General"
   ],
   "amoxicillin anhydrous": [
-    "Cancer"
+    "General"
   ],
   "isoetharine mesylate": [
-    "Cardiovascular"
+    "General"
   ],
   "diclazuril": [
     "General"
   ],
   "diltiazem hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "prednisone": [
-    "Cancer"
+    "General"
   ],
   "omeprazole magnesium": [
     "General"
@@ -3048,7 +3025,7 @@
     "General"
   ],
   "miconazole nitrate": [
-    "Cancer"
+    "General"
   ],
   "deserpidine": [
     "Cardiovascular"
@@ -3060,22 +3037,22 @@
     "General"
   ],
   "labetalol hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "ramucirumab": [
-    "Cancer"
+    "General"
   ],
   "netupitant": [
-    "Cancer"
+    "General"
   ],
   "raloxifene hydrochloride": [
     "General"
   ],
   "rasburicase": [
-    "Cancer"
+    "General"
   ],
   "ropivacaine": [
-    "Cancer"
+    "General"
   ],
   "rosuvastatin": [
     "General"
@@ -3099,7 +3076,7 @@
     "General"
   ],
   "selenomethionine": [
-    "Cancer"
+    "General"
   ],
   "zoledronic acid anhydrous": [
     "General"
@@ -3108,34 +3085,34 @@
     "General"
   ],
   "acitretin": [
-    "Cancer"
+    "General"
   ],
   "thyrotropin": [
-    "Cancer"
+    "General"
   ],
   "cyclosporine": [
-    "Cancer"
+    "General"
   ],
   "pamidronate disodium": [
     "General"
   ],
   "ginger allergenic extract": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "baclofen": [
     "General"
   ],
   "hydroxychloroquine": [
-    "Cancer"
+    "General"
   ],
   "meropenem anhydrous": [
-    "Cancer"
+    "General"
   ],
   "stavudine": [
     "General"
   ],
   "tazarotene": [
-    "Cancer"
+    "General"
   ],
   "estrone": [
     "General"
@@ -3162,7 +3139,7 @@
     "General"
   ],
   "sulfamethazine": [
-    "Cancer"
+    "General"
   ],
   "betaine": [
     "General"
@@ -3174,14 +3151,13 @@
     "General"
   ],
   "cyclobenzaprine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "talazoparib": [
-    "Cancer"
+    "General"
   ],
   "clavulanic acid": [
-    "Cancer"
+    "General"
   ],
   "alemtuzumab": [
     "General"
@@ -3193,13 +3169,13 @@
     "General"
   ],
   "zaleplon": [
-    "Psychiatric"
+    "General"
   ],
   "nisoldipine": [
     "General"
   ],
   "carbidopa anhydrous": [
-    "Parkinsons"
+    "General"
   ],
   "donepezil": [
     "Alzheimers"
@@ -3211,13 +3187,13 @@
     "General"
   ],
   "interferon beta-1b": [
-    "Cancer"
+    "General"
   ],
   "clonazepam": [
     "General"
   ],
   "lanatoside c": [
-    "Cancer"
+    "General"
   ],
   "citronellyl acetate": [
     "General"
@@ -3232,7 +3208,7 @@
     "General"
   ],
   "lisdexamfetamine dimesylate": [
-    "Parkinsons"
+    "General"
   ],
   "acebutolol": [
     "Cardiovascular"
@@ -3241,7 +3217,7 @@
     "General"
   ],
   "octotropine methylbromide": [
-    "Alzheimers"
+    "General"
   ],
   "clenbuterol": [
     "Cardiovascular"
@@ -3259,37 +3235,36 @@
     "General"
   ],
   "diphenidol": [
-    "Alzheimers"
+    "General"
   ],
   "prazosin": [
     "General"
   ],
   "ipratropium cation": [
-    "Cancer"
+    "General"
   ],
   "carprofen": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "orphenadrine": [
     "General"
   ],
   "nalidixic acid": [
-    "Cancer"
+    "General"
   ],
   "promethazine hydrochloride": [
     "Alzheimers"
   ],
   "dronedarone": [
-    "Cardiovascular"
+    "General"
   ],
   "chenodeoxycholic acid": [
     "General"
   ],
   "meperidine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "mephentermine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "adapalene": [
@@ -3308,7 +3283,7 @@
     "General"
   ],
   "talbutal": [
-    "Psychiatric"
+    "General"
   ],
   "racementhol": [
     "General"
@@ -3317,14 +3292,12 @@
     "Cardiovascular"
   ],
   "treprostinil": [
-    "Diabetic"
+    "General"
   ],
   "trospium": [
     "Alzheimers"
   ],
   "triflupromazine": [
-    "Psychiatric",
-    "Parkinsons",
     "Alzheimers"
   ],
   "botulinum toxin type b": [
@@ -3340,7 +3313,7 @@
     "General"
   ],
   "pexidartinib": [
-    "Cancer"
+    "General"
   ],
   "iopamidol": [
     "General"
@@ -3382,7 +3355,7 @@
     "General"
   ],
   "cycloserine": [
-    "Alzheimers"
+    "General"
   ],
   "cefpodoxime": [
     "General"
@@ -3397,7 +3370,6 @@
     "General"
   ],
   "ephedrine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "darunavir": [
@@ -3419,13 +3391,13 @@
     "General"
   ],
   "saquinavir": [
-    "Cancer"
+    "General"
   ],
   "dolasetron": [
     "General"
   ],
   "indinavir": [
-    "Cancer"
+    "General"
   ],
   "rimantadine": [
     "General"
@@ -3473,7 +3445,7 @@
     "General"
   ],
   "lenvatinib": [
-    "Cancer"
+    "General"
   ],
   "levothyroxine": [
     "General"
@@ -3494,7 +3466,7 @@
     "General"
   ],
   "piperine": [
-    "Parkinsons"
+    "General"
   ],
   "cefamandole": [
     "General"
@@ -3506,7 +3478,6 @@
     "General"
   ],
   "metaraminol": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "delavirdine": [
@@ -3543,7 +3514,7 @@
     "General"
   ],
   "sulfaphenazole": [
-    "Cancer"
+    "General"
   ],
   "zomepirac sodium": [
     "General"
@@ -3552,8 +3523,8 @@
     "General"
   ],
   "dobutamine": [
-    "Parkinsons",
-    "Cardiovascular"
+    "Cardiovascular",
+    "Parkinsons"
   ],
   "ketamine hydrochloride": [
     "General"
@@ -3562,7 +3533,7 @@
     "General"
   ],
   "linagliptin": [
-    "Cancer"
+    "General"
   ],
   "memantine hydrochloride": [
     "General"
@@ -3583,7 +3554,7 @@
     "General"
   ],
   "sotagliflozin": [
-    "Diabetic"
+    "General"
   ],
   "silodosin": [
     "General"
@@ -3592,13 +3563,13 @@
     "General"
   ],
   "zileuton": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "indacaterol": [
-    "Cardiovascular"
+    "General"
   ],
   "terbutaline": [
-    "Cardiovascular"
+    "General"
   ],
   "olodaterol": [
     "Cardiovascular"
@@ -3610,22 +3581,22 @@
     "General"
   ],
   "inotuzumab ozogamicin": [
-    "Cancer"
+    "General"
   ],
   "acetaminophen": [
     "General"
   ],
   "fenoprofen": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "etodolac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "fenofibrate micronized": [
     "General"
   ],
   "aspartic acid": [
-    "Cancer"
+    "General"
   ],
   "anisindione": [
     "General"
@@ -3661,13 +3632,13 @@
     "General"
   ],
   "flibanserin": [
-    "Psychiatric"
+    "General"
   ],
   "romiplostim": [
     "General"
   ],
   "raltegravir potassium": [
-    "Cancer"
+    "General"
   ],
   "enoxacin": [
     "General"
@@ -3679,16 +3650,16 @@
     "General"
   ],
   "toripalimab-tpzi": [
-    "Cancer"
+    "General"
   ],
   "mogamulizumab": [
     "General"
   ],
   "trilaciclib": [
-    "Cancer"
+    "General"
   ],
   "diclofenac epolamine": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "tislelizumab": [
     "General"
@@ -3700,13 +3671,13 @@
     "General"
   ],
   "milnacipran": [
-    "Psychiatric"
+    "General"
   ],
   "lurasidone hydrochloride": [
     "General"
   ],
   "chloroquine": [
-    "Cancer"
+    "General"
   ],
   "teniposide": [
     "General"
@@ -3718,7 +3689,7 @@
     "General"
   ],
   "lomitapide mesylate": [
-    "Cardiovascular"
+    "General"
   ],
   "etelcalcetide": [
     "General"
@@ -3727,10 +3698,10 @@
     "Cardiovascular"
   ],
   "flurbiprofen": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "nirogacestat": [
-    "Cancer"
+    "General"
   ],
   "oxaliplatin": [
     "General"
@@ -3739,10 +3710,10 @@
     "General"
   ],
   "dantrolene": [
-    "Alzheimers"
+    "General"
   ],
   "mechlorethamine": [
-    "Cancer"
+    "General"
   ],
   "vitamin k": [
     "General"
@@ -3772,7 +3743,6 @@
     "General"
   ],
   "pimozide": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "demecarium bromide": [
@@ -3782,10 +3752,9 @@
     "General"
   ],
   "sparsentan": [
-    "Cardiovascular"
+    "General"
   ],
   "pergolide": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "bevacizumab-awwb": [
@@ -3813,7 +3782,7 @@
     "General"
   ],
   "mometasone": [
-    "Cancer"
+    "General"
   ],
   "oxyphencyclimine hydrochloride": [
     "Alzheimers"
@@ -3837,7 +3806,6 @@
     "Diabetic"
   ],
   "phentermine resin": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "atomoxetine hydrochloride": [
@@ -3850,7 +3818,7 @@
     "General"
   ],
   "codeine phosphate": [
-    "General"
+    "Pain"
   ],
   "eflornithine hydrochloride": [
     "General"
@@ -3904,13 +3872,13 @@
     "General"
   ],
   "margetuximab-cmkb": [
-    "Cancer"
+    "General"
   ],
   "coumarin": [
     "General"
   ],
   "sulindac": [
-    "Cancer"
+    "General"
   ],
   "warfarin potassium": [
     "General"
@@ -3925,7 +3893,7 @@
     "General"
   ],
   "mexiletine": [
-    "Cancer"
+    "General"
   ],
   "nomifensine maleate": [
     "General"
@@ -3940,13 +3908,13 @@
     "General"
   ],
   "norethindrone acetate": [
-    "Cancer"
+    "General"
   ],
   "eculizumab": [
     "General"
   ],
   "miltefosine": [
-    "Cancer"
+    "General"
   ],
   "cetirizine hydrochloride": [
     "General"
@@ -3967,7 +3935,7 @@
     "General"
   ],
   "heparin calcium": [
-    "Cardiovascular"
+    "General"
   ],
   "ifosfamide": [
     "General"
@@ -3976,8 +3944,7 @@
     "General"
   ],
   "lumiracoxib": [
-    "Cancer",
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "benznidazole": [
     "General"
@@ -3986,10 +3953,10 @@
     "General"
   ],
   "larotrectinib": [
-    "Cancer"
+    "General"
   ],
   "selpercatinib": [
-    "Cancer"
+    "General"
   ],
   "pyrilamine": [
     "General"
@@ -3998,7 +3965,7 @@
     "General"
   ],
   "adalimumab-adbm": [
-    "Cancer"
+    "General"
   ],
   "carglumic acid": [
     "General"
@@ -4007,17 +3974,16 @@
     "General"
   ],
   "ketorolac tromethamine": [
-    "Cancer"
+    "General"
   ],
   "cariprazine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "amoxapine": [
     "Parkinsons"
   ],
   "dapsone": [
-    "Cancer"
+    "General"
   ],
   "lidocaine": [
     "General"
@@ -4026,19 +3992,19 @@
     "General"
   ],
   "buprenorphine": [
-    "Psychiatric"
+    "General"
   ],
   "dabigatran": [
     "General"
   ],
   "valbenazine": [
-    "Cancer"
+    "General"
   ],
   "selegiline": [
     "Parkinsons"
   ],
   "vildagliptin": [
-    "Diabetic"
+    "General"
   ],
   "certolizumab pegol": [
     "General"
@@ -4062,7 +4028,7 @@
     "General"
   ],
   "aducanumab": [
-    "Alzheimers"
+    "General"
   ],
   "tralokinumab": [
     "General"
@@ -4092,7 +4058,7 @@
     "General"
   ],
   "vortioxetine hydrobromide": [
-    "Psychiatric"
+    "General"
   ],
   "baricitinib": [
     "General"
@@ -4104,7 +4070,7 @@
     "Alzheimers"
   ],
   "mefenamic acid": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "mepenzolate": [
     "General"
@@ -4119,14 +4085,13 @@
     "General"
   ],
   "thiamylal": [
-    "Diabetic",
-    "Psychiatric"
+    "Diabetic"
   ],
   "hydrocortamate": [
     "General"
   ],
   "propoxyphene": [
-    "General"
+    "Pain"
   ],
   "tadalafil": [
     "General"
@@ -4135,7 +4100,7 @@
     "General"
   ],
   "aflibercept": [
-    "Cancer"
+    "General"
   ],
   "obinutuzumab": [
     "General"
@@ -4150,8 +4115,7 @@
     "Alzheimers"
   ],
   "buspirone": [
-    "Psychiatric",
-    "Cancer"
+    "General"
   ],
   "cholic acid": [
     "General"
@@ -4172,13 +4136,13 @@
     "General"
   ],
   "levomilnacipran": [
-    "Psychiatric"
+    "General"
   ],
   "inotersen": [
     "General"
   ],
   "leuprolide acetate": [
-    "Cancer"
+    "General"
   ],
   "rivaroxaban": [
     "General"
@@ -4190,10 +4154,10 @@
     "General"
   ],
   "hydroxyamphetamine hydrobromide": [
-    "Cardiovascular"
+    "General"
   ],
   "aceclofenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "tinzaparin sodium": [
     "General"
@@ -4223,10 +4187,9 @@
     "General"
   ],
   "thiothixene": [
-    "Cancer"
+    "General"
   ],
   "molindone": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "levocetirizine": [
@@ -4239,7 +4202,7 @@
     "General"
   ],
   "ketoconazole": [
-    "Cancer"
+    "General"
   ],
   "progesterone": [
     "General"
@@ -4248,7 +4211,7 @@
     "General"
   ],
   "futibatinib": [
-    "Cancer"
+    "General"
   ],
   "amsacrine": [
     "General"
@@ -4257,7 +4220,7 @@
     "General"
   ],
   "lorlatinib": [
-    "Cancer"
+    "General"
   ],
   "acarbose": [
     "General"
@@ -4269,7 +4232,7 @@
     "Alzheimers"
   ],
   "valdecoxib": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "esmolol hydrochloride": [
     "Cardiovascular"
@@ -4278,10 +4241,10 @@
     "Cardiovascular"
   ],
   "dacomitinib anhydrous": [
-    "Cancer"
+    "General"
   ],
   "itraconazole": [
-    "Cancer"
+    "General"
   ],
   "nicardipine hydrochloride": [
     "General"
@@ -4290,7 +4253,7 @@
     "General"
   ],
   "adagrasib": [
-    "Cancer"
+    "General"
   ],
   "pentamidine isethionate": [
     "General"
@@ -4299,7 +4262,7 @@
     "General"
   ],
   "brigatinib": [
-    "Cancer"
+    "General"
   ],
   "disulfiram": [
     "General"
@@ -4323,20 +4286,19 @@
     "General"
   ],
   "thyrotropin alfa": [
-    "Cancer"
+    "General"
   ],
   "glimepiride": [
     "Diabetic"
   ],
   "ropinirole": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "ocrelizumab": [
     "General"
   ],
   "raltitrexed": [
-    "Cancer"
+    "General"
   ],
   "solifenacin": [
     "General"
@@ -4351,7 +4313,7 @@
     "General"
   ],
   "acetyldigitoxin": [
-    "Cancer"
+    "General"
   ],
   "chlorpropamide": [
     "General"
@@ -4360,19 +4322,19 @@
     "General"
   ],
   "diphenylpyraline": [
-    "Cancer"
+    "General"
   ],
   "ethynodiol diacetate": [
     "General"
   ],
   "benoxinate": [
-    "Cancer"
+    "General"
   ],
   "procyclidine": [
     "Alzheimers"
   ],
   "promazine": [
-    "Parkinsons"
+    "General"
   ],
   "propantheline": [
     "Alzheimers"
@@ -4423,7 +4385,7 @@
     "General"
   ],
   "eplerenone": [
-    "Cancer"
+    "General"
   ],
   "alcaftadine": [
     "General"
@@ -4432,7 +4394,6 @@
     "General"
   ],
   "fluphenazine hydrochloride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "emedastine difumarate": [
@@ -4460,7 +4421,7 @@
     "General"
   ],
   "difenoxin hydrochloride": [
-    "General"
+    "Pain"
   ],
   "medrysone": [
     "General"
@@ -4475,7 +4436,7 @@
     "General"
   ],
   "diclofenac potassium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "belimumab": [
     "General"
@@ -4487,13 +4448,13 @@
     "General"
   ],
   "isoproterenol": [
-    "Cardiovascular"
+    "General"
   ],
   "esomeprazole strontium": [
     "General"
   ],
   "afatinib dimaleate": [
-    "Cancer"
+    "General"
   ],
   "olodaterol hydrochloride": [
     "Cardiovascular"
@@ -4526,8 +4487,7 @@
     "General"
   ],
   "oxymetazoline hydrochloride": [
-    "Psychiatric",
-    "Cancer"
+    "General"
   ],
   "amodiaquine hydrochloride": [
     "General"
@@ -4539,7 +4499,7 @@
     "General"
   ],
   "dydrogesterone": [
-    "Cancer"
+    "General"
   ],
   "thioctic acid": [
     "General"
@@ -4599,7 +4559,7 @@
     "General"
   ],
   "flavoxate": [
-    "Alzheimers"
+    "General"
   ],
   "miglitol": [
     "General"
@@ -4620,7 +4580,7 @@
     "Alzheimers"
   ],
   "anileridine": [
-    "General"
+    "Pain"
   ],
   "valbenazine tosylate": [
     "General"
@@ -4632,7 +4592,7 @@
     "General"
   ],
   "paliperidone": [
-    "Cancer"
+    "General"
   ],
   "oxyphencyclimine": [
     "Alzheimers"
@@ -4644,14 +4604,13 @@
     "General"
   ],
   "naphazoline": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "betamethasone": [
     "General"
   ],
   "sapropterin": [
-    "Parkinsons"
+    "General"
   ],
   "tropisetron": [
     "General"
@@ -4702,7 +4661,7 @@
     "General"
   ],
   "mirabegron": [
-    "Cancer"
+    "General"
   ],
   "telotristat ethyl": [
     "General"
@@ -4711,7 +4670,7 @@
     "General"
   ],
   "levamisole": [
-    "Cancer"
+    "General"
   ],
   "diphenidol hydrochloride": [
     "Alzheimers"
@@ -4726,7 +4685,7 @@
     "General"
   ],
   "enasidenib": [
-    "Cancer"
+    "General"
   ],
   "bempedoic acid": [
     "General"
@@ -4735,8 +4694,7 @@
     "General"
   ],
   "methixene hydrochloride": [
-    "Psychiatric",
-    "Alzheimers"
+    "General"
   ],
   "clofarabine": [
     "General"
@@ -4757,7 +4715,7 @@
     "General"
   ],
   "sulfasalazine": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "insulin aspart protamine, human": [
     "Diabetic"
@@ -4769,7 +4727,7 @@
     "General"
   ],
   "tremelimumab": [
-    "Cancer"
+    "General"
   ],
   "efmoroctocog alfa": [
     "General"
@@ -4784,7 +4742,7 @@
     "Cardiovascular"
   ],
   "prednisolone acetate": [
-    "Cancer"
+    "General"
   ],
   "dyclonine": [
     "General"
@@ -4796,7 +4754,7 @@
     "General"
   ],
   "triprolidine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "diphenhydramine citrate": [
     "General"
@@ -4820,7 +4778,7 @@
     "General"
   ],
   "oxycodone terephthalate": [
-    "General"
+    "Pain"
   ],
   "rimexolone": [
     "General"
@@ -4838,7 +4796,7 @@
     "General"
   ],
   "levallorphan tartrate": [
-    "General"
+    "Pain"
   ],
   "nebivolol hydrochloride": [
     "Cardiovascular"
@@ -4865,13 +4823,13 @@
     "General"
   ],
   "teprotumumab-trbw": [
-    "Cancer"
+    "General"
   ],
   "levosimendan": [
     "General"
   ],
   "fedratinib hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "lasofoxifene": [
     "General"
@@ -4898,14 +4856,13 @@
     "General"
   ],
   "loteprednol": [
-    "Cancer"
+    "General"
   ],
   "dexketoprofen": [
-    "Pain/Anti-inflammatory",
-    "Alzheimers"
+    "General"
   ],
   "citalopram hydrobromide": [
-    "Psychiatric"
+    "General"
   ],
   "geraniol": [
     "General"
@@ -4914,19 +4871,19 @@
     "General"
   ],
   "docusate sodium": [
-    "Cancer"
+    "General"
   ],
   "deutetrabenazine": [
-    "Cancer"
+    "General"
   ],
   "nusinersen": [
     "General"
   ],
   "pitolisant": [
-    "Cancer"
+    "General"
   ],
   "encorafenib": [
-    "Cancer"
+    "General"
   ],
   "pentostatin": [
     "Diabetic"
@@ -4941,7 +4898,7 @@
     "General"
   ],
   "sodium ascorbate": [
-    "Cancer"
+    "General"
   ],
   "dulaglutide": [
     "Diabetic"
@@ -4950,7 +4907,7 @@
     "General"
   ],
   "eliglustat": [
-    "Cancer"
+    "General"
   ],
   "insulin glulisine, human": [
     "Diabetic"
@@ -4968,7 +4925,7 @@
     "General"
   ],
   "ritodrine": [
-    "Cardiovascular"
+    "General"
   ],
   "ambrisentan": [
     "General"
@@ -4983,14 +4940,13 @@
     "Cardiovascular"
   ],
   "rotigotine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "trimipramine": [
-    "Psychiatric"
+    "General"
   ],
   "parecoxib": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "elosulfase alfa": [
     "General"
@@ -4999,8 +4955,7 @@
     "General"
   ],
   "meloxicam": [
-    "Cancer",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "echothiophate iodide": [
     "Alzheimers"
@@ -5015,10 +4970,10 @@
     "General"
   ],
   "dexibuprofen": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "pimavanserin": [
-    "Psychiatric"
+    "General"
   ],
   "tegaserod": [
     "General"
@@ -5027,7 +4982,6 @@
     "General"
   ],
   "pramipexole": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "glucagon (rdna)": [
@@ -5037,7 +4991,7 @@
     "General"
   ],
   "ivermectin": [
-    "Cancer"
+    "General"
   ],
   "bexarotene": [
     "General"
@@ -5055,7 +5009,6 @@
     "General"
   ],
   "amineptin": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "buserelin": [
@@ -5071,16 +5024,16 @@
     "Alzheimers"
   ],
   "hydrocortisone sodium succinate": [
-    "Cancer"
+    "General"
   ],
   "triprolidine": [
     "General"
   ],
   "fexofenadine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "aliskiren": [
-    "Cancer"
+    "General"
   ],
   "clobetasol": [
     "General"
@@ -5089,7 +5042,7 @@
     "General"
   ],
   "hydrocortisone acetate": [
-    "Cancer"
+    "General"
   ],
   "testosterone cypionate": [
     "General"
@@ -5113,10 +5066,10 @@
     "General"
   ],
   "tazemetostat": [
-    "Cancer"
+    "General"
   ],
   "temsirolimus": [
-    "Cancer"
+    "General"
   ],
   "yttrium y 90 ibritumomab tiuxetan": [
     "General"
@@ -5125,10 +5078,10 @@
     "General"
   ],
   "alfentanil hydrochloride": [
-    "Parkinsons"
+    "Pain"
   ],
   "pirprofen": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "pitavastatin sodium": [
     "Cardiovascular"
@@ -5143,13 +5096,13 @@
     "General"
   ],
   "levomethadyl acetate hydrochloride": [
-    "General"
+    "Pain"
   ],
   "prednicarbate": [
-    "Cancer"
+    "General"
   ],
   "hydrocortisone valerate": [
-    "Cancer"
+    "General"
   ],
   "ranolazine": [
     "General"
@@ -5173,13 +5126,13 @@
     "General"
   ],
   "phentolamine": [
-    "Cancer"
+    "General"
   ],
   "rescinnamine": [
     "General"
   ],
   "infigratinib phosphate": [
-    "Cancer"
+    "General"
   ],
   "dexrazoxane": [
     "General"
@@ -5209,10 +5162,10 @@
     "Cardiovascular"
   ],
   "pacritinib citrate": [
-    "Cancer"
+    "General"
   ],
   "tivozanib hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "bimekizumab": [
     "General"
@@ -5224,13 +5177,13 @@
     "General"
   ],
   "lesinurad": [
-    "Cancer"
+    "General"
   ],
   "sitagliptin": [
     "General"
   ],
   "hydroxocobalamin": [
-    "Cancer"
+    "General"
   ],
   "praziquantel": [
     "General"
@@ -5281,7 +5234,7 @@
     "General"
   ],
   "cholesterol": [
-    "Cancer"
+    "General"
   ],
   "thymol": [
     "General"
@@ -5299,7 +5252,7 @@
     "General"
   ],
   "sodium nitrite": [
-    "Cancer"
+    "General"
   ],
   "coagulation factor viia (recombinant)-jncw": [
     "General"
@@ -5344,7 +5297,7 @@
     "General"
   ],
   "inotuzumab": [
-    "Cancer"
+    "General"
   ],
   "fenoterol": [
     "Cardiovascular"
@@ -5353,7 +5306,7 @@
     "General"
   ],
   "abrocitinib": [
-    "Cancer"
+    "General"
   ],
   "glucagon hydrochloride": [
     "General"
@@ -5386,17 +5339,16 @@
     "General"
   ],
   "fenoprofen calcium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "erythrityl tetranitrate": [
     "General"
   ],
   "etoricoxib": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "benzydamine": [
-    "Cancer",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "lipegfilgrastim": [
     "General"
@@ -5429,16 +5381,16 @@
     "General"
   ],
   "pirtobrutinib": [
-    "Cancer"
+    "General"
   ],
   "insulin, protamine zinc": [
     "Diabetic"
   ],
   "lufenuron": [
-    "Cancer"
+    "General"
   ],
   "imidocarb dipropionate": [
-    "Cancer"
+    "General"
   ],
   "oxyphenonium bromide": [
     "Alzheimers"
@@ -5447,7 +5399,7 @@
     "Alzheimers"
   ],
   "metolazone": [
-    "Cancer"
+    "General"
   ],
   "corticotropin": [
     "General"
@@ -5462,7 +5414,7 @@
     "General"
   ],
   "apazone": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "octocrylene": [
     "General"
@@ -5471,7 +5423,7 @@
     "Cardiovascular"
   ],
   "boceprevir": [
-    "Cancer"
+    "General"
   ],
   "saquinavir mesylate": [
     "General"
@@ -5492,7 +5444,7 @@
     "General"
   ],
   "procarbazine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "flurazepam hydrochloride": [
     "General"
@@ -5504,7 +5456,7 @@
     "General"
   ],
   "sulfadiazine": [
-    "Cancer"
+    "General"
   ],
   "fencamfamin": [
     "Parkinsons"
@@ -5516,7 +5468,7 @@
     "General"
   ],
   "hexylresorcinol": [
-    "Cancer"
+    "General"
   ],
   "afamelanotide": [
     "General"
@@ -5525,13 +5477,13 @@
     "General"
   ],
   "dapoxetine": [
-    "Psychiatric"
+    "General"
   ],
   "primaquine": [
     "General"
   ],
   "gepirone": [
-    "Psychiatric"
+    "General"
   ],
   "efavirenz": [
     "General"
@@ -5591,7 +5543,7 @@
     "General"
   ],
   "methantheline": [
-    "Alzheimers"
+    "General"
   ],
   "streptokinase": [
     "General"
@@ -5600,7 +5552,7 @@
     "General"
   ],
   "peginterferon beta-1a": [
-    "Cancer"
+    "General"
   ],
   "pegvaliase": [
     "General"
@@ -5621,7 +5573,6 @@
     "General"
   ],
   "carphenazine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "dihydrotachysterol": [
@@ -5649,7 +5600,7 @@
     "General"
   ],
   "grazoprevir": [
-    "Cancer"
+    "General"
   ],
   "drospirenone": [
     "General"
@@ -5658,7 +5609,7 @@
     "General"
   ],
   "pralsetinib": [
-    "Cancer"
+    "General"
   ],
   "sodium dodecyl sulfate": [
     "General"
@@ -5667,7 +5618,7 @@
     "General"
   ],
   "salicylic acid": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "resmetirom": [
     "General"
@@ -5685,7 +5636,6 @@
     "General"
   ],
   "thiothixene hydrochloride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "prednisolone tebutate": [
@@ -5716,7 +5666,7 @@
     "General"
   ],
   "clomipramine hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "cimetidine hydrochloride": [
     "General"
@@ -5728,7 +5678,7 @@
     "General"
   ],
   "hydroxyprogesterone caproate (usp)": [
-    "Cancer"
+    "General"
   ],
   "treprostinil diolamine": [
     "General"
@@ -5737,7 +5687,7 @@
     "General"
   ],
   "alclofenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "thenalidine": [
     "General"
@@ -5749,16 +5699,16 @@
     "General"
   ],
   "deucravacitinib": [
-    "Cancer"
+    "General"
   ],
   "2-mercaptoethanesulfonic acid": [
-    "Alzheimers"
+    "General"
   ],
   "stearic acid": [
     "General"
   ],
   "triacetin": [
-    "Cancer"
+    "General"
   ],
   "etretinate": [
     "General"
@@ -5773,7 +5723,7 @@
     "Alzheimers"
   ],
   "epothilone d": [
-    "Cancer"
+    "General"
   ],
   "pasireotide diaspartate": [
     "General"
@@ -5788,7 +5738,7 @@
     "General"
   ],
   "sofosbuvir": [
-    "Cancer"
+    "General"
   ],
   "tofacitinib": [
     "General"
@@ -5806,10 +5756,10 @@
     "General"
   ],
   "grapefruit juice": [
-    "Cancer"
+    "General"
   ],
   "codeine sulfate": [
-    "General"
+    "Pain"
   ],
   "apraclonidine hydrochloride": [
     "General"
@@ -5821,7 +5771,7 @@
     "General"
   ],
   "clocortolone": [
-    "Cancer"
+    "General"
   ],
   "cyproterone": [
     "General"
@@ -5836,10 +5786,10 @@
     "General"
   ],
   "oxaprozin potassium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "indomethacin sodium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "desirudin": [
     "General"
@@ -5848,7 +5798,7 @@
     "Cardiovascular"
   ],
   "evinacumab": [
-    "Cardiovascular"
+    "General"
   ],
   "riociguat": [
     "General"
@@ -5869,14 +5819,13 @@
     "General"
   ],
   "loxapine succinate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "vorapaxar sulfate": [
     "General"
   ],
   "asparaginase": [
-    "Cancer"
+    "General"
   ],
   "pixantrone": [
     "General"
@@ -5906,7 +5855,7 @@
     "Cardiovascular"
   ],
   "protriptyline": [
-    "Cancer"
+    "General"
   ],
   "tirbanibulin": [
     "General"
@@ -5924,7 +5873,7 @@
     "General"
   ],
   "glafenine": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "nialamide": [
     "Parkinsons"
@@ -5942,16 +5891,16 @@
     "General"
   ],
   "alverine": [
-    "Psychiatric"
-  ],
-  "dextromoramide": [
     "General"
   ],
+  "dextromoramide": [
+    "Pain"
+  ],
   "furazolidone": [
-    "Cancer"
+    "General"
   ],
   "copanlisib hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "perindopril": [
     "Cardiovascular"
@@ -5993,7 +5942,7 @@
     "General"
   ],
   "bisacodyl": [
-    "Cancer"
+    "General"
   ],
   "hydrogen peroxide": [
     "General"
@@ -6020,7 +5969,7 @@
     "General"
   ],
   "daunorubicin hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "eslicarbazepine": [
     "General"
@@ -6029,7 +5978,7 @@
     "General"
   ],
   "lumefantrine": [
-    "Cancer"
+    "General"
   ],
   "streptomycin sulfate": [
     "General"
@@ -6053,10 +6002,10 @@
     "General"
   ],
   "clioquinol": [
-    "Cancer"
+    "General"
   ],
   "dimethyl fumarate": [
-    "Cancer"
+    "General"
   ],
   "benzethonium chloride": [
     "General"
@@ -6077,16 +6026,16 @@
     "General"
   ],
   "bicalutamide": [
-    "Cancer"
+    "General"
   ],
   "interferon alfa-n3": [
-    "Cancer"
+    "General"
   ],
   "hydroflumethiazide": [
     "General"
   ],
   "nalmefene": [
-    "General"
+    "Pain"
   ],
   "ramelteon": [
     "General"
@@ -6101,7 +6050,7 @@
     "Alzheimers"
   ],
   "artemether": [
-    "Cancer"
+    "General"
   ],
   "cephapirin sodium": [
     "General"
@@ -6113,7 +6062,7 @@
     "General"
   ],
   "propylene glycol monostearate": [
-    "Alzheimers"
+    "General"
   ],
   "oxiglutatione": [
     "General"
@@ -6128,7 +6077,7 @@
     "Cardiovascular"
   ],
   "fluvoxamine maleate": [
-    "Psychiatric"
+    "General"
   ],
   "choline fenofibrate": [
     "Diabetic"
@@ -6152,10 +6101,10 @@
     "General"
   ],
   "deslanoside": [
-    "Cancer"
+    "General"
   ],
   "triclofos sodium": [
-    "Psychiatric"
+    "General"
   ],
   "cefprozil anhydrous": [
     "General"
@@ -6215,11 +6164,9 @@
     "General"
   ],
   "olanzapine pamoate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "loxapine hydrochloride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "fidaxomicin": [
@@ -6232,7 +6179,6 @@
     "General"
   ],
   "cariprazine hydrochloride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "pasireotide pamoate": [
@@ -6257,12 +6203,11 @@
     "General"
   ],
   "minaprine hydrochloride": [
-    "Psychiatric",
     "Parkinsons",
     "Alzheimers"
   ],
   "glecaprevir": [
-    "Cancer"
+    "General"
   ],
   "cenegermin-bkbj": [
     "General"
@@ -6271,7 +6216,7 @@
     "General"
   ],
   "lercanidipine hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "maleic acid": [
     "General"
@@ -6307,19 +6252,19 @@
     "General"
   ],
   "papaverine": [
-    "Cancer"
+    "General"
   ],
   "ticrynafen": [
-    "Cancer"
+    "General"
   ],
   "diphenhydramine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "griseofulvin": [
     "General"
   ],
   "butylparaben": [
-    "Cancer"
+    "General"
   ],
   "tropolone": [
     "General"
@@ -6328,46 +6273,46 @@
     "Parkinsons"
   ],
   "pipobroman": [
-    "Cancer"
+    "General"
   ],
   "linoleic acid": [
-    "Cancer"
+    "General"
   ],
   "thonzonium bromide": [
-    "Cancer"
+    "General"
   ],
   "piperonyl butoxide": [
-    "Cancer"
+    "General"
   ],
   "canrenone": [
-    "Cancer"
+    "General"
   ],
   "hydralazine": [
     "General"
   ],
   "benserazide": [
-    "Parkinsons"
+    "General"
   ],
   "phloretin": [
-    "Cancer"
+    "General"
   ],
   "pyridostigmine": [
     "General"
   ],
   "lopinavir": [
-    "Cancer"
+    "General"
   ],
   "chlorquinaldol": [
     "General"
   ],
   "thimerosal": [
-    "Cancer"
+    "General"
   ],
   "unoprostone isopropyl": [
     "General"
   ],
   "isoxsuprine": [
-    "Cancer"
+    "General"
   ],
   "iproniazid": [
     "General"
@@ -6376,17 +6321,16 @@
     "General"
   ],
   "thiethylperazine malate": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "hesperidin": [
     "General"
   ],
   "disopyramide": [
-    "Cancer"
+    "General"
   ],
   "epirubicin hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "cromoglycate": [
     "General"
@@ -6395,13 +6339,13 @@
     "General"
   ],
   "colestipol hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "aldesleukin": [
     "General"
   ],
   "soy protein isolate": [
-    "Cancer"
+    "General"
   ],
   "thrombin": [
     "General"
@@ -6410,25 +6354,25 @@
     "General"
   ],
   "daptomycin": [
-    "Cancer"
+    "General"
   ],
   "norfloxacin": [
-    "Cancer"
+    "General"
   ],
   "bromazepam": [
-    "Cancer"
+    "General"
   ],
   "viloxazine": [
-    "Cancer"
+    "General"
   ],
   "edoxaban": [
     "General"
   ],
   "capivasertib": [
-    "Cancer"
+    "General"
   ],
   "glucarpidase": [
-    "Cancer"
+    "General"
   ],
   "bepotastine besilate": [
     "General"
@@ -6437,16 +6381,16 @@
     "General"
   ],
   "oxymorphone": [
-    "General"
+    "Pain"
   ],
   "fluticasone furoate": [
     "General"
   ],
   "cocaine": [
-    "Psychiatric"
+    "General"
   ],
   "levomethadyl": [
-    "General"
+    "Pain"
   ],
   "pentolinium": [
     "General"
@@ -6461,7 +6405,7 @@
     "General"
   ],
   "interferon alfacon-1": [
-    "Cancer"
+    "General"
   ],
   "oxazepam": [
     "General"
@@ -6470,7 +6414,7 @@
     "General"
   ],
   "dimercaprol": [
-    "Cancer"
+    "General"
   ],
   "finerenone": [
     "General"
@@ -6500,7 +6444,7 @@
     "General"
   ],
   "tafenoquine": [
-    "Cancer"
+    "General"
   ],
   "uracil mustard": [
     "General"
@@ -6512,7 +6456,7 @@
     "General"
   ],
   "cladribine": [
-    "Cancer"
+    "General"
   ],
   "carbenicillin indanyl sodium": [
     "General"
@@ -6527,10 +6471,10 @@
     "General"
   ],
   "salsalate": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "tranylcypromine": [
-    "Parkinsons"
+    "General"
   ],
   "siponimod": [
     "General"
@@ -6545,7 +6489,7 @@
     "General"
   ],
   "lornoxicam": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "acetate": [
     "General"
@@ -6554,22 +6498,22 @@
     "General"
   ],
   "celiprolol": [
-    "Cancer"
+    "General"
   ],
   "sparfloxacin": [
-    "Cancer"
+    "General"
   ],
   "carbamoylcholine": [
     "General"
   ],
   "eluxadoline": [
-    "General"
+    "Pain"
   ],
   "leniolisib": [
     "General"
   ],
   "duvelisib": [
-    "Cancer"
+    "General"
   ],
   "mavacamten": [
     "General"
@@ -6608,7 +6552,7 @@
     "General"
   ],
   "bazedoxifene acetate": [
-    "Diabetic"
+    "General"
   ],
   "insulin susp protamine zinc purified pork": [
     "Diabetic"
@@ -6632,7 +6576,6 @@
     "General"
   ],
   "dapiprazole": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "corifollitropin alfa": [
@@ -6645,20 +6588,19 @@
     "General"
   ],
   "pseudoephedrine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "flucytosine": [
-    "Cancer"
+    "General"
   ],
   "sulfinpyrazone": [
-    "Cancer"
+    "General"
   ],
   "neostigmine": [
     "Alzheimers"
   ],
   "pyrantel pamoate": [
-    "Alzheimers"
+    "General"
   ],
   "physostigmine": [
     "General"
@@ -6670,7 +6612,7 @@
     "General"
   ],
   "methylhomatropine": [
-    "Alzheimers"
+    "General"
   ],
   "sapropterin dihydrochloride": [
     "General"
@@ -6685,17 +6627,16 @@
     "General"
   ],
   "bromfenac sodium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "trimeprazine tartrate": [
-    "Cancer"
+    "General"
   ],
   "tripelennamine citrate": [
     "General"
   ],
   "trimipramine maleate": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "secretin synthetic porcine": [
     "General"
@@ -6773,7 +6714,7 @@
     "General"
   ],
   "sulfanilamide": [
-    "Cancer"
+    "General"
   ],
   "sulfacetamide sodium": [
     "General"
@@ -6809,7 +6750,6 @@
     "General"
   ],
   "diethylpropion": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "cinoxacin": [
@@ -6858,8 +6798,7 @@
     "General"
   ],
   "propiomazine": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "epoetin theta": [
     "General"
@@ -6868,7 +6807,7 @@
     "General"
   ],
   "trilaciclib dihydrochloride": [
-    "Cancer"
+    "General"
   ],
   "lenacapavir": [
     "General"
@@ -6898,23 +6837,22 @@
     "General"
   ],
   "methocarbamol": [
-    "Cancer"
+    "General"
   ],
   "erythrosine": [
     "General"
   ],
   "triclabendazole": [
-    "Cancer"
+    "General"
   ],
   "protriptyline hydrochloride": [
-    "Psychiatric",
-    "Cancer"
+    "General"
   ],
   "racepinephrine hydrochloride": [
     "Cardiovascular"
   ],
   "diethylcarbamazine citrate": [
-    "Cancer"
+    "General"
   ],
   "tiopronin": [
     "General"
@@ -6926,7 +6864,7 @@
     "General"
   ],
   "phenol": [
-    "Cancer"
+    "General"
   ],
   "carisoprodol": [
     "General"
@@ -6953,7 +6891,7 @@
     "Cardiovascular"
   ],
   "voxilaprevir": [
-    "Cancer"
+    "General"
   ],
   "apixaban": [
     "General"
@@ -6977,7 +6915,7 @@
     "General"
   ],
   "anifrolumab": [
-    "Cancer"
+    "General"
   ],
   "melphalan flufenamide": [
     "General"
@@ -6998,7 +6936,7 @@
     "General"
   ],
   "diflorasone diacetate": [
-    "Cancer"
+    "General"
   ],
   "glucosamine": [
     "General"
@@ -7013,7 +6951,7 @@
     "General"
   ],
   "mefloquine": [
-    "Cancer"
+    "General"
   ],
   "haloprogin": [
     "General"
@@ -7037,7 +6975,6 @@
     "General"
   ],
   "piperacetazine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "porfimer sodium": [
@@ -7074,10 +7011,10 @@
     "General"
   ],
   "moxetumomab pasudotox": [
-    "Cancer"
+    "General"
   ],
   "stanozolol": [
-    "Cancer"
+    "General"
   ],
   "arginine": [
     "General"
@@ -7086,7 +7023,7 @@
     "General"
   ],
   "rasagiline": [
-    "Parkinsons"
+    "General"
   ],
   "glycyrrhetinic acid": [
     "General"
@@ -7119,7 +7056,7 @@
     "General"
   ],
   "citric acid": [
-    "Cancer"
+    "General"
   ],
   "desoxycorticosterone acetate": [
     "General"
@@ -7131,7 +7068,7 @@
     "General"
   ],
   "chlorhexidine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "atipamezole": [
     "General"
@@ -7167,7 +7104,7 @@
     "General"
   ],
   "ruxolitinib phosphate": [
-    "Cancer"
+    "General"
   ],
   "acetazolamide sodium": [
     "General"
@@ -7188,10 +7125,10 @@
     "General"
   ],
   "aloxiprin": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "fam-trastuzumab deruxtecan-nxki": [
-    "Cancer"
+    "General"
   ],
   "setmelanotide acetate": [
     "General"
@@ -7203,7 +7140,7 @@
     "General"
   ],
   "ibufenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "maltol": [
     "General"
@@ -7233,7 +7170,7 @@
     "General"
   ],
   "ropeginterferon alfa-2b": [
-    "Cancer"
+    "General"
   ],
   "lumasiran": [
     "General"
@@ -7254,7 +7191,6 @@
     "Alzheimers"
   ],
   "zuclopenthixol": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "cisatracurium besylate": [
@@ -7264,7 +7200,7 @@
     "General"
   ],
   "methohexital": [
-    "Psychiatric"
+    "General"
   ],
   "insulin, regular, pork": [
     "Diabetic"
@@ -7309,7 +7245,7 @@
     "General"
   ],
   "cantharidin": [
-    "Cancer"
+    "General"
   ],
   "methscopolamine bromide": [
     "Alzheimers"
@@ -7318,10 +7254,10 @@
     "General"
   ],
   "burosumab-twza": [
-    "Cancer"
+    "General"
   ],
   "cobimetinib fumarate": [
-    "Cancer"
+    "General"
   ],
   "dasiglucagon hydrochloride": [
     "General"
@@ -7345,8 +7281,7 @@
     "General"
   ],
   "balsalazide": [
-    "Diabetic",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "benzyl salicylate": [
     "General"
@@ -7364,10 +7299,10 @@
     "General"
   ],
   "lorcaserin hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "fentanyl hydrochloride": [
-    "General"
+    "Pain"
   ],
   "hydrocortamate hydrochloride": [
     "General"
@@ -7376,7 +7311,7 @@
     "General"
   ],
   "dexamethasone sodium phosphate": [
-    "Cancer"
+    "General"
   ],
   "methoxamine hydrochloride": [
     "General"
@@ -7403,7 +7338,7 @@
     "Diabetic"
   ],
   "xylometazoline hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "cefaclor anhydrous": [
     "General"
@@ -7412,13 +7347,12 @@
     "General"
   ],
   "drotrecogin alfa": [
-    "Parkinsons"
+    "General"
   ],
   "efalizumab": [
     "General"
   ],
   "droperidol": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "eicosapentaenoic acid": [
@@ -7428,13 +7362,13 @@
     "Cardiovascular"
   ],
   "monobenzone": [
-    "Cancer"
+    "General"
   ],
   "cyclofenil": [
-    "Cancer"
+    "General"
   ],
   "doxercalciferol": [
-    "Cancer"
+    "General"
   ],
   "perindoprilat": [
     "General"
@@ -7446,19 +7380,19 @@
     "General"
   ],
   "s-adenosylmethionine": [
-    "Cancer"
+    "General"
   ],
   "letermovir": [
     "General"
   ],
   "azelastine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "nedocromil": [
     "General"
   ],
   "enasidenib mesylate": [
-    "Cancer"
+    "General"
   ],
   "artenimol": [
     "General"
@@ -7482,7 +7416,7 @@
     "Diabetic"
   ],
   "atovaquone": [
-    "Cancer"
+    "General"
   ],
   "albumin human-kjda": [
     "General"
@@ -7536,13 +7470,13 @@
     "Cardiovascular"
   ],
   "cromolyn sodium": [
-    "Cancer"
+    "General"
   ],
   "trenbolone acetate": [
     "General"
   ],
   "benzalkonium chloride": [
-    "Cancer"
+    "General"
   ],
   "penicillin g potassium": [
     "General"
@@ -7551,7 +7485,7 @@
     "General"
   ],
   "methyclothiazide": [
-    "Cancer"
+    "General"
   ],
   "magnesium chloride anhydrous": [
     "Alzheimers"
@@ -7566,7 +7500,7 @@
     "Cardiovascular"
   ],
   "mepolizumab": [
-    "Cancer"
+    "General"
   ],
   "nedosiran": [
     "General"
@@ -7581,7 +7515,7 @@
     "General"
   ],
   "diphenoxylate": [
-    "General"
+    "Pain"
   ],
   "collagenase clostridium histolyticum-aaes": [
     "General"
@@ -7623,7 +7557,7 @@
     "General"
   ],
   "tolmetin": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "laurocapram": [
     "General"
@@ -7635,7 +7569,7 @@
     "General"
   ],
   "3-iodobenzylguanidine": [
-    "Parkinsons"
+    "General"
   ],
   "avanafil": [
     "General"
@@ -7653,7 +7587,7 @@
     "Cardiovascular"
   ],
   "dexfenfluramine": [
-    "Psychiatric"
+    "General"
   ],
   "voretigene neparvovec": [
     "General"
@@ -7692,10 +7626,10 @@
     "General"
   ],
   "nalmefene hydrochloride": [
-    "General"
+    "Pain"
   ],
   "clometacin": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "ansuvimab-zykl": [
     "General"
@@ -7716,13 +7650,13 @@
     "Cardiovascular"
   ],
   "bismuth subsalicylate": [
-    "Pain/Anti-inflammatory"
+    "General"
   ],
   "indigo": [
-    "Alzheimers"
+    "General"
   ],
   "kinetin": [
-    "Cancer"
+    "General"
   ],
   "verteporfin": [
     "General"
@@ -7734,16 +7668,16 @@
     "Cardiovascular"
   ],
   "pegloticase": [
-    "Cancer"
+    "General"
   ],
   "alvimopan anhydrous": [
-    "General"
+    "Pain"
   ],
   "elagolix sodium": [
     "General"
   ],
   "barbital": [
-    "Psychiatric"
+    "General"
   ],
   "solriamfetol": [
     "General"
@@ -7761,7 +7695,7 @@
     "General"
   ],
   "danthron": [
-    "Cancer"
+    "General"
   ],
   "telotristat etiprate": [
     "General"
@@ -7788,7 +7722,7 @@
     "General"
   ],
   "fructose": [
-    "Cancer"
+    "General"
   ],
   "olopatadine": [
     "General"
@@ -7797,7 +7731,7 @@
     "General"
   ],
   "bromfenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "iobenguane i-123": [
     "General"
@@ -7815,10 +7749,10 @@
     "General"
   ],
   "amobarbital": [
-    "Psychiatric"
+    "General"
   ],
   "phenylalanine": [
-    "Parkinsons"
+    "General"
   ],
   "coagulation factor x human": [
     "General"
@@ -7860,7 +7794,7 @@
     "General"
   ],
   "diroximel fumarate": [
-    "Cancer"
+    "General"
   ],
   "brexucabtagene autoleucel": [
     "General"
@@ -7875,7 +7809,7 @@
     "General"
   ],
   "denatonium benzoate": [
-    "Cancer"
+    "General"
   ],
   "vidarabine": [
     "General"
@@ -7887,7 +7821,7 @@
     "General"
   ],
   "omega-3 fatty acids": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "desmoteplase": [
     "General"
@@ -7923,14 +7857,13 @@
     "General"
   ],
   "moxifloxacin": [
-    "Cancer"
-  ],
-  "diphenoxylate hydrochloride": [
     "General"
   ],
+  "diphenoxylate hydrochloride": [
+    "Pain"
+  ],
   "carphenazine maleate": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "diacetylrhein": [
     "General"
@@ -7945,7 +7878,7 @@
     "Cardiovascular"
   ],
   "nelfinavir mesylate": [
-    "Cancer"
+    "General"
   ],
   "hydroxyzine pamoate": [
     "General"
@@ -7975,7 +7908,7 @@
     "General"
   ],
   "propyl gallate": [
-    "Cancer"
+    "General"
   ],
   "triptorelin": [
     "General"
@@ -7984,7 +7917,7 @@
     "General"
   ],
   "gramicidin": [
-    "Cancer"
+    "General"
   ],
   "vancomycin": [
     "General"
@@ -7999,7 +7932,7 @@
     "General"
   ],
   "florbetapir f-18": [
-    "Alzheimers"
+    "General"
   ],
   "ritlecitinib": [
     "General"
@@ -8080,7 +8013,7 @@
     "General"
   ],
   "lysine": [
-    "Cancer"
+    "General"
   ],
   "insulin degludec": [
     "Diabetic"
@@ -8089,7 +8022,7 @@
     "General"
   ],
   "pyrogallol": [
-    "Cancer"
+    "General"
   ],
   "nitazoxanide": [
     "General"
@@ -8119,7 +8052,7 @@
     "General"
   ],
   "mecasermin rinfabate": [
-    "Cancer"
+    "General"
   ],
   "seractide acetate": [
     "General"
@@ -8164,7 +8097,6 @@
     "General"
   ],
   "pramipexole dihydrochloride": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "tedizolid phosphate": [
@@ -8174,7 +8106,7 @@
     "General"
   ],
   "ombitasvir": [
-    "Cancer"
+    "General"
   ],
   "finafloxacin": [
     "General"
@@ -8204,7 +8136,6 @@
     "General"
   ],
   "benperidol": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "vaborbactam": [
@@ -8223,28 +8154,28 @@
     "General"
   ],
   "diacetylmorphine": [
-    "General"
+    "Pain"
   ],
   "cefotetan": [
     "General"
   ],
   "indoprofen": [
-    "Diabetic"
+    "General"
   ],
   "biotin": [
     "General"
   ],
   "dibucaine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "allantoin": [
     "General"
   ],
   "ferrous sulfate": [
-    "Cancer"
+    "General"
   ],
   "halofantrine hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "pyrithione zinc": [
     "General"
@@ -8253,7 +8184,7 @@
     "General"
   ],
   "thonzonium": [
-    "Cancer"
+    "General"
   ],
   "benzaldehyde": [
     "General"
@@ -8268,7 +8199,7 @@
     "General"
   ],
   "ginkgo biloba extract": [
-    "Cancer"
+    "General"
   ],
   "albendazole": [
     "General"
@@ -8280,7 +8211,7 @@
     "Cardiovascular"
   ],
   "dezocine": [
-    "General"
+    "Pain"
   ],
   "fosinopril": [
     "Cardiovascular"
@@ -8334,13 +8265,13 @@
     "Cardiovascular"
   ],
   "articaine": [
-    "Cancer"
+    "General"
   ],
   "calcium": [
     "General"
   ],
   "lactulose": [
-    "Cancer"
+    "General"
   ],
   "proline": [
     "General"
@@ -8349,7 +8280,8 @@
     "General"
   ],
   "meptazinol": [
-    "Alzheimers"
+    "Alzheimers",
+    "Pain"
   ],
   "sitaxentan": [
     "General"
@@ -8388,7 +8320,6 @@
     "General"
   ],
   "mesoridazine besylate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "azatadine": [
@@ -8398,7 +8329,7 @@
     "General"
   ],
   "oliceridine": [
-    "Cancer"
+    "Pain"
   ],
   "pegcetacoplan": [
     "General"
@@ -8422,14 +8353,13 @@
     "Alzheimers"
   ],
   "hydrocodone polistirex": [
-    "General"
+    "Pain"
   ],
   "isoproterenol sulfate": [
     "Cardiovascular"
   ],
   "balsalazide disodium": [
-    "Diabetic",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "phenoxybenzamine hydrochloride": [
     "General"
@@ -8465,7 +8395,7 @@
     "General"
   ],
   "naloxegol": [
-    "General"
+    "Pain"
   ],
   "daprodustat": [
     "General"
@@ -8477,10 +8407,10 @@
     "General"
   ],
   "remimazolam besylate": [
-    "Psychiatric"
+    "General"
   ],
   "benzhydrocodone hydrochloride": [
-    "General"
+    "Pain"
   ],
   "potassium oxybate": [
     "General"
@@ -8495,7 +8425,7 @@
     "General"
   ],
   "lacidipine": [
-    "Cardiovascular"
+    "General"
   ],
   "cerivastatin sodium": [
     "Cardiovascular"
@@ -8504,8 +8434,7 @@
     "General"
   ],
   "triflupromazine hydrochloride": [
-    "Psychiatric",
-    "Parkinsons"
+    "General"
   ],
   "methyl isobutyl ketone": [
     "General"
@@ -8514,22 +8443,22 @@
     "Diabetic"
   ],
   "dobutamine hydrochloride": [
-    "Cardiovascular"
+    "General"
   ],
   "nitrofurazone": [
-    "Cancer"
+    "General"
   ],
   "benorilate": [
     "General"
   ],
   "4-aminophenol": [
-    "Cancer"
+    "General"
   ],
   "oxyphenisatin acetate": [
     "General"
   ],
   "tribromsalan": [
-    "Diabetic"
+    "General"
   ],
   "chondroitin sulfates": [
     "General"
@@ -8553,16 +8482,16 @@
     "General"
   ],
   "adl5859": [
-    "General"
+    "Pain"
   ],
   "interferon beta": [
-    "Cancer"
+    "General"
   ],
   "umbralisib": [
-    "Cancer"
+    "General"
   ],
   "dasabuvir": [
-    "Cancer"
+    "General"
   ],
   "delafloxacin": [
     "General"
@@ -8580,7 +8509,6 @@
     "General"
   ],
   "phenyltoloxamine": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "oritavancin": [
@@ -8635,7 +8563,7 @@
     "Cardiovascular"
   ],
   "glutaral": [
-    "Cancer"
+    "General"
   ],
   "talazoparib tosylate": [
     "General"
@@ -8650,7 +8578,7 @@
     "Parkinsons"
   ],
   "acemetacin": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "elapegademase-lvlr": [
     "General"
@@ -8668,10 +8596,10 @@
     "General"
   ],
   "hydrocodone bitartrate": [
-    "General"
+    "Pain"
   ],
   "fenclofenac": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "methapyrilene fumarate": [
     "General"
@@ -8686,7 +8614,7 @@
     "Alzheimers"
   ],
   "melengestrol acetate": [
-    "Cancer"
+    "General"
   ],
   "maprotiline hydrochloride": [
     "General"
@@ -8695,7 +8623,7 @@
     "General"
   ],
   "acepromazine": [
-    "Cancer"
+    "General"
   ],
   "lutein": [
     "General"
@@ -8722,19 +8650,19 @@
     "General"
   ],
   "almitrine": [
-    "Cancer"
+    "General"
   ],
   "clobetasol propionate": [
     "General"
   ],
   "ribociclib succinate": [
-    "Cancer"
-  ],
-  "butorphanol tartrate": [
     "General"
   ],
+  "butorphanol tartrate": [
+    "Pain"
+  ],
   "cholestyramine resin": [
-    "Cardiovascular"
+    "General"
   ],
   "bromodiphenhydramine hydrochloride": [
     "General"
@@ -8749,7 +8677,7 @@
     "General"
   ],
   "carbetapentane": [
-    "Cancer"
+    "General"
   ],
   "insulin zinc susp purified pork": [
     "Diabetic"
@@ -8758,7 +8686,7 @@
     "Diabetic"
   ],
   "propoxyphene napsylate": [
-    "General"
+    "Pain"
   ],
   "sermorelin acetate": [
     "General"
@@ -8767,7 +8695,7 @@
     "General"
   ],
   "flurbiprofen sodium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "mycophenolate mofetil hydrochloride": [
     "General"
@@ -8797,7 +8725,7 @@
     "General"
   ],
   "benzethonium": [
-    "Cancer"
+    "General"
   ],
   "niacinamide": [
     "General"
@@ -8818,7 +8746,7 @@
     "General"
   ],
   "imipramine pamoate": [
-    "Psychiatric"
+    "General"
   ],
   "diosmin": [
     "General"
@@ -8830,14 +8758,13 @@
     "General"
   ],
   "haloperidol lactate": [
-    "Psychiatric",
     "Parkinsons"
   ],
   "ibandronate sodium": [
     "General"
   ],
   "alectinib hydrochloride": [
-    "Cancer"
+    "General"
   ],
   "levocabastine hydrochloride": [
     "General"
@@ -8849,10 +8776,10 @@
     "Alzheimers"
   ],
   "sufentanil citrate": [
-    "General"
+    "Pain"
   ],
   "levorphanol tartrate": [
-    "General"
+    "Pain"
   ],
   "donepezil hydrochloride": [
     "Alzheimers"
@@ -8873,22 +8800,22 @@
     "General"
   ],
   "tazemetostat hydrobromide": [
-    "Cancer"
+    "General"
   ],
   "levamlodipine maleate": [
-    "Cardiovascular"
+    "General"
   ],
   "retifanlimab": [
     "General"
   ],
   "chloroacetic acid": [
-    "Cancer"
+    "General"
   ],
   "sulfuric acid": [
     "General"
   ],
   "methyleugenol": [
-    "Cancer"
+    "General"
   ],
   "efbemalenograstim alfa": [
     "General"
@@ -8897,7 +8824,7 @@
     "General"
   ],
   "oxyquinoline sulfate": [
-    "Cancer"
+    "General"
   ],
   "cyclandelate": [
     "General"
@@ -8909,7 +8836,7 @@
     "General"
   ],
   "potassium chloride": [
-    "Cancer"
+    "General"
   ],
   "butylscopolamine": [
     "General"
@@ -8918,7 +8845,7 @@
     "General"
   ],
   "milnacipran hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "belladonna extract, usp": [
     "General"
@@ -8948,7 +8875,7 @@
     "Cardiovascular"
   ],
   "omaveloxolone": [
-    "Cancer"
+    "General"
   ],
   "insulin zinc, extended": [
     "Diabetic"
@@ -8984,13 +8911,13 @@
     "Diabetic"
   ],
   "propoxyphene hydrochloride": [
-    "General"
+    "Pain"
   ],
   "bufexamac": [
     "General"
   ],
   "chloroxylenol": [
-    "Cancer"
+    "General"
   ],
   "atogepant": [
     "General"
@@ -9047,7 +8974,7 @@
     "General"
   ],
   "ibuprofen lysine": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "malic acid": [
     "General"
@@ -9062,7 +8989,7 @@
     "General"
   ],
   "antipyrine": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "fosinopril sodium": [
     "Cardiovascular"
@@ -9098,7 +9025,7 @@
     "General"
   ],
   "isoxicam": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "segesterone acetate": [
     "General"
@@ -9110,10 +9037,10 @@
     "General"
   ],
   "fipexide": [
-    "Cancer"
+    "General"
   ],
   "parecoxib sodium": [
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "chlorphenoxamine": [
     "General"
@@ -9122,7 +9049,7 @@
     "General"
   ],
   "phenazopyridine": [
-    "Cancer"
+    "General"
   ],
   "trimethobenzamide": [
     "General"
@@ -9131,7 +9058,7 @@
     "General"
   ],
   "anileridine phosphate": [
-    "General"
+    "Pain"
   ],
   "galcanezumab": [
     "General"
@@ -9149,7 +9076,7 @@
     "Alzheimers"
   ],
   "lithium citrate": [
-    "Cancer"
+    "General"
   ],
   "cyclopentolate hydrochloride": [
     "General"
@@ -9206,19 +9133,19 @@
     "General"
   ],
   "isopropyl palmitate": [
-    "Cancer"
+    "General"
   ],
   "zinc sulfate anhydrous": [
-    "Cancer"
+    "General"
   ],
   "vitamin a palmitate": [
     "General"
   ],
   "p-aminohippurate": [
-    "Alzheimers"
+    "General"
   ],
   "guaifenesin": [
-    "Cancer"
+    "General"
   ],
   "piperacillin anhydrous": [
     "General"
@@ -9239,13 +9166,13 @@
     "General"
   ],
   "chlorphentermine hydrochloride": [
-    "Psychiatric"
+    "General"
   ],
   "benzyl benzoate": [
     "General"
   ],
   "aluminum": [
-    "Cancer"
+    "General"
   ],
   "deoxyribonucleases": [
     "General"
@@ -9257,7 +9184,7 @@
     "General"
   ],
   "tyrosine": [
-    "Parkinsons"
+    "General"
   ],
   "capromab pendetide": [
     "General"
@@ -9296,7 +9223,7 @@
     "Diabetic"
   ],
   "morphine sulfate": [
-    "General"
+    "Pain"
   ],
   "hydrocortisone cypionate": [
     "General"
@@ -9353,7 +9280,7 @@
     "General"
   ],
   "sodium sulfate anhydrous": [
-    "Cancer"
+    "General"
   ],
   "agalsidase beta": [
     "General"
@@ -9402,7 +9329,7 @@
   ],
   "olsalazine sodium": [
     "Diabetic",
-    "Pain/Anti-inflammatory"
+    "Pain"
   ],
   "acetanilide": [
     "General"
@@ -9417,10 +9344,10 @@
     "General"
   ],
   "indalpine": [
-    "Psychiatric"
+    "General"
   ],
   "selumetinib sulfate": [
-    "Cancer"
+    "General"
   ],
   ".alpha.1-proteinase inhibitor human": [
     "General"
@@ -9465,7 +9392,7 @@
     "General"
   ],
   "dihydrocodeine bitartrate": [
-    "General"
+    "Pain"
   ],
   "pirbuterol acetate": [
     "Cardiovascular"
@@ -9480,7 +9407,7 @@
     "General"
   ],
   "metacresol": [
-    "Cancer"
+    "General"
   ],
   "myristic acid": [
     "Diabetic"
@@ -9498,7 +9425,7 @@
     "General"
   ],
   "decanoic acid": [
-    "Cancer"
+    "General"
   ],
   "exifone": [
     "General"
@@ -9513,6 +9440,6 @@
     "General"
   ],
   "sodium nitrate": [
-    "Cancer"
+    "General"
   ]
 }
