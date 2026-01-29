@@ -7633,10 +7633,11 @@ def render_professional_drug_discovery_chatbox():
                             drugs_with_defaults = []
                             for idx, drug in enumerate(top_3):
                                 drug_with_defaults = drug.copy()
-                                drug_with_defaults['confidence'] = 0.90 - (idx * 0.05)
-                                drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
-                                drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
-                                drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
+                                # USE REAL SCORE from scoring_engine, not fake hardcoded values!
+                                drug_with_defaults['confidence'] = drug.get('confidence', 0.5)  # From score_drug()
+                                drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {', '.join(drug.get('targets', ['Unknown'])[:2])}")
+                                drug_with_defaults['targets'] = drug.get('targets', ['Unknown'])
+                                drug_with_defaults['indication'] = drug.get('category', 'Drug repurposing candidate')
                                 drugs_with_defaults.append(drug_with_defaults)
                             st.session_state.selected_drugs = drugs_with_defaults
                             st.session_state.current_query = f"Top 3 {drug_category}"
