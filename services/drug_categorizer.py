@@ -1,5 +1,5 @@
 """
-Drug Categorizer
+Drug Categorizer - FIXED VERSION
 Uses drug_therapeutic_categories.json for proper categorization
 """
 import logging
