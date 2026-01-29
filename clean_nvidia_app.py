@@ -9652,123 +9652,59 @@ def render_biocypher_network_section():
                             st.error(f"Network rendering failed: {viz_error}")
                             import traceback
                             logger.error(traceback.format_exc())
+                        
+                        # === EVIDENCE CHAIN NARRATIVE (ALWAYS SHOW!) ===
+                        st.markdown("---")
+                        st.markdown("### 📋 Evidence Chain Explanation")
+                        
+                        try:
+                            from evidence_chain_narrator import generate_evidence_chain_description
+                            chain_desc = generate_evidence_chain_description(nodes_df, edges_df, selected_drug_for_evidence, disease_name)
+                            st.info(chain_desc)
+                        except ImportError:
+                            # Fallback: Generate simple chain description
+                            drug_id = f"DRUG_{selected_drug_for_evidence.replace(' ', '_').upper()}"
+                            drug_edges = edges_df[edges_df['source'] == drug_id]
                             
-                            # === ALWAYS SHOW NETWORK EXPLANATION (outside try block) ===
-                            st.markdown("---")
-                            st.markdown("### Network Analysis & Therapeutic Rationale")
-                            
-                            try:
-                                # Generate explanation from actual graph data
-                                explanation = generate_network_explanation(nodes_df, edges_df, disease_name)
-                                st.markdown(explanation)
-                            except Exception as exp_error:
-                                logger.error(f"Explanation generation failed: {exp_error}")
-                                st.info("Network analysis temporarily unavailable")
-                            
-                            # DISPLAY PATHWAYS AND GENES
-                            st.markdown("---")
-                            st.markdown("### Biological Pathways & Target Genes")
-                            
-                            try:
-                                # Get pathway details
-                                pathway_details = biocypher.get_pathway_details(nodes_df, edges_df)
+                            if len(drug_edges) > 0:
+                                target_id = drug_edges.iloc[0]['target']
+                                target_node = nodes_df[nodes_df['id'] == target_id]
+                                target_name = target_node.iloc[0]['name'] if len(target_node) > 0 else 'Unknown'
                                 
-                                if pathway_details:
-                                    col1, col2 = st.columns([1, 1])
-                                    
-                                    with col1:
-                                        st.markdown("#### Affected Pathways")
-                                        
-                                        # Show disease-relevant pathways first
-                                        relevant_pathways = [p for p in pathway_details if p['disease_relevant']]
-                                        other_pathways = [p for p in pathway_details if not p['disease_relevant']]
-                                        
-                                        if relevant_pathways:
-                                            st.success(f"Disease-Relevant Pathways: {len(relevant_pathways)}")
-                                            for pw in relevant_pathways[:10]:
-                                                with st.expander(f"{pw['name']} (Relevance: {pw['relevance_score']:.0%})", expanded=False):
-                                                    st.caption(f"**Source:** {pw['source']}")
-                                                    if pw['category']:
-                                                        st.caption(f"**Category:** {pw['category']}")
-                                                    st.caption(f"**Proteins involved:** {', '.join(pw['proteins'][:5])}")
-                                                    if len(pw['proteins']) > 5:
-                                                        st.caption(f"... and {len(pw['proteins']) - 5} more")
-                                        
-                                        if other_pathways:
-                                            st.info(f"Other Pathways: {len(other_pathways)}")
-                                            with st.expander(f"Show {len(other_pathways)} additional pathways", expanded=False):
-                                                for pw in other_pathways[:15]:
-                                                    st.caption(f"**{pw['name']}** ({pw['protein_count']} proteins)")
-                                    
-                                    with col2:
-                                        st.markdown("#### Target Genes/Proteins")
-                                        
-                                        # Extract gene/protein info
-                                        protein_nodes = nodes_df[nodes_df['type'] == 'protein'].to_dict('records')
-                                        
-                                        st.info(f"Total Targets: {len(protein_nodes)}")
-                                        
-                                        for protein in protein_nodes[:20]:
-                                            gene_name = protein.get('name', 'Unknown')
-                                            full_name = protein.get('full_name', gene_name)
-                                            function = protein.get('function', 'Protein target')
-                                            
-                                            with st.expander(f"{gene_name}", expanded=False):
-                                                if full_name != gene_name:
-                                                    st.caption(f"**Full name:** {full_name}")
-                                                st.caption(f"**Function:** {function}")
-                                                
-                                                # Show which drugs target this protein
-                                                drug_edges = edges_df[
-                                                    (edges_df['target'] == protein['id']) & 
-                                                    (edges_df.get('edge_type', '') == 'drug_protein')
-                                                ]
-                                                if not drug_edges.empty:
-                                                    targeting_drugs = []
-                                                    for _, edge in drug_edges.iterrows():
-                                                        drug_id = edge['source']
-                                                        drug_node = nodes_df[nodes_df['id'] == drug_id]
-                                                        if not drug_node.empty:
-                                                            drug_name_found = drug_node.iloc[0]['name']
-                                                            confidence = edge.get('confidence', 0)
-                                                            targeting_drugs.append(f"{drug_name_found} ({confidence:.0%})")
-                                                    
-                                                    if targeting_drugs:
-                                                        st.caption(f"**Targeted by:** {', '.join(targeting_drugs)}")
-                                        
-                                        if len(protein_nodes) > 20:
-                                            st.caption(f"... and {len(protein_nodes) - 20} more targets")
-                                else:
-                                    st.warning("No pathway information available")
-                                    
-                            except Exception as pathway_error:
-                                logger.error(f"Pathway display error: {pathway_error}")
-                                import traceback
-                                logger.error(traceback.format_exc())
-                                st.warning("Could not display pathway details")
-                    
+                                st.info(f"**{selected_drug_for_evidence}** → targets → **{target_name}** → participates in biological pathways → linked to **{disease_name}**")
+                        except Exception as desc_err:
+                            logger.warning(f"Chain description failed: {desc_err}")
+                        
+                        # === NETWORK EXPLANATION ===
+                        st.markdown("---")
+                        st.markdown("### Network Analysis & Therapeutic Rationale")
+                        
+                        try:
+                            # Generate explanation from actual graph data
+                            explanation = generate_network_explanation(nodes_df, edges_df, disease_name)
+                            st.markdown(explanation)
+                        except Exception as exp_error:
+                            logger.error(f"Explanation generation failed: {exp_error}")
+                            st.info("Network analysis temporarily unavailable")
+                        
                     else:
                         st.warning(f"No evidence graph generated for {selected_drug_for_evidence}")
-                        logger.warning(f"BioCypher returned empty graph: {len(nodes_df) if 'nodes_df' in locals() else 0} nodes")
+                        logger.warning(f"BioCypher returned empty graph")
                         
                 except Exception as biocypher_error:
                     st.error(f"BioCypher processing error: {biocypher_error}")
                     logger.error(f"BioCypher error: {biocypher_error}")
-                    import traceback
-                    logger.error(traceback.format_exc())
             else:
-                st.info("BioCypher not available - install evidence_graph_builder.py")
-                logger.warning("BioCypher module not loaded")
-            
-            # End of BioCypher network section
-            st.markdown("---")
-            
+                st.info("BioCypher not available")
+        
         except Exception as network_error:
             st.error(f"Network section error: {network_error}")
             logger.error(f"Network rendering error: {network_error}")
-            import traceback
-            logger.error(traceback.format_exc())
-                
+    
+    else:
+        st.info("Please select drugs from Step 1 to view evidence network")
+
+
 def create_enhanced_drug_disease_network(recommended_drugs, disease_name):
     """Create enhanced network showing drug-to-disease connections with Apache ECharts"""
     
