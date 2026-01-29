@@ -115,12 +115,40 @@ def get_drug_targets_from_db(drug_name: str) -> list:
 
 @st.cache_data(ttl=3600)
 def get_drug_smiles(drug_name: str) -> str:
-    """Get SMILES structure from database"""
-    sql = "SELECT smiles FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
-    results = execute_db(sql, (drug_name,))
-    if results and results[0].get('smiles'):
-        return results[0]['smiles']
-    return ""
+    """Get SMILES structure from drugs.json with flexible name matching"""
+    import json
+    
+    try:
+        with open('drugs.json', 'r') as f:
+            drugs = json.load(f)
+        
+        drug_lower = drug_name.lower()
+        
+        # Try exact match
+        if drug_lower in drugs:
+            return drugs[drug_lower].get('smiles', '')
+        
+        # Try partial match (handles "metformin hydrochloride" → "metformin")
+        # Remove common salt/form suffixes
+        clean_name = drug_lower
+        for suffix in [' hydrochloride', ' sodium', ' sulfate', ' maleate', ' tartrate', 
+                       ' phosphate', ' acetate', ' citrate', ', sterile', ' mesylate']:
+            clean_name = clean_name.replace(suffix, '')
+        
+        # Try cleaned name
+        if clean_name in drugs:
+            return drugs[clean_name].get('smiles', '')
+        
+        # Try partial match in any drug name
+        for drug_key, drug_data in drugs.items():
+            if clean_name in drug_key or drug_key in clean_name:
+                return drug_data.get('smiles', '')
+        
+        logger.warning(f"No SMILES found for {drug_name}")
+        return ""
+    except Exception as e:
+        logger.error(f"SMILES lookup failed for {drug_name}: {e}")
+        return ""
 
 def _format_drug_results(drugs: list) -> list:
     """
@@ -11904,12 +11932,13 @@ def render_molecular_docking_section():
                 st.warning("No docking poses generated")
                 return
             
-            # === FETCH PROTEIN PDB ONCE (before pose loop) ===
+            # === FETCH PROTEIN PDB ===
             protein_pdb_data = None
             pdb_debug_info = []
             try:
                 import requests
                 import os
+                import time
                 
                 # PDB ID mappings
                 pdb_ids = {
@@ -11918,55 +11947,81 @@ def render_molecular_docking_section():
                     'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK',
                     'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2',
                     'PTGS2': '5F19', 'PTGS1': '2OYE', 'COX8A': '5Z62',
-                    'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O'
+                    'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O',
+                    'BCHE': '1P0I', 'PRKAA1': '4CFF', 'PRKAA2': '4CFF'
                 }
                 pdb_id = pdb_ids.get(target_protein.upper())
                 
                 if pdb_id:
-                    pdb_debug_info.append(f"PDB ID for {target_protein}: {pdb_id}")
+                    pdb_debug_info.append(f"Target: {target_protein} → PDB ID: {pdb_id}")
                     
-                    # TRY LOCAL FOLDER FIRST!
+                    # Try local file first
                     local_pdb_path = f"pdb_structures/{target_protein.upper()}_{pdb_id}.pdb"
-                    pdb_debug_info.append(f"Checking local path: {local_pdb_path}")
+                    pdb_debug_info.append(f"Checking: {local_pdb_path}")
                     
                     if os.path.exists(local_pdb_path):
                         with open(local_pdb_path, 'r') as f:
                             protein_pdb_data = f.read()
-                        logger.info(f"✅ Loaded {target_protein} from local file ({pdb_id})")
-                        pdb_debug_info.append(f"✅ Loaded from local file!")
-                        st.success(f"✅ Loaded {target_protein} protein structure from local file")
+                        pdb_debug_info.append(f"✅ Loaded from local file ({len(protein_pdb_data)} bytes)")
+                        st.success(f"✅ Loaded {target_protein} structure from local file")
                     else:
-                        pdb_debug_info.append(f"❌ Local file not found")
+                        pdb_debug_info.append("Local file not found, attempting download...")
                         
-                        # Try download as fallback
-                        try:
-                            pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
-                            pdb_debug_info.append(f"Attempting download from: {pdb_url}")
-                            
-                            resp = requests.get(pdb_url, timeout=10)
-                            pdb_debug_info.append(f"Response status: {resp.status_code}")
-                            
-                            if resp.status_code == 200:
-                                protein_pdb_data = resp.text
-                                logger.info(f"✅ Downloaded {target_protein} from RCSB PDB ({pdb_id})")
-                                pdb_debug_info.append(f"✅ Downloaded successfully ({len(protein_pdb_data)} bytes)")
-                                st.success(f"✅ Downloaded {target_protein} protein structure from RCSB PDB")
-                            else:
-                                logger.warning(f"PDB download returned {resp.status_code}")
-                                pdb_debug_info.append(f"❌ Download failed: HTTP {resp.status_code}")
-                                st.warning(f"⚠️ Could not download protein structure (HTTP {resp.status_code})")
-                        except Exception as download_err:
-                            logger.warning(f"PDB download failed: {download_err}")
-                            pdb_debug_info.append(f"❌ Download error: {str(download_err)}")
-                            st.error(f"⚠️ Network download blocked: {str(download_err)}")
+                        # ROBUST DOWNLOAD with retries and proper headers
+                        pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+                        pdb_debug_info.append(f"URL: {pdb_url}")
+                        
+                        # Add proper headers (some servers require User-Agent)
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': 'text/plain,*/*'
+                        }
+                        
+                        # Try download with retries
+                        max_retries = 3
+                        for attempt in range(max_retries):
+                            try:
+                                pdb_debug_info.append(f"Attempt {attempt + 1}/{max_retries}...")
+                                
+                                response = requests.get(
+                                    pdb_url, 
+                                    headers=headers,
+                                    timeout=30,  # Longer timeout
+                                    allow_redirects=True,
+                                    verify=True  # SSL verification
+                                )
+                                
+                                pdb_debug_info.append(f"Response: HTTP {response.status_code}")
+                                
+                                if response.status_code == 200:
+                                    protein_pdb_data = response.text
+                                    pdb_debug_info.append(f"✅ Downloaded successfully ({len(protein_pdb_data)} bytes)")
+                                    st.success(f"✅ Downloaded {target_protein} structure from RCSB PDB")
+                                    break
+                                else:
+                                    pdb_debug_info.append(f"❌ HTTP {response.status_code}: {response.reason}")
+                                    if attempt < max_retries - 1:
+                                        time.sleep(1)  # Wait before retry
+                            except requests.exceptions.Timeout:
+                                pdb_debug_info.append(f"❌ Timeout on attempt {attempt + 1}")
+                                if attempt < max_retries - 1:
+                                    time.sleep(2)
+                            except requests.exceptions.ConnectionError as ce:
+                                pdb_debug_info.append(f"❌ Connection error: {str(ce)[:100]}")
+                                if attempt < max_retries - 1:
+                                    time.sleep(2)
+                            except Exception as download_err:
+                                pdb_debug_info.append(f"❌ Error: {str(download_err)[:100]}")
+                                break
+                        
+                        if not protein_pdb_data:
+                            st.warning(f"⚠️ Could not download {target_protein} structure. See debug info below.")
                 else:
-                    logger.warning(f"No PDB ID mapped for {target_protein}")
                     pdb_debug_info.append(f"❌ No PDB ID mapping for {target_protein}")
                     st.info(f"ℹ️ No PDB structure available for {target_protein}")
             except Exception as fetch_err:
-                logger.warning(f"Could not fetch PDB: {fetch_err}")
                 pdb_debug_info.append(f"❌ Exception: {str(fetch_err)}")
-                st.error(f"⚠️ PDB fetch error: {str(fetch_err)}")
+                st.error(f"⚠️ PDB fetch error: {str(fetch_err)[:200]}")
             
             # Show debug info
             with st.expander("🔍 PDB Download Debug Info", expanded=False):
