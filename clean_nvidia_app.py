@@ -11929,6 +11929,7 @@ def render_molecular_docking_section():
             
             # === FETCH PROTEIN PDB ONCE (before pose loop) ===
             protein_pdb_data = None
+            pdb_debug_info = []
             try:
                 import requests
                 import os
@@ -11945,29 +11946,55 @@ def render_molecular_docking_section():
                 pdb_id = pdb_ids.get(target_protein.upper())
                 
                 if pdb_id:
+                    pdb_debug_info.append(f"PDB ID for {target_protein}: {pdb_id}")
+                    
                     # TRY LOCAL FOLDER FIRST!
                     local_pdb_path = f"pdb_structures/{target_protein.upper()}_{pdb_id}.pdb"
+                    pdb_debug_info.append(f"Checking local path: {local_pdb_path}")
                     
                     if os.path.exists(local_pdb_path):
                         with open(local_pdb_path, 'r') as f:
                             protein_pdb_data = f.read()
                         logger.info(f"✅ Loaded {target_protein} from local file ({pdb_id})")
+                        pdb_debug_info.append(f"✅ Loaded from local file!")
+                        st.success(f"✅ Loaded {target_protein} protein structure from local file")
                     else:
-                        # Try download as fallback (might fail on Streamlit Cloud)
+                        pdb_debug_info.append(f"❌ Local file not found")
+                        
+                        # Try download as fallback
                         try:
                             pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+                            pdb_debug_info.append(f"Attempting download from: {pdb_url}")
+                            
                             resp = requests.get(pdb_url, timeout=10)
+                            pdb_debug_info.append(f"Response status: {resp.status_code}")
+                            
                             if resp.status_code == 200:
                                 protein_pdb_data = resp.text
                                 logger.info(f"✅ Downloaded {target_protein} from RCSB PDB ({pdb_id})")
+                                pdb_debug_info.append(f"✅ Downloaded successfully ({len(protein_pdb_data)} bytes)")
+                                st.success(f"✅ Downloaded {target_protein} protein structure from RCSB PDB")
                             else:
                                 logger.warning(f"PDB download returned {resp.status_code}")
+                                pdb_debug_info.append(f"❌ Download failed: HTTP {resp.status_code}")
+                                st.warning(f"⚠️ Could not download protein structure (HTTP {resp.status_code})")
                         except Exception as download_err:
-                            logger.warning(f"PDB download failed (Streamlit Cloud blocks external downloads): {download_err}")
+                            logger.warning(f"PDB download failed: {download_err}")
+                            pdb_debug_info.append(f"❌ Download error: {str(download_err)}")
+                            st.error(f"⚠️ Network download blocked: {str(download_err)}")
                 else:
                     logger.warning(f"No PDB ID mapped for {target_protein}")
+                    pdb_debug_info.append(f"❌ No PDB ID mapping for {target_protein}")
+                    st.info(f"ℹ️ No PDB structure available for {target_protein}")
             except Exception as fetch_err:
                 logger.warning(f"Could not fetch PDB: {fetch_err}")
+                pdb_debug_info.append(f"❌ Exception: {str(fetch_err)}")
+                st.error(f"⚠️ PDB fetch error: {str(fetch_err)}")
+            
+            # Show debug info
+            with st.expander("🔍 PDB Download Debug Info", expanded=False):
+                for info in pdb_debug_info:
+                    st.text(info)
             
             # === SHOW GROQ DESCRIPTION AT TOP ===
             st.markdown("---")
