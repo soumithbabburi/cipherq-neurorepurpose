@@ -7551,37 +7551,29 @@ def render_professional_drug_discovery_chatbox():
             if db_category:
                 try:
                     from services.drug_categorizer import get_drug_categorizer
-                    from real_molecular_optimizer import is_drug_optimizable, calculate_repurposing_score
+                    from scoring_engine import score_drug
+                    from workflow_optimizer import select_best_drugs_for_analysis
                     categorizer = get_drug_categorizer()
                     category_drugs = categorizer.get_drugs_by_category(db_category)
                     
                     if category_drugs:
-                        st.success(f"Found {len(category_drugs)} {drug_category} in database")
+                        st.success(f"Found {len(category_drugs)} {drug_category} from curated database")
                         
-                        # Score and rank drugs for Top 3 candidates
-                        scored_drugs = []
+                        # Score drugs using JSON-based scoring
                         for drug in category_drugs:
                             drug_name = drug.get('name', '')
-                            smiles = drug.get('smiles', '')
-                            drug_class = drug.get('class', '')
+                            targets = drug.get('targets', [])
                             
-                            # Check optimization suitability
-                            opt_check = is_drug_optimizable(drug_name, smiles, drug_class)
+                            # Calculate REAL score from JSON data
+                            score = score_drug(drug_name, selected_disease)
                             
-                            # Calculate repurposing score
-                            score_data = calculate_repurposing_score(drug_name, smiles, selected_disease)
-                            
-                            drug_scored = drug.copy()
-                            drug_scored['can_optimize'] = opt_check['can_optimize']
-                            drug_scored['opt_reason'] = opt_check['reason']
-                            drug_scored['molecule_type'] = opt_check['molecule_type']
-                            drug_scored['overall_score'] = score_data['overall_score']
-                            drug_scored['drug_likeness'] = score_data['drug_likeness']
-                            drug_scored['optimization_potential'] = score_data['optimization_potential']
-                            scored_drugs.append(drug_scored)
+                            drug['repurposing_score'] = score * 100  # Convert to percentage
+                            drug['confidence'] = score
+                            drug['can_optimize'] = True  # All small molecules can be optimized
+                            drug['optimization_class'] = 'Small molecule'
                         
-                        # Sort by overall score (highest first), prioritizing optimizable drugs
-                        scored_drugs.sort(key=lambda x: (x['can_optimize'], x['overall_score']), reverse=True)
+                        # Sort by score
+                        scored_drugs = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
                         
                         # Count how many are optimizable vs biologics
                         optimizable_drugs = [d for d in scored_drugs if d['can_optimize']]
