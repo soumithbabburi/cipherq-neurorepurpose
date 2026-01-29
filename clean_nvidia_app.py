@@ -7506,15 +7506,12 @@ def render_professional_drug_discovery_chatbox():
         # Map display names to database category names
         CATEGORY_MAP = {
             "-- Select Category --": None,
-            "Diabetic Drugs": "Diabetes",
+            "Diabetic Drugs": "Diabetic",
             "Cardiovascular Drugs": "Cardiovascular", 
-            "Anti-inflammatory Drugs": "Anti-inflammatory",
-            "Neurological Drugs": "Neurological",
-            "Cancer Drugs": "Cancer",
-            "Antibiotic Drugs": "Antibiotic",
-            "Antiviral Drugs": "Antiviral",
-            "Psychiatric Drugs": "Psychiatric",
-            "Pain Drugs": "Pain"
+            "Parkinson's Drugs": "Parkinsons",
+            "Alzheimer's Drugs": "Alzheimers",
+            "Pain/Anti-inflammatory": "Pain",
+            "Psychiatric Drugs": "Psychiatric"
         }
         
         drug_category = st.selectbox(
@@ -7524,7 +7521,7 @@ def render_professional_drug_discovery_chatbox():
             key="quick_drug_category"
         )
         
-        # Fetch drugs from database when category is selected
+        # Fetch drugs when category is selected
         if drug_category != "-- Select Category --":
             db_category = CATEGORY_MAP.get(drug_category)
             if db_category:
@@ -7536,7 +7533,8 @@ def render_professional_drug_discovery_chatbox():
                     category_drugs = categorizer.get_drugs_by_category(db_category)
                     
                     if category_drugs:
-                        st.success(f"Found {len(category_drugs)} {drug_category} from curated database")
+                        # Show actual count only
+                        st.info(f"Found {len(category_drugs)} {drug_category}")
                         
                         # Score drugs using JSON-based scoring
                         for drug in category_drugs:
