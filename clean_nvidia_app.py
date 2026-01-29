@@ -9632,7 +9632,7 @@ def render_biocypher_network_section():
                                         with col1:
                                             st.metric("Drugs", metrics['drug_count'])
                                         with col2:
-                                            st.metric("Targets", metrics['target_count'])
+                                            st.metric("Targets", metrics.get('target_count', metrics.get('protein_count', 0)))
                                         with col3:
                                             st.metric("Connections", metrics['total_edges'])
                                         
