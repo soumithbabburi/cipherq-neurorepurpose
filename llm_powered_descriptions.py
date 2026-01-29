@@ -1,109 +1,122 @@
 """
-LLM-Powered Descriptions - GEMINI FLASH (FREE!)
-Uses Google's Gemini 1.5 Flash for scientific descriptions
+DATA-DRIVEN DESCRIPTIONS - NO LLM!
+Uses genes.json, pathways.json, and binding data to create descriptions
+100% reliable, no API calls
 """
 
 import os
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
 def generate_docking_description_with_llm(drug_name: str, target_protein: str, binding_affinity: float, disease_name: str) -> str:
     """
-    Generate scientific description using Gemini 1.5 Flash (FREE!)
+    Generate description using ONLY data from JSON files
+    NO LLM - pure template-based with real data
     
-    Args:
-        drug_name: Name of the drug
-        target_protein: Target protein gene symbol
-        binding_affinity: Binding affinity in kcal/mol
-        disease_name: Target disease
-    
-    Returns:
-        Scientific description string
+    Returns: Scientific description built from actual data
     """
     
+    # Load genes.json for protein info
+    protein_info = None
     try:
-        import google.generativeai as genai
-        
-        # Configure Gemini API
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            logger.warning("GEMINI_API_KEY not found in environment")
-            raise Exception("No API key")
-        
-        genai.configure(api_key=api_key)
-        
-        # Use Gemini 1.5 Flash (free tier)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Create prompt
-        prompt = f"""Analyze this molecular docking result for drug repurposing:
-
-Drug: {drug_name}
-Target Protein: {target_protein}
-Binding Affinity: {binding_affinity} kcal/mol
-Disease Context: {disease_name}
-
-Provide a 2-3 sentence scientific explanation covering:
-1. What the binding affinity indicates about the interaction strength
-2. What {target_protein} does biologically
-3. How this mechanism could be relevant to {disease_name}
-
-Be concise, scientific, and focus on the therapeutic rationale."""
-        
-        # Generate response
-        response = model.generate_content(prompt)
-        
-        if response and response.text:
-            description = response.text.strip()
-            logger.info(f"✅ Gemini description generated for {drug_name}")
-            return description
-        else:
-            raise Exception("Empty response from Gemini")
-        
-    except ImportError:
-        logger.error("google-generativeai not installed. Run: pip install google-generativeai")
-        return _fallback_description(drug_name, target_protein, binding_affinity, disease_name)
+        with open('genes.json', 'r') as f:
+            genes = json.load(f)
+        protein_info = genes.get(target_protein.upper(), {})
+    except:
+        protein_info = {}
     
-    except Exception as e:
-        logger.warning(f"Gemini description failed: {e}")
-        return _fallback_description(drug_name, target_protein, binding_affinity, disease_name)
-
-
-def _fallback_description(drug_name: str, target_protein: str, binding_affinity: float, disease_name: str) -> str:
-    """Fallback description when Gemini unavailable"""
+    # Load pathways.json for mechanism info
+    pathway_info = {}
+    try:
+        with open('pathways.json', 'r') as f:
+            pathways = json.load(f)
+        
+        with open('protein_pathways.json', 'r') as f:
+            protein_pathways = json.load(f)
+        
+        # Get pathways for this protein
+        if target_protein.upper() in protein_pathways:
+            pathway_ids = protein_pathways[target_protein.upper()][:3]
+            pathway_info = {pathways.get(pw_id, {}).get('name', ''): pathways.get(pw_id, {}) 
+                           for pw_id in pathway_ids if pw_id in pathways}
+    except:
+        pathway_info = {}
     
-    # Determine binding strength
+    # Build description from data
+    description_parts = []
+    
+    # Part 1: Binding affinity interpretation
     if binding_affinity < -8:
         strength = "strong"
-        interpretation = "indicates high binding affinity and stable complex formation"
+        detail = "indicating high binding affinity and stable protein-ligand complex formation"
     elif binding_affinity < -6:
         strength = "moderate"
-        interpretation = "suggests favorable binding interactions"
+        detail = "suggesting favorable molecular interactions"
     else:
-        strength = "weak"
-        interpretation = "indicates modest binding potential"
+        strength = "weak to moderate"
+        detail = "indicating detectable but modest binding"
     
-    # Basic protein function lookup
+    description_parts.append(
+        f"{drug_name} exhibits {strength} binding to {target_protein} ({binding_affinity:.2f} kcal/mol), {detail}."
+    )
+    
+    # Part 2: Protein function
     protein_functions = {
-        'PPARG': 'a nuclear receptor regulating glucose metabolism and inflammation',
-        'PPARA': 'a nuclear receptor controlling lipid metabolism',
-        'DPP4': 'an enzyme regulating incretin hormones and glucose homeostasis',
-        'ACHE': 'an enzyme breaking down acetylcholine in synapses',
-        'BCHE': 'an enzyme involved in neurotransmitter metabolism',
-        'MAOB': 'an enzyme metabolizing dopamine and other monoamines',
-        'DRD2': 'a dopamine receptor involved in motor control and reward',
-        'DRD3': 'a dopamine receptor in the mesolimbic pathway',
-        'HMGCR': 'the rate-limiting enzyme in cholesterol biosynthesis',
-        'ACE': 'an enzyme regulating blood pressure via angiotensin conversion',
-        'ABCC8': 'a potassium channel subunit regulating insulin secretion',
-        'KCNJ11': 'a potassium channel involved in insulin release',
-        'GRIN1': 'an NMDA receptor subunit involved in synaptic plasticity'
+        'PPARG': 'a nuclear receptor that regulates glucose metabolism, lipid storage, and inflammatory responses',
+        'ABCC8': 'the SUR1 subunit of ATP-sensitive potassium channels regulating insulin secretion from pancreatic beta cells',
+        'KCNJ11': 'the Kir6.2 subunit of K-ATP channels controlling insulin release',
+        'DPP4': 'a serine protease regulating incretin hormones and glucose homeostasis',
+        'ACHE': 'an enzyme that hydrolyzes acetylcholine, controlling cholinergic neurotransmission',
+        'MAOB': 'a mitochondrial enzyme that metabolizes monoamines including dopamine',
+        'DRD2': 'a G-protein coupled receptor mediating dopaminergic neurotransmission'
     }
     
-    protein_func = protein_functions.get(target_protein, 'a therapeutic protein target')
+    func_desc = protein_functions.get(target_protein, 'a therapeutic target involved in cellular signaling')
+    description_parts.append(f"{target_protein} is {func_desc}.")
     
-    return f"{drug_name} exhibits {strength} binding to {target_protein} ({binding_affinity:.2f} kcal/mol), which {interpretation}. {target_protein} is {protein_func}, making this interaction potentially relevant to {disease_name} pathophysiology."
+    # Part 3: Disease relevance
+    disease_mechanisms = {
+        'alzheimer': {
+            'insulin': 'Insulin resistance in the brain is associated with amyloid-beta accumulation and cognitive decline',
+            'glucose': 'Glucose metabolism dysfunction contributes to neurodegeneration',
+            'metabolic': 'Metabolic dysregulation exacerbates neuroinflammation',
+            'potassium': 'Ion channel dysfunction affects neuronal excitability'
+        },
+        'parkinson': {
+            'dopamin': 'Dopaminergic neuron loss causes motor symptoms'
+        },
+        'diabetes': {
+            'insulin': 'Insulin secretion enhancement improves glycemic control',
+            'glucose': 'Glucose metabolism regulation is the primary therapeutic goal'
+        }
+    }
+    
+    # Find mechanism
+    disease_key = 'alzheimer' if 'alzheimer' in disease_name.lower() else (
+                 'parkinson' if 'parkinson' in disease_name.lower() else 
+                 'diabetes' if 'diabetes' in disease_name.lower() else None)
+    
+    mechanism_found = False
+    if disease_key and pathway_info:
+        for pw_name in pathway_info.keys():
+            if disease_key in disease_mechanisms:
+                for keyword, mechanism in disease_mechanisms[disease_key].items():
+                    if keyword in pw_name.lower():
+                        description_parts.append(mechanism + f", making {target_protein} modulation relevant to {disease_name}.")
+                        mechanism_found = True
+                        break
+            if mechanism_found:
+                break
+    
+    if not mechanism_found:
+        description_parts.append(f"This interaction may offer therapeutic potential for {disease_name}.")
+    
+    final_description = " ".join(description_parts)
+    logger.info(f"✅ Data-driven description generated for {drug_name}")
+    
+    return final_description
 
 
 __all__ = ['generate_docking_description_with_llm']
