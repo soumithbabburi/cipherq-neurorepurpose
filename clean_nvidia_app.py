@@ -12099,8 +12099,8 @@ def render_molecular_docking_section():
                                     
                                     # Add note about positioning
                                     st.markdown(f"**{selected_drug} with {target_protein} protein**")
-                                    st.caption("🌈 Rainbow ribbon: Protein structure | 🟢 Green: Drug molecule")
-                                    st.caption("⚠️ Drug position is computational estimate (actual docked pose requires AutoDock Vina executable)")
+                                    st.caption("Rainbow ribbon: Protein structure | Green: Drug molecule")
+                                    st.caption("Note: Drug position is computational estimate (actual docked pose requires AutoDock Vina executable)")
                                     
                                 else:
                                     # Just drug molecule
