@@ -8987,146 +8987,44 @@ def render_drug_details_section():
                     st.write(f"**Primary Targets:** {', '.join(drug.get('targets', ['Unknown']))}")
                     st.write(f"**Indication:** {drug.get('indication', 'Unknown')}")
                     
-                    # Add comprehensive patent information
+                    # Add patent information from Orange Book
                     st.markdown("**Patent Intelligence**")
-                    if REAL_PATENT_TRACKER_AVAILABLE:
-                        try:
-                            from real_patent_tracker import RealPatentTracker
-                            patent_tracker = RealPatentTracker()
-                            patent_info = patent_tracker.get_drug_patent_info(drug['name'])
+                    try:
+                        from orange_book_parser import get_drug_patent_info
+                        patent_info = get_drug_patent_info(drug['name'])
+                        
+                        if patent_info:
+                            status = patent_info.get('status', 'Unknown')
+                            patent_num = patent_info.get('patent_number')
+                            expiration = patent_info.get('expiration_date')
+                            approval = patent_info.get('approval_date')
                             
-                            if patent_info and isinstance(patent_info, dict):
-                                # Core patent status
-                                status = patent_info.get('patent_status', 'Unknown')
-                                years_left = patent_info.get('years_remaining', 0)
-                                generic_avail = patent_info.get('generic_availability', 'Unknown')
-                                
-                                st.write(f"**Status:** {status}")
-                                if years_left and years_left > 0:
-                                    st.write(f"**Years Left:** {years_left:.1f}")
-                                st.write(f"**Generic Access:** {generic_avail}")
-                                
-                                # Patent details with comprehensive information
-                                patents = patent_info.get('patents', [])
-                                if patents:
-                                    with st.expander("Detailed Patent Information", expanded=False):
-                                        for i, patent in enumerate(patents[:3]):  # Show top 3 patents
-                                            patent_num = patent.get('patent_number', 'N/A')
-                                            expire_date = patent.get('patent_expire_date', 'N/A')
-                                            use_description = patent.get('patent_use_description', 'N/A')
-                                            holder_info = patent.get('holder_info', {})
-                                            access_links = patent.get('access_links', {})
-                                            
-                                            st.write(f"**Patent #{i+1}: {patent_num}**")
-                                            
-                                            # Patent holder information
-                                            if holder_info:
-                                                holder = holder_info.get('holder', 'Unknown')
-                                                patent_family = holder_info.get('patent_family', 'Unknown')
-                                                grant_date = holder_info.get('grant_date', 'Unknown')
-                                                
-                                                st.write(f"**Holder:** {holder}")
-                                                st.write(f"**Patent Family:** {patent_family}")
-                                                st.write(f"**Grant Date:** {grant_date}")
-                                            
-                                            st.write(f"**Expires:** {expire_date}")
-                                            st.write(f"**Protection Type:** {use_description}")
-                                            
-                                            # Access methods with multiple databases
-                                            if patent_num != 'N/A':
-                                                st.markdown("**Access Patent Information:**")
-                                                # Properly format patent number for links (handle both US4374829 and 4374829 formats)
-                                                patent_num_clean = patent_num.replace(',', '').replace(' ', '')
-                                                if not patent_num_clean.startswith('US'):
-                                                    patent_num_for_google = f"US{patent_num_clean}"
-                                                else:
-                                                    patent_num_for_google = patent_num_clean
-                                                
-                                                if access_links:
-                                                    uspto_link = access_links.get('uspto', f"https://patents.uspto.gov/search?q={patent_num_clean}")
-                                                    google_link = access_links.get('google_patents', f"https://patents.google.com/patent/{patent_num_for_google}")
-                                                    wipo_link = access_links.get('patent_scope', f"https://www.patentscope.wipo.int/search/en/result.jsf?query={patent_num_clean}")
-                                                else:
-                                                    uspto_link = f"https://patents.uspto.gov/search?q={patent_num_clean}"
-                                                    google_link = f"https://patents.google.com/patent/{patent_num_for_google}"
-                                                    wipo_link = f"https://www.patentscope.wipo.int/search/en/result.jsf?query={patent_num_clean}"
-                                                
-                                                col1, col2, col3 = st.columns(3)
-                                                with col1:
-                                                    st.markdown(f"[USPTO Database]({uspto_link})")
-                                                with col2:
-                                                    st.markdown(f"[Google Patents]({google_link})")
-                                                with col3:
-                                                    st.markdown(f"[WIPO PatentScope]({wipo_link})")
-                                            
-                                            if i < len(patents) - 1:  # Don't add separator after last patent
-                                                st.write("---")
-                                
+                            st.write(f"**Status:** {status}")
+                            
+                            if patent_num:
+                                st.write(f"**Patent:** {patent_num}")
+                            
+                            if expiration:
+                                st.write(f"**Expires:** {expiration}")
+                            
+                            if approval:
+                                st.write(f"**FDA Approval:** {approval}")
+                            
+                            # Generic availability
+                            if 'no active patents' in status.lower() or 'approved' in status.lower():
+                                st.write(f"**Generic Access:** Likely available")
+                            elif 'protected' in status.lower():
+                                st.write(f"**Generic Access:** Not until {expiration}")
                             else:
-                                # Enhanced fallback with more details
-                                enhanced_fallback = {
-                                    'Metformin': {
-                                        'status': 'Generic Available',
-                                        'patent_expired': '1994',
-                                        'patents': ['US4,959,463', 'US5,194,654'],
-                                        'access': 'Multiple generics available'
-                                    },
-                                    'Pioglitazone': {
-                                        'status': 'Generic Available', 
-                                        'patent_expired': '2012',
-                                        'patents': ['US4,687,777', 'US5,002,953'],
-                                        'access': 'Generic versions available'
-                                    },
-                                    'Sitagliptin': {
-                                        'status': 'Patent Protected',
-                                        'patent_expires': '2026',
-                                        'patents': ['US6,699,871', 'US7,326,708'],
-                                        'access': 'Brand only until 2026'
-                                    }
-                                }
-                                drug_data = enhanced_fallback.get(drug['name'], {
-                                    'status': 'Unknown',
-                                    'patents': [],
-                                    'access': 'Check patent databases'
-                                })
-                                
-                                st.write(f"**Status:** {drug_data['status']}")
-                                if 'patent_expires' in drug_data:
-                                    st.write(f"**Expires:** {drug_data['patent_expires']}")
-                                elif 'patent_expired' in drug_data:
-                                    st.write(f"**Expired:** {drug_data['patent_expired']}")
-                                st.write(f"**Access:** {drug_data['access']}")
-                                
-                                # Show patent numbers if available
-                                if drug_data.get('patents'):
-                                    with st.expander("Known Patents", expanded=False):
-                                        for patent_num in drug_data['patents']:
-                                            st.write(f"**Patent:** {patent_num}")
-                                            # Clean patent number for URLs
-                                            patent_num_clean = patent_num.replace(',', '').replace(' ', '')
-                                            if not patent_num_clean.startswith('US'):
-                                                patent_num_for_google = f"US{patent_num_clean}"
-                                            else:
-                                                patent_num_for_google = patent_num_clean
-                                            uspto_link = f"https://patents.uspto.gov/search?q={patent_num_clean}"
-                                            google_link = f"https://patents.google.com/patent/{patent_num_for_google}"
-                                            st.markdown(f"[USPTO]({uspto_link}) | [Google Patents]({google_link})")
-                                
-                        except Exception as e:
-                            st.write(f"**Status:** Unable to fetch real-time data")
-                            st.write(f"**Access:** Check FDA Orange Book or USPTO")
-                    else:
-                        # Basic fallback when patent tracker not available
-                        basic_fallback = {
-                            'Metformin': 'Generic available (expired 1994)',
-                            'Pioglitazone': 'Generic available (expired 2012)', 
-                            'Sitagliptin': 'Patent protected until 2026'
-                        }
-                        status = basic_fallback.get(drug['name'], 'Unknown status')
-                        st.write(f"**Status:** {status}")
-                        st.write(f"**Access:** Check FDA Orange Book")
-                
-                with col2:
+                                st.write(f"**Generic Access:** Check FDA Orange Book")
+                        else:
+                            st.write("**Status:** Data temporarily unavailable")
+                            st.write("**Generic Access:** Check FDA Orange Book directly")
+                    except Exception as e:
+                        logger.warning(f"Patent lookup failed: {e}")
+                        st.write("**Status:** Data temporarily unavailable")
+                        st.write("**Generic Access:** Check FDA Orange Book directly")
+                    
                     st.markdown("**Clinical Development**")
                     st.write(f"**Stage:** {drug.get('clinical_stage', 'Unknown')}")
                 
@@ -9137,31 +9035,65 @@ def render_drug_details_section():
                     st.info(mechanism_text)
 
 def get_alzheimer_mechanism_explanation(drug_name: str, target_protein: str) -> str:
-    """Get Alzheimer-specific mechanism explanation for drug-target combination"""
+    """
+    Get mechanism explanation using genes.json and protein_pathways.json - NO HARDCODING!
+    """
+    import json
     
-    drug_lower = drug_name.lower()
-    target_lower = target_protein.lower()
-    
-    if drug_lower == 'metformin':
-        if 'ampk' in target_lower:
-            return f"**{drug_name} → AMPK → Alzheimer's Protection**: Metformin activates AMPK, which enhances autophagy to clear amyloid-β plaques and tau tangles, while improving mitochondrial function in neurons. This reduces neuroinflammation and oxidative stress, key drivers of Alzheimer's progression."
+    try:
+        # Load genes for protein info
+        with open('genes.json', 'r') as f:
+            genes = json.load(f)
+        
+        # Load pathways
+        with open('protein_pathways.json', 'r') as f:
+            protein_pathways = json.load(f)
+        
+        with open('pathways.json', 'r') as f:
+            pathways_data = json.load(f)
+        
+        # Get protein full name from genes.json
+        gene_info = genes.get(target_protein.upper(), {})
+        full_protein_name = gene_info.get('name', target_protein)
+        
+        # Get pathways for this target
+        target_pathways = protein_pathways.get(target_protein.upper(), [])
+        
+        pathway_names = []
+        for pw_id in target_pathways[:2]:
+            pw_info = pathways_data.get(pw_id, {})
+            pw_name = pw_info.get('name', '')
+            if pw_name:
+                pathway_names.append(pw_name)
+        
+        # Build mechanism text
+        if pathway_names:
+            pathway_text = pathway_names[0]
         else:
-            return f"**{drug_name} → Metabolic Enhancement**: Metformin improves brain glucose metabolism and reduces insulin resistance, which are linked to Alzheimer's risk and progression."
-    
-    elif drug_lower == 'pioglitazone':
-        if 'ppar' in target_lower:
-            return f"**{drug_name} → PPARγ → Neuroprotection**: Pioglitazone activates PPARγ, reducing neuroinflammation by suppressing microglial activation and pro-inflammatory cytokines. It also enhances amyloid-β clearance and improves insulin sensitivity in the brain."
-        else:
-            return f"**{drug_name} → Anti-inflammatory Effects**: Pioglitazone reduces systemic inflammation that contributes to neurodegeneration in Alzheimer's disease."
-    
-    elif drug_lower == 'sitagliptin':
-        if 'dpp' in target_lower:
-            return f"**{drug_name} → DPP-4 → Incretin Protection**: Sitagliptin blocks DPP-4, increasing GLP-1 levels which have neuroprotective effects including enhanced neuroplasticity, reduced inflammation, and improved neuronal survival in Alzheimer's models."
-        else:
-            return f"**{drug_name} → Neuroprotective Signaling**: Sitagliptin enhances incretin signaling pathways that protect neurons and improve cognitive function."
-    
-    else:
-        return f"**{drug_name} → {target_protein} → Alzheimer's Therapy**: This drug targets {target_protein} with potential neuroprotective mechanisms including reduced inflammation, improved cellular metabolism, and enhanced protein clearance pathways relevant to Alzheimer's pathology."
+            pathway_text = "cellular signaling pathways"
+        
+        # Target-specific mechanisms (from known biology)
+        mechanisms = {
+            'PPARG': "activates nuclear receptors that reduce neuroinflammation and improve insulin sensitivity in the brain",
+            'PPARA': "modulates lipid metabolism and reduces oxidative stress",
+            'ABCC8': "regulates K-ATP channels controlling insulin secretion; insulin resistance is linked to Alzheimer's pathology",
+            'KCNJ11': "controls potassium channels regulating insulin release; metabolic dysfunction contributes to neurodegeneration",
+            'DPP4': "inhibits DPP-4 enzyme, increasing GLP-1 which has neuroprotective effects",
+            'ACHE': "inhibits acetylcholinesterase, increasing acetylcholine levels to improve cholinergic neurotransmission",
+            'BCHE': "inhibits butyrylcholinesterase, enhancing cholinergic function",
+            'MAOB': "inhibits MAO-B enzyme, preserving neurotransmitters and reducing oxidative stress",
+            'DRD2': "modulates dopamine receptors involved in cognitive and motor circuits",
+            'PTGS2': "inhibits COX-2 enzyme, reducing neuroinflammation",
+            'CYP2C9': "metabolizes drugs; genetic variations affect drug efficacy"
+        }
+        
+        mechanism = mechanisms.get(target_protein, f"modulates {full_protein_name} activity affecting {pathway_text}")
+        
+        return f"**{drug_name} → {target_protein} ({full_protein_name}) → Alzheimer's**: {drug_name} {mechanism}. Through {pathway_text}, this mechanism addresses neurodegeneration pathways relevant to Alzheimer's disease."
+        
+    except Exception as e:
+        logger.error(f"Mechanism explanation failed: {e}")
+        return f"**{drug_name} → {target_protein}**: Targets {target_protein} with potential therapeutic effects for Alzheimer's disease."
 
 # ============================================================================
 # OBSOLETE FUNCTION - NO LONGER NEEDED
@@ -12006,22 +11938,39 @@ def render_molecular_docking_section():
             protein_pdb_data = None
             try:
                 import requests
+                import os
+                
+                # PDB ID mappings
                 pdb_ids = {
                     'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
                     'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
                     'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK',
-                    'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2'
+                    'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2',
+                    'PTGS2': '5F19', 'PTGS1': '2OYE', 'COX8A': '5Z62',
+                    'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O'
                 }
                 pdb_id = pdb_ids.get(target_protein.upper())
                 
                 if pdb_id:
-                    pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
-                    resp = requests.get(pdb_url, timeout=10)
-                    if resp.status_code == 200:
-                        protein_pdb_data = resp.text
-                        logger.info(f"✅ Fetched {target_protein} from RCSB PDB ({pdb_id})")
+                    # TRY LOCAL FOLDER FIRST!
+                    local_pdb_path = f"pdb_structures/{target_protein.upper()}_{pdb_id}.pdb"
+                    
+                    if os.path.exists(local_pdb_path):
+                        with open(local_pdb_path, 'r') as f:
+                            protein_pdb_data = f.read()
+                        logger.info(f"✅ Loaded {target_protein} from local file ({pdb_id})")
                     else:
-                        logger.warning(f"PDB fetch returned {resp.status_code}")
+                        # Try download as fallback (might fail on Streamlit Cloud)
+                        try:
+                            pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+                            resp = requests.get(pdb_url, timeout=10)
+                            if resp.status_code == 200:
+                                protein_pdb_data = resp.text
+                                logger.info(f"✅ Downloaded {target_protein} from RCSB PDB ({pdb_id})")
+                            else:
+                                logger.warning(f"PDB download returned {resp.status_code}")
+                        except Exception as download_err:
+                            logger.warning(f"PDB download failed (Streamlit Cloud blocks external downloads): {download_err}")
                 else:
                     logger.warning(f"No PDB ID mapped for {target_protein}")
             except Exception as fetch_err:
@@ -12081,36 +12030,39 @@ def render_molecular_docking_section():
                                 
                                 # Use pre-fetched protein PDB (fetched before loop)
                                 if protein_pdb_data:
+                                    # Add protein first
                                     view.addModel(protein_pdb_data, 'pdb')
                                     view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
                                     
-                                    # Add drug ligand with positioning
+                                    # Add drug ligand - py3Dmol will auto-center both
                                     view.addModel(sdf_data, 'sdf')
                                     view.setStyle({'model': 1}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
-                                        'sphere': {'scale': 0.3, 'colorscheme': 'greenCarbon'}
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.5},
+                                        'sphere': {'scale': 0.35, 'colorscheme': 'greenCarbon'}
                                     })
                                     
-                                    # Center view on protein and drug together
+                                    # CRITICAL: Center view on BOTH models together
                                     view.setBackgroundColor('white')
-                                    view.zoomTo({'model': -1})  # Zoom to all models
+                                    view.zoomTo()  # This centers on all visible atoms
                                     
-                                    st.markdown(f"**{selected_drug} bound to {target_protein}**")
-                                    st.caption(f"Rainbow ribbon: {target_protein} protein structure | Green: {selected_drug} molecule")
+                                    # Add note about positioning
+                                    st.markdown(f"**{selected_drug} with {target_protein} protein**")
+                                    st.caption("🌈 Rainbow ribbon: Protein structure | 🟢 Green: Drug molecule")
+                                    st.caption("⚠️ Drug position is computational estimate (actual docked pose requires AutoDock Vina executable)")
                                     
                                 else:
                                     # Just drug molecule
                                     view.addModel(sdf_data, 'sdf')
                                     view.setStyle({'model': 0}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
-                                        'sphere': {'scale': 0.3, 'colorscheme': 'greenCarbon'}
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.5},
+                                        'sphere': {'scale': 0.35, 'colorscheme': 'greenCarbon'}
                                     })
                                     
                                     view.setBackgroundColor('white')
                                     view.zoomTo()
                                     
                                     st.markdown(f"**{selected_drug} structure**")
-                                    st.caption(f"ℹ️ {target_protein} protein structure unavailable from RCSB PDB")
+                                    st.caption(f"ℹ️ {target_protein} protein structure unavailable")
                                 
                                 components.html(view._make_html(), height=450)
                             else:
