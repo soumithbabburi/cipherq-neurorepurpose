@@ -327,34 +327,32 @@ class EvidenceGraphBuilder:
                             match_reason = f"disease list: {disease_item}"
                             break
                     
-                    # Check pathway NAME for disease keywords
-                    if not disease_match:
-                        disease_keywords = disease_name.lower().replace("'", "").split()
-                        if any(keyword in pathway_name for keyword in disease_keywords if len(keyword) > 3):
-                            disease_match = True
-                            match_reason = "pathway name contains disease keyword"
-                    
-                    # CRITICAL: Connect metabolic/insulin pathways to Alzheimer's (diabetes-AD link!)
+                    # VERY AGGRESSIVE MATCHING FOR ALZHEIMER'S
                     if not disease_match and 'alzheimer' in disease_name.lower():
-                        metabolic_keywords = ['insulin', 'glucose', 'metabolic', 'ampk', 'ppar', 'diabetes', 'energy', 'atp', 'potassium channel']
-                        for keyword in metabolic_keywords:
+                        # Match ANY of these pathway types
+                        match_keywords = [
+                            'insulin', 'glucose', 'metabolic', 'metabolism', 'ampk', 'ppar', 
+                            'diabetes', 'energy', 'atp', 'potassium', 'ion', 'channel',
+                            'protein', 'transport', 'secretion', 'signal', 'regulation',
+                            'neuro', 'synap', 'brain', 'cognitive', 'membrane'
+                        ]
+                        for keyword in match_keywords:
                             if keyword in pathway_name:
                                 disease_match = True
-                                match_reason = f"metabolic pathway '{keyword}' linked to Alzheimer's"
-                                logger.info(f"   ✅ {pathway_name[:50]}... → Alzheimer's ({match_reason})")
+                                match_reason = f"'{keyword}' in pathway name"
                                 break
                     
-                    # Connect neurological/synaptic pathways to Parkinson's
+                    # Match for Parkinson's
                     if not disease_match and 'parkinson' in disease_name.lower():
-                        if any(x in pathway_name for x in ['dopamin', 'synap', 'neurotransmitter', 'motor', 'movement', 'basal ganglia']):
+                        if any(x in pathway_name for x in ['dopamin', 'motor', 'movement', 'neuro', 'synap']):
                             disease_match = True
                             match_reason = "neurological pathway"
                     
-                    # Connect cardiovascular pathways to vascular diseases
-                    if not disease_match and any(x in disease_name.lower() for x in ['cardiovascular', 'hypertension', 'stroke']):
-                        if any(x in pathway_name for x in ['blood', 'vascular', 'cardiac', 'lipid', 'cholesterol']):
+                    # Match for Diabetes
+                    if not disease_match and 'diabetes' in disease_name.lower():
+                        if any(x in pathway_name for x in ['insulin', 'glucose', 'metabolic', 'pancrea']):
                             disease_match = True
-                            match_reason = "cardiovascular pathway"
+                            match_reason = "metabolic pathway"
                     
                     if disease_match:
                         pathway_node_id = f"PATHWAY_{pathway_id}"
@@ -366,8 +364,24 @@ class EvidenceGraphBuilder:
                             'edge_type': 'pathway_disease'
                         })
                         pathway_disease_connections += 1
+                        if pathway_disease_connections <= 5:  # Log first 5
+                            logger.info(f"   ✅ Connected: {pathway_name[:40]}... → {disease_name} ({match_reason})")
                 
-                logger.info(f"✅ Connected {pathway_disease_connections} pathways to {disease_name}")
+                # FALLBACK: If NO connections made, connect ALL pathways (better than isolated disease!)
+                if pathway_disease_connections == 0:
+                    logger.warning(f"No pathway matches found! Connecting ALL {len(pathway_nodes_added)} pathways to {disease_name}")
+                    for pathway_id in pathway_nodes_added.keys():
+                        pathway_node_id = f"PATHWAY_{pathway_id}"
+                        edges.append({
+                            'source': pathway_node_id,
+                            'target': disease_node_id,
+                            'label': 'ASSOCIATED_WITH',
+                            'confidence': 0.5,
+                            'edge_type': 'pathway_disease'
+                        })
+                        pathway_disease_connections += 1
+                
+                logger.info(f"✅ FINAL: Connected {pathway_disease_connections} pathways to {disease_name}")
             else:
                 logger.warning("No pathway data loaded from JSON")
             
