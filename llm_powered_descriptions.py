@@ -1,20 +1,20 @@
 """
-LLM-Powered Docking Descriptions using Groq API
-Generates scientific descriptions of molecular docking results
+LLM-Powered Descriptions - GEMINI FLASH (FREE!)
+Uses Google's Gemini 1.5 Flash for scientific descriptions
 """
+
 import os
 import logging
-from groq import Groq
 
 logger = logging.getLogger(__name__)
 
-def generate_docking_description_with_llm(drug_name, target_protein, binding_affinity, disease_name):
+def generate_docking_description_with_llm(drug_name: str, target_protein: str, binding_affinity: float, disease_name: str) -> str:
     """
-    Generate scientific description of docking results using Groq API.
+    Generate scientific description using Gemini 1.5 Flash (FREE!)
     
     Args:
         drug_name: Name of the drug
-        target_protein: Target protein (e.g., PPARG, DPP4)
+        target_protein: Target protein gene symbol
         binding_affinity: Binding affinity in kcal/mol
         disease_name: Target disease
     
@@ -23,50 +23,87 @@ def generate_docking_description_with_llm(drug_name, target_protein, binding_aff
     """
     
     try:
-        # Get Groq API key
-        api_key = os.getenv('GROQ_API_KEY')
+        import google.generativeai as genai
         
+        # Configure Gemini API
+        api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            raise ValueError("GROQ_API_KEY not found in environment")
+            logger.warning("GEMINI_API_KEY not found in environment")
+            raise Exception("No API key")
         
-        # Initialize Groq client
-        client = Groq(api_key=api_key)
+        genai.configure(api_key=api_key)
+        
+        # Use Gemini 1.5 Flash (free tier)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Create prompt
-        prompt = f"""Explain this molecular docking result in 2-3 scientific sentences:
+        prompt = f"""Analyze this molecular docking result for drug repurposing:
 
 Drug: {drug_name}
 Target Protein: {target_protein}
 Binding Affinity: {binding_affinity} kcal/mol
 Disease Context: {disease_name}
 
-Explain:
-1. What this binding affinity means (more negative = stronger binding)
-2. How {drug_name} binding to {target_protein} could be therapeutic for {disease_name}
-3. The biological significance
+Provide a 2-3 sentence scientific explanation covering:
+1. What the binding affinity indicates about the interaction strength
+2. What {target_protein} does biologically
+3. How this mechanism could be relevant to {disease_name}
 
-Be factual, concise, and scientific. Use the actual protein name and binding value."""
+Be concise, scientific, and focus on the therapeutic rationale."""
         
-        # Call Groq API
-        logger.info(f"Calling Groq API for docking description...")
-        response = client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }],
-            max_tokens=400,
-            temperature=0.7
-        )
+        # Generate response
+        response = model.generate_content(prompt)
         
-        description = response.choices[0].message.content.strip()
-        logger.info(f"✅ Groq description generated ({len(description)} chars)")
+        if response and response.text:
+            description = response.text.strip()
+            logger.info(f"✅ Gemini description generated for {drug_name}")
+            return description
+        else:
+            raise Exception("Empty response from Gemini")
         
-        return description
-        
+    except ImportError:
+        logger.error("google-generativeai not installed. Run: pip install google-generativeai")
+        return _fallback_description(drug_name, target_protein, binding_affinity, disease_name)
+    
     except Exception as e:
-        logger.warning(f"Groq API failed: {e}")
-        
-        # Fallback to simple description
-        strength = "strong" if binding_affinity < -8 else ("moderate" if binding_affinity < -6 else "weak")
-        return f"**{drug_name} → {target_protein}**: Binding affinity of {binding_affinity} kcal/mol indicates {strength} molecular interaction. This {strength} binding suggests potential therapeutic activity for {disease_name}."
+        logger.warning(f"Gemini description failed: {e}")
+        return _fallback_description(drug_name, target_protein, binding_affinity, disease_name)
+
+
+def _fallback_description(drug_name: str, target_protein: str, binding_affinity: float, disease_name: str) -> str:
+    """Fallback description when Gemini unavailable"""
+    
+    # Determine binding strength
+    if binding_affinity < -8:
+        strength = "strong"
+        interpretation = "indicates high binding affinity and stable complex formation"
+    elif binding_affinity < -6:
+        strength = "moderate"
+        interpretation = "suggests favorable binding interactions"
+    else:
+        strength = "weak"
+        interpretation = "indicates modest binding potential"
+    
+    # Basic protein function lookup
+    protein_functions = {
+        'PPARG': 'a nuclear receptor regulating glucose metabolism and inflammation',
+        'PPARA': 'a nuclear receptor controlling lipid metabolism',
+        'DPP4': 'an enzyme regulating incretin hormones and glucose homeostasis',
+        'ACHE': 'an enzyme breaking down acetylcholine in synapses',
+        'BCHE': 'an enzyme involved in neurotransmitter metabolism',
+        'MAOB': 'an enzyme metabolizing dopamine and other monoamines',
+        'DRD2': 'a dopamine receptor involved in motor control and reward',
+        'DRD3': 'a dopamine receptor in the mesolimbic pathway',
+        'HMGCR': 'the rate-limiting enzyme in cholesterol biosynthesis',
+        'ACE': 'an enzyme regulating blood pressure via angiotensin conversion',
+        'ABCC8': 'a potassium channel subunit regulating insulin secretion',
+        'KCNJ11': 'a potassium channel involved in insulin release',
+        'GRIN1': 'an NMDA receptor subunit involved in synaptic plasticity'
+    }
+    
+    protein_func = protein_functions.get(target_protein, 'a therapeutic protein target')
+    
+    return f"{drug_name} exhibits {strength} binding to {target_protein} ({binding_affinity:.2f} kcal/mol), which {interpretation}. {target_protein} is {protein_func}, making this interaction potentially relevant to {disease_name} pathophysiology."
+
+
+__all__ = ['generate_docking_description_with_llm']
