@@ -1,0 +1,10082 @@
+{
+  "angiotensin ii": [
+    "Cardiovascular"
+  ],
+  "neratinib": [
+    "Cancer"
+  ],
+  "imatinib": [
+    "Cancer"
+  ],
+  "clodronic acid": [
+    "General"
+  ],
+  "oxytetracycline anhydrous": [
+    "Cancer"
+  ],
+  "cisplatin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "arbutamine": [
+    "Cardiovascular"
+  ],
+  "dibucaine": [
+    "General"
+  ],
+  "nintedanib esylate": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "dipivefrin hydrochloride": [
+    "Cardiovascular"
+  ],
+  "tamoxifen": [
+    "Cancer"
+  ],
+  "phenolphthalein": [
+    "Diabetic"
+  ],
+  "tetrabenazine": [
+    "Cancer"
+  ],
+  "remoxipride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dactinomycin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "amlodipine besylate": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "bazedoxifene": [
+    "General"
+  ],
+  "nabumetone": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "vasopressin tannate": [
+    "General"
+  ],
+  "pitavastatin magnesium": [
+    "Cardiovascular"
+  ],
+  "carbetapentane citrate": [
+    "Cancer"
+  ],
+  "bcg vaccine": [
+    "General"
+  ],
+  "lamivudine": [
+    "General"
+  ],
+  "clotiazepam": [
+    "Psychiatric"
+  ],
+  "bupropion hydrochloride": [
+    "Parkinsons",
+    "Cardiovascular",
+    "Psychiatric"
+  ],
+  "selumetinib": [
+    "Cancer"
+  ],
+  "mesalamine": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "gilteritinib": [
+    "Cancer"
+  ],
+  "mitoxantrone": [
+    "Cancer"
+  ],
+  "ibrutinib": [
+    "Cancer"
+  ],
+  "palbociclib": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "eribulin mesylate": [
+    "General"
+  ],
+  "ceritinib": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "phenylephrine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "methylprednisolone sodium succinate": [
+    "General"
+  ],
+  "fluvastatin": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "paclitaxel": [
+    "Cancer"
+  ],
+  "pregabalin": [
+    "Cardiovascular"
+  ],
+  "faricimab": [
+    "General"
+  ],
+  "everolimus": [
+    "Cancer"
+  ],
+  "clindamycin hydrochloride": [
+    "General"
+  ],
+  "desipramine": [
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "sertindole": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "nepafenac": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "fulvestrant": [
+    "Cancer"
+  ],
+  "prazosin hydrochloride": [
+    "Cancer"
+  ],
+  "lumacaftor": [
+    "General"
+  ],
+  "dexamethasone": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "insulin, regular, human": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "alprostadil": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "chlorambucil": [
+    "Cancer"
+  ],
+  "cytarabine": [
+    "Cancer"
+  ],
+  "vilanterol": [
+    "Cardiovascular"
+  ],
+  "yohimbine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "propantheline bromide": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "chlorprothixene": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "thioridazine": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "tolvaptan": [
+    "General"
+  ],
+  "human chorionic gonadotropin": [
+    "Cancer"
+  ],
+  "apigenin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "nonivamide": [
+    "General"
+  ],
+  "nefazodone": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "halazepam": [
+    "Psychiatric"
+  ],
+  "glutethimide": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "clobazam": [
+    "Psychiatric"
+  ],
+  "rolapitant": [
+    "General"
+  ],
+  "axitinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "naltrexone hydrochloride": [
+    "General"
+  ],
+  "lactose": [
+    "Cancer"
+  ],
+  "ergotamine": [
+    "Psychiatric"
+  ],
+  "azithromycin": [
+    "Cancer"
+  ],
+  "methylergonovine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "indapamide": [
+    "General"
+  ],
+  "liraglutide": [
+    "Diabetic"
+  ],
+  "carboplatin": [
+    "Cancer"
+  ],
+  "terazosin hydrochloride": [
+    "General"
+  ],
+  "ramipril": [
+    "Cardiovascular"
+  ],
+  "histamine": [
+    "Cancer"
+  ],
+  "risperidone": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular",
+    "Psychiatric"
+  ],
+  "carfilzomib": [
+    "Cancer"
+  ],
+  "fludrocortisone acetate": [
+    "General"
+  ],
+  "eptifibatide": [
+    "General"
+  ],
+  "minaprine": [
+    "Alzheimers",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "ascorbic acid": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "methacholine chloride": [
+    "Cancer"
+  ],
+  "phenobarbital": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "mycophenolate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "ivabradine hydrochloride": [
+    "General"
+  ],
+  "methandrostenolone": [
+    "General"
+  ],
+  "quinine": [
+    "Cancer"
+  ],
+  "doxazosin mesylate": [
+    "General"
+  ],
+  "diazoxide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "amikacin": [
+    "General"
+  ],
+  "triparanol": [
+    "Diabetic"
+  ],
+  "thymol iodide": [
+    "General"
+  ],
+  "danazol": [
+    "Cancer"
+  ],
+  "butabarbital": [
+    "Psychiatric"
+  ],
+  "trilostane": [
+    "Cancer"
+  ],
+  "trimetrexate": [
+    "Cancer"
+  ],
+  "sapanisertib": [
+    "Cancer"
+  ],
+  "ledipasvir": [
+    "Cancer"
+  ],
+  "pamidronate": [
+    "Cancer"
+  ],
+  "heparin": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "conivaptan": [
+    "General"
+  ],
+  "fluorouracil": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "dehydrated alcohol": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "paroxetine hydrochloride, hemihydrate": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "panobinostat": [
+    "Cancer"
+  ],
+  "gemfibrozil": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "ticlopidine": [
+    "Cancer"
+  ],
+  "tannic acid": [
+    "Cancer"
+  ],
+  "triclosan": [
+    "Cancer"
+  ],
+  "methotrexate": [
+    "Cancer",
+    "Diabetic",
+    "Pain/Anti-inflammatory"
+  ],
+  "ibuprofen, sodium salt": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "sulfamethoxazole": [
+    "Cancer"
+  ],
+  "suloctidil": [
+    "Cardiovascular"
+  ],
+  "octreotide acetate": [
+    "Cancer"
+  ],
+  "vincristine": [
+    "Cancer"
+  ],
+  "pentosan polysulfate": [
+    "Cancer"
+  ],
+  "vardenafil": [
+    "General"
+  ],
+  "nicotine polacrilex": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "abemaciclib": [
+    "Cancer"
+  ],
+  "erlotinib": [
+    "Cancer"
+  ],
+  "bithionol": [
+    "Diabetic"
+  ],
+  "propranolol hydrochloride": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "azacitidine": [
+    "Cancer"
+  ],
+  "cobimetinib": [
+    "Cancer"
+  ],
+  "apomorphine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "ziprasidone": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular",
+    "Psychiatric"
+  ],
+  "butalbital": [
+    "Psychiatric"
+  ],
+  "erythromycin": [
+    "Cancer"
+  ],
+  "triazolam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "esketamine": [
+    "Alzheimers"
+  ],
+  "chloramphenicol sodium succinate": [
+    "General"
+  ],
+  "letrozole": [
+    "Cancer"
+  ],
+  "pembrolizumab": [
+    "Cancer"
+  ],
+  "benzquinamide": [
+    "Alzheimers"
+  ],
+  "melphalan": [
+    "Cancer"
+  ],
+  "etanercept-szzs": [
+    "Cancer"
+  ],
+  "ethacrynic acid": [
+    "Cancer"
+  ],
+  "dequalinium": [
+    "Cancer"
+  ],
+  "ganaxolone": [
+    "Psychiatric"
+  ],
+  "silver sulfadiazine": [
+    "General"
+  ],
+  "aspirin": [
+    "Diabetic",
+    "Pain/Anti-inflammatory",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "tramadol": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "phloroglucinol": [
+    "Cardiovascular"
+  ],
+  "ticlopidine hydrochloride": [
+    "General"
+  ],
+  "nilotinib": [
+    "Cancer"
+  ],
+  "misoprostol": [
+    "General"
+  ],
+  "olaparib": [
+    "Cancer"
+  ],
+  "doxacurium chloride": [
+    "General"
+  ],
+  "uracil": [
+    "Cancer"
+  ],
+  "reserpine": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "lorazepam": [
+    "Psychiatric"
+  ],
+  "cilastatin": [
+    "General"
+  ],
+  "methohexital sodium": [
+    "Psychiatric"
+  ],
+  "methotrimeprazine": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "ivosidenib": [
+    "Cancer"
+  ],
+  "clozapine": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "orphenadrine hydrochloride": [
+    "Alzheimers"
+  ],
+  "sevoflurane": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "voriconazole": [
+    "Cancer"
+  ],
+  "pentoxifylline": [
+    "Cancer"
+  ],
+  "roflumilast": [
+    "General"
+  ],
+  "pexidartinib hydrochloride": [
+    "Cancer"
+  ],
+  "chlordiazepoxide": [
+    "Psychiatric"
+  ],
+  "masitinib": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "digoxin": [
+    "Cancer"
+  ],
+  "idarubicin": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "flurazepam": [
+    "Psychiatric"
+  ],
+  "nelfinavir": [
+    "Cancer"
+  ],
+  "lithium": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "urofollitropin": [
+    "General"
+  ],
+  "sufentanil": [
+    "General"
+  ],
+  "protokylol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "decamethonium": [
+    "General"
+  ],
+  "mepivacaine hydrochloride": [
+    "Cancer"
+  ],
+  "ethchlorvynol": [
+    "Psychiatric"
+  ],
+  "cyproheptadine hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "gentian violet cation": [
+    "Alzheimers",
+    "Cancer",
+    "Diabetic"
+  ],
+  "busulfan": [
+    "Cancer"
+  ],
+  "prazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "theophylline sodium glycinate": [
+    "General"
+  ],
+  "sulpiride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "chlormezanone": [
+    "General"
+  ],
+  "celecoxib": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "dronedarone hydrochloride": [
+    "Cardiovascular"
+  ],
+  "brexanolone": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "infliximab-dyyb": [
+    "Cancer"
+  ],
+  "crizotinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "oxyphenbutazone": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "methylphenidate hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "bithionolate sodium": [
+    "General"
+  ],
+  "pasireotide": [
+    "General"
+  ],
+  "clofazimine": [
+    "Cancer"
+  ],
+  "quetiapine fumarate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "amitriptyline hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "clindamycin": [
+    "General"
+  ],
+  "acetazolamide": [
+    "General"
+  ],
+  "vinorelbine": [
+    "Cancer"
+  ],
+  "quazepam": [
+    "Psychiatric"
+  ],
+  "cefoxitin sodium": [
+    "General"
+  ],
+  "levofloxacin anhydrous": [
+    "Cancer"
+  ],
+  "indocyanine green acid form": [
+    "Cancer"
+  ],
+  "metipranolol": [
+    "Cardiovascular"
+  ],
+  "domperidone": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dinoprost tromethamine": [
+    "General"
+  ],
+  "vorinostat": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "adefovir dipivoxil": [
+    "Cancer"
+  ],
+  "trametinib dimethyl sulfoxide": [
+    "Cancer"
+  ],
+  "pravastatin sodium": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "phenytoin sodium": [
+    "Cancer"
+  ],
+  "eszopiclone": [
+    "Psychiatric"
+  ],
+  "melatonin": [
+    "Cancer",
+    "Parkinsons",
+    "Pain/Anti-inflammatory"
+  ],
+  "labetalol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "cenobamate": [
+    "Psychiatric"
+  ],
+  "mercaptopurine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "masoprocol": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "vincristine sulfate": [
+    "Cancer"
+  ],
+  "phendimetrazine": [
+    "Parkinsons"
+  ],
+  "hydrocortisone sodium phosphate": [
+    "General"
+  ],
+  "codeine anhydrous": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "tetracycline": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "pyrazinamide": [
+    "Cancer"
+  ],
+  "midodrine": [
+    "Cancer"
+  ],
+  "mecasermin": [
+    "Cancer"
+  ],
+  "norgestimate": [
+    "General"
+  ],
+  "exemestane": [
+    "Cancer"
+  ],
+  "rucaparib": [
+    "Cancer"
+  ],
+  "maraviroc": [
+    "General"
+  ],
+  "risankizumab": [
+    "General"
+  ],
+  "ampicillin trihydrate": [
+    "General"
+  ],
+  "ingenol mebutate": [
+    "General"
+  ],
+  "allopurinol": [
+    "Cancer"
+  ],
+  "estrogen": [
+    "General"
+  ],
+  "mepazine acetate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "dihydroergotamine mesylate": [
+    "Parkinsons"
+  ],
+  "enfortumab vedotin-ejfv": [
+    "Cancer"
+  ],
+  "paricalcitol": [
+    "Cancer"
+  ],
+  "rituximab": [
+    "Cancer"
+  ],
+  "verapamil": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "dolutegravir sodium": [
+    "Cancer"
+  ],
+  "macimorelin acetate": [
+    "General"
+  ],
+  "doxycycline anhydrous": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "panitumumab": [
+    "Cancer"
+  ],
+  "zopiclone": [
+    "Psychiatric"
+  ],
+  "succimer": [
+    "Cancer"
+  ],
+  "agomelatine": [
+    "Psychiatric"
+  ],
+  "quinidine sulfate": [
+    "General"
+  ],
+  "benztropine": [
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "mequitazine": [
+    "General"
+  ],
+  "cetuximab": [
+    "Cancer"
+  ],
+  "retapamulin": [
+    "General"
+  ],
+  "ferulic acid": [
+    "Alzheimers"
+  ],
+  "mechlorethamine hydrochloride": [
+    "Cancer"
+  ],
+  "atorvastatin calcium trihydrate": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "neratinib maleate": [
+    "Cancer"
+  ],
+  "thyrotropin-releasing hormone": [
+    "General"
+  ],
+  "interferon alfa": [
+    "Cancer"
+  ],
+  "niacin": [
+    "Cancer"
+  ],
+  "tivozanib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "pentobarbital sodium": [
+    "Psychiatric"
+  ],
+  "belinostat": [
+    "Cancer"
+  ],
+  "methylparaben": [
+    "Cancer"
+  ],
+  "tretinoin": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "topiramate": [
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "gefitinib": [
+    "Cancer"
+  ],
+  "cidofovir anhydrous": [
+    "General"
+  ],
+  "clotrimazole": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "repotrectinib": [
+    "Cancer"
+  ],
+  "temazepam": [
+    "Psychiatric"
+  ],
+  "oxypurinol": [
+    "General"
+  ],
+  "benoxinate hydrochloride": [
+    "Cancer"
+  ],
+  "bromperidol": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "fluorometholone": [
+    "General"
+  ],
+  "calcipotriene": [
+    "Cancer"
+  ],
+  "vemurafenib": [
+    "Cancer"
+  ],
+  "aprepitant": [
+    "General"
+  ],
+  "midostaurin": [
+    "Cancer"
+  ],
+  "methylnaltrexone": [
+    "General"
+  ],
+  "tocainide hydrochloride": [
+    "General"
+  ],
+  "6-aminocaproic acid": [
+    "General"
+  ],
+  "desvenlafaxine succinate": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "epinephrine bitartrate": [
+    "Cardiovascular"
+  ],
+  "lumateperone": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "etomidate": [
+    "Psychiatric"
+  ],
+  "testosterone": [
+    "Cancer"
+  ],
+  "carminic acid": [
+    "Cancer"
+  ],
+  "imipramine hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "norepinephrine": [
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "probenecid": [
+    "Cancer"
+  ],
+  "nitrofurantoin, macrocrystals": [
+    "Cancer"
+  ],
+  "econazole nitrate": [
+    "Cancer"
+  ],
+  "thalidomide": [
+    "Cancer",
+    "Diabetic",
+    "Pain/Anti-inflammatory"
+  ],
+  "halobetasol": [
+    "General"
+  ],
+  "meclofenamate": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "tolcapone": [
+    "Parkinsons"
+  ],
+  "olanzapine": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "dabrafenib": [
+    "Cancer"
+  ],
+  "methyldopa anhydrous": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "hesperetin": [
+    "Diabetic"
+  ],
+  "chlortetracycline hydrochloride": [
+    "General"
+  ],
+  "fluticasone": [
+    "General"
+  ],
+  "lapatinib": [
+    "Cancer"
+  ],
+  "propafenone": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "thiopental sodium": [
+    "Psychiatric"
+  ],
+  "vitamin b12": [
+    "Cancer"
+  ],
+  "larotrectinib sulfate": [
+    "Cancer"
+  ],
+  "vinblastine sulfate": [
+    "Cancer"
+  ],
+  "sunitinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "fenfluramine hydrochloride": [
+    "Psychiatric"
+  ],
+  "diethylstilbestrol": [
+    "Cancer"
+  ],
+  "ibritumomab tiuxetan": [
+    "General"
+  ],
+  "phenazopyridine hydrochloride": [
+    "Cancer"
+  ],
+  "anagrelide hydrochloride": [
+    "General"
+  ],
+  "brexpiprazole": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "catechin": [
+    "General"
+  ],
+  "trypan blue": [
+    "General"
+  ],
+  "carvedilol": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "doxepin hydrochloride": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "varenicline": [
+    "General"
+  ],
+  "adenosine": [
+    "General"
+  ],
+  "triamterene": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "alendronate sodium": [
+    "General"
+  ],
+  "hexachlorophene": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "asenapine maleate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "halcinonide": [
+    "Cancer"
+  ],
+  "sodium chloride": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "urokinase": [
+    "Cancer"
+  ],
+  "zinc chloride": [
+    "Cancer"
+  ],
+  "maprotiline": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "buspirone hydrochloride": [
+    "Psychiatric"
+  ],
+  "zafirlukast": [
+    "Cancer"
+  ],
+  "vandetanib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "clebopride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dasatinib anhydrous": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "ruxolitinib": [
+    "Cancer"
+  ],
+  "docetaxel anhydrous": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "desloratadine": [
+    "Diabetic"
+  ],
+  "chlorothiazide sodium": [
+    "General"
+  ],
+  "ethacrynate sodium": [
+    "General"
+  ],
+  "levobetaxolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "ethambutol hydrochloride": [
+    "Cancer"
+  ],
+  "chlorthalidone": [
+    "General"
+  ],
+  "perphenazine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "pazopanib": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "venlafaxine hydrochloride": [
+    "Psychiatric"
+  ],
+  "canagliflozin": [
+    "Diabetic"
+  ],
+  "teduglutide": [
+    "General"
+  ],
+  "desogestrel": [
+    "General"
+  ],
+  "ado-trastuzumab emtansine": [
+    "Cancer"
+  ],
+  "cabazitaxel": [
+    "Cancer"
+  ],
+  "vinorelbine tartrate": [
+    "General"
+  ],
+  "acamprosate calcium": [
+    "Alzheimers",
+    "Cancer",
+    "Psychiatric"
+  ],
+  "amantadine hydrochloride": [
+    "Alzheimers"
+  ],
+  "felbamate": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "tetrahydrozoline hydrochloride": [
+    "General"
+  ],
+  "naphazoline hydrochloride": [
+    "General"
+  ],
+  "ajmalicine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "nimodipine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "nandrolone decanoate": [
+    "Cancer"
+  ],
+  "nadolol": [
+    "Cardiovascular"
+  ],
+  "rifampin": [
+    "Cancer"
+  ],
+  "rifabutin": [
+    "General"
+  ],
+  "ocriplasmin": [
+    "Cancer"
+  ],
+  "hetacillin": [
+    "General"
+  ],
+  "clomipramine": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "tolterodine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "chlordiazepoxide hydrochloride": [
+    "Psychiatric"
+  ],
+  "alprazolam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "midazolam hydrochloride": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "isoflurane": [
+    "Psychiatric"
+  ],
+  "cephalothin sodium": [
+    "General"
+  ],
+  "disodium latamoxef": [
+    "General"
+  ],
+  "cefotiam hydrochloride": [
+    "General"
+  ],
+  "ceftizoxime sodium": [
+    "General"
+  ],
+  "cefadroxil anhydrous": [
+    "General"
+  ],
+  "ertapenem": [
+    "General"
+  ],
+  "imipenem anhydrous": [
+    "General"
+  ],
+  "erythromycin stearate": [
+    "General"
+  ],
+  "dirithromycin": [
+    "General"
+  ],
+  "erythromycin gluceptate": [
+    "General"
+  ],
+  "dalfopristin": [
+    "General"
+  ],
+  "quinupristin": [
+    "General"
+  ],
+  "oxytetracycline hydrochloride": [
+    "General"
+  ],
+  "paromomycin sulfate": [
+    "General"
+  ],
+  "neomycin sulfate": [
+    "General"
+  ],
+  "spectinomycin hydrochloride": [
+    "General"
+  ],
+  "gabapentin enacarbil": [
+    "Cardiovascular"
+  ],
+  "chloroprocaine": [
+    "Cancer"
+  ],
+  "procaine hydrochloride": [
+    "General"
+  ],
+  "mephenytoin": [
+    "General"
+  ],
+  "tetracaine": [
+    "Cancer"
+  ],
+  "zonisamide": [
+    "General"
+  ],
+  "linezolid": [
+    "Cancer"
+  ],
+  "capreomycin sulfate": [
+    "General"
+  ],
+  "methsuximide": [
+    "General"
+  ],
+  "sacubitril": [
+    "General"
+  ],
+  "paritaprevir": [
+    "Cancer"
+  ],
+  "oxtriphylline": [
+    "General"
+  ],
+  "ixazomib citrate": [
+    "General"
+  ],
+  "lemborexant": [
+    "General"
+  ],
+  "osimertinib": [
+    "Cancer"
+  ],
+  "pacritinib": [
+    "Cancer"
+  ],
+  "fostamatinib": [
+    "Cancer"
+  ],
+  "naldemedine": [
+    "General"
+  ],
+  "dicyclomine hydrochloride": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dihydrostreptomycin sulfate": [
+    "General"
+  ],
+  "methaqualone hydrochloride": [
+    "Psychiatric"
+  ],
+  "sulfadimethoxine": [
+    "General"
+  ],
+  "perhexiline maleate": [
+    "Cancer"
+  ],
+  "zimeldine hydrochloride": [
+    "Psychiatric"
+  ],
+  "amisulpride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "clothiapine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "relebactam": [
+    "General"
+  ],
+  "vasoactive intestinal peptide": [
+    "General"
+  ],
+  "tedizolid": [
+    "General"
+  ],
+  "phenethicillin": [
+    "General"
+  ],
+  "floxacillin": [
+    "Cancer"
+  ],
+  "baloxavir": [
+    "General"
+  ],
+  "spiramycin": [
+    "General"
+  ],
+  "mycophenolate sodium": [
+    "General"
+  ],
+  "casirivimab": [
+    "General"
+  ],
+  "fingolimod lauryl sulfate": [
+    "General"
+  ],
+  "anastrozole": [
+    "Cancer"
+  ],
+  "alpelisib": [
+    "Cancer"
+  ],
+  "sorafenib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "afatinib": [
+    "Cancer"
+  ],
+  "leucine": [
+    "Cancer"
+  ],
+  "mefloquine hydrochloride": [
+    "Cancer"
+  ],
+  "chlorpromazine hydrochloride": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "nevirapine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "riluzole": [
+    "General"
+  ],
+  "nicardipine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "nortriptyline hydrochloride": [
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "pyrithione": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "trifluoperazine hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "chlorpromazine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "indomethacin": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "cefuroxime axetil": [
+    "General"
+  ],
+  "decitabine": [
+    "Cancer"
+  ],
+  "colchiceine": [
+    "Cancer"
+  ],
+  "niclosamide": [
+    "Cancer"
+  ],
+  "dicumarol": [
+    "Cancer"
+  ],
+  "carmustine": [
+    "Cancer"
+  ],
+  "nilutamide": [
+    "Cancer"
+  ],
+  "levonorgestrel": [
+    "General"
+  ],
+  "diazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "rabeprazole": [
+    "Cancer"
+  ],
+  "zalcitabine": [
+    "Cancer"
+  ],
+  "colchicine": [
+    "Cancer"
+  ],
+  "oxatomide": [
+    "Cancer"
+  ],
+  "fluconazole": [
+    "Cancer"
+  ],
+  "pitavastatin calcium": [
+    "Cardiovascular"
+  ],
+  "plicamycin": [
+    "Cancer"
+  ],
+  "rocuronium": [
+    "Cancer"
+  ],
+  "doxorubicin hydrochloride": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "oxybenzone": [
+    "General"
+  ],
+  "edaravone": [
+    "Cancer"
+  ],
+  "amphotericin b liposomal": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "estradiol valerate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "boric acid": [
+    "General"
+  ],
+  "cyproterone acetate": [
+    "Cancer"
+  ],
+  "naproxen sodium": [
+    "Cancer",
+    "Psychiatric",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "methylergonovine maleate": [
+    "Parkinsons"
+  ],
+  "docusate": [
+    "General"
+  ],
+  "mitobronitol": [
+    "General"
+  ],
+  "rimonabant": [
+    "General"
+  ],
+  "simvastatin": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "etidronic acid": [
+    "Cancer"
+  ],
+  "dienestrol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "benzbromarone": [
+    "Diabetic"
+  ],
+  "fluspirilene": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "cyclothiazide": [
+    "Cancer"
+  ],
+  "chlormadinone acetate": [
+    "General"
+  ],
+  "phenelzine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "diflunisal": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "anthralin": [
+    "General"
+  ],
+  "bronopol": [
+    "Cancer"
+  ],
+  "cinnarizine": [
+    "Cardiovascular"
+  ],
+  "digitoxin": [
+    "Cancer"
+  ],
+  "dichloroacetic acid": [
+    "General"
+  ],
+  "fenretinide": [
+    "Cancer"
+  ],
+  "valrubicin": [
+    "General"
+  ],
+  "rimegepant": [
+    "General"
+  ],
+  "phenylbutazone": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "fluorescein": [
+    "General"
+  ],
+  "remdesivir": [
+    "General"
+  ],
+  "propylparaben": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "aztreonam": [
+    "Cancer"
+  ],
+  "tepotinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "cabozantinib s-malate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "ibutamoren": [
+    "General"
+  ],
+  "regorafenib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "guanadrel sulfate": [
+    "General"
+  ],
+  "promazine hydrochloride": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "nifedipine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "ribavirin": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "pilocarpine hydrochloride": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "citalopram": [
+    "Cancer",
+    "Psychiatric",
+    "Cardiovascular"
+  ],
+  "prasterone": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "interleukin-11": [
+    "Cancer"
+  ],
+  "mitomycin": [
+    "Cancer"
+  ],
+  "epoetin alfa": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "oxycodone": [
+    "General"
+  ],
+  "tolmetin sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "atropine": [
+    "Alzheimers"
+  ],
+  "ixabepilone": [
+    "General"
+  ],
+  "chlorzoxazone": [
+    "General"
+  ],
+  "venetoclax": [
+    "Cancer"
+  ],
+  "mannitol": [
+    "Cancer"
+  ],
+  "capecitabine": [
+    "Cancer",
+    "Diabetic",
+    "Pain/Anti-inflammatory"
+  ],
+  "propofol": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "dextroamphetamine sulfate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "rofecoxib": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "epigallocatechin gallate": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "beclomethasone dipropionate": [
+    "Cancer"
+  ],
+  "megestrol acetate": [
+    "Cancer"
+  ],
+  "didanosine": [
+    "Cancer"
+  ],
+  "theophylline": [
+    "General"
+  ],
+  "pantoprazole sodium": [
+    "Cancer"
+  ],
+  "levodopa": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "methaqualone": [
+    "Psychiatric"
+  ],
+  "leflunomide": [
+    "Cancer"
+  ],
+  "isosorbide mononitrate": [
+    "General"
+  ],
+  "irinotecan hydrochloride": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "inositol": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "astemizole": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "ranitidine hydrochloride": [
+    "Cancer"
+  ],
+  "sirolimus": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "mitoxantrone hydrochloride": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "progestin": [
+    "Cancer"
+  ],
+  "erenumab": [
+    "General"
+  ],
+  "toremifene": [
+    "Cancer"
+  ],
+  "proxibarbal": [
+    "Parkinsons"
+  ],
+  "cemiplimab-rwlc": [
+    "Cancer"
+  ],
+  "infigratinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "ipilimumab": [
+    "Cancer"
+  ],
+  "diclofenac sodium": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "losartan potassium": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "ethosuximide": [
+    "General"
+  ],
+  "emapalumab-lzsg": [
+    "Cancer"
+  ],
+  "paregoric": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "fosdenopterin": [
+    "General"
+  ],
+  "avatrombopag": [
+    "General"
+  ],
+  "belumosudil": [
+    "General"
+  ],
+  "vitamin e": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "carbimazole": [
+    "General"
+  ],
+  "nortriptyline": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "sertraline hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "bepridil": [
+    "Cancer"
+  ],
+  "felodipine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "mitotane": [
+    "Cancer"
+  ],
+  "ospemifene": [
+    "General"
+  ],
+  "acalabrutinib": [
+    "Cancer"
+  ],
+  "nivolumab": [
+    "Cancer"
+  ],
+  "migalastat": [
+    "General"
+  ],
+  "pirenzepine": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "ustekinumab": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "ribociclib": [
+    "Cancer"
+  ],
+  "upadacitinib": [
+    "Cancer"
+  ],
+  "efgartigimod alfa": [
+    "General"
+  ],
+  "tenofovir disoproxil fumarate": [
+    "General"
+  ],
+  "methylene blue anhydrous": [
+    "Cancer"
+  ],
+  "thiotepa": [
+    "Cancer"
+  ],
+  "gabapentin": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "acyclovir": [
+    "General"
+  ],
+  "lamotrigine": [
+    "Cancer"
+  ],
+  "ravulizumab": [
+    "General"
+  ],
+  "acenocoumarol": [
+    "General"
+  ],
+  "avelumab": [
+    "Cancer"
+  ],
+  "spironolactone": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "etoposide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "velpatasvir": [
+    "Cancer"
+  ],
+  "ondansetron hydrochloride": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "tapentadol": [
+    "General"
+  ],
+  "olutasidenib": [
+    "Cancer"
+  ],
+  "triamcinolone": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "creatine": [
+    "General"
+  ],
+  "tenofovir": [
+    "General"
+  ],
+  "arsenic trioxide": [
+    "Cancer"
+  ],
+  "valproic acid": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "vismodegib": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "pyrilamine maleate": [
+    "General"
+  ],
+  "von willebrand factor": [
+    "General"
+  ],
+  "tripelennamine hydrochloride": [
+    "General"
+  ],
+  "azatadine maleate": [
+    "General"
+  ],
+  "buclizine hydrochloride": [
+    "General"
+  ],
+  "isoniazid": [
+    "General"
+  ],
+  "methysergide maleate": [
+    "Psychiatric"
+  ],
+  "ethopropazine hydrochloride": [
+    "Alzheimers",
+    "Pain/Anti-inflammatory"
+  ],
+  "clevidipine": [
+    "Cardiovascular"
+  ],
+  "metoclopramide hydrochloride": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dextromethorphan hydrobromide": [
+    "General"
+  ],
+  "lisinopril anhydrous": [
+    "Cardiovascular"
+  ],
+  "tafluprost": [
+    "General"
+  ],
+  "loperamide": [
+    "Cancer"
+  ],
+  "dextroamphetamine adipate": [
+    "Parkinsons"
+  ],
+  "somatropin (recombinant dna origin)": [
+    "Cancer"
+  ],
+  "hydromorphone hydrochloride": [
+    "Cancer"
+  ],
+  "norelgestromin": [
+    "General"
+  ],
+  "trofinetide": [
+    "Cancer"
+  ],
+  "nonacog alfa": [
+    "General"
+  ],
+  "bosutinib": [
+    "Cancer"
+  ],
+  "amphetamine aspartate": [
+    "Parkinsons"
+  ],
+  "interferon alfa-2b": [
+    "Cancer"
+  ],
+  "bleomycin": [
+    "Cancer"
+  ],
+  "anileridine hydrochloride": [
+    "General"
+  ],
+  "ponesimod": [
+    "General"
+  ],
+  "pirfenidone": [
+    "General"
+  ],
+  "dexamethasone acetate": [
+    "General"
+  ],
+  "safinamide": [
+    "Parkinsons"
+  ],
+  "pramlintide": [
+    "Alzheimers",
+    "Diabetic"
+  ],
+  "hydrocortisone butyrate": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "teplizumab": [
+    "General"
+  ],
+  "trandolapril": [
+    "Cardiovascular"
+  ],
+  "zanamivir": [
+    "General"
+  ],
+  "valsartan": [
+    "Cardiovascular"
+  ],
+  "vapreotide": [
+    "General"
+  ],
+  "miglustat": [
+    "General"
+  ],
+  "clidinium": [
+    "Alzheimers"
+  ],
+  "ergoloid mesylates, usp": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "amlexanox": [
+    "Cancer"
+  ],
+  "estazolam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "flumethasone pivalate": [
+    "Cancer"
+  ],
+  "furosemide": [
+    "Cardiovascular"
+  ],
+  "gliclazide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "golimumab": [
+    "Cancer"
+  ],
+  "hydroxyurea": [
+    "Cancer"
+  ],
+  "isoflurophate": [
+    "Alzheimers"
+  ],
+  "liothyronine": [
+    "Cancer"
+  ],
+  "mesoridazine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "mephobarbital": [
+    "Psychiatric"
+  ],
+  "methysergide": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "milrinone": [
+    "General"
+  ],
+  "methixene": [
+    "Alzheimers"
+  ],
+  "pentazocine": [
+    "Cancer"
+  ],
+  "secretin": [
+    "General"
+  ],
+  "thiethylperazine": [
+    "Alzheimers",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "tirofiban": [
+    "General"
+  ],
+  "lansoprazole": [
+    "Cancer"
+  ],
+  "cimetidine": [
+    "Cancer"
+  ],
+  "abarelix": [
+    "General"
+  ],
+  "estrogens, conjugated (usp)": [
+    "General"
+  ],
+  "dinoprostone": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "dimenhydrinate": [
+    "Cancer"
+  ],
+  "pergolide mesylate": [
+    "Parkinsons"
+  ],
+  "dichlorphenamide": [
+    "General"
+  ],
+  "alfuzosin hydrochloride": [
+    "Cancer"
+  ],
+  "phenylephrine bitartrate": [
+    "General"
+  ],
+  "galantamine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "hexobarbital": [
+    "Psychiatric"
+  ],
+  "lofexidine": [
+    "Cancer"
+  ],
+  "methadyl acetate": [
+    "General"
+  ],
+  "methoxamine": [
+    "General"
+  ],
+  "tolazoline hydrochloride": [
+    "General"
+  ],
+  "pindolol": [
+    "Cardiovascular"
+  ],
+  "prochlorperazine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "sumatriptan": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "dyphylline": [
+    "General"
+  ],
+  "vigabatrin": [
+    "General"
+  ],
+  "belatacept": [
+    "General"
+  ],
+  "decamethonium bromide": [
+    "General"
+  ],
+  "aprocitentan": [
+    "General"
+  ],
+  "fomepizole": [
+    "General"
+  ],
+  "rozanolixizumab": [
+    "Cancer"
+  ],
+  "secobarbital sodium": [
+    "Psychiatric"
+  ],
+  "ubrogepant": [
+    "General"
+  ],
+  "zolpidem tartrate": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "dutasteride": [
+    "General"
+  ],
+  "desmopressin": [
+    "Cancer"
+  ],
+  "denileukin diftitox": [
+    "General"
+  ],
+  "interferon gamma-1b": [
+    "Cancer"
+  ],
+  "zidovudine": [
+    "Cancer"
+  ],
+  "moricizine hydrochloride": [
+    "Cancer"
+  ],
+  "oxcarbazepine": [
+    "Cancer"
+  ],
+  "prilocaine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "fosphenytoin": [
+    "General"
+  ],
+  "desflurane": [
+    "Psychiatric"
+  ],
+  "cannabidiol": [
+    "General"
+  ],
+  "maribavir": [
+    "General"
+  ],
+  "levorphanol": [
+    "General"
+  ],
+  "siltuximab": [
+    "General"
+  ],
+  "acetylcholine": [
+    "Cardiovascular"
+  ],
+  "lenvatinib mesylate": [
+    "Cancer"
+  ],
+  "chloramphenicol": [
+    "General"
+  ],
+  "blinatumomab": [
+    "General"
+  ],
+  "ibalizumab": [
+    "General"
+  ],
+  "tipiracil hydrochloride": [
+    "General"
+  ],
+  "elotuzumab": [
+    "General"
+  ],
+  "minocycline": [
+    "Cancer"
+  ],
+  "phenacemide": [
+    "General"
+  ],
+  "magnesium sulfate anhydrous": [
+    "Cancer"
+  ],
+  "pyruvic acid": [
+    "General"
+  ],
+  "methoxyflurane": [
+    "Psychiatric"
+  ],
+  "roxadustat": [
+    "General"
+  ],
+  "quinethazone": [
+    "General"
+  ],
+  "amdinocillin": [
+    "General"
+  ],
+  "pemirolast": [
+    "General"
+  ],
+  "sulfacetamide": [
+    "Cancer"
+  ],
+  "trifluridine": [
+    "General"
+  ],
+  "levamlodipine": [
+    "General"
+  ],
+  "lutropin alfa": [
+    "General"
+  ],
+  "iron carbonyl": [
+    "General"
+  ],
+  "bimatoprost": [
+    "General"
+  ],
+  "sertaconazole": [
+    "General"
+  ],
+  "fusidate": [
+    "General"
+  ],
+  "proflavine": [
+    "General"
+  ],
+  "oxacillin": [
+    "General"
+  ],
+  "cefixime anhydrous": [
+    "General"
+  ],
+  "cysteamine hydrochloride": [
+    "General"
+  ],
+  "thiamine": [
+    "General"
+  ],
+  "fostemsavir": [
+    "General"
+  ],
+  "perampanel": [
+    "General"
+  ],
+  "sulfamethizole": [
+    "General"
+  ],
+  "dupilumab": [
+    "General"
+  ],
+  "lutetium lu 177 dotatate": [
+    "General"
+  ],
+  "polatuzumab vedotin": [
+    "Cancer"
+  ],
+  "lusutrombopag": [
+    "General"
+  ],
+  "methimazole": [
+    "Cancer"
+  ],
+  "amifostine anhydrous": [
+    "Cancer"
+  ],
+  "fospropofol disodium": [
+    "General"
+  ],
+  "polidocanol": [
+    "General"
+  ],
+  "ponatinib": [
+    "Cancer"
+  ],
+  "fesoterodine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "abciximab": [
+    "General"
+  ],
+  "amcinonide": [
+    "Cancer"
+  ],
+  "aminosalicylic acid": [
+    "Pain/Anti-inflammatory"
+  ],
+  "asenapine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "brinzolamide": [
+    "General"
+  ],
+  "butenafine": [
+    "General"
+  ],
+  "cefepime": [
+    "General"
+  ],
+  "ceftriaxone": [
+    "Cancer"
+  ],
+  "cephaloglycin": [
+    "General"
+  ],
+  "ciclopirox": [
+    "General"
+  ],
+  "chlormethiazole": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "ceftolozane sulfate": [
+    "General"
+  ],
+  "metocurine iodide": [
+    "General"
+  ],
+  "capmatinib": [
+    "Parkinsons"
+  ],
+  "relugolix": [
+    "General"
+  ],
+  "obeticholic acid": [
+    "General"
+  ],
+  "tobramycin": [
+    "General"
+  ],
+  "atazanavir": [
+    "Cancer"
+  ],
+  "modafinil": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "bifonazole": [
+    "Diabetic"
+  ],
+  "difluprednate": [
+    "General"
+  ],
+  "4-phenylbutyric acid": [
+    "Cancer"
+  ],
+  "zilucoplan": [
+    "General"
+  ],
+  "zuranolone": [
+    "Psychiatric"
+  ],
+  "candoxatril": [
+    "Cardiovascular"
+  ],
+  "momelotinib": [
+    "Cancer"
+  ],
+  "bromocriptine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "asciminib": [
+    "General"
+  ],
+  "xylometazoline": [
+    "Cancer"
+  ],
+  "dromostanolone": [
+    "General"
+  ],
+  "levobunolol": [
+    "Cardiovascular"
+  ],
+  "formoterol fumarate": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "ziconotide": [
+    "General"
+  ],
+  "oxaprozin": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "piroxicam-beta-cyclodextrin": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "plerixafor": [
+    "Cancer"
+  ],
+  "abiraterone acetate": [
+    "Cancer"
+  ],
+  "fentanyl citrate": [
+    "Cancer"
+  ],
+  "cabergoline": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "tucatinib": [
+    "Cancer"
+  ],
+  "palmitate": [
+    "General"
+  ],
+  "erdafitinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "anhydrous tacrolimus": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "flumazenil": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "lecanemab": [
+    "Alzheimers"
+  ],
+  "lonafarnib": [
+    "Cancer"
+  ],
+  "isoxsuprine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "betahistine": [
+    "General"
+  ],
+  "bezafibrate": [
+    "Diabetic"
+  ],
+  "filgotinib": [
+    "Cancer"
+  ],
+  "carbetocin": [
+    "Cancer"
+  ],
+  "ciprofibrate": [
+    "Diabetic"
+  ],
+  "catumaxomab": [
+    "General"
+  ],
+  "tolbutamide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "prenylamine": [
+    "General"
+  ],
+  "tenofovir alafenamide": [
+    "General"
+  ],
+  "trihexyphenidyl": [
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "dothiepin": [
+    "Psychiatric"
+  ],
+  "darifenacin": [
+    "Cancer"
+  ],
+  "cevimeline": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "oxybutynin": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "methscopolamine": [
+    "Alzheimers"
+  ],
+  "methadone hydrochloride": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "avapritinib": [
+    "Cancer"
+  ],
+  "entrectinib": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "glycyrrhizic acid": [
+    "General"
+  ],
+  "argipressin": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "physostigmine salicylate": [
+    "Alzheimers"
+  ],
+  "amlodipine benzoate": [
+    "Cardiovascular"
+  ],
+  "andexanet alfa": [
+    "General"
+  ],
+  "rosiglitazone": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "vonoprazan fumarate": [
+    "General"
+  ],
+  "idelalisib": [
+    "Cancer"
+  ],
+  "odevixibat": [
+    "Cancer"
+  ],
+  "crisaborole": [
+    "General"
+  ],
+  "odesivimab": [
+    "General"
+  ],
+  "alirocumab": [
+    "Cardiovascular"
+  ],
+  "danaparoid": [
+    "General"
+  ],
+  "fluoxetine hydrochloride": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "dostarlimab": [
+    "Cancer"
+  ],
+  "imiquimod": [
+    "General"
+  ],
+  "ixazomib": [
+    "Cancer"
+  ],
+  "alectinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "durvalumab": [
+    "Cancer"
+  ],
+  "tisagenlecleucel": [
+    "General"
+  ],
+  "ripretinib": [
+    "Cancer"
+  ],
+  "sulthiame": [
+    "General"
+  ],
+  "sotorasib": [
+    "Cancer"
+  ],
+  "topotecan hydrochloride": [
+    "Cancer"
+  ],
+  "tirofiban hydrochloride": [
+    "General"
+  ],
+  "chlorpheniramine polistirex": [
+    "Cancer"
+  ],
+  "quizartinib": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "medroxyprogesterone": [
+    "General"
+  ],
+  "atezolizumab": [
+    "Cancer"
+  ],
+  "acetophenazine": [
+    "Parkinsons"
+  ],
+  "loxapine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "incobotulinumtoxina": [
+    "General"
+  ],
+  "unfractionated heparin": [
+    "General"
+  ],
+  "dihydroergocristine": [
+    "Parkinsons"
+  ],
+  "prilocaine": [
+    "Cancer"
+  ],
+  "binimetinib": [
+    "Cancer"
+  ],
+  "trazodone": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "glasdegib": [
+    "Pain/Anti-inflammatory"
+  ],
+  "butorphanol": [
+    "General"
+  ],
+  "arformoterol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "metamizole sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "enzalutamide": [
+    "Cancer"
+  ],
+  "metyrosine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "febuxostat": [
+    "Cancer"
+  ],
+  "testosterone propionate": [
+    "Cancer"
+  ],
+  "glofitamab": [
+    "General"
+  ],
+  "clorazepate": [
+    "Psychiatric"
+  ],
+  "dorzolamide": [
+    "General"
+  ],
+  "carbamazepine": [
+    "Cancer"
+  ],
+  "pegvisomant": [
+    "General"
+  ],
+  "methylprednisolone": [
+    "Cancer"
+  ],
+  "pioglitazone hydrochloride": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "samidorphan l-malate": [
+    "General"
+  ],
+  "podofilox": [
+    "Cancer"
+  ],
+  "clascoterone": [
+    "General"
+  ],
+  "inamrinone": [
+    "General"
+  ],
+  "quinidine": [
+    "Cancer"
+  ],
+  "butabarbital sodium": [
+    "Psychiatric"
+  ],
+  "histrelin acetate": [
+    "General"
+  ],
+  "peginterferon alfa-2b": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "isradipine": [
+    "Cardiovascular"
+  ],
+  "alitretinoin": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "romidepsin": [
+    "Cancer"
+  ],
+  "sodium oxybate": [
+    "General"
+  ],
+  "suprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "aripiprazole lauroxil": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "pramlintide acetate": [
+    "General"
+  ],
+  "fluoxymesterone": [
+    "General"
+  ],
+  "iloperidone": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "avobenzone": [
+    "General"
+  ],
+  "chlorothiazide": [
+    "Cancer"
+  ],
+  "epinephrine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "lutetium dotatate lu-177": [
+    "General"
+  ],
+  "phentolamine mesylate": [
+    "Cancer"
+  ],
+  "tricetin": [
+    "General"
+  ],
+  "terfenadine": [
+    "Cancer"
+  ],
+  "finasteride": [
+    "Cancer"
+  ],
+  "ampicillin (anhydrous)": [
+    "General"
+  ],
+  "hydrocodone": [
+    "Parkinsons"
+  ],
+  "flutamide": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "vilazodone hydrochloride": [
+    "Psychiatric"
+  ],
+  "atenolol": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "macimorelin": [
+    "General"
+  ],
+  "dopamine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "meclizine": [
+    "Cancer"
+  ],
+  "camptothecin": [
+    "Cancer"
+  ],
+  "gemcitabine": [
+    "Cancer"
+  ],
+  "mifepristone": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "temozolomide": [
+    "Cancer"
+  ],
+  "medroxyprogesterone acetate": [
+    "Cancer"
+  ],
+  "moclobemide": [
+    "Parkinsons"
+  ],
+  "bethanechol": [
+    "Alzheimers"
+  ],
+  "bortezomib": [
+    "Cancer"
+  ],
+  "selinexor": [
+    "Cancer"
+  ],
+  "fedratinib": [
+    "Cancer"
+  ],
+  "copanlisib": [
+    "Cancer"
+  ],
+  "ibandronate": [
+    "General"
+  ],
+  "nefazodone hydrochloride": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "ethoxzolamide": [
+    "General"
+  ],
+  "vitamin b6": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "peginterferon alfa-2a": [
+    "Cancer"
+  ],
+  "fludarabine": [
+    "Cancer"
+  ],
+  "levomilnacipran hydrochloride": [
+    "Psychiatric"
+  ],
+  "niraparib": [
+    "Cancer"
+  ],
+  "bosentan anhydrous": [
+    "General"
+  ],
+  "tegaserod maleate": [
+    "Cancer"
+  ],
+  "phenindione": [
+    "General"
+  ],
+  "guanethidine": [
+    "General"
+  ],
+  "amiloride hydrochloride": [
+    "General"
+  ],
+  "acetylcysteine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "flunisolide anhydrous": [
+    "Cancer"
+  ],
+  "proparacaine": [
+    "General"
+  ],
+  "fluphenazine enanthate": [
+    "Parkinsons"
+  ],
+  "gonadorelin acetate": [
+    "General"
+  ],
+  "sulfadoxine": [
+    "Cancer"
+  ],
+  "amphetamine adipate": [
+    "Parkinsons"
+  ],
+  "rimantadine hydrochloride": [
+    "General"
+  ],
+  "esomeprazole sodium": [
+    "General"
+  ],
+  "mirtazapine": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "nitroglycerin": [
+    "Cancer"
+  ],
+  "sodium nitroprusside": [
+    "General"
+  ],
+  "isosorbide dinitrate": [
+    "General"
+  ],
+  "tolazamide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "glipizide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "acetohexamide": [
+    "Diabetic"
+  ],
+  "telaprevir": [
+    "Cancer"
+  ],
+  "canakinumab": [
+    "General"
+  ],
+  "palivizumab": [
+    "General"
+  ],
+  "azlocillin sodium": [
+    "General"
+  ],
+  "terconazole": [
+    "General"
+  ],
+  "sulconazole nitrate": [
+    "General"
+  ],
+  "tioconazole": [
+    "General"
+  ],
+  "posaconazole": [
+    "General"
+  ],
+  "oxiconazole": [
+    "General"
+  ],
+  "succinylcholine": [
+    "Alzheimers"
+  ],
+  "thiamylal sodium": [
+    "Psychiatric"
+  ],
+  "trovafloxacin mesylate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "mafenide": [
+    "Cancer"
+  ],
+  "sulfisoxazole diolamine": [
+    "General"
+  ],
+  "sulfadiazine sodium": [
+    "General"
+  ],
+  "lypressin": [
+    "General"
+  ],
+  "tazobactam sodium": [
+    "General"
+  ],
+  "cefotaxime sodium": [
+    "Cancer"
+  ],
+  "basiliximab": [
+    "General"
+  ],
+  "ciprofloxacin": [
+    "Cancer"
+  ],
+  "lomefloxacin hydrochloride": [
+    "General"
+  ],
+  "grepafloxacin hydrochloride": [
+    "General"
+  ],
+  "gatifloxacin anhydrous": [
+    "General"
+  ],
+  "ethotoin": [
+    "General"
+  ],
+  "disopyramide phosphate": [
+    "General"
+  ],
+  "etidocaine hydrochloride": [
+    "General"
+  ],
+  "rufinamide": [
+    "General"
+  ],
+  "propoxycaine hydrochloride": [
+    "General"
+  ],
+  "propafenone hydrochloride": [
+    "Cardiovascular"
+  ],
+  "proparacaine hydrochloride": [
+    "General"
+  ],
+  "indecainide hydrochloride": [
+    "General"
+  ],
+  "simeprevir sodium": [
+    "Cancer"
+  ],
+  "eslicarbazepine acetate": [
+    "General"
+  ],
+  "desvenlafaxine fumarate": [
+    "Psychiatric"
+  ],
+  "cangrelor tetrasodium": [
+    "General"
+  ],
+  "sonidegib": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "fruquintinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "samidorphan": [
+    "General"
+  ],
+  "ketoprofen": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "elbasvir": [
+    "Cancer"
+  ],
+  "ertugliflozin": [
+    "Diabetic"
+  ],
+  "guselkumab": [
+    "General"
+  ],
+  "eptinezumab": [
+    "General"
+  ],
+  "benzydamine hydrochloride": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "cefodizime": [
+    "General"
+  ],
+  "dimethindene": [
+    "General"
+  ],
+  "angiotensin ii acetate": [
+    "Cardiovascular"
+  ],
+  "avatrombopag maleate": [
+    "General"
+  ],
+  "tecovirimat": [
+    "General"
+  ],
+  "zanubrutinib": [
+    "Cancer"
+  ],
+  "nitrendipine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "serdexmethylphenidate chloride": [
+    "Parkinsons"
+  ],
+  "elranatamab": [
+    "General"
+  ],
+  "trichlorfon": [
+    "Cancer"
+  ],
+  "oteseconazole": [
+    "General"
+  ],
+  "metformin hydrochloride": [
+    "Diabetic"
+  ],
+  "sulfisoxazole": [
+    "Cancer"
+  ],
+  "meclofenamate sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "rutin": [
+    "Cancer"
+  ],
+  "permethrin": [
+    "General"
+  ],
+  "iodoquinol": [
+    "Cancer"
+  ],
+  "riboflavin": [
+    "Cancer"
+  ],
+  "olsalazine": [
+    "Cancer"
+  ],
+  "pralidoxime cation": [
+    "Alzheimers"
+  ],
+  "bromhexine hydrochloride": [
+    "General"
+  ],
+  "feprazone": [
+    "Cancer"
+  ],
+  "haloperidol decanoate": [
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Alzheimers",
+    "Parkinsons"
+  ],
+  "isotretinoin": [
+    "Cancer"
+  ],
+  "carteolol": [
+    "Cardiovascular"
+  ],
+  "moricizine": [
+    "General"
+  ],
+  "alosetron hydrochloride": [
+    "General"
+  ],
+  "tamoxifen citrate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "prednisolone": [
+    "Cancer"
+  ],
+  "bromocriptine mesylate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "dexmedetomidine hydrochloride": [
+    "General"
+  ],
+  "emtricitabine": [
+    "General"
+  ],
+  "fluocinolone acetonide": [
+    "Cancer"
+  ],
+  "cysteine": [
+    "General"
+  ],
+  "artemisinin": [
+    "General"
+  ],
+  "loratadine": [
+    "Cancer"
+  ],
+  "phenacetin": [
+    "General"
+  ],
+  "tamsulosin hydrochloride": [
+    "Cancer"
+  ],
+  "chlorhexidine gluconate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "fenofibric acid": [
+    "Diabetic"
+  ],
+  "cephalexin anhydrous": [
+    "General"
+  ],
+  "amoxicillin anhydrous": [
+    "Cancer"
+  ],
+  "isoetharine mesylate": [
+    "Cardiovascular"
+  ],
+  "diclazuril": [
+    "General"
+  ],
+  "diltiazem hydrochloride": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "prednisone": [
+    "Cancer"
+  ],
+  "omeprazole magnesium": [
+    "General"
+  ],
+  "metformin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "methoxsalen": [
+    "Cancer"
+  ],
+  "miconazole nitrate": [
+    "Cancer"
+  ],
+  "deserpidine": [
+    "Cardiovascular"
+  ],
+  "azelaic acid": [
+    "General"
+  ],
+  "candesartan cilexetil": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "labetalol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "ramucirumab": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "netupitant": [
+    "Cancer"
+  ],
+  "raloxifene hydrochloride": [
+    "Cancer",
+    "Diabetic",
+    "Pain/Anti-inflammatory"
+  ],
+  "rasburicase": [
+    "Cancer"
+  ],
+  "ropivacaine": [
+    "Cancer"
+  ],
+  "rosuvastatin": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "dacarbazine": [
+    "Cancer"
+  ],
+  "anakinra": [
+    "General"
+  ],
+  "clomiphene citrate": [
+    "General"
+  ],
+  "irbesartan": [
+    "Cardiovascular"
+  ],
+  "dronabinol": [
+    "Cancer"
+  ],
+  "lycopene": [
+    "Cancer"
+  ],
+  "selenomethionine": [
+    "Cancer"
+  ],
+  "zoledronic acid anhydrous": [
+    "Cancer"
+  ],
+  "benzthiazide": [
+    "General"
+  ],
+  "acitretin": [
+    "Cancer"
+  ],
+  "thyrotropin": [
+    "Cancer"
+  ],
+  "cyclosporine": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "pamidronate disodium": [
+    "General"
+  ],
+  "ginger allergenic extract": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "baclofen": [
+    "Cancer"
+  ],
+  "hydroxychloroquine": [
+    "Alzheimers",
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "meropenem anhydrous": [
+    "Cancer"
+  ],
+  "stavudine": [
+    "Cancer"
+  ],
+  "tazarotene": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "estrone": [
+    "Cancer"
+  ],
+  "benzphetamine": [
+    "General"
+  ],
+  "dicloxacillin": [
+    "General"
+  ],
+  "rifapentine": [
+    "General"
+  ],
+  "fluvoxamine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "vitamin a": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "bumetanide": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "regadenoson anhydrous": [
+    "General"
+  ],
+  "sulfamethazine": [
+    "Cancer"
+  ],
+  "betaine": [
+    "General"
+  ],
+  "rilonacept": [
+    "General"
+  ],
+  "rivastigmine": [
+    "Alzheimers"
+  ],
+  "cyclobenzaprine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "talazoparib": [
+    "Cancer"
+  ],
+  "clavulanic acid": [
+    "Cancer"
+  ],
+  "alemtuzumab": [
+    "General"
+  ],
+  "enflurane": [
+    "Psychiatric"
+  ],
+  "genistein": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "zaleplon": [
+    "Psychiatric"
+  ],
+  "nisoldipine": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "carbidopa anhydrous": [
+    "Parkinsons"
+  ],
+  "donepezil": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "leucovorin calcium": [
+    "Cancer"
+  ],
+  "granisetron": [
+    "Cancer"
+  ],
+  "interferon beta-1b": [
+    "Cancer"
+  ],
+  "clonazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "lanatoside c": [
+    "Cancer"
+  ],
+  "citronellyl acetate": [
+    "General"
+  ],
+  "ezogabine": [
+    "General"
+  ],
+  "palifermin": [
+    "Cancer"
+  ],
+  "brentuximab vedotin": [
+    "Cancer"
+  ],
+  "lisdexamfetamine dimesylate": [
+    "Parkinsons"
+  ],
+  "acebutolol": [
+    "Cardiovascular"
+  ],
+  "atracurium": [
+    "General"
+  ],
+  "octotropine methylbromide": [
+    "Alzheimers"
+  ],
+  "clenbuterol": [
+    "Cardiovascular"
+  ],
+  "cinacalcet": [
+    "General"
+  ],
+  "cilostazol": [
+    "Cancer"
+  ],
+  "choriogonadotropin alfa": [
+    "General"
+  ],
+  "brompheniramine": [
+    "General"
+  ],
+  "diphenidol": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "prazosin": [
+    "General"
+  ],
+  "ipratropium cation": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "carprofen": [
+    "Pain/Anti-inflammatory"
+  ],
+  "orphenadrine": [
+    "Alzheimers"
+  ],
+  "nalidixic acid": [
+    "Cancer"
+  ],
+  "promethazine hydrochloride": [
+    "Parkinsons",
+    "Alzheimers",
+    "Cancer",
+    "Diabetic"
+  ],
+  "dronedarone": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "chenodeoxycholic acid": [
+    "General"
+  ],
+  "meperidine hydrochloride": [
+    "Cancer"
+  ],
+  "mephentermine": [
+    "Parkinsons"
+  ],
+  "adapalene": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "fingolimod": [
+    "General"
+  ],
+  "penbutolol": [
+    "Cardiovascular"
+  ],
+  "fospropofol": [
+    "General"
+  ],
+  "lanreotide acetate": [
+    "General"
+  ],
+  "talbutal": [
+    "Psychiatric"
+  ],
+  "racementhol": [
+    "General"
+  ],
+  "timolol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "treprostinil": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "trospium": [
+    "Alzheimers"
+  ],
+  "triflupromazine": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons"
+  ],
+  "botulinum toxin type b": [
+    "General"
+  ],
+  "lurbinectedin": [
+    "General"
+  ],
+  "sutimlimab": [
+    "General"
+  ],
+  "floxuridine": [
+    "Cancer"
+  ],
+  "pexidartinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "iopamidol": [
+    "General"
+  ],
+  "totarol": [
+    "General"
+  ],
+  "omeprazole": [
+    "Cancer"
+  ],
+  "nystatin": [
+    "General"
+  ],
+  "ivabradine": [
+    "General"
+  ],
+  "heptane": [
+    "General"
+  ],
+  "colistimethate": [
+    "General"
+  ],
+  "polymyxin b sulfate": [
+    "General"
+  ],
+  "aminoglutethimide": [
+    "General"
+  ],
+  "inamrinone lactate": [
+    "General"
+  ],
+  "methacycline hydrochloride": [
+    "General"
+  ],
+  "ceforanide": [
+    "General"
+  ],
+  "demeclocycline": [
+    "General"
+  ],
+  "cycloserine": [
+    "Alzheimers"
+  ],
+  "cefpodoxime": [
+    "General"
+  ],
+  "loracarbef": [
+    "General"
+  ],
+  "nitrous oxide": [
+    "General"
+  ],
+  "benzoic acid": [
+    "General"
+  ],
+  "ephedrine": [
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "darunavir": [
+    "General"
+  ],
+  "capreomycin": [
+    "General"
+  ],
+  "atosiban": [
+    "Cancer"
+  ],
+  "altretamine": [
+    "General"
+  ],
+  "ceftazidime anhydrous": [
+    "General"
+  ],
+  "glutamic acid": [
+    "General"
+  ],
+  "saquinavir": [
+    "Cancer"
+  ],
+  "dolasetron": [
+    "General"
+  ],
+  "indinavir": [
+    "Cancer"
+  ],
+  "rimantadine": [
+    "General"
+  ],
+  "thioguanine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "sulfapyridine": [
+    "General"
+  ],
+  "nitric oxide": [
+    "General"
+  ],
+  "vitamin k3": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "eugenol": [
+    "General"
+  ],
+  "duloxetine hydrochloride": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "butoconazole": [
+    "General"
+  ],
+  "alclometasone": [
+    "General"
+  ],
+  "ibrexafungerp": [
+    "General"
+  ],
+  "vedolizumab": [
+    "General"
+  ],
+  "delafloxacin meglumine": [
+    "General"
+  ],
+  "baloxavir marboxil": [
+    "General"
+  ],
+  "moxidectin": [
+    "General"
+  ],
+  "revefenacin": [
+    "General"
+  ],
+  "lenvatinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "levothyroxine": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "debrisoquin": [
+    "General"
+  ],
+  "troleandomycin": [
+    "Cancer"
+  ],
+  "benzylpenicilloyl polylysine": [
+    "General"
+  ],
+  "glycopyrronium": [
+    "Alzheimers",
+    "Cardiovascular"
+  ],
+  "estramustine": [
+    "Cancer"
+  ],
+  "piperine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "cefamandole": [
+    "General"
+  ],
+  "scopolamine": [
+    "Alzheimers"
+  ],
+  "hydroquinone": [
+    "Cancer"
+  ],
+  "metaraminol": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "delavirdine": [
+    "Cancer"
+  ],
+  "desoximetasone": [
+    "Cancer"
+  ],
+  "docosanol": [
+    "General"
+  ],
+  "etidronate disodium": [
+    "General"
+  ],
+  "penicillin v potassium": [
+    "General"
+  ],
+  "terbinafine": [
+    "Cancer"
+  ],
+  "penicillin g sodium": [
+    "General"
+  ],
+  "istradefylline": [
+    "General"
+  ],
+  "cefuroxime sodium": [
+    "General"
+  ],
+  "guaiacol": [
+    "General"
+  ],
+  "piperonal": [
+    "General"
+  ],
+  "sulfaphenazole": [
+    "Cancer"
+  ],
+  "zomepirac sodium": [
+    "General"
+  ],
+  "cyclophosphamide anhydrous": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "dobutamine": [
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "ketamine hydrochloride": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "lanthanum carbonate": [
+    "General"
+  ],
+  "linagliptin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "memantine hydrochloride": [
+    "Alzheimers"
+  ],
+  "peramivir anhydrous": [
+    "General"
+  ],
+  "pegaptanib": [
+    "General"
+  ],
+  "propylhexedrine": [
+    "General"
+  ],
+  "teriflunomide": [
+    "Cardiovascular"
+  ],
+  "liothyronine sodium": [
+    "Cancer"
+  ],
+  "sotagliflozin": [
+    "Diabetic"
+  ],
+  "silodosin": [
+    "General"
+  ],
+  "benazepril": [
+    "Cardiovascular"
+  ],
+  "zileuton": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "indacaterol": [
+    "Alzheimers",
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "terbutaline": [
+    "Cardiovascular"
+  ],
+  "olodaterol": [
+    "Cardiovascular"
+  ],
+  "opicapone": [
+    "Parkinsons"
+  ],
+  "sincalide": [
+    "General"
+  ],
+  "inotuzumab ozogamicin": [
+    "Cancer"
+  ],
+  "acetaminophen": [
+    "Pain/Anti-inflammatory",
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "fenoprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "etodolac": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "fenofibrate micronized": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "aspartic acid": [
+    "Cancer"
+  ],
+  "anisindione": [
+    "General"
+  ],
+  "daclizumab": [
+    "General"
+  ],
+  "brivaracetam": [
+    "General"
+  ],
+  "chloroform": [
+    "General"
+  ],
+  "tezacaftor": [
+    "General"
+  ],
+  "eteplirsen": [
+    "General"
+  ],
+  "venlafaxine": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "apremilast": [
+    "Cancer"
+  ],
+  "tranexamic acid": [
+    "General"
+  ],
+  "folic acid": [
+    "Cancer"
+  ],
+  "glutamine": [
+    "Cancer"
+  ],
+  "flibanserin": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "romiplostim": [
+    "Cancer"
+  ],
+  "raltegravir potassium": [
+    "Cancer"
+  ],
+  "enoxacin": [
+    "General"
+  ],
+  "warfarin": [
+    "Cancer"
+  ],
+  "quercetin": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular"
+  ],
+  "toripalimab-tpzi": [
+    "Cancer"
+  ],
+  "mogamulizumab": [
+    "General"
+  ],
+  "trilaciclib": [
+    "Cancer"
+  ],
+  "diclofenac epolamine": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "tislelizumab": [
+    "General"
+  ],
+  "ofloxacin": [
+    "Cancer"
+  ],
+  "vorapaxar": [
+    "General"
+  ],
+  "milnacipran": [
+    "Psychiatric"
+  ],
+  "lurasidone hydrochloride": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "chloroquine": [
+    "Cancer"
+  ],
+  "teniposide": [
+    "Cancer"
+  ],
+  "uridine": [
+    "General"
+  ],
+  "eflornithine": [
+    "General"
+  ],
+  "lomitapide mesylate": [
+    "Cardiovascular"
+  ],
+  "etelcalcetide": [
+    "General"
+  ],
+  "captopril": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "flurbiprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "nirogacestat": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "oxaliplatin": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "betrixaban": [
+    "General"
+  ],
+  "dantrolene": [
+    "Cancer"
+  ],
+  "mechlorethamine": [
+    "Cancer"
+  ],
+  "vitamin k": [
+    "Cancer"
+  ],
+  "ursodiol": [
+    "Cancer"
+  ],
+  "exenatide": [
+    "Diabetic"
+  ],
+  "flecainide acetate": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "penicillin v": [
+    "General"
+  ],
+  "terlipressin": [
+    "General"
+  ],
+  "norethindrone": [
+    "Cancer"
+  ],
+  "bisoprolol": [
+    "Cardiovascular"
+  ],
+  "amiodarone hydrochloride": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "pimozide": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "demecarium bromide": [
+    "Alzheimers"
+  ],
+  "phenylpropanolamine polistirex": [
+    "General"
+  ],
+  "sparsentan": [
+    "Cardiovascular"
+  ],
+  "pergolide": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "bevacizumab-awwb": [
+    "Cancer"
+  ],
+  "lutetium lu 177 vipivotide tetraxetan": [
+    "General"
+  ],
+  "pemetrexed disodium": [
+    "Cancer"
+  ],
+  "practolol": [
+    "Cardiovascular"
+  ],
+  "lovastatin": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "olaratumab": [
+    "Diabetic"
+  ],
+  "trichlormethiazide": [
+    "General"
+  ],
+  "tebentafusp": [
+    "General"
+  ],
+  "mometasone": [
+    "Cancer"
+  ],
+  "oxyphencyclimine hydrochloride": [
+    "Alzheimers"
+  ],
+  "argatroban": [
+    "General"
+  ],
+  "quinapril hydrochloride": [
+    "Cardiovascular"
+  ],
+  "biperiden hydrochloride": [
+    "Alzheimers"
+  ],
+  "rizatriptan benzoate": [
+    "General"
+  ],
+  "methantheline bromide": [
+    "General"
+  ],
+  "insulin lispro protamine recombinant": [
+    "Diabetic"
+  ],
+  "phentermine resin": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "atomoxetine hydrochloride": [
+    "Cancer"
+  ],
+  "tapentadol hydrochloride": [
+    "General"
+  ],
+  "etonogestrel": [
+    "General"
+  ],
+  "codeine phosphate": [
+    "General"
+  ],
+  "eflornithine hydrochloride": [
+    "General"
+  ],
+  "enalapril maleate": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "deferoxamine": [
+    "Cancer"
+  ],
+  "evolocumab": [
+    "General"
+  ],
+  "selenium": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "gonadotropin, chorionic": [
+    "General"
+  ],
+  "latanoprostene bunod": [
+    "General"
+  ],
+  "brodalumab": [
+    "General"
+  ],
+  "benralizumab": [
+    "General"
+  ],
+  "ulipristal acetate": [
+    "General"
+  ],
+  "tolrestat": [
+    "General"
+  ],
+  "dapagliflozin propanediol": [
+    "Diabetic"
+  ],
+  "lofexidine hydrochloride": [
+    "General"
+  ],
+  "voclosporin": [
+    "General"
+  ],
+  "gallium nitrate": [
+    "General"
+  ],
+  "spesolimab": [
+    "General"
+  ],
+  "caffeine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "margetuximab-cmkb": [
+    "Cancer"
+  ],
+  "coumarin": [
+    "Cancer"
+  ],
+  "sulindac": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "warfarin potassium": [
+    "General"
+  ],
+  "padimate-o": [
+    "General"
+  ],
+  "salmeterol": [
+    "Cardiovascular"
+  ],
+  "nizatidine": [
+    "General"
+  ],
+  "mexiletine": [
+    "Cancer"
+  ],
+  "nomifensine maleate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "streptozocin": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "doxylamine": [
+    "General"
+  ],
+  "soybean seed oil": [
+    "General"
+  ],
+  "norethindrone acetate": [
+    "Cancer"
+  ],
+  "eculizumab": [
+    "General"
+  ],
+  "miltefosine": [
+    "Cancer"
+  ],
+  "cetirizine hydrochloride": [
+    "General"
+  ],
+  "isopropyl alcohol": [
+    "General"
+  ],
+  "interferon beta-1a": [
+    "Cancer"
+  ],
+  "sacituzumab govitecan": [
+    "Cancer"
+  ],
+  "ispaghula husk": [
+    "General"
+  ],
+  "thyroglobulin": [
+    "General"
+  ],
+  "heparin calcium": [
+    "Cardiovascular"
+  ],
+  "ifosfamide": [
+    "Cancer"
+  ],
+  "nafcillin": [
+    "General"
+  ],
+  "lumiracoxib": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "benznidazole": [
+    "General"
+  ],
+  "methylcellulose": [
+    "General"
+  ],
+  "larotrectinib": [
+    "Cancer"
+  ],
+  "selpercatinib": [
+    "Cancer"
+  ],
+  "pyrilamine": [
+    "Cancer"
+  ],
+  "nateglinide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "adalimumab-adbm": [
+    "Cancer"
+  ],
+  "carglumic acid": [
+    "General"
+  ],
+  "lenalidomide": [
+    "Cancer"
+  ],
+  "ketorolac tromethamine": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "cariprazine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "amoxapine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "dapsone": [
+    "Cancer"
+  ],
+  "lidocaine": [
+    "Cancer"
+  ],
+  "risdiplam": [
+    "General"
+  ],
+  "buprenorphine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "dabigatran": [
+    "Cardiovascular"
+  ],
+  "valbenazine": [
+    "Cancer"
+  ],
+  "selegiline": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "vildagliptin": [
+    "Diabetic"
+  ],
+  "certolizumab pegol": [
+    "Cancer"
+  ],
+  "alteplase": [
+    "Cancer"
+  ],
+  "clomiphene": [
+    "General"
+  ],
+  "artemotil": [
+    "General"
+  ],
+  "apalutamide": [
+    "General"
+  ],
+  "sildenafil": [
+    "Cardiovascular"
+  ],
+  "proguanil": [
+    "General"
+  ],
+  "aducanumab": [
+    "Alzheimers"
+  ],
+  "tralokinumab": [
+    "General"
+  ],
+  "phenprocoumon": [
+    "Diabetic"
+  ],
+  "gestodene": [
+    "General"
+  ],
+  "abatacept": [
+    "Cancer"
+  ],
+  "icatibant": [
+    "General"
+  ],
+  "salmon calcitonin": [
+    "Alzheimers"
+  ],
+  "lacosamide": [
+    "General"
+  ],
+  "ketotifen fumarate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "lercanidipine": [
+    "General"
+  ],
+  "vortioxetine hydrobromide": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "baricitinib": [
+    "Cancer"
+  ],
+  "tesamorelin": [
+    "General"
+  ],
+  "edrophonium cation": [
+    "Alzheimers"
+  ],
+  "mefenamic acid": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "mepenzolate": [
+    "General"
+  ],
+  "nafarelin": [
+    "General"
+  ],
+  "oxprenolol": [
+    "Cardiovascular"
+  ],
+  "nitisinone": [
+    "General"
+  ],
+  "thiamylal": [
+    "Diabetic",
+    "Psychiatric"
+  ],
+  "hydrocortamate": [
+    "General"
+  ],
+  "propoxyphene": [
+    "General"
+  ],
+  "tadalafil": [
+    "General"
+  ],
+  "motixafortide": [
+    "General"
+  ],
+  "aflibercept": [
+    "Cancer"
+  ],
+  "obinutuzumab": [
+    "General"
+  ],
+  "mycophenolate mofetil": [
+    "Cancer"
+  ],
+  "gallamine triethiodide": [
+    "General"
+  ],
+  "buclizine": [
+    "Alzheimers"
+  ],
+  "buspirone": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "cholic acid": [
+    "General"
+  ],
+  "pretomanid": [
+    "General"
+  ],
+  "pipecuronium": [
+    "General"
+  ],
+  "sodium bicarbonate": [
+    "General"
+  ],
+  "cyclopentolate": [
+    "Alzheimers"
+  ],
+  "mirvetuximab soravtansine": [
+    "General"
+  ],
+  "levomilnacipran": [
+    "Psychiatric"
+  ],
+  "inotersen": [
+    "General"
+  ],
+  "leuprolide acetate": [
+    "Cancer"
+  ],
+  "rivaroxaban": [
+    "Cardiovascular"
+  ],
+  "becaplermin": [
+    "General"
+  ],
+  "elacestrant": [
+    "General"
+  ],
+  "hydroxyamphetamine hydrobromide": [
+    "Cardiovascular"
+  ],
+  "aceclofenac": [
+    "Pain/Anti-inflammatory"
+  ],
+  "tinzaparin sodium": [
+    "General"
+  ],
+  "torsemide": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "tetrahydrozoline": [
+    "General"
+  ],
+  "phenoxybenzamine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "brimonidine": [
+    "General"
+  ],
+  "apraclonidine": [
+    "General"
+  ],
+  "dextromethorphan polistirex": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "pralatrexate": [
+    "General"
+  ],
+  "pemigatinib": [
+    "General"
+  ],
+  "thiothixene": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "molindone": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "levocetirizine": [
+    "General"
+  ],
+  "metoprolol": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "nalbuphine hydrochloride": [
+    "Cancer"
+  ],
+  "ketoconazole": [
+    "Cancer"
+  ],
+  "progesterone": [
+    "Cancer"
+  ],
+  "ethinyl estradiol": [
+    "Cancer"
+  ],
+  "futibatinib": [
+    "Cancer"
+  ],
+  "amsacrine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "latanoprost": [
+    "General"
+  ],
+  "lorlatinib": [
+    "Cancer"
+  ],
+  "acarbose": [
+    "General"
+  ],
+  "bupivacaine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "aclidinium": [
+    "Alzheimers"
+  ],
+  "valdecoxib": [
+    "Pain/Anti-inflammatory"
+  ],
+  "esmolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "azilsartan medoxomil": [
+    "Cardiovascular"
+  ],
+  "dacomitinib anhydrous": [
+    "Cancer"
+  ],
+  "itraconazole": [
+    "Cancer"
+  ],
+  "nicardipine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "bremelanotide": [
+    "General"
+  ],
+  "adagrasib": [
+    "Cancer"
+  ],
+  "pentamidine isethionate": [
+    "Cancer"
+  ],
+  "propylthiouracil": [
+    "Cancer"
+  ],
+  "brigatinib": [
+    "Cancer"
+  ],
+  "disulfiram": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "oxymetholone": [
+    "Cancer"
+  ],
+  "tbo-filgrastim": [
+    "General"
+  ],
+  "galsulfase": [
+    "General"
+  ],
+  "glyburide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "methamphetamine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "budesonide": [
+    "Cancer"
+  ],
+  "thyrotropin alfa": [
+    "Cancer"
+  ],
+  "glimepiride": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "ropinirole": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "ocrelizumab": [
+    "General"
+  ],
+  "raltitrexed": [
+    "Cancer"
+  ],
+  "solifenacin": [
+    "Alzheimers"
+  ],
+  "diethylpropion hydrochloride": [
+    "Parkinsons"
+  ],
+  "ticagrelor": [
+    "General"
+  ],
+  "travoprost": [
+    "General"
+  ],
+  "acetyldigitoxin": [
+    "Cancer"
+  ],
+  "chlorpropamide": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "adenosine triphosphate": [
+    "Cancer"
+  ],
+  "diphenylpyraline": [
+    "Cancer"
+  ],
+  "ethynodiol diacetate": [
+    "Cancer"
+  ],
+  "benoxinate": [
+    "Cancer"
+  ],
+  "procyclidine": [
+    "Alzheimers"
+  ],
+  "promazine": [
+    "Alzheimers",
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "propantheline": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "meprobamate": [
+    "Psychiatric"
+  ],
+  "bethanidine": [
+    "Cardiovascular"
+  ],
+  "alfuzosin": [
+    "General"
+  ],
+  "lubiprostone": [
+    "General"
+  ],
+  "plazomicin": [
+    "General"
+  ],
+  "calcitriol": [
+    "Cancer"
+  ],
+  "sargramostim": [
+    "General"
+  ],
+  "ivacaftor": [
+    "General"
+  ],
+  "orlistat": [
+    "General"
+  ],
+  "beclomethasone": [
+    "Cancer"
+  ],
+  "bethanechol chloride": [
+    "General"
+  ],
+  "iodine-131-tositumomab": [
+    "General"
+  ],
+  "trimethadione": [
+    "General"
+  ],
+  "etrasimod": [
+    "General"
+  ],
+  "tenecteplase": [
+    "General"
+  ],
+  "eplerenone": [
+    "Cancer"
+  ],
+  "alcaftadine": [
+    "General"
+  ],
+  "voxelotor": [
+    "General"
+  ],
+  "fluphenazine hydrochloride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "emedastine difumarate": [
+    "General"
+  ],
+  "gemtuzumab ozogamicin": [
+    "Cancer"
+  ],
+  "eprosartan mesylate": [
+    "Cardiovascular"
+  ],
+  "gonadorelin hydrochloride": [
+    "General"
+  ],
+  "troglitazone": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "calcifediol anhydrous": [
+    "General"
+  ],
+  "dofetilide": [
+    "Cancer"
+  ],
+  "aliskiren fumarate": [
+    "General"
+  ],
+  "difenoxin hydrochloride": [
+    "General"
+  ],
+  "medrysone": [
+    "Cancer"
+  ],
+  "quinestrol": [
+    "Cancer"
+  ],
+  "diethylstilbestrol diphosphate": [
+    "General"
+  ],
+  "tocilizumab": [
+    "General"
+  ],
+  "diclofenac potassium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "belimumab": [
+    "General"
+  ],
+  "hydroxyzine": [
+    "Cancer"
+  ],
+  "clopidogrel bisulfate": [
+    "General"
+  ],
+  "isoproterenol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "esomeprazole strontium": [
+    "General"
+  ],
+  "afatinib dimaleate": [
+    "Cancer"
+  ],
+  "olodaterol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "levetiracetam": [
+    "Cancer"
+  ],
+  "amiloride": [
+    "Cancer"
+  ],
+  "tafamidis": [
+    "General"
+  ],
+  "repaglinide": [
+    "Diabetic"
+  ],
+  "prabotulinumtoxin a": [
+    "General"
+  ],
+  "calcium oxybate": [
+    "General"
+  ],
+  "somapacitan": [
+    "General"
+  ],
+  "trimethaphan": [
+    "General"
+  ],
+  "fezolinetant": [
+    "General"
+  ],
+  "oxymetazoline hydrochloride": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "amodiaquine hydrochloride": [
+    "General"
+  ],
+  "eltrombopag": [
+    "Cancer"
+  ],
+  "minocycline hydrochloride": [
+    "General"
+  ],
+  "dydrogesterone": [
+    "Cancer"
+  ],
+  "thioctic acid": [
+    "General"
+  ],
+  "choline chloride": [
+    "General"
+  ],
+  "tolnaftate": [
+    "General"
+  ],
+  "capsaicin": [
+    "Cancer"
+  ],
+  "amifampridine phosphate": [
+    "General"
+  ],
+  "amifampridine": [
+    "General"
+  ],
+  "clopidogrel": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "capromab": [
+    "General"
+  ],
+  "framycetin": [
+    "Cancer"
+  ],
+  "cetrorelix": [
+    "General"
+  ],
+  "c1 esterase inhibitor": [
+    "General"
+  ],
+  "trifluoperazine": [
+    "Diabetic",
+    "Psychiatric",
+    "Cancer",
+    "Cardiovascular",
+    "Parkinsons"
+  ],
+  "prasugrel": [
+    "General"
+  ],
+  "vinblastine": [
+    "Cancer"
+  ],
+  "ecallantide": [
+    "General"
+  ],
+  "calaspargase pegol": [
+    "General"
+  ],
+  "fremanezumab": [
+    "General"
+  ],
+  "tezacaftor and ivacaftor": [
+    "General"
+  ],
+  "tagraxofusp-erzs": [
+    "General"
+  ],
+  "flavoxate": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "miglitol": [
+    "General"
+  ],
+  "talimogene laherparepvec": [
+    "General"
+  ],
+  "lifitegrast": [
+    "General"
+  ],
+  "human calcitonin": [
+    "Alzheimers"
+  ],
+  "carboprost tromethamine": [
+    "General"
+  ],
+  "ambenonium": [
+    "Alzheimers"
+  ],
+  "anileridine": [
+    "General"
+  ],
+  "valbenazine tosylate": [
+    "General"
+  ],
+  "halothane": [
+    "Psychiatric"
+  ],
+  "minoxidil": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "paliperidone": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "oxyphencyclimine": [
+    "Alzheimers"
+  ],
+  "succinic acid": [
+    "General"
+  ],
+  "coagulation factor x, human": [
+    "General"
+  ],
+  "naphazoline": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "betamethasone": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "sapropterin": [
+    "Parkinsons"
+  ],
+  "tropisetron": [
+    "Cancer"
+  ],
+  "methoxy polyethylene glycol-epoetin beta": [
+    "General"
+  ],
+  "remifentanil hydrochloride": [
+    "Parkinsons"
+  ],
+  "cryptenamine acetates": [
+    "General"
+  ],
+  "dextrothyroxine sodium": [
+    "General"
+  ],
+  "estradiol cypionate": [
+    "General"
+  ],
+  "plecanatide": [
+    "General"
+  ],
+  "frovatriptan": [
+    "General"
+  ],
+  "enoxaparin sodium": [
+    "General"
+  ],
+  "naratriptan": [
+    "Psychiatric"
+  ],
+  "fenoldopam mesylate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "cangrelor": [
+    "General"
+  ],
+  "histidine": [
+    "General"
+  ],
+  "laropiprant": [
+    "Cardiovascular"
+  ],
+  "trabectedin": [
+    "Cancer"
+  ],
+  "lomustine": [
+    "Cancer"
+  ],
+  "mirabegron": [
+    "Cancer"
+  ],
+  "telotristat ethyl": [
+    "General"
+  ],
+  "tryptophan": [
+    "General"
+  ],
+  "levamisole": [
+    "Cancer"
+  ],
+  "diphenidol hydrochloride": [
+    "Alzheimers"
+  ],
+  "ergocalciferol": [
+    "Cancer"
+  ],
+  "glycine": [
+    "Cancer"
+  ],
+  "chlorpheniramine maleate": [
+    "General"
+  ],
+  "enasidenib": [
+    "Cancer"
+  ],
+  "bempedoic acid": [
+    "General"
+  ],
+  "isopropamide iodide": [
+    "Alzheimers"
+  ],
+  "methixene hydrochloride": [
+    "Alzheimers",
+    "Cancer",
+    "Psychiatric"
+  ],
+  "clofarabine": [
+    "Cancer"
+  ],
+  "iloprost": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "tiagabine hydrochloride": [
+    "General"
+  ],
+  "prucalopride": [
+    "General"
+  ],
+  "macitentan": [
+    "General"
+  ],
+  "lisocabtagene maraleucel": [
+    "General"
+  ],
+  "sulfasalazine": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "insulin aspart protamine, human": [
+    "Diabetic"
+  ],
+  "natalizumab": [
+    "General"
+  ],
+  "cisapride": [
+    "General"
+  ],
+  "tremelimumab": [
+    "Cancer"
+  ],
+  "efmoroctocog alfa": [
+    "General"
+  ],
+  "edrophonium chloride": [
+    "Alzheimers"
+  ],
+  "metyrapone": [
+    "General"
+  ],
+  "mipomersen": [
+    "Cardiovascular"
+  ],
+  "prednisolone acetate": [
+    "Cancer"
+  ],
+  "dyclonine": [
+    "Cancer"
+  ],
+  "biperiden": [
+    "Alzheimers"
+  ],
+  "pomalidomide": [
+    "General"
+  ],
+  "triprolidine hydrochloride": [
+    "Cancer"
+  ],
+  "diphenhydramine citrate": [
+    "General"
+  ],
+  "omalizumab": [
+    "General"
+  ],
+  "azilsartan kamedoxomil": [
+    "Cardiovascular"
+  ],
+  "dapiprazole hydrochloride": [
+    "General"
+  ],
+  "divalproex sodium": [
+    "General"
+  ],
+  "clofibrate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "famotidine": [
+    "General"
+  ],
+  "oxycodone terephthalate": [
+    "General"
+  ],
+  "rimexolone": [
+    "Cancer"
+  ],
+  "fluprednisolone": [
+    "General"
+  ],
+  "synthetic conjugated estrogens, b": [
+    "General"
+  ],
+  "tolbutamide sodium, sterile": [
+    "Diabetic"
+  ],
+  "dextrothyroxine": [
+    "General"
+  ],
+  "levallorphan tartrate": [
+    "General"
+  ],
+  "nebivolol hydrochloride": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "anidulafungin": [
+    "General"
+  ],
+  "muromonab-cd3": [
+    "General"
+  ],
+  "acesulfame": [
+    "General"
+  ],
+  "tasimelteon": [
+    "General"
+  ],
+  "reslizumab": [
+    "General"
+  ],
+  "ixekizumab": [
+    "General"
+  ],
+  "ibutamoren mesylate": [
+    "General"
+  ],
+  "teprotumumab-trbw": [
+    "Cancer"
+  ],
+  "levosimendan": [
+    "Diabetic"
+  ],
+  "fedratinib hydrochloride": [
+    "Cancer"
+  ],
+  "lasofoxifene": [
+    "General"
+  ],
+  "omidenepag": [
+    "General"
+  ],
+  "maralixibat": [
+    "General"
+  ],
+  "ibrexafungerp citrate": [
+    "General"
+  ],
+  "ambroxol": [
+    "General"
+  ],
+  "dimethyl succinate": [
+    "General"
+  ],
+  "acrylamide": [
+    "General"
+  ],
+  "oseltamivir phosphate": [
+    "General"
+  ],
+  "loteprednol": [
+    "Cancer"
+  ],
+  "dexketoprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "citalopram hydrobromide": [
+    "Psychiatric"
+  ],
+  "geraniol": [
+    "General"
+  ],
+  "orphenadrine citrate": [
+    "Alzheimers"
+  ],
+  "docusate sodium": [
+    "Cancer"
+  ],
+  "deutetrabenazine": [
+    "Cancer"
+  ],
+  "nusinersen": [
+    "General"
+  ],
+  "pitolisant": [
+    "Cancer"
+  ],
+  "encorafenib": [
+    "Cancer"
+  ],
+  "pentostatin": [
+    "Diabetic"
+  ],
+  "mobocertinib": [
+    "General"
+  ],
+  "telithromycin": [
+    "General"
+  ],
+  "elagolix": [
+    "General"
+  ],
+  "sodium ascorbate": [
+    "Cancer"
+  ],
+  "dulaglutide": [
+    "Diabetic"
+  ],
+  "umeclidinium bromide": [
+    "Cancer"
+  ],
+  "eliglustat": [
+    "Cancer"
+  ],
+  "insulin glulisine, human": [
+    "Diabetic"
+  ],
+  "resveratrol": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "betazole": [
+    "General"
+  ],
+  "profenamine": [
+    "Alzheimers"
+  ],
+  "phenylpropanolamine": [
+    "General"
+  ],
+  "ritodrine": [
+    "Cardiovascular"
+  ],
+  "ambrisentan": [
+    "General"
+  ],
+  "levallorphan": [
+    "General"
+  ],
+  "gonadorelin": [
+    "General"
+  ],
+  "moexipril": [
+    "Cardiovascular"
+  ],
+  "rotigotine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "trimipramine": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "parecoxib": [
+    "Pain/Anti-inflammatory"
+  ],
+  "elosulfase alfa": [
+    "General"
+  ],
+  "mecamylamine": [
+    "Cancer"
+  ],
+  "meloxicam": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "echothiophate iodide": [
+    "Alzheimers"
+  ],
+  "isoetharine": [
+    "Cardiovascular"
+  ],
+  "pinacidil": [
+    "Diabetic"
+  ],
+  "teriparatide": [
+    "General"
+  ],
+  "dexibuprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "pimavanserin": [
+    "Psychiatric"
+  ],
+  "tegaserod": [
+    "General"
+  ],
+  "bivalirudin": [
+    "General"
+  ],
+  "pramipexole": [
+    "Parkinsons"
+  ],
+  "glucagon (rdna)": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "daridorexant": [
+    "General"
+  ],
+  "ivermectin": [
+    "Cancer"
+  ],
+  "bexarotene": [
+    "Cancer"
+  ],
+  "erlotinib hydrochloride": [
+    "General"
+  ],
+  "alanine": [
+    "General"
+  ],
+  "hexylcaine": [
+    "General"
+  ],
+  "isatuximab": [
+    "General"
+  ],
+  "amineptin": [
+    "Parkinsons"
+  ],
+  "buserelin": [
+    "General"
+  ],
+  "butamben": [
+    "General"
+  ],
+  "5-hydroxytryptophan": [
+    "General"
+  ],
+  "cycrimine": [
+    "Alzheimers"
+  ],
+  "hydrocortisone sodium succinate": [
+    "Cancer"
+  ],
+  "triprolidine": [
+    "General"
+  ],
+  "fexofenadine hydrochloride": [
+    "Cancer"
+  ],
+  "aliskiren": [
+    "Cancer"
+  ],
+  "clobetasol": [
+    "General"
+  ],
+  "alpha 1-antitrypsin": [
+    "General"
+  ],
+  "hydrocortisone acetate": [
+    "Cancer"
+  ],
+  "testosterone cypionate": [
+    "General"
+  ],
+  "ataluren": [
+    "Cancer"
+  ],
+  "ranitidine bismuth citrate": [
+    "General"
+  ],
+  "insulin zinc susp extended beef": [
+    "Diabetic"
+  ],
+  "insulin zinc susp prompt beef": [
+    "Diabetic"
+  ],
+  "sucralfate": [
+    "General"
+  ],
+  "norgestrel": [
+    "Cancer"
+  ],
+  "tazemetostat": [
+    "Cancer"
+  ],
+  "temsirolimus": [
+    "Cancer"
+  ],
+  "yttrium y 90 ibritumomab tiuxetan": [
+    "General"
+  ],
+  "suvorexant": [
+    "General"
+  ],
+  "alfentanil hydrochloride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "pirprofen": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "pitavastatin sodium": [
+    "Cardiovascular"
+  ],
+  "idecabtagene vicleucel": [
+    "General"
+  ],
+  "abacavir": [
+    "Cancer"
+  ],
+  "carnitine": [
+    "General"
+  ],
+  "levomethadyl acetate hydrochloride": [
+    "General"
+  ],
+  "prednicarbate": [
+    "Cancer"
+  ],
+  "hydrocortisone valerate": [
+    "Cancer"
+  ],
+  "ranolazine": [
+    "Cancer"
+  ],
+  "ritodrine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "diethanolamine": [
+    "General"
+  ],
+  "deflazacort": [
+    "General"
+  ],
+  "ropinirole hydrochloride": [
+    "Parkinsons"
+  ],
+  "moxisylyte": [
+    "General"
+  ],
+  "naloxone hydrochloride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "phentolamine": [
+    "Parkinsons",
+    "Cancer",
+    "Diabetic"
+  ],
+  "rescinnamine": [
+    "Cardiovascular"
+  ],
+  "infigratinib phosphate": [
+    "Cancer"
+  ],
+  "dexrazoxane": [
+    "General"
+  ],
+  "oxandrolone": [
+    "General"
+  ],
+  "givosiran": [
+    "General"
+  ],
+  "gentamicin": [
+    "Cancer"
+  ],
+  "caplacizumab-yhdp": [
+    "General"
+  ],
+  "fluocinonide": [
+    "General"
+  ],
+  "dexmethylphenidate": [
+    "Parkinsons"
+  ],
+  "tafasitamab": [
+    "General"
+  ],
+  "telmisartan": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "pacritinib citrate": [
+    "Cancer"
+  ],
+  "tivozanib hydrochloride": [
+    "Cancer"
+  ],
+  "bimekizumab": [
+    "General"
+  ],
+  "difelikefalin": [
+    "General"
+  ],
+  "cobicistat": [
+    "General"
+  ],
+  "lesinurad": [
+    "Cancer"
+  ],
+  "sitagliptin": [
+    "Diabetic"
+  ],
+  "hydroxocobalamin": [
+    "Cancer"
+  ],
+  "praziquantel": [
+    "General"
+  ],
+  "tromethamine": [
+    "General"
+  ],
+  "arcitumomab": [
+    "General"
+  ],
+  "mebendazole": [
+    "General"
+  ],
+  "malathion": [
+    "Alzheimers",
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "thiopental": [
+    "Psychiatric"
+  ],
+  "axicabtagene ciloleucel": [
+    "General"
+  ],
+  "alefacept": [
+    "General"
+  ],
+  "acrivastine": [
+    "General"
+  ],
+  "cosyntropin": [
+    "General"
+  ],
+  "terazosin": [
+    "Cancer"
+  ],
+  "deoxycholic acid": [
+    "General"
+  ],
+  "citrulline": [
+    "General"
+  ],
+  "ibutilide": [
+    "Cardiovascular"
+  ],
+  "corticotropin-zinc hydroxide": [
+    "General"
+  ],
+  "fosaprepitant": [
+    "General"
+  ],
+  "cholesterol": [
+    "Cancer"
+  ],
+  "thymol": [
+    "General"
+  ],
+  "clarithromycin": [
+    "Cancer"
+  ],
+  "nelarabine": [
+    "General"
+  ],
+  "ardeparin sodium": [
+    "General"
+  ],
+  "hyoscyamine": [
+    "General"
+  ],
+  "sodium nitrite": [
+    "Cancer"
+  ],
+  "coagulation factor viia (recombinant)-jncw": [
+    "General"
+  ],
+  "chlorotrianisene": [
+    "General"
+  ],
+  "metaproterenol": [
+    "Cardiovascular"
+  ],
+  "polyestradiol phosphate": [
+    "General"
+  ],
+  "plasmin": [
+    "General"
+  ],
+  "ozanimod hydrochloride": [
+    "General"
+  ],
+  "meprednisone": [
+    "General"
+  ],
+  "ritonavir": [
+    "Cancer"
+  ],
+  "pimecrolimus": [
+    "General"
+  ],
+  "semaglutide": [
+    "Diabetic"
+  ],
+  "nomegestrol": [
+    "General"
+  ],
+  "mivacurium": [
+    "Alzheimers"
+  ],
+  "vonicog alfa": [
+    "General"
+  ],
+  "solifenacin succinate": [
+    "General"
+  ],
+  "inotuzumab": [
+    "Cancer"
+  ],
+  "fenoterol": [
+    "Cardiovascular"
+  ],
+  "velaglucerase alfa": [
+    "General"
+  ],
+  "abrocitinib": [
+    "Cancer"
+  ],
+  "glucagon hydrochloride": [
+    "General"
+  ],
+  "vosoritide": [
+    "General"
+  ],
+  "netarsudil": [
+    "General"
+  ],
+  "pheniramine maleate": [
+    "General"
+  ],
+  "hydroxyzine hydrochloride": [
+    "General"
+  ],
+  "prednisolone sodium phosphate": [
+    "General"
+  ],
+  "fluorometholone acetate": [
+    "General"
+  ],
+  "triamcinolone diacetate": [
+    "General"
+  ],
+  "methylprednisolone acetate": [
+    "General"
+  ],
+  "clonidine hydrochloride": [
+    "Cancer"
+  ],
+  "fenoprofen calcium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "erythrityl tetranitrate": [
+    "General"
+  ],
+  "etoricoxib": [
+    "Pain/Anti-inflammatory"
+  ],
+  "benzydamine": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "lipegfilgrastim": [
+    "General"
+  ],
+  "tildrakizumab": [
+    "General"
+  ],
+  "azaribine": [
+    "General"
+  ],
+  "bictegravir": [
+    "General"
+  ],
+  "bictegravir sodium": [
+    "General"
+  ],
+  "estriol": [
+    "General"
+  ],
+  "epoetin delta": [
+    "General"
+  ],
+  "imidapril": [
+    "Cardiovascular"
+  ],
+  "iobenguane i-131": [
+    "General"
+  ],
+  "lenograstim": [
+    "Cancer"
+  ],
+  "pirtobrutinib": [
+    "Cancer"
+  ],
+  "insulin, protamine zinc": [
+    "Diabetic"
+  ],
+  "lufenuron": [
+    "Cancer"
+  ],
+  "imidocarb dipropionate": [
+    "Cancer"
+  ],
+  "oxyphenonium bromide": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "pyridostigmine bromide": [
+    "Alzheimers"
+  ],
+  "metolazone": [
+    "Cancer"
+  ],
+  "corticotropin": [
+    "Cancer"
+  ],
+  "aminophylline": [
+    "General"
+  ],
+  "metronidazole": [
+    "General"
+  ],
+  "camphor oil": [
+    "General"
+  ],
+  "apazone": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "octocrylene": [
+    "General"
+  ],
+  "terbutaline sulfate": [
+    "Cardiovascular"
+  ],
+  "boceprevir": [
+    "Cancer"
+  ],
+  "saquinavir mesylate": [
+    "Cancer"
+  ],
+  "propanidid": [
+    "Alzheimers"
+  ],
+  "pentetic acid": [
+    "General"
+  ],
+  "naltrexone": [
+    "Parkinsons"
+  ],
+  "butylated hydroxytoluene": [
+    "Cancer"
+  ],
+  "cholecalciferol": [
+    "Cancer"
+  ],
+  "procarbazine hydrochloride": [
+    "Cancer"
+  ],
+  "flurazepam hydrochloride": [
+    "Psychiatric"
+  ],
+  "aluminum hydroxide": [
+    "General"
+  ],
+  "bacitracin": [
+    "General"
+  ],
+  "sulfadiazine": [
+    "Cancer"
+  ],
+  "fencamfamin": [
+    "Parkinsons"
+  ],
+  "inebilizumab-cdon": [
+    "General"
+  ],
+  "belzutifan": [
+    "Cancer"
+  ],
+  "hexylresorcinol": [
+    "Cancer"
+  ],
+  "afamelanotide": [
+    "General"
+  ],
+  "parathyroid hormone": [
+    "General"
+  ],
+  "dapoxetine": [
+    "Psychiatric"
+  ],
+  "primaquine": [
+    "Cancer"
+  ],
+  "gepirone": [
+    "Psychiatric"
+  ],
+  "efavirenz": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "pivampicillin": [
+    "General"
+  ],
+  "dipivefrin": [
+    "Cardiovascular"
+  ],
+  "flunitrazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "benzocaine": [
+    "General"
+  ],
+  "benzonatate": [
+    "General"
+  ],
+  "pentagastrin": [
+    "General"
+  ],
+  "diphenhydramine": [
+    "Cancer"
+  ],
+  "tiludronic acid": [
+    "General"
+  ],
+  "tripelennamine": [
+    "General"
+  ],
+  "osilodrostat": [
+    "General"
+  ],
+  "polythiazide": [
+    "General"
+  ],
+  "tacrine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "methyldopate hydrochloride": [
+    "General"
+  ],
+  "capmatinib hydrochloride": [
+    "General"
+  ],
+  "sodium tetradecyl sulfate": [
+    "General"
+  ],
+  "mitiglinide": [
+    "Diabetic"
+  ],
+  "zolmitriptan": [
+    "Psychiatric"
+  ],
+  "deferasirox": [
+    "General"
+  ],
+  "methantheline": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "streptokinase": [
+    "General"
+  ],
+  "bromodiphenhydramine": [
+    "General"
+  ],
+  "peginterferon beta-1a": [
+    "Cancer"
+  ],
+  "pegvaliase": [
+    "General"
+  ],
+  "cerliponase alfa": [
+    "General"
+  ],
+  "epirubicin": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "metharbital": [
+    "Psychiatric"
+  ],
+  "niraparib tosylate": [
+    "General"
+  ],
+  "mebutamate": [
+    "General"
+  ],
+  "carphenazine": [
+    "Parkinsons"
+  ],
+  "dihydrotachysterol": [
+    "General"
+  ],
+  "stiripentol": [
+    "General"
+  ],
+  "semuloparin": [
+    "General"
+  ],
+  "xamoterol": [
+    "Cardiovascular"
+  ],
+  "albuterol sulfate": [
+    "Diabetic",
+    "Cardiovascular"
+  ],
+  "entacapone": [
+    "Parkinsons"
+  ],
+  "necitumumab": [
+    "General"
+  ],
+  "4-hydroxybutyric acid": [
+    "General"
+  ],
+  "grazoprevir": [
+    "Cancer"
+  ],
+  "drospirenone": [
+    "General"
+  ],
+  "pyrimethamine": [
+    "Cancer"
+  ],
+  "pralsetinib": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "sodium dodecyl sulfate": [
+    "General"
+  ],
+  "azathioprine sodium": [
+    "General"
+  ],
+  "salicylic acid": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "resmetirom": [
+    "General"
+  ],
+  "mizolastine": [
+    "General"
+  ],
+  "gadofosveset trisodium": [
+    "General"
+  ],
+  "pentazocine lactate": [
+    "General"
+  ],
+  "bremelanotide acetate": [
+    "General"
+  ],
+  "thiothixene hydrochloride": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "prednisolone tebutate": [
+    "General"
+  ],
+  "rilpivirine": [
+    "General"
+  ],
+  "lanadelumab-flyo": [
+    "General"
+  ],
+  "tropicamide": [
+    "General"
+  ],
+  "tiotropium bromide": [
+    "General"
+  ],
+  "spirapril hydrochloride": [
+    "Cardiovascular"
+  ],
+  "propiomazine hydrochloride": [
+    "General"
+  ],
+  "procyclidine hydrochloride": [
+    "Alzheimers"
+  ],
+  "hydrochlorothiazide": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "clomipramine hydrochloride": [
+    "Psychiatric"
+  ],
+  "cimetidine hydrochloride": [
+    "General"
+  ],
+  "insulin zinc susp purified beef/pork": [
+    "Diabetic"
+  ],
+  "pseudoephedrine polistirex": [
+    "General"
+  ],
+  "hydroxyprogesterone caproate (usp)": [
+    "Cancer"
+  ],
+  "treprostinil diolamine": [
+    "General"
+  ],
+  "romosozumab": [
+    "General"
+  ],
+  "alclofenac": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "thenalidine": [
+    "General"
+  ],
+  "alfacalcidol": [
+    "General"
+  ],
+  "calcitonin": [
+    "General"
+  ],
+  "deucravacitinib": [
+    "Cancer"
+  ],
+  "2-mercaptoethanesulfonic acid": [
+    "General"
+  ],
+  "stearic acid": [
+    "General"
+  ],
+  "triacetin": [
+    "Cancer"
+  ],
+  "etretinate": [
+    "Cancer"
+  ],
+  "azelastine": [
+    "General"
+  ],
+  "methazolamide": [
+    "General"
+  ],
+  "hexocyclium methylsulfate": [
+    "Alzheimers"
+  ],
+  "epothilone d": [
+    "Cancer"
+  ],
+  "pasireotide diaspartate": [
+    "General"
+  ],
+  "guanabenz": [
+    "General"
+  ],
+  "dorzolamide hydrochloride": [
+    "General"
+  ],
+  "epinastine hydrochloride": [
+    "General"
+  ],
+  "sofosbuvir": [
+    "Cancer"
+  ],
+  "tofacitinib": [
+    "Cancer"
+  ],
+  "pentazocine hydrochloride": [
+    "General"
+  ],
+  "rosiglitazone maleate": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "warfarin sodium": [
+    "General"
+  ],
+  "norethynodrel": [
+    "General"
+  ],
+  "grapefruit juice": [
+    "Cancer"
+  ],
+  "codeine sulfate": [
+    "General"
+  ],
+  "apraclonidine hydrochloride": [
+    "General"
+  ],
+  "voglibose": [
+    "General"
+  ],
+  "chlophedianol": [
+    "General"
+  ],
+  "clocortolone": [
+    "Cancer"
+  ],
+  "cyproterone": [
+    "Cancer"
+  ],
+  "goserelin acetate": [
+    "General"
+  ],
+  "testolactone": [
+    "General"
+  ],
+  "caffeine citrate": [
+    "General"
+  ],
+  "oxaprozin potassium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "indomethacin sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "desirudin": [
+    "General"
+  ],
+  "salmeterol xinafoate": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "evinacumab": [
+    "Cardiovascular"
+  ],
+  "riociguat": [
+    "General"
+  ],
+  "abaloparatide": [
+    "General"
+  ],
+  "albiglutide": [
+    "Diabetic"
+  ],
+  "propionic acid": [
+    "General"
+  ],
+  "hexylcaine hydrochloride": [
+    "General"
+  ],
+  "bilastine": [
+    "General"
+  ],
+  "loxapine succinate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "vorapaxar sulfate": [
+    "General"
+  ],
+  "asparaginase": [
+    "Cancer"
+  ],
+  "pixantrone": [
+    "General"
+  ],
+  "carbaril": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "dexbrompheniramine maleate": [
+    "General"
+  ],
+  "setmelanotide": [
+    "General"
+  ],
+  "tizanidine hydrochloride": [
+    "General"
+  ],
+  "salicylamide": [
+    "General"
+  ],
+  "guanabenz acetate": [
+    "General"
+  ],
+  "methapyrilene hydrochloride": [
+    "General"
+  ],
+  "betaxolol": [
+    "Cardiovascular"
+  ],
+  "protriptyline": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "tirbanibulin": [
+    "General"
+  ],
+  "ofatumumab": [
+    "General"
+  ],
+  "satralizumab": [
+    "General"
+  ],
+  "idoxuridine": [
+    "General"
+  ],
+  "lysosomal alpha-glucosidase": [
+    "General"
+  ],
+  "glafenine": [
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "nialamide": [
+    "Parkinsons"
+  ],
+  "cephradine": [
+    "General"
+  ],
+  "phenoxypropazine": [
+    "Parkinsons"
+  ],
+  "remoxipride hydrochloride": [
+    "Parkinsons"
+  ],
+  "elexacaftor": [
+    "General"
+  ],
+  "alverine": [
+    "Psychiatric"
+  ],
+  "dextromoramide": [
+    "General"
+  ],
+  "furazolidone": [
+    "Cancer"
+  ],
+  "copanlisib hydrochloride": [
+    "Cancer"
+  ],
+  "perindopril": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "sotalol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "ezetimibe": [
+    "General"
+  ],
+  "denosumab": [
+    "General"
+  ],
+  "isocarboxazid": [
+    "Parkinsons"
+  ],
+  "omidenepag isopropyl": [
+    "General"
+  ],
+  "toripalimab": [
+    "General"
+  ],
+  "insulin [injection], biphasic": [
+    "Diabetic"
+  ],
+  "insulin, isophane": [
+    "Diabetic"
+  ],
+  "lincomycin": [
+    "General"
+  ],
+  "medronic acid": [
+    "General"
+  ],
+  "rocuronium bromide": [
+    "General"
+  ],
+  "ethamsylate": [
+    "General"
+  ],
+  "bisacodyl": [
+    "Cancer"
+  ],
+  "hydrogen peroxide": [
+    "Cancer"
+  ],
+  "oxyquinoline": [
+    "Cancer"
+  ],
+  "doconexent": [
+    "General"
+  ],
+  "umbralisib tosylate": [
+    "General"
+  ],
+  "cetylpyridinium chloride": [
+    "General"
+  ],
+  "dalfampridine": [
+    "Cancer"
+  ],
+  "tisotumab vedotin-tftv": [
+    "General"
+  ],
+  "polyethylene glycol 4000": [
+    "General"
+  ],
+  "daunorubicin hydrochloride": [
+    "Cancer"
+  ],
+  "eslicarbazepine": [
+    "General"
+  ],
+  "aurothioglucose": [
+    "General"
+  ],
+  "lumefantrine": [
+    "Cancer"
+  ],
+  "streptomycin sulfate": [
+    "General"
+  ],
+  "flurandrenolide": [
+    "General"
+  ],
+  "pentaerythritol tetranitrate": [
+    "General"
+  ],
+  "sibutramine hydrochloride": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "remimazolam": [
+    "Psychiatric"
+  ],
+  "esmolol": [
+    "Cardiovascular"
+  ],
+  "azathioprine": [
+    "Cancer"
+  ],
+  "clioquinol": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "dimethyl fumarate": [
+    "Cancer"
+  ],
+  "benzethonium chloride": [
+    "Cancer"
+  ],
+  "ublituximab": [
+    "General"
+  ],
+  "lidocaine hydrochloride": [
+    "General"
+  ],
+  "sarilumab": [
+    "General"
+  ],
+  "curcumin": [
+    "Alzheimers",
+    "Cancer",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "guanidine hydrochloride": [
+    "General"
+  ],
+  "bicalutamide": [
+    "Cancer"
+  ],
+  "interferon alfa-n3": [
+    "Cancer"
+  ],
+  "hydroflumethiazide": [
+    "General"
+  ],
+  "nalmefene": [
+    "General"
+  ],
+  "ramelteon": [
+    "General"
+  ],
+  "primidone": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "tipranavir": [
+    "General"
+  ],
+  "tridihexethyl chloride": [
+    "Alzheimers"
+  ],
+  "artemether": [
+    "Cancer"
+  ],
+  "cephapirin sodium": [
+    "Cancer"
+  ],
+  "mestranol": [
+    "Cancer"
+  ],
+  "teriparatide acetate": [
+    "General"
+  ],
+  "propylene glycol monostearate": [
+    "General"
+  ],
+  "oxiglutatione": [
+    "General"
+  ],
+  "tepotinib hydrochloride": [
+    "General"
+  ],
+  "reteplase": [
+    "General"
+  ],
+  "oxprenolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "fluvoxamine maleate": [
+    "Psychiatric"
+  ],
+  "choline fenofibrate": [
+    "Diabetic"
+  ],
+  "mupirocin calcium": [
+    "General"
+  ],
+  "phenmetrazine hydrochloride": [
+    "Parkinsons"
+  ],
+  "doxycycline calcium": [
+    "General"
+  ],
+  "levonordefrin": [
+    "General"
+  ],
+  "hetacillin potassium": [
+    "General"
+  ],
+  "tubocurarine chloride": [
+    "General"
+  ],
+  "deslanoside": [
+    "Cancer"
+  ],
+  "triclofos sodium": [
+    "Psychiatric"
+  ],
+  "cefprozil anhydrous": [
+    "General"
+  ],
+  "cefdinir": [
+    "General"
+  ],
+  "cefoperazone sodium": [
+    "General"
+  ],
+  "cefpiramide sodium": [
+    "General"
+  ],
+  "ceftaroline fosamil acetate": [
+    "General"
+  ],
+  "carbenicillin disodium": [
+    "General"
+  ],
+  "cyclacillin": [
+    "General"
+  ],
+  "cefonicid sodium": [
+    "General"
+  ],
+  "mezlocillin sodium": [
+    "General"
+  ],
+  "oxytetracycline calcium": [
+    "General"
+  ],
+  "kanamycin sulfate": [
+    "General"
+  ],
+  "demeclocycline hydrochloride": [
+    "General"
+  ],
+  "erythromycin lactobionate": [
+    "General"
+  ],
+  "netilmicin sulfate": [
+    "General"
+  ],
+  "meclocycline sulfosalicylate": [
+    "General"
+  ],
+  "bepridil hydrochloride": [
+    "Cardiovascular"
+  ],
+  "novobiocin sodium": [
+    "General"
+  ],
+  "quinidine gluconate": [
+    "General"
+  ],
+  "merethoxylline procaine": [
+    "General"
+  ],
+  "olanzapine pamoate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "loxapine hydrochloride": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "fidaxomicin": [
+    "General"
+  ],
+  "lincomycin hydrochloride": [
+    "General"
+  ],
+  "isavuconazonium sulfate": [
+    "General"
+  ],
+  "cariprazine hydrochloride": [
+    "Parkinsons"
+  ],
+  "pasireotide pamoate": [
+    "General"
+  ],
+  "butamben picrate": [
+    "General"
+  ],
+  "sulfamethoxypyridazine": [
+    "General"
+  ],
+  "proglumide": [
+    "General"
+  ],
+  "pyrovalerone hydrochloride": [
+    "Parkinsons"
+  ],
+  "tetrazepam": [
+    "Psychiatric"
+  ],
+  "ebrotidine": [
+    "General"
+  ],
+  "minaprine hydrochloride": [
+    "Alzheimers",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "glecaprevir": [
+    "Cancer"
+  ],
+  "cenegermin-bkbj": [
+    "Cancer"
+  ],
+  "cefiderocol": [
+    "General"
+  ],
+  "lercanidipine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "maleic acid": [
+    "General"
+  ],
+  "vericiguat": [
+    "General"
+  ],
+  "penamecillin": [
+    "General"
+  ],
+  "pefloxacin": [
+    "General"
+  ],
+  "leuprolide mesylate": [
+    "General"
+  ],
+  "ephedrine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "enoximone": [
+    "Parkinsons"
+  ],
+  "bebtelovimab": [
+    "General"
+  ],
+  "pemetrexed tromethamine": [
+    "General"
+  ],
+  "glutamic acid hydrochloride": [
+    "General"
+  ],
+  "chloroxine": [
+    "General"
+  ],
+  "papaverine": [
+    "Cancer"
+  ],
+  "ticrynafen": [
+    "Cancer"
+  ],
+  "diphenhydramine hydrochloride": [
+    "Cancer"
+  ],
+  "griseofulvin": [
+    "General"
+  ],
+  "butylparaben": [
+    "Cancer"
+  ],
+  "tropolone": [
+    "General"
+  ],
+  "selegiline hydrochloride": [
+    "Parkinsons"
+  ],
+  "pipobroman": [
+    "Cancer"
+  ],
+  "linoleic acid": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "thonzonium bromide": [
+    "Cancer"
+  ],
+  "piperonyl butoxide": [
+    "Cancer"
+  ],
+  "canrenone": [
+    "Cancer"
+  ],
+  "hydralazine": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "benserazide": [
+    "Parkinsons"
+  ],
+  "phloretin": [
+    "Cancer"
+  ],
+  "pyridostigmine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "lopinavir": [
+    "Cancer"
+  ],
+  "chlorquinaldol": [
+    "General"
+  ],
+  "thimerosal": [
+    "Cancer"
+  ],
+  "unoprostone isopropyl": [
+    "General"
+  ],
+  "isoxsuprine": [
+    "Cancer"
+  ],
+  "iproniazid": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "montelukast sodium": [
+    "Cancer",
+    "Pain/Anti-inflammatory"
+  ],
+  "thiethylperazine malate": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "hesperidin": [
+    "General"
+  ],
+  "disopyramide": [
+    "Cancer"
+  ],
+  "epirubicin hydrochloride": [
+    "Cancer"
+  ],
+  "cromoglycate": [
+    "Cancer"
+  ],
+  "daunorubicin liposomal": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "colestipol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "aldesleukin": [
+    "Cancer"
+  ],
+  "soy protein isolate": [
+    "Cancer"
+  ],
+  "thrombin": [
+    "Cancer"
+  ],
+  "penicillamine": [
+    "General"
+  ],
+  "daptomycin": [
+    "Cancer"
+  ],
+  "norfloxacin": [
+    "Cancer"
+  ],
+  "bromazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "viloxazine": [
+    "Cancer"
+  ],
+  "edoxaban": [
+    "Cardiovascular"
+  ],
+  "capivasertib": [
+    "Cancer"
+  ],
+  "glucarpidase": [
+    "Cancer"
+  ],
+  "bepotastine besilate": [
+    "General"
+  ],
+  "iodine": [
+    "General"
+  ],
+  "oxymorphone": [
+    "Parkinsons"
+  ],
+  "fluticasone furoate": [
+    "General"
+  ],
+  "cocaine": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "levomethadyl": [
+    "General"
+  ],
+  "pentolinium": [
+    "General"
+  ],
+  "paramethasone": [
+    "General"
+  ],
+  "tridihexethyl": [
+    "Alzheimers"
+  ],
+  "epoprostenol": [
+    "General"
+  ],
+  "interferon alfacon-1": [
+    "Cancer"
+  ],
+  "oxazepam": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "secobarbital": [
+    "Psychiatric"
+  ],
+  "dimercaprol": [
+    "Cancer"
+  ],
+  "finerenone": [
+    "General"
+  ],
+  "brincidofovir": [
+    "General"
+  ],
+  "piperazine": [
+    "General"
+  ],
+  "cefditoren pivoxil": [
+    "General"
+  ],
+  "natamycin": [
+    "General"
+  ],
+  "cefazolin": [
+    "General"
+  ],
+  "micafungin": [
+    "General"
+  ],
+  "entecavir anhydrous": [
+    "General"
+  ],
+  "methdilazine": [
+    "General"
+  ],
+  "tafenoquine": [
+    "Cancer"
+  ],
+  "uracil mustard": [
+    "General"
+  ],
+  "auranofin": [
+    "General"
+  ],
+  "estradiol 3-benzoate": [
+    "General"
+  ],
+  "cladribine": [
+    "Cancer"
+  ],
+  "carbenicillin indanyl sodium": [
+    "General"
+  ],
+  "acetohydroxamic acid": [
+    "General"
+  ],
+  "anistreplase": [
+    "General"
+  ],
+  "doravirine": [
+    "General"
+  ],
+  "salsalate": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "tranylcypromine": [
+    "Parkinsons"
+  ],
+  "siponimod": [
+    "General"
+  ],
+  "givinostat": [
+    "Cancer"
+  ],
+  "acetaldehyde": [
+    "General"
+  ],
+  "tolazoline": [
+    "Parkinsons"
+  ],
+  "lornoxicam": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "acetate": [
+    "General"
+  ],
+  "cyclizine": [
+    "General"
+  ],
+  "celiprolol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "sparfloxacin": [
+    "Cancer"
+  ],
+  "carbamoylcholine": [
+    "Alzheimers"
+  ],
+  "eluxadoline": [
+    "General"
+  ],
+  "leniolisib": [
+    "Cancer"
+  ],
+  "duvelisib": [
+    "Cancer"
+  ],
+  "mavacamten": [
+    "General"
+  ],
+  "mitapivat": [
+    "General"
+  ],
+  "empagliflozin": [
+    "Diabetic"
+  ],
+  "caspofungin": [
+    "General"
+  ],
+  "procainamide hydrochloride": [
+    "General"
+  ],
+  "ciclesonide": [
+    "General"
+  ],
+  "tacrine hydrochloride": [
+    "Alzheimers"
+  ],
+  "arfolitixorin": [
+    "General"
+  ],
+  "monomethyl fumarate": [
+    "Cancer"
+  ],
+  "metipranolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "ethylenediamine": [
+    "General"
+  ],
+  "4-hydroxycyclophosphamide": [
+    "General"
+  ],
+  "bazedoxifene acetate": [
+    "Diabetic"
+  ],
+  "insulin susp protamine zinc purified pork": [
+    "Diabetic"
+  ],
+  "dyclonine hydrochloride": [
+    "General"
+  ],
+  "antithrombin alfa": [
+    "General"
+  ],
+  "quinapril": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "oleic acid": [
+    "Diabetic"
+  ],
+  "brompheniramine maleate": [
+    "General"
+  ],
+  "benzphetamine hydrochloride": [
+    "General"
+  ],
+  "dapiprazole": [
+    "Parkinsons"
+  ],
+  "corifollitropin alfa": [
+    "General"
+  ],
+  "cocaine hydrochloride": [
+    "General"
+  ],
+  "desonide": [
+    "General"
+  ],
+  "pseudoephedrine": [
+    "Cancer",
+    "Parkinsons",
+    "Cardiovascular",
+    "Psychiatric"
+  ],
+  "flucytosine": [
+    "Cancer"
+  ],
+  "sulfinpyrazone": [
+    "Cancer"
+  ],
+  "neostigmine": [
+    "Alzheimers",
+    "Cancer"
+  ],
+  "pyrantel pamoate": [
+    "General"
+  ],
+  "physostigmine": [
+    "Alzheimers"
+  ],
+  "panobinostat lactate": [
+    "Cancer"
+  ],
+  "estetrol": [
+    "General"
+  ],
+  "methylhomatropine": [
+    "Alzheimers"
+  ],
+  "sapropterin dihydrochloride": [
+    "General"
+  ],
+  "betaine hydrochloride": [
+    "General"
+  ],
+  "pancuronium": [
+    "General"
+  ],
+  "mibefradil dihydrochloride": [
+    "General"
+  ],
+  "bromfenac sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "trimeprazine tartrate": [
+    "Cancer"
+  ],
+  "tripelennamine citrate": [
+    "General"
+  ],
+  "trimipramine maleate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "secretin synthetic porcine": [
+    "General"
+  ],
+  "insulin zinc susp extended purified beef": [
+    "Diabetic"
+  ],
+  "insulin susp isophane beef/pork": [
+    "Diabetic"
+  ],
+  "insulin zinc susp purified beef": [
+    "Diabetic"
+  ],
+  "fosfomycin tromethamine": [
+    "General"
+  ],
+  "desoxycorticosterone pivalate": [
+    "General"
+  ],
+  "ambenonium chloride": [
+    "Alzheimers"
+  ],
+  "paramethasone acetate": [
+    "General"
+  ],
+  "estrogens, esterified (usp)": [
+    "General"
+  ],
+  "rauwolfia serpentina (usp)": [
+    "Cardiovascular"
+  ],
+  "pargyline hydrochloride": [
+    "Parkinsons"
+  ],
+  "phenelzine sulfate": [
+    "Parkinsons"
+  ],
+  "idursulfase": [
+    "General"
+  ],
+  "diltiazem malate": [
+    "Cardiovascular"
+  ],
+  "rivastigmine tartrate": [
+    "Alzheimers"
+  ],
+  "bitolterol mesylate": [
+    "Cardiovascular"
+  ],
+  "testosterone enanthate": [
+    "General"
+  ],
+  "fosamprenavir": [
+    "General"
+  ],
+  "rapacuronium bromide": [
+    "General"
+  ],
+  "atracurium besylate": [
+    "General"
+  ],
+  "spinosad": [
+    "General"
+  ],
+  "clorazepate dipotassium": [
+    "Psychiatric"
+  ],
+  "methyprylon": [
+    "Psychiatric"
+  ],
+  "besifloxacin hydrochloride": [
+    "General"
+  ],
+  "alatrofloxacin mesylate": [
+    "General"
+  ],
+  "sulfanilamide": [
+    "Cancer"
+  ],
+  "sulfacetamide sodium": [
+    "General"
+  ],
+  "sulfameter": [
+    "General"
+  ],
+  "clavulanate potassium": [
+    "General"
+  ],
+  "sulbactam sodium": [
+    "General"
+  ],
+  "ceftazidime sodium": [
+    "General"
+  ],
+  "ceftriaxone sodium": [
+    "General"
+  ],
+  "cefepime hydrochloride": [
+    "General"
+  ],
+  "cefpodoxime proxetil": [
+    "General"
+  ],
+  "nafcillin sodium": [
+    "General"
+  ],
+  "enfuvirtide": [
+    "General"
+  ],
+  "tetracycline hydrochloride": [
+    "General"
+  ],
+  "diethylpropion": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "cinoxacin": [
+    "General"
+  ],
+  "gemifloxacin mesylate": [
+    "General"
+  ],
+  "fingolimod hydrochloride": [
+    "General"
+  ],
+  "lindane": [
+    "General"
+  ],
+  "luliconazole": [
+    "General"
+  ],
+  "epinastine": [
+    "Parkinsons"
+  ],
+  "mifamurtide": [
+    "General"
+  ],
+  "moxonidine": [
+    "General"
+  ],
+  "bezlotoxumab": [
+    "General"
+  ],
+  "bismuth subgallate": [
+    "General"
+  ],
+  "cefsulodin": [
+    "General"
+  ],
+  "carbenoxolone": [
+    "General"
+  ],
+  "dichlorobenzyl alcohol": [
+    "General"
+  ],
+  "netarsudil dimesylate": [
+    "General"
+  ],
+  "vilobelimab": [
+    "General"
+  ],
+  "propiomazine": [
+    "Alzheimers",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "epoetin theta": [
+    "General"
+  ],
+  "cefiderocol sulfate tosylate": [
+    "General"
+  ],
+  "trilaciclib dihydrochloride": [
+    "Cancer"
+  ],
+  "lenacapavir": [
+    "General"
+  ],
+  "quinupristin/dalfopristin": [
+    "General"
+  ],
+  "mosunetuzumab": [
+    "General"
+  ],
+  "bamlanivimab": [
+    "General"
+  ],
+  "eflapegrastim": [
+    "General"
+  ],
+  "mitapivat sulfate": [
+    "General"
+  ],
+  "somatrogon": [
+    "General"
+  ],
+  "mobocertinib succinate": [
+    "General"
+  ],
+  "estropipate": [
+    "General"
+  ],
+  "methocarbamol": [
+    "Cancer"
+  ],
+  "erythrosine": [
+    "General"
+  ],
+  "triclabendazole": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "protriptyline hydrochloride": [
+    "Cancer",
+    "Psychiatric"
+  ],
+  "racepinephrine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "diethylcarbamazine citrate": [
+    "Cancer"
+  ],
+  "tiopronin": [
+    "General"
+  ],
+  "calcium pantothenate": [
+    "General"
+  ],
+  "trioxsalen": [
+    "General"
+  ],
+  "phenol": [
+    "Cancer"
+  ],
+  "carisoprodol": [
+    "General"
+  ],
+  "dinutuximab": [
+    "General"
+  ],
+  "ganciclovir": [
+    "General"
+  ],
+  "nabilone": [
+    "General"
+  ],
+  "vitamin d": [
+    "General"
+  ],
+  "emicizumab": [
+    "General"
+  ],
+  "alkavervir": [
+    "General"
+  ],
+  "inclisiran": [
+    "Cardiovascular"
+  ],
+  "voxilaprevir": [
+    "Cancer"
+  ],
+  "apixaban": [
+    "Cardiovascular"
+  ],
+  "eprosartan": [
+    "Cardiovascular"
+  ],
+  "nitroprusside": [
+    "Cardiovascular"
+  ],
+  "tiotropium": [
+    "Alzheimers",
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "bentiromide": [
+    "General"
+  ],
+  "phenmetrazine": [
+    "Parkinsons"
+  ],
+  "ranibizumab": [
+    "General"
+  ],
+  "anifrolumab": [
+    "Cancer"
+  ],
+  "melphalan flufenamide": [
+    "General"
+  ],
+  "cabotegravir": [
+    "General"
+  ],
+  "lactoferrin": [
+    "General"
+  ],
+  "thiabendazole": [
+    "Cancer"
+  ],
+  "famciclovir": [
+    "General"
+  ],
+  "dornase alfa": [
+    "General"
+  ],
+  "diflorasone diacetate": [
+    "Cancer"
+  ],
+  "glucosamine": [
+    "General"
+  ],
+  "eravacycline": [
+    "General"
+  ],
+  "rifamycin sv": [
+    "General"
+  ],
+  "omadacycline": [
+    "General"
+  ],
+  "mefloquine": [
+    "Cancer"
+  ],
+  "haloprogin": [
+    "General"
+  ],
+  "sulfacytine": [
+    "General"
+  ],
+  "levoketoconazole": [
+    "Cancer"
+  ],
+  "fomivirsen sodium": [
+    "General"
+  ],
+  "gemifloxacin": [
+    "General"
+  ],
+  "insulin susp isophane recombinant human": [
+    "Diabetic"
+  ],
+  "mupirocin": [
+    "General"
+  ],
+  "piperacetazine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "porfimer sodium": [
+    "General"
+  ],
+  "saralasin acetate": [
+    "Cardiovascular"
+  ],
+  "probucol": [
+    "General"
+  ],
+  "penicillin g benzathine": [
+    "General"
+  ],
+  "hydroxystilbamidine isethionate": [
+    "Cancer"
+  ],
+  "adl5747": [
+    "General"
+  ],
+  "fondaparinux": [
+    "General"
+  ],
+  "alanylglutamine": [
+    "General"
+  ],
+  "pentamidine": [
+    "General"
+  ],
+  "teicoplanin": [
+    "General"
+  ],
+  "sermorelin": [
+    "General"
+  ],
+  "moxetumomab pasudotox": [
+    "Cancer"
+  ],
+  "stanozolol": [
+    "Cancer"
+  ],
+  "arginine": [
+    "General"
+  ],
+  "lithium carbonate": [
+    "Cancer"
+  ],
+  "rasagiline": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "glycyrrhetinic acid": [
+    "General"
+  ],
+  "omacetaxine mepesuccinate": [
+    "General"
+  ],
+  "clemastine": [
+    "Cancer"
+  ],
+  "dalbavancin": [
+    "General"
+  ],
+  "cevimeline hydrochloride": [
+    "Alzheimers"
+  ],
+  "clodronate disodium": [
+    "General"
+  ],
+  "selexipag": [
+    "General"
+  ],
+  "vincamine": [
+    "General"
+  ],
+  "enalaprilat anhydrous": [
+    "Cardiovascular"
+  ],
+  "nafarelin acetate": [
+    "General"
+  ],
+  "citric acid": [
+    "Cancer"
+  ],
+  "desoxycorticosterone acetate": [
+    "General"
+  ],
+  "volanesorsen": [
+    "Alzheimers"
+  ],
+  "paramethadione": [
+    "General"
+  ],
+  "chlorhexidine hydrochloride": [
+    "Cancer"
+  ],
+  "atipamezole": [
+    "General"
+  ],
+  "acetylcholine chloride": [
+    "General"
+  ],
+  "eletriptan": [
+    "Cancer"
+  ],
+  "trihexyphenidyl hydrochloride": [
+    "Alzheimers"
+  ],
+  "timolol maleate": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "metoprolol tartrate": [
+    "Cardiovascular"
+  ],
+  "dolasetron mesylate": [
+    "General"
+  ],
+  "alogliptin benzoate": [
+    "Diabetic"
+  ],
+  "frovatriptan succinate": [
+    "General"
+  ],
+  "ergotamine tartrate": [
+    "General"
+  ],
+  "elvitegravir": [
+    "General"
+  ],
+  "ruxolitinib phosphate": [
+    "Cancer"
+  ],
+  "acetazolamide sodium": [
+    "General"
+  ],
+  "guanfacine hydrochloride": [
+    "Cancer"
+  ],
+  "penbutolol sulfate": [
+    "Cardiovascular"
+  ],
+  "metaproterenol sulfate": [
+    "Cardiovascular"
+  ],
+  "perindopril arginine": [
+    "Cardiovascular"
+  ],
+  "sitaxentan sodium": [
+    "General"
+  ],
+  "aloxiprin": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "fam-trastuzumab deruxtecan-nxki": [
+    "Cancer"
+  ],
+  "setmelanotide acetate": [
+    "General"
+  ],
+  "coagulation factor ix recombinant immunoglobulin g1 fusion protein": [
+    "General"
+  ],
+  "cetalkonium chloride": [
+    "General"
+  ],
+  "ibufenac": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "maltol": [
+    "General"
+  ],
+  "ozanimod": [
+    "General"
+  ],
+  "melevodopa": [
+    "Parkinsons"
+  ],
+  "methyl anthranilate": [
+    "General"
+  ],
+  "mersalyl": [
+    "General"
+  ],
+  "benzophenone": [
+    "General"
+  ],
+  "amprenavir": [
+    "Cancer"
+  ],
+  "sorbitol": [
+    "General"
+  ],
+  "glycerol phenylbutyrate": [
+    "General"
+  ],
+  "ropeginterferon alfa-2b": [
+    "Cancer"
+  ],
+  "lumasiran": [
+    "General"
+  ],
+  "omacetaxine": [
+    "General"
+  ],
+  "almotriptan": [
+    "General"
+  ],
+  "crofelemer": [
+    "General"
+  ],
+  "ceruletide": [
+    "General"
+  ],
+  "oxyphenonium": [
+    "Alzheimers"
+  ],
+  "zuclopenthixol": [
+    "Parkinsons"
+  ],
+  "cisatracurium besylate": [
+    "General"
+  ],
+  "degarelix": [
+    "General"
+  ],
+  "methohexital": [
+    "Psychiatric"
+  ],
+  "insulin, regular, pork": [
+    "Diabetic"
+  ],
+  "trimeprazine": [
+    "General"
+  ],
+  "maltose": [
+    "General"
+  ],
+  "mazindol": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "racepinephrine": [
+    "Parkinsons"
+  ],
+  "cefmetazole sodium": [
+    "General"
+  ],
+  "patisiran": [
+    "General"
+  ],
+  "insulin zinc susp semisynthetic purified human": [
+    "Diabetic"
+  ],
+  "procaine": [
+    "General"
+  ],
+  "loncastuximab tesirine": [
+    "General"
+  ],
+  "mecamylamine hydrochloride": [
+    "General"
+  ],
+  "estramustine phosphate sodium": [
+    "General"
+  ],
+  "alum, potassium": [
+    "General"
+  ],
+  "hydroxychloroquine sulfate": [
+    "General"
+  ],
+  "cantharidin": [
+    "Cancer"
+  ],
+  "methscopolamine bromide": [
+    "Alzheimers"
+  ],
+  "hydrocortisone probutate": [
+    "General"
+  ],
+  "burosumab-twza": [
+    "Cancer"
+  ],
+  "cobimetinib fumarate": [
+    "Cancer"
+  ],
+  "dasiglucagon hydrochloride": [
+    "General"
+  ],
+  "risedronic acid": [
+    "General"
+  ],
+  "vamorolone": [
+    "General"
+  ],
+  "racecadotril": [
+    "General"
+  ],
+  "etravirine": [
+    "Cancer"
+  ],
+  "darolutamide": [
+    "General"
+  ],
+  "artesunate": [
+    "Cancer"
+  ],
+  "balsalazide": [
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "benzyl salicylate": [
+    "General"
+  ],
+  "lh (menotropins)": [
+    "General"
+  ],
+  "olmesartan medoxomil": [
+    "Cardiovascular"
+  ],
+  "sodium valproate": [
+    "General"
+  ],
+  "naratriptan hydrochloride": [
+    "General"
+  ],
+  "lorcaserin hydrochloride": [
+    "Psychiatric"
+  ],
+  "fentanyl hydrochloride": [
+    "General"
+  ],
+  "hydrocortamate hydrochloride": [
+    "General"
+  ],
+  "betamethasone sodium phosphate": [
+    "General"
+  ],
+  "dexamethasone sodium phosphate": [
+    "Cancer"
+  ],
+  "methoxamine hydrochloride": [
+    "General"
+  ],
+  "trimethaphan camsylate": [
+    "General"
+  ],
+  "maftivimab": [
+    "General"
+  ],
+  "saxagliptin anhydrous": [
+    "Diabetic"
+  ],
+  "methyl aminolevulinate hydrochloride": [
+    "General"
+  ],
+  "sotalol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "betamethasone valerate": [
+    "General"
+  ],
+  "cinacalcet hydrochloride": [
+    "Diabetic"
+  ],
+  "xylometazoline hydrochloride": [
+    "Psychiatric"
+  ],
+  "cefaclor anhydrous": [
+    "General"
+  ],
+  "phytosterols": [
+    "General"
+  ],
+  "drotrecogin alfa": [
+    "Parkinsons"
+  ],
+  "efalizumab": [
+    "General"
+  ],
+  "droperidol": [
+    "Cancer",
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "eicosapentaenoic acid": [
+    "Pain/Anti-inflammatory"
+  ],
+  "spirapril": [
+    "Cardiovascular"
+  ],
+  "monobenzone": [
+    "Cancer"
+  ],
+  "cyclofenil": [
+    "Cancer"
+  ],
+  "doxercalciferol": [
+    "Cancer"
+  ],
+  "perindoprilat": [
+    "General"
+  ],
+  "buserelin acetate": [
+    "General"
+  ],
+  "tapinarof": [
+    "General"
+  ],
+  "s-adenosylmethionine": [
+    "Cancer"
+  ],
+  "letermovir": [
+    "General"
+  ],
+  "azelastine hydrochloride": [
+    "Cancer"
+  ],
+  "nedocromil": [
+    "General"
+  ],
+  "enasidenib mesylate": [
+    "Cancer"
+  ],
+  "artenimol": [
+    "General"
+  ],
+  "meclizine hydrochloride": [
+    "General"
+  ],
+  "adefovir": [
+    "General"
+  ],
+  "bendroflumethiazide": [
+    "General"
+  ],
+  "methyltestosterone": [
+    "General"
+  ],
+  "plasminogen": [
+    "General"
+  ],
+  "insulin detemir": [
+    "Diabetic"
+  ],
+  "atovaquone": [
+    "Cancer"
+  ],
+  "albumin human-kjda": [
+    "General"
+  ],
+  "thymidine": [
+    "Cancer"
+  ],
+  "pronetalol": [
+    "Cardiovascular"
+  ],
+  "vardenafil hydrochloride trihydrate": [
+    "General"
+  ],
+  "conivaptan hydrochloride": [
+    "General"
+  ],
+  "insulin purified beef": [
+    "Diabetic"
+  ],
+  "mequinol": [
+    "General"
+  ],
+  "abacavir sulfate": [
+    "General"
+  ],
+  "levalbuterol tartrate": [
+    "Cardiovascular"
+  ],
+  "secukinumab": [
+    "General"
+  ],
+  "palovarotene": [
+    "General"
+  ],
+  "bendazac": [
+    "General"
+  ],
+  "glasdegib maleate": [
+    "General"
+  ],
+  "fostamatinib disodium": [
+    "General"
+  ],
+  "lonapegsomatropin": [
+    "General"
+  ],
+  "phenylephrine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "benazepril hydrochloride": [
+    "Cardiovascular"
+  ],
+  "cromolyn sodium": [
+    "Cancer"
+  ],
+  "trenbolone acetate": [
+    "General"
+  ],
+  "benzalkonium chloride": [
+    "Cancer"
+  ],
+  "penicillin g potassium": [
+    "General"
+  ],
+  "dl-lactic acid": [
+    "General"
+  ],
+  "methyclothiazide": [
+    "Cancer"
+  ],
+  "magnesium chloride anhydrous": [
+    "Alzheimers"
+  ],
+  "luteinizing hormone": [
+    "General"
+  ],
+  "echinacea preparation": [
+    "General"
+  ],
+  "cilazapril": [
+    "Cardiovascular"
+  ],
+  "mepolizumab": [
+    "Cancer"
+  ],
+  "nedosiran": [
+    "General"
+  ],
+  "insulin glargine-yfgn": [
+    "Diabetic"
+  ],
+  "progestogen": [
+    "General"
+  ],
+  "recombinant factor viia": [
+    "General"
+  ],
+  "diphenoxylate": [
+    "General"
+  ],
+  "collagenase clostridium histolyticum-aaes": [
+    "Cancer"
+  ],
+  "delavirdine mesylate": [
+    "General"
+  ],
+  "eliglustat tartrate": [
+    "General"
+  ],
+  "phenindamine": [
+    "General"
+  ],
+  "insulin susp protamine zinc beef/pork": [
+    "Diabetic"
+  ],
+  "alpidem": [
+    "General"
+  ],
+  "dimethyl sulfoxide": [
+    "Cancer"
+  ],
+  "picotamide": [
+    "General"
+  ],
+  "lixisenatide": [
+    "Diabetic"
+  ],
+  "acipimox": [
+    "General"
+  ],
+  "adenosine monophosphate": [
+    "General"
+  ],
+  "doxorubicin liposome": [
+    "Cancer"
+  ],
+  "icatibant acetate": [
+    "General"
+  ],
+  "tolmetin": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "laurocapram": [
+    "General"
+  ],
+  "sipuleucel-t": [
+    "General"
+  ],
+  "foscarnet": [
+    "General"
+  ],
+  "3-iodobenzylguanidine": [
+    "Parkinsons"
+  ],
+  "avanafil": [
+    "General"
+  ],
+  "eptacog alfa (activated)": [
+    "General"
+  ],
+  "epoprostenol sodium": [
+    "General"
+  ],
+  "rifaximin": [
+    "General"
+  ],
+  "isoetharine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "dexfenfluramine": [
+    "Psychiatric"
+  ],
+  "voretigene neparvovec": [
+    "General"
+  ],
+  "bendamustine": [
+    "General"
+  ],
+  "insulin susp isophane purified beef": [
+    "Diabetic"
+  ],
+  "levobupivacaine hydrochloride": [
+    "General"
+  ],
+  "bethanidine sulfate": [
+    "General"
+  ],
+  "nesiritide": [
+    "General"
+  ],
+  "risedronate sodium anhydrous": [
+    "General"
+  ],
+  "dapagliflozin propylene glycol": [
+    "Diabetic"
+  ],
+  "flavoxate hydrochloride": [
+    "General"
+  ],
+  "obiltoxaximab": [
+    "General"
+  ],
+  "defibrotide": [
+    "General"
+  ],
+  "esomeprazole magnesium": [
+    "General"
+  ],
+  "nalmefene hydrochloride": [
+    "General"
+  ],
+  "clometacin": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "ansuvimab-zykl": [
+    "General"
+  ],
+  "ethylestrenol": [
+    "General"
+  ],
+  "milrinone lactate": [
+    "General"
+  ],
+  "tositumomab": [
+    "General"
+  ],
+  "pipecuronium bromide": [
+    "General"
+  ],
+  "reproterol": [
+    "Cardiovascular"
+  ],
+  "bismuth subsalicylate": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "indigo": [
+    "Cancer"
+  ],
+  "kinetin": [
+    "Cancer"
+  ],
+  "verteporfin": [
+    "General"
+  ],
+  "atropine sulfate": [
+    "Alzheimers"
+  ],
+  "methacholine": [
+    "Cardiovascular"
+  ],
+  "pegloticase": [
+    "Cancer"
+  ],
+  "alvimopan anhydrous": [
+    "General"
+  ],
+  "elagolix sodium": [
+    "General"
+  ],
+  "barbital": [
+    "Psychiatric"
+  ],
+  "solriamfetol": [
+    "General"
+  ],
+  "reboxetine": [
+    "General"
+  ],
+  "ornithine, (l)-isomer": [
+    "General"
+  ],
+  "pegfilgrastim-jmdb": [
+    "General"
+  ],
+  "sodium dichloroacetate": [
+    "General"
+  ],
+  "danthron": [
+    "Cancer"
+  ],
+  "telotristat etiprate": [
+    "General"
+  ],
+  "fosnetupitant chloride hydrochloride": [
+    "General"
+  ],
+  "prucalopride succinate": [
+    "General"
+  ],
+  "omadacycline tosylate": [
+    "General"
+  ],
+  "lefamulin acetate": [
+    "General"
+  ],
+  "lasmiditan succinate": [
+    "General"
+  ],
+  "crizanlizumab": [
+    "General"
+  ],
+  "factor xiii, human": [
+    "General"
+  ],
+  "fructose": [
+    "Cancer"
+  ],
+  "olopatadine": [
+    "General"
+  ],
+  "vanillin": [
+    "General"
+  ],
+  "bromfenac": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "iobenguane i-123": [
+    "General"
+  ],
+  "betibeglogene autotemcel": [
+    "General"
+  ],
+  "luspatercept-aamt": [
+    "General"
+  ],
+  "betazole hydrochloride": [
+    "General"
+  ],
+  "levocabastine": [
+    "General"
+  ],
+  "amobarbital": [
+    "Psychiatric"
+  ],
+  "phenylalanine": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "coagulation factor x human": [
+    "General"
+  ],
+  "iptacopan": [
+    "General"
+  ],
+  "ximelagatran": [
+    "General"
+  ],
+  "benoxaprofen": [
+    "Pain/Anti-inflammatory"
+  ],
+  "methdilazine hydrochloride": [
+    "General"
+  ],
+  "degarelix acetate": [
+    "General"
+  ],
+  "cortisone acetate": [
+    "General"
+  ],
+  "osimertinib mesylate": [
+    "General"
+  ],
+  "amivantamab-vmjw": [
+    "General"
+  ],
+  "talquetamab": [
+    "General"
+  ],
+  "antrafenine": [
+    "General"
+  ],
+  "trifarotene": [
+    "Alzheimers"
+  ],
+  "pitolisant hydrochloride": [
+    "General"
+  ],
+  "diroximel fumarate": [
+    "Cancer"
+  ],
+  "brexucabtagene autoleucel": [
+    "General"
+  ],
+  "asciminib hydrochloride": [
+    "General"
+  ],
+  "phenoxyethanol": [
+    "General"
+  ],
+  "3,3',4',5-tetrachlorosalicylanilide": [
+    "General"
+  ],
+  "denatonium benzoate": [
+    "Cancer"
+  ],
+  "vidarabine": [
+    "General"
+  ],
+  "dodecyl gallate": [
+    "General"
+  ],
+  "bisabolol": [
+    "General"
+  ],
+  "omega-3 fatty acids": [
+    "Pain/Anti-inflammatory"
+  ],
+  "desmoteplase": [
+    "General"
+  ],
+  "recombinant human chorionic gonadotropin": [
+    "General"
+  ],
+  "thymalfasin": [
+    "General"
+  ],
+  "ethinamate": [
+    "General"
+  ],
+  "indecainide": [
+    "General"
+  ],
+  "vibegron": [
+    "General"
+  ],
+  "sodium selenite": [
+    "General"
+  ],
+  "aprotinin": [
+    "General"
+  ],
+  "clemastine fumarate": [
+    "General"
+  ],
+  "cinnamic aldehyde": [
+    "General"
+  ],
+  "anti-thymocyte globulin": [
+    "Cancer"
+  ],
+  "moxifloxacin": [
+    "Cancer"
+  ],
+  "diphenoxylate hydrochloride": [
+    "General"
+  ],
+  "carphenazine maleate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "diacetylrhein": [
+    "Cancer"
+  ],
+  "telavancin": [
+    "General"
+  ],
+  "aclidinium bromide": [
+    "General"
+  ],
+  "levalbuterol": [
+    "Cancer",
+    "Cardiovascular"
+  ],
+  "nelfinavir mesylate": [
+    "Cancer"
+  ],
+  "hydroxyzine pamoate": [
+    "General"
+  ],
+  "benziodarone": [
+    "General"
+  ],
+  "alcuronium": [
+    "General"
+  ],
+  "canrenoate potassium": [
+    "General"
+  ],
+  "dibenzepin": [
+    "General"
+  ],
+  "distigmine": [
+    "Alzheimers"
+  ],
+  "technetium tc 99m succimer": [
+    "General"
+  ],
+  "yohimbine hydrochloride": [
+    "General"
+  ],
+  "homatropine hydrobromide": [
+    "General"
+  ],
+  "propyl gallate": [
+    "Cancer"
+  ],
+  "triptorelin": [
+    "General"
+  ],
+  "sacrosidase": [
+    "General"
+  ],
+  "gramicidin": [
+    "Cancer"
+  ],
+  "vancomycin": [
+    "General"
+  ],
+  "emedastine": [
+    "General"
+  ],
+  "diphemanil methylsulfate": [
+    "Alzheimers"
+  ],
+  "tezepelumab": [
+    "General"
+  ],
+  "florbetapir f-18": [
+    "Alzheimers"
+  ],
+  "ritlecitinib": [
+    "General"
+  ],
+  "tafamidis meglumine": [
+    "General"
+  ],
+  "bemiparin sodium": [
+    "General"
+  ],
+  "streptomycin": [
+    "General"
+  ],
+  "febantel": [
+    "General"
+  ],
+  "golodirsen": [
+    "General"
+  ],
+  "metoprolol succinate": [
+    "Cardiovascular"
+  ],
+  "hypoxis hemerocallidea root extract": [
+    "General"
+  ],
+  "erdosteine": [
+    "General"
+  ],
+  "benzododecinium chloride": [
+    "General"
+  ],
+  "deferiprone": [
+    "General"
+  ],
+  "lasmiditan": [
+    "General"
+  ],
+  "alogliptin": [
+    "Diabetic"
+  ],
+  "procainamide": [
+    "General"
+  ],
+  "berotralstat": [
+    "General"
+  ],
+  "nonoxynol-9": [
+    "General"
+  ],
+  "cetylpyridinium": [
+    "General"
+  ],
+  "cortisone": [
+    "General"
+  ],
+  "pegaspargase": [
+    "Cancer"
+  ],
+  "linolenic acid": [
+    "Cancer"
+  ],
+  "vinflunine": [
+    "General"
+  ],
+  "dexfenfluramine hydrochloride": [
+    "Psychiatric"
+  ],
+  "ropivacaine hydrochloride": [
+    "General"
+  ],
+  "carteolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "chrysin": [
+    "Cancer"
+  ],
+  "quinidine polygalacturonate": [
+    "General"
+  ],
+  "lysine": [
+    "Cancer"
+  ],
+  "insulin degludec": [
+    "Diabetic"
+  ],
+  "chloramphenicol palmitate": [
+    "General"
+  ],
+  "pyrogallol": [
+    "Cancer"
+  ],
+  "nitazoxanide": [
+    "Cancer"
+  ],
+  "ecothiopate": [
+    "General"
+  ],
+  "rucaparib camsylate": [
+    "General"
+  ],
+  "phenyl aminosalicylate": [
+    "General"
+  ],
+  "sertaconazole nitrate": [
+    "General"
+  ],
+  "linaclotide": [
+    "General"
+  ],
+  "dabigatran etexilate mesylate": [
+    "General"
+  ],
+  "betaxolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "ceruletide diethylamine": [
+    "General"
+  ],
+  "mecasermin rinfabate": [
+    "Cancer"
+  ],
+  "seractide acetate": [
+    "General"
+  ],
+  "amphetamine sulfate": [
+    "Parkinsons"
+  ],
+  "ticarcillin disodium": [
+    "General"
+  ],
+  "bacampicillin hydrochloride": [
+    "General"
+  ],
+  "cefazolin sodium": [
+    "General"
+  ],
+  "doripenem": [
+    "General"
+  ],
+  "cephalexin hydrochloride": [
+    "General"
+  ],
+  "piperacillin sodium": [
+    "General"
+  ],
+  "tigecycline": [
+    "General"
+  ],
+  "gentamicin sulfate": [
+    "General"
+  ],
+  "telbivudine": [
+    "General"
+  ],
+  "mexiletine hydrochloride": [
+    "General"
+  ],
+  "articaine hydrochloride": [
+    "General"
+  ],
+  "norepinephrine bitartrate": [
+    "Cardiovascular"
+  ],
+  "pramipexole dihydrochloride": [
+    "Parkinsons"
+  ],
+  "tedizolid phosphate": [
+    "General"
+  ],
+  "avibactam sodium": [
+    "General"
+  ],
+  "ombitasvir": [
+    "Cancer"
+  ],
+  "finafloxacin": [
+    "General"
+  ],
+  "daclatasvir dihydrochloride": [
+    "General"
+  ],
+  "carbocysteine": [
+    "General"
+  ],
+  "telotristat": [
+    "General"
+  ],
+  "encainide hydrochloride": [
+    "General"
+  ],
+  "nitrefazole": [
+    "General"
+  ],
+  "temafloxacin hydrochloride": [
+    "General"
+  ],
+  "terodiline hydrochloride": [
+    "Alzheimers",
+    "Cardiovascular"
+  ],
+  "allylestrenol": [
+    "General"
+  ],
+  "benperidol": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "vaborbactam": [
+    "General"
+  ],
+  "ozenoxacin": [
+    "General"
+  ],
+  "eravacycline dihydrochloride": [
+    "General"
+  ],
+  "plazomicin sulfate": [
+    "General"
+  ],
+  "fibrinogen, human": [
+    "General"
+  ],
+  "diacetylmorphine": [
+    "General"
+  ],
+  "cefotetan": [
+    "General"
+  ],
+  "indoprofen": [
+    "Cancer",
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "biotin": [
+    "General"
+  ],
+  "dibucaine hydrochloride": [
+    "Cancer"
+  ],
+  "allantoin": [
+    "General"
+  ],
+  "ferrous sulfate": [
+    "Cancer"
+  ],
+  "halofantrine hydrochloride": [
+    "Cancer"
+  ],
+  "pyrithione zinc": [
+    "General"
+  ],
+  "enrofloxacin": [
+    "General"
+  ],
+  "thonzonium": [
+    "Cancer"
+  ],
+  "benzaldehyde": [
+    "General"
+  ],
+  "acrisorcin": [
+    "General"
+  ],
+  "calcium gluconate": [
+    "General"
+  ],
+  "heavy mineral oil": [
+    "General"
+  ],
+  "ginkgo biloba extract": [
+    "Cancer"
+  ],
+  "albendazole": [
+    "General"
+  ],
+  "glatiramer": [
+    "General"
+  ],
+  "pitavastatin": [
+    "Cardiovascular"
+  ],
+  "dezocine": [
+    "General"
+  ],
+  "fosinopril": [
+    "Cardiovascular"
+  ],
+  "tocainide": [
+    "General"
+  ],
+  "lefamulin": [
+    "General"
+  ],
+  "dihydrocodeine": [
+    "General"
+  ],
+  "sodium pyruvate": [
+    "General"
+  ],
+  "procarbazine": [
+    "General"
+  ],
+  "valganciclovir": [
+    "General"
+  ],
+  "safinamide mesylate": [
+    "Parkinsons"
+  ],
+  "sodium zirconium cyclosilicate": [
+    "General"
+  ],
+  "cellulose sodium phosphate": [
+    "General"
+  ],
+  "viomycin sulfate": [
+    "General"
+  ],
+  "besifloxacin": [
+    "General"
+  ],
+  "efinaconazole": [
+    "General"
+  ],
+  "sebelipase alfa": [
+    "General"
+  ],
+  "sulodexide": [
+    "General"
+  ],
+  "serine": [
+    "General"
+  ],
+  "vilanterol trifenatate": [
+    "Cardiovascular"
+  ],
+  "articaine": [
+    "Cancer"
+  ],
+  "calcium": [
+    "General"
+  ],
+  "lactulose": [
+    "Cancer"
+  ],
+  "proline": [
+    "General"
+  ],
+  "ciclopirox olamine": [
+    "Cancer"
+  ],
+  "meptazinol": [
+    "Alzheimers"
+  ],
+  "sitaxentan": [
+    "General"
+  ],
+  "anhydrous dextrose": [
+    "Parkinsons"
+  ],
+  "triamcinolone hexacetonide": [
+    "General"
+  ],
+  "rimiterol": [
+    "Cardiovascular"
+  ],
+  "coagulation factor ix (recombinant), glycopegylated": [
+    "General"
+  ],
+  "belantamab mafodotin-blmf": [
+    "General"
+  ],
+  "pheniramine": [
+    "General"
+  ],
+  "dexchlorpheniramine maleate": [
+    "General"
+  ],
+  "papaverine hydrochloride": [
+    "Cancer"
+  ],
+  "metreleptin": [
+    "General"
+  ],
+  "histamine phosphate": [
+    "General"
+  ],
+  "methotrexate sodium": [
+    "General"
+  ],
+  "mesoridazine besylate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "azatadine": [
+    "General"
+  ],
+  "estrogens, conjugated synthetic a": [
+    "General"
+  ],
+  "oliceridine": [
+    "Cancer"
+  ],
+  "pegcetacoplan": [
+    "General"
+  ],
+  "carbinoxamine maleate": [
+    "General"
+  ],
+  "fluphenazine decanoate": [
+    "Parkinsons"
+  ],
+  "ganirelix acetate": [
+    "General"
+  ],
+  "secretin human, synthetic": [
+    "General"
+  ],
+  "almotriptan malate": [
+    "General"
+  ],
+  "hexafluorenium bromide": [
+    "Alzheimers"
+  ],
+  "hydrocodone polistirex": [
+    "General"
+  ],
+  "isoproterenol sulfate": [
+    "Cardiovascular"
+  ],
+  "balsalazide disodium": [
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "phenoxybenzamine hydrochloride": [
+    "Cancer"
+  ],
+  "methicillin sodium": [
+    "General"
+  ],
+  "mivacurium chloride": [
+    "General"
+  ],
+  "sulfathiazole": [
+    "General"
+  ],
+  "sulfalene": [
+    "General"
+  ],
+  "acetyl sulfisoxazole": [
+    "General"
+  ],
+  "sulfamerazine": [
+    "General"
+  ],
+  "trimethoprim sulfate": [
+    "General"
+  ],
+  "ceftibuten": [
+    "General"
+  ],
+  "sulfoxone sodium": [
+    "General"
+  ],
+  "droxidopa": [
+    "Cardiovascular"
+  ],
+  "naloxegol": [
+    "General"
+  ],
+  "daprodustat": [
+    "General"
+  ],
+  "bexagliflozin": [
+    "Diabetic"
+  ],
+  "argipressin tannate": [
+    "General"
+  ],
+  "remimazolam besylate": [
+    "Psychiatric"
+  ],
+  "benzhydrocodone hydrochloride": [
+    "General"
+  ],
+  "potassium oxybate": [
+    "General"
+  ],
+  "talampicillin": [
+    "General"
+  ],
+  "epcoritamab": [
+    "General"
+  ],
+  "maralixibat chloride": [
+    "General"
+  ],
+  "lacidipine": [
+    "Cardiovascular"
+  ],
+  "cerivastatin sodium": [
+    "Cardiovascular"
+  ],
+  "altrenogest": [
+    "General"
+  ],
+  "triflupromazine hydrochloride": [
+    "Cancer",
+    "Parkinsons"
+  ],
+  "methyl isobutyl ketone": [
+    "General"
+  ],
+  "idebenone": [
+    "Diabetic"
+  ],
+  "dobutamine hydrochloride": [
+    "Cardiovascular"
+  ],
+  "nitrofurazone": [
+    "Cancer"
+  ],
+  "benorilate": [
+    "General"
+  ],
+  "4-aminophenol": [
+    "Cancer"
+  ],
+  "oxyphenisatin acetate": [
+    "General"
+  ],
+  "tribromsalan": [
+    "Diabetic"
+  ],
+  "chondroitin sulfates": [
+    "General"
+  ],
+  "urea": [
+    "Cancer"
+  ],
+  "green tea leaf extract": [
+    "General"
+  ],
+  "benazeprilat": [
+    "General"
+  ],
+  "eplontersen": [
+    "General"
+  ],
+  "methionine": [
+    "General"
+  ],
+  "vutrisiran": [
+    "General"
+  ],
+  "adl5859": [
+    "General"
+  ],
+  "interferon beta": [
+    "Cancer"
+  ],
+  "umbralisib": [
+    "Cancer"
+  ],
+  "dasabuvir": [
+    "Cancer"
+  ],
+  "delafloxacin": [
+    "General"
+  ],
+  "delamanid": [
+    "General"
+  ],
+  "candicidin": [
+    "General"
+  ],
+  "colistin": [
+    "General"
+  ],
+  "kanamycin a": [
+    "General"
+  ],
+  "phenyltoloxamine": [
+    "Parkinsons"
+  ],
+  "oritavancin": [
+    "General"
+  ],
+  "doxapram": [
+    "General"
+  ],
+  "bendamustine hydrochloride": [
+    "General"
+  ],
+  "penciclovir": [
+    "General"
+  ],
+  "valacyclovir": [
+    "Diabetic"
+  ],
+  "trientine": [
+    "General"
+  ],
+  "raxibacumab": [
+    "General"
+  ],
+  "sarecycline": [
+    "General"
+  ],
+  "valacyclovir hydrochloride": [
+    "General"
+  ],
+  "ethionamide": [
+    "General"
+  ],
+  "tavaborole": [
+    "General"
+  ],
+  "saccharin": [
+    "General"
+  ],
+  "amylmetacresol": [
+    "General"
+  ],
+  "carbinoxamine": [
+    "Alzheimers"
+  ],
+  "tenapanor hydrochloride": [
+    "General"
+  ],
+  "indinavir sulfate": [
+    "General"
+  ],
+  "dilevalol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "glutaral": [
+    "Cancer"
+  ],
+  "talazoparib tosylate": [
+    "General"
+  ],
+  "perflunafene": [
+    "General"
+  ],
+  "hyaluronic acid": [
+    "General"
+  ],
+  "mebanazine": [
+    "Parkinsons"
+  ],
+  "acemetacin": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "elapegademase-lvlr": [
+    "General"
+  ],
+  "tulobuterol": [
+    "Cardiovascular"
+  ],
+  "prasugrel hydrochloride": [
+    "General"
+  ],
+  "insulin purified pork": [
+    "Diabetic"
+  ],
+  "phenylpropanolamine hydrochloride": [
+    "General"
+  ],
+  "hydrocodone bitartrate": [
+    "General"
+  ],
+  "fenclofenac": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "methapyrilene fumarate": [
+    "General"
+  ],
+  "veralipride": [
+    "Parkinsons"
+  ],
+  "human c1-esterase inhibitor": [
+    "General"
+  ],
+  "benztropine mesylate": [
+    "Alzheimers"
+  ],
+  "melengestrol acetate": [
+    "Cancer"
+  ],
+  "maprotiline hydrochloride": [
+    "Cancer"
+  ],
+  "hydroxytyrosol": [
+    "General"
+  ],
+  "acepromazine": [
+    "Cancer"
+  ],
+  "lutein": [
+    "General"
+  ],
+  "propylene glycol": [
+    "General"
+  ],
+  "alosetron": [
+    "General"
+  ],
+  "raloxifen": [
+    "General"
+  ],
+  "modified vaccinia ankara-bavarian nordic": [
+    "General"
+  ],
+  "metocurine": [
+    "General"
+  ],
+  "fludrocortisone": [
+    "General"
+  ],
+  "onapristone": [
+    "General"
+  ],
+  "almitrine": [
+    "Cancer"
+  ],
+  "clobetasol propionate": [
+    "General"
+  ],
+  "ribociclib succinate": [
+    "Cancer"
+  ],
+  "butorphanol tartrate": [
+    "General"
+  ],
+  "cholestyramine resin": [
+    "Cardiovascular"
+  ],
+  "bromodiphenhydramine hydrochloride": [
+    "General"
+  ],
+  "vecuronium bromide": [
+    "Cancer"
+  ],
+  "fenbendazole": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "avacopan": [
+    "General"
+  ],
+  "carbetapentane": [
+    "Cancer"
+  ],
+  "insulin zinc susp purified pork": [
+    "Diabetic"
+  ],
+  "insulin susp isophane semisynthetic purified human": [
+    "Diabetic"
+  ],
+  "propoxyphene napsylate": [
+    "General"
+  ],
+  "sermorelin acetate": [
+    "General"
+  ],
+  "betamethasone acetate": [
+    "General"
+  ],
+  "flurbiprofen sodium": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "mycophenolate mofetil hydrochloride": [
+    "General"
+  ],
+  "pancuronium bromide": [
+    "Cancer"
+  ],
+  "rolapitant hydrochloride": [
+    "General"
+  ],
+  "gilteritinib fumarate": [
+    "General"
+  ],
+  "siponimod fumarate": [
+    "General"
+  ],
+  "rimegepant sulfate": [
+    "General"
+  ],
+  "fostemsavir tromethamine": [
+    "General"
+  ],
+  "magnesium oxybate": [
+    "General"
+  ],
+  "mirikizumab": [
+    "General"
+  ],
+  "benzethonium": [
+    "Cancer"
+  ],
+  "niacinamide": [
+    "General"
+  ],
+  "copper chloride": [
+    "General"
+  ],
+  "casimersen": [
+    "General"
+  ],
+  "triptorelin pamoate": [
+    "General"
+  ],
+  "levoleucovorin": [
+    "General"
+  ],
+  "tirzepatide": [
+    "Diabetic"
+  ],
+  "imipramine pamoate": [
+    "Psychiatric"
+  ],
+  "diosmin": [
+    "General"
+  ],
+  "osilodrostat phosphate": [
+    "General"
+  ],
+  "doxylamine succinate": [
+    "General"
+  ],
+  "haloperidol lactate": [
+    "Parkinsons",
+    "Psychiatric"
+  ],
+  "ibandronate sodium": [
+    "General"
+  ],
+  "alectinib hydrochloride": [
+    "Cancer"
+  ],
+  "levocabastine hydrochloride": [
+    "General"
+  ],
+  "acetophenazine maleate": [
+    "Parkinsons"
+  ],
+  "cycrimine hydrochloride": [
+    "Alzheimers"
+  ],
+  "sufentanil citrate": [
+    "Cancer"
+  ],
+  "levorphanol tartrate": [
+    "General"
+  ],
+  "donepezil hydrochloride": [
+    "Alzheimers"
+  ],
+  "tesamorelin acetate": [
+    "General"
+  ],
+  "amlodipine maleate": [
+    "Cardiovascular"
+  ],
+  "indacaterol maleate": [
+    "Cardiovascular"
+  ],
+  "dutetrabenazine": [
+    "General"
+  ],
+  "onasemnogene abeparvovec-xioi": [
+    "General"
+  ],
+  "tazemetostat hydrobromide": [
+    "Cancer"
+  ],
+  "levamlodipine maleate": [
+    "Cardiovascular"
+  ],
+  "retifanlimab": [
+    "General"
+  ],
+  "chloroacetic acid": [
+    "Cancer"
+  ],
+  "sulfuric acid": [
+    "General"
+  ],
+  "methyleugenol": [
+    "Cancer"
+  ],
+  "efbemalenograstim alfa": [
+    "General"
+  ],
+  "didecyldimethylammonium chloride": [
+    "General"
+  ],
+  "oxyquinoline sulfate": [
+    "Cancer"
+  ],
+  "cyclandelate": [
+    "General"
+  ],
+  "sodium salicylate": [
+    "General"
+  ],
+  "chlormerodrin": [
+    "General"
+  ],
+  "potassium chloride": [
+    "Cancer"
+  ],
+  "butylscopolamine": [
+    "General"
+  ],
+  "acetylglucosamine": [
+    "General"
+  ],
+  "milnacipran hydrochloride": [
+    "Psychiatric"
+  ],
+  "belladonna extract, usp": [
+    "General"
+  ],
+  "belumosudil mesylate": [
+    "General"
+  ],
+  "valerian root extract": [
+    "General"
+  ],
+  "etoposide phosphate": [
+    "General"
+  ],
+  "biperiden lactate": [
+    "Alzheimers"
+  ],
+  "saxagliptin hydrochloride": [
+    "Diabetic"
+  ],
+  "insulin zinc susp prompt purified pork": [
+    "Diabetic"
+  ],
+  "ziconotide acetate": [
+    "General"
+  ],
+  "mephentermine sulfate": [
+    "Cardiovascular"
+  ],
+  "omaveloxolone": [
+    "Cancer"
+  ],
+  "insulin zinc, extended": [
+    "Diabetic"
+  ],
+  "kojic acid": [
+    "General"
+  ],
+  "alpha-tocopherol acetate": [
+    "General"
+  ],
+  "naftifine": [
+    "General"
+  ],
+  "gadobenate dimeglumine": [
+    "General"
+  ],
+  "fumaric acid": [
+    "General"
+  ],
+  "ioflupane i-123": [
+    "Parkinsons"
+  ],
+  "aminolevulinic acid hydrochloride": [
+    "General"
+  ],
+  "anhydrous zinc acetate": [
+    "General"
+  ],
+  "peginesatide acetate": [
+    "General"
+  ],
+  "insulin zinc susp recombinant human": [
+    "Diabetic"
+  ],
+  "propoxyphene hydrochloride": [
+    "General"
+  ],
+  "bufexamac": [
+    "General"
+  ],
+  "chloroxylenol": [
+    "Cancer"
+  ],
+  "atogepant": [
+    "General"
+  ],
+  "moexipril hydrochloride": [
+    "Cardiovascular"
+  ],
+  "zavegepant": [
+    "General"
+  ],
+  "iodine i-131": [
+    "General"
+  ],
+  "benzquinamide hydrochloride": [
+    "Parkinsons"
+  ],
+  "granisetron hydrochloride": [
+    "General"
+  ],
+  "betamethasone benzoate": [
+    "General"
+  ],
+  "pentolinium tartrate": [
+    "General"
+  ],
+  "teclistamab-cqyv": [
+    "General"
+  ],
+  "udenafil": [
+    "General"
+  ],
+  "rifamycin sodium": [
+    "General"
+  ],
+  "tinidazole": [
+    "General"
+  ],
+  "linzagolix": [
+    "General"
+  ],
+  "cyclizine lactate": [
+    "General"
+  ],
+  "asfotase alfa": [
+    "General"
+  ],
+  "bupivacaine hydrochloride": [
+    "General"
+  ],
+  "pseudoephedrine sulfate": [
+    "General"
+  ],
+  "drotrecogin alfa (activated)": [
+    "General"
+  ],
+  "ibuprofen lysine": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "malic acid": [
+    "General"
+  ],
+  "erythromycin estolate": [
+    "General"
+  ],
+  "pyrvinium pamoate": [
+    "General"
+  ],
+  "tenofovir alafenamide fumarate": [
+    "General"
+  ],
+  "antipyrine": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "fosinopril sodium": [
+    "Cardiovascular"
+  ],
+  "antazoline phosphate": [
+    "General"
+  ],
+  "metoprolol fumarate": [
+    "Cardiovascular"
+  ],
+  "allopurinol sodium": [
+    "General"
+  ],
+  "danaparoid sodium": [
+    "General"
+  ],
+  "insulin aspart protamine recombinant": [
+    "Diabetic"
+  ],
+  "insulin lispro-aabc": [
+    "Diabetic"
+  ],
+  "bretylium tosylate": [
+    "General"
+  ],
+  "igovomab": [
+    "General"
+  ],
+  "cortivazol": [
+    "General"
+  ],
+  "pozelimab": [
+    "General"
+  ],
+  "isoxicam": [
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "segesterone acetate": [
+    "General"
+  ],
+  "viloxazine hydrochloride": [
+    "General"
+  ],
+  "dasiglucagon": [
+    "General"
+  ],
+  "fipexide": [
+    "Cancer"
+  ],
+  "parecoxib sodium": [
+    "Pain/Anti-inflammatory"
+  ],
+  "chlorphenoxamine": [
+    "General"
+  ],
+  "gamma-aminobutyric acid": [
+    "General"
+  ],
+  "phenazopyridine": [
+    "Cancer"
+  ],
+  "trimethobenzamide": [
+    "General"
+  ],
+  "dienogest": [
+    "General"
+  ],
+  "anileridine phosphate": [
+    "General"
+  ],
+  "galcanezumab": [
+    "General"
+  ],
+  "insulin zinc, prompt": [
+    "Diabetic"
+  ],
+  "doxacurium": [
+    "General"
+  ],
+  "micafungin sodium": [
+    "General"
+  ],
+  "mepenzolate bromide": [
+    "Alzheimers"
+  ],
+  "lithium citrate": [
+    "Cancer"
+  ],
+  "cyclopentolate hydrochloride": [
+    "General"
+  ],
+  "bisoprolol fumarate": [
+    "Cardiovascular"
+  ],
+  "insulin susp protamine zinc purified beef": [
+    "Diabetic"
+  ],
+  "guanethidine monosulfate": [
+    "General"
+  ],
+  "cefmenoxime hydrochloride": [
+    "General"
+  ],
+  "cefotetan disodium": [
+    "General"
+  ],
+  "tetracycline phosphate complex": [
+    "General"
+  ],
+  "phensuximide": [
+    "General"
+  ],
+  "sulfadimethoxine sodium": [
+    "General"
+  ],
+  "pibrentasvir": [
+    "General"
+  ],
+  "cabotegravir sodium": [
+    "General"
+  ],
+  "etesevimab": [
+    "General"
+  ],
+  "daridorexant hydrochloride": [
+    "General"
+  ],
+  "acalabrutinib maleate": [
+    "General"
+  ],
+  "sorbic acid": [
+    "General"
+  ],
+  "desipramine hydrochloride": [
+    "Diabetic"
+  ],
+  "phenformin hydrochloride": [
+    "Cancer",
+    "Diabetic"
+  ],
+  "resorcinol": [
+    "General"
+  ],
+  "isopropyl palmitate": [
+    "Cancer"
+  ],
+  "zinc sulfate anhydrous": [
+    "Cancer"
+  ],
+  "vitamin a palmitate": [
+    "General"
+  ],
+  "p-aminohippurate": [
+    "General"
+  ],
+  "guaifenesin": [
+    "Cancer"
+  ],
+  "piperacillin anhydrous": [
+    "General"
+  ],
+  "ethyl vanillin": [
+    "General"
+  ],
+  "iron-dextran complex": [
+    "General"
+  ],
+  "patiromer calcium": [
+    "General"
+  ],
+  "taliglucerase alfa": [
+    "General"
+  ],
+  "bedaquiline fumarate": [
+    "General"
+  ],
+  "chlorphentermine hydrochloride": [
+    "Psychiatric"
+  ],
+  "benzyl benzoate": [
+    "General"
+  ],
+  "aluminum": [
+    "Cancer"
+  ],
+  "deoxyribonucleases": [
+    "General"
+  ],
+  "fosfomycin": [
+    "General"
+  ],
+  "glutathione": [
+    "General"
+  ],
+  "tyrosine": [
+    "Parkinsons"
+  ],
+  "capromab pendetide": [
+    "General"
+  ],
+  "sulisobenzone": [
+    "General"
+  ],
+  "ciprofloxacin hydrochloride": [
+    "General"
+  ],
+  "fluorodeoxyglucose f18": [
+    "Cancer"
+  ],
+  "phenformin": [
+    "Diabetic"
+  ],
+  "thiethylperazine maleate": [
+    "Parkinsons"
+  ],
+  "diphenylpyraline hydrochloride": [
+    "General"
+  ],
+  "cetrorelix acetate": [
+    "General"
+  ],
+  "insulin zinc susp beef": [
+    "Diabetic"
+  ],
+  "insulin susp isophane purified pork": [
+    "Diabetic"
+  ],
+  "insulin zinc susp extended recombinant human": [
+    "Diabetic"
+  ],
+  "insulin susp isophane beef": [
+    "Diabetic"
+  ],
+  "morphine sulfate": [
+    "General"
+  ],
+  "hydrocortisone cypionate": [
+    "General"
+  ],
+  "cloxacillin sodium": [
+    "General"
+  ],
+  "dextroamphetamine saccharate": [
+    "Parkinsons"
+  ],
+  "trimethoprim hydrochloride": [
+    "General"
+  ],
+  "cefamandole nafate": [
+    "General"
+  ],
+  "dicloxacillin sodium": [
+    "General"
+  ],
+  "dasabuvir sodium": [
+    "General"
+  ],
+  "agatolimod sodium": [
+    "General"
+  ],
+  "brolucizumab": [
+    "General"
+  ],
+  "benfluorex": [
+    "General"
+  ],
+  "cefpirome": [
+    "General"
+  ],
+  "aminosalicylate sodium": [
+    "General"
+  ],
+  "aminosalicylate potassium": [
+    "General"
+  ],
+  "bulevirtide": [
+    "General"
+  ],
+  "nilotinib hydrochloride monohydrate": [
+    "General"
+  ],
+  "nirsevimab": [
+    "General"
+  ],
+  "fusidate sodium": [
+    "General"
+  ],
+  "imdevimab": [
+    "General"
+  ],
+  "sodium sulfate anhydrous": [
+    "Cancer"
+  ],
+  "agalsidase beta": [
+    "General"
+  ],
+  "glucose-6-phosphate": [
+    "General"
+  ],
+  "magnesium": [
+    "General"
+  ],
+  "tazobactam": [
+    "General"
+  ],
+  "meningococcal group b vaccine": [
+    "General"
+  ],
+  "inulin": [
+    "General"
+  ],
+  "oxamniquine": [
+    "General"
+  ],
+  "penicillin g procaine": [
+    "General"
+  ],
+  "bretylium": [
+    "Cardiovascular"
+  ],
+  "pirbuterol": [
+    "Cardiovascular"
+  ],
+  "sorivudine": [
+    "General"
+  ],
+  "quinaprilat": [
+    "General"
+  ],
+  "turoctocog alfa": [
+    "General"
+  ],
+  "phenyl salicylate": [
+    "General"
+  ],
+  "berotralstat hydrochloride": [
+    "General"
+  ],
+  "olsalazine sodium": [
+    "Diabetic",
+    "Cardiovascular",
+    "Pain/Anti-inflammatory"
+  ],
+  "acetanilide": [
+    "General"
+  ],
+  "daunorubicin citrate": [
+    "General"
+  ],
+  "acebutolol hydrochloride": [
+    "Cardiovascular"
+  ],
+  "darunavir ethanolate": [
+    "General"
+  ],
+  "indalpine": [
+    "Psychiatric"
+  ],
+  "selumetinib sulfate": [
+    "Cancer"
+  ],
+  ".alpha.1-proteinase inhibitor human": [
+    "General"
+  ],
+  "arbutin": [
+    "General"
+  ],
+  "oxibendazole": [
+    "General"
+  ],
+  "menatetrenone": [
+    "General"
+  ],
+  "fluorescein sodium": [
+    "General"
+  ],
+  "viltolarsen": [
+    "General"
+  ],
+  "trandolaprilat": [
+    "General"
+  ],
+  "lodoxamide tromethamine": [
+    "General"
+  ],
+  "technetium tc 99m sestamibi": [
+    "General"
+  ],
+  "tofersen": [
+    "General"
+  ],
+  "metaraminol bitartrate": [
+    "General"
+  ],
+  "pralidoxime chloride": [
+    "Alzheimers"
+  ],
+  "somatrem": [
+    "General"
+  ],
+  "cilastatin sodium": [
+    "General"
+  ],
+  "dihydrocodeine bitartrate": [
+    "General"
+  ],
+  "pirbuterol acetate": [
+    "Cardiovascular"
+  ],
+  "doxapram hydrochloride": [
+    "General"
+  ],
+  "echothiophate": [
+    "Alzheimers"
+  ],
+  "atoltivimab": [
+    "General"
+  ],
+  "metacresol": [
+    "Cancer"
+  ],
+  "myristic acid": [
+    "Diabetic"
+  ],
+  "talc": [
+    "General"
+  ],
+  "potassium citrate anhydrous": [
+    "General"
+  ],
+  "vestronidase alfa-vjbk": [
+    "General"
+  ],
+  "ramiprilat": [
+    "General"
+  ],
+  "decanoic acid": [
+    "Cancer"
+  ],
+  "exifone": [
+    "General"
+  ],
+  "oxolinic acid": [
+    "General"
+  ],
+  "phenylethyl alcohol": [
+    "General"
+  ],
+  "sulfacarbamide": [
+    "General"
+  ],
+  "sodium nitrate": [
+    "Cancer"
+  ]
+}
