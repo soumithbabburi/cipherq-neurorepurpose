@@ -12147,31 +12147,34 @@ def render_molecular_docking_section():
                                 if protein_pdb_data:
                                     view.addModel(protein_pdb_data, 'pdb')
                                     view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
-                                    pdb_loaded = True
-                                else:
-                                    pdb_loaded = False
-                                
-                                # Add drug ligand
-                                view.addModel(sdf_data, 'sdf')
-                                if pdb_loaded:
+                                    
+                                    # Add drug ligand with positioning
+                                    view.addModel(sdf_data, 'sdf')
                                     view.setStyle({'model': 1}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
-                                        'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
+                                        'sphere': {'scale': 0.3, 'colorscheme': 'greenCarbon'}
                                     })
+                                    
+                                    # Center view on protein and drug together
+                                    view.setBackgroundColor('white')
+                                    view.zoomTo({'model': -1})  # Zoom to all models
+                                    
+                                    st.markdown(f"**{selected_drug} bound to {target_protein}**")
+                                    st.caption(f"Rainbow ribbon: {target_protein} protein structure | Green: {selected_drug} molecule")
+                                    
                                 else:
+                                    # Just drug molecule
+                                    view.addModel(sdf_data, 'sdf')
                                     view.setStyle({'model': 0}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
-                                        'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
+                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
+                                        'sphere': {'scale': 0.3, 'colorscheme': 'greenCarbon'}
                                     })
-                                
-                                view.setBackgroundColor('white')
-                                view.zoomTo()
-                                
-                                # Display
-                                if pdb_loaded:
-                                    st.markdown(f"**{selected_drug} bound to {target_protein} (PDB structure)**")
-                                else:
+                                    
+                                    view.setBackgroundColor('white')
+                                    view.zoomTo()
+                                    
                                     st.markdown(f"**{selected_drug} structure**")
+                                    st.caption(f"ℹ️ {target_protein} protein structure unavailable from RCSB PDB")
                                 
                                 components.html(view._make_html(), height=450)
                             else:
