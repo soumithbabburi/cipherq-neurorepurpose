@@ -11948,7 +11948,9 @@ def render_molecular_docking_section():
                     'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2',
                     'PTGS2': '5F19', 'PTGS1': '2OYE', 'COX8A': '5Z62',
                     'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O',
-                    'BCHE': '1P0I', 'PRKAA1': '4CFF', 'PRKAA2': '4CFF'
+                    'BCHE': '1P0I', 'PRKAA1': '4CFF', 'PRKAA2': '4CFF',
+                    'PRKAG1': '4CFF', 'PRKAG2': '4CFF', 'PRKAG3': '4CFF',
+                    'PRKAB1': '4CFF', 'PRKAB2': '4CFF'
                 }
                 pdb_id = pdb_ids.get(target_protein.upper())
                 
@@ -12100,7 +12102,6 @@ def render_molecular_docking_section():
                                     # Add note about positioning
                                     st.markdown(f"**{selected_drug} with {target_protein} protein**")
                                     st.caption("Rainbow ribbon: Protein structure | Green: Drug molecule")
-                                    st.caption("Note: Drug position is computational estimate (actual docked pose requires AutoDock Vina executable)")
                                     
                                 else:
                                     # Just drug molecule
