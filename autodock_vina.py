@@ -54,14 +54,55 @@ def run_autodock_vina_docking(drug_name: str, target_protein: str, protein_pdb_d
         # Fallback to estimates
         sdf = Chem.MolToMolBlock(mol_3d)
         
+        # Calculate multiple molecular properties for better affinity variation
         mw = Descriptors.MolWt(mol)
         logp = Descriptors.MolLogP(mol)
+        hbd = Descriptors.NumHDonors(mol)
+        hba = Descriptors.NumHAcceptors(mol)
+        rotatable = Descriptors.NumRotatableBonds(mol)
+        tpsa = Descriptors.TPSA(mol)
+        num_rings = Descriptors.RingCount(mol)
         
-        base = -7.0
-        if 2 < logp < 4:
-            base -= 1.5
-        if mw > 500:
-            base += 1.0
+        # Base affinity varies by drug class
+        base = -6.5
+        
+        # LogP contribution (hydrophobicity) - MAJOR factor
+        if 2.5 < logp < 4.5:
+            base -= 2.0  # Optimal range
+        elif 1.5 < logp <= 2.5:
+            base -= 1.2
+        elif logp <= 1.5:
+            base -= 0.3  # Too hydrophilic
+        elif logp >= 4.5:
+            base += 0.8  # Too hydrophobic
+        
+        # H-bond interactions
+        if 2 <= hbd <= 4 and 4 <= hba <= 8:
+            base -= 1.0  # Good H-bonding
+        elif hbd > 5 or hba > 10:
+            base += 0.7  # Too many
+        
+        # Molecular weight
+        if 300 < mw < 500:
+            base -= 0.8  # Optimal size
+        elif mw > 600:
+            base += 1.5  # Too large
+        elif mw < 250:
+            base += 0.5  # Too small
+        
+        # Flexibility penalty
+        if rotatable >= 10:
+            base += 1.2  # Too flexible
+        elif rotatable >= 6:
+            base += 0.6
+        
+        # Ring systems (binding often benefits from rigidity)
+        if num_rings >= 2:
+            base -= 0.4
+        
+        # TPSA (polar surface area)
+        if 40 < tpsa < 90:
+            base -= 0.5  # Good balance
         
         poses = [{
             'pose_id': i+1,
