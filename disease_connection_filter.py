@@ -36,16 +36,27 @@ _INTERACTIONS_CACHE = None
 
 def load_interactions_database(file_path='drug_interactions.json'):
     """Load drug-target interactions from JSON file"""
-    try:
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                return json.load(f)
-        else:
-            logger.warning(f"⚠️ Interactions file not found: {file_path}")
-            return {}
-    except Exception as e:
-        logger.error(f"❌ Error loading interactions: {e}")
-        return {}
+    # Try multiple possible locations
+    possible_paths = [
+        file_path,
+        'drug_interactions.json',
+        'data/drug_interactions.json',
+        'hetionet_drug_interactions.json',
+        'data/hetionet_drug_interactions.json'
+    ]
+    
+    for path in possible_paths:
+        try:
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    data = json.load(f)
+                    logger.info(f"✅ Loaded interactions from: {path}")
+                    return data
+        except Exception as e:
+            continue
+    
+    logger.error(f"❌ Could not find interactions file in any of: {possible_paths}")
+    return {}
 
 def get_interactions_cache(force_reload=False):
     """Get or load interactions cache"""
@@ -138,6 +149,74 @@ def extract_gene_symbols(targets):
     
     return gene_symbols
 
+def normalize_drug_name(name):
+    """Normalize drug name for matching"""
+    if not name:
+        return ""
+    # Convert to lowercase, remove extra spaces and special chars
+    normalized = name.lower().strip()
+    normalized = normalized.replace('-', ' ')
+    normalized = ' '.join(normalized.split())  # Remove extra spaces
+    return normalized
+
+def build_drug_lookup_index(interactions_db):
+    """Build index for fast drug name lookup with variations"""
+    lookup = {}
+    
+    for drug_name in interactions_db.keys():
+        # Original name
+        lookup[drug_name] = drug_name
+        
+        # Lowercase
+        lookup[drug_name.lower()] = drug_name
+        
+        # Normalized
+        normalized = normalize_drug_name(drug_name)
+        lookup[normalized] = drug_name
+        
+        # Without spaces
+        lookup[drug_name.replace(' ', '')] = drug_name
+        lookup[drug_name.lower().replace(' ', '')] = drug_name
+    
+    return lookup
+
+_DRUG_LOOKUP_INDEX = None
+
+def find_drug_in_interactions(drug_name, interactions_db):
+    """Find drug in interactions database with fuzzy matching"""
+    global _DRUG_LOOKUP_INDEX
+    
+    if not drug_name:
+        return None
+    
+    # Build lookup index if not exists
+    if _DRUG_LOOKUP_INDEX is None:
+        _DRUG_LOOKUP_INDEX = build_drug_lookup_index(interactions_db)
+    
+    # Try exact match first
+    if drug_name in interactions_db:
+        return drug_name
+    
+    # Try lookup index
+    if drug_name in _DRUG_LOOKUP_INDEX:
+        return _DRUG_LOOKUP_INDEX[drug_name]
+    
+    # Try lowercase
+    if drug_name.lower() in _DRUG_LOOKUP_INDEX:
+        return _DRUG_LOOKUP_INDEX[drug_name.lower()]
+    
+    # Try normalized
+    normalized = normalize_drug_name(drug_name)
+    if normalized in _DRUG_LOOKUP_INDEX:
+        return _DRUG_LOOKUP_INDEX[normalized]
+    
+    # Try without spaces
+    no_space = drug_name.replace(' ', '')
+    if no_space in _DRUG_LOOKUP_INDEX:
+        return _DRUG_LOOKUP_INDEX[no_space]
+    
+    return None
+
 def enrich_drug_with_targets(drug_dict, interactions_db=None):
     """Add target information to drug dictionary"""
     if interactions_db is None:
@@ -161,17 +240,16 @@ def enrich_drug_with_targets(drug_dict, interactions_db=None):
             drug_dict['drug_name'] = drug_name
         return drug_dict
     
-    # Look up targets in interactions DB
-    if drug_name in interactions_db:
-        drug_dict['targets'] = [t['gene_symbol'] for t in interactions_db[drug_name]]
+    # Look up targets using fuzzy matching
+    matched_name = find_drug_in_interactions(drug_name, interactions_db)
+    
+    if matched_name:
+        drug_dict['targets'] = [t['gene_symbol'] for t in interactions_db[matched_name]]
+        if matched_name != drug_name:
+            logger.debug(f"Matched '{drug_name}' to '{matched_name}'")
     else:
-        # Try case-insensitive match
-        for db_name in interactions_db:
-            if db_name.lower() == drug_name.lower():
-                drug_dict['targets'] = [t['gene_symbol'] for t in interactions_db[db_name]]
-                break
-        else:
-            drug_dict['targets'] = []
+        drug_dict['targets'] = []
+        logger.debug(f"No match found for '{drug_name}'")
     
     # Ensure drug_name field
     if 'drug_name' not in drug_dict:
@@ -270,12 +348,18 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
     # Auto-enrich with targets if needed
     if auto_enrich:
         interactions_db = get_interactions_cache()
+        if not interactions_db:
+            logger.error("❌ No interactions database loaded! Check file path.")
+            return []
+        
+        logger.info(f"Enriching {len(drugs)} drugs with target data...")
         enriched_drugs = [enrich_drug_with_targets(d.copy(), interactions_db) for d in drugs]
     else:
         enriched_drugs = drugs
     
     results = []
     no_targets_count = 0
+    drugs_with_targets = []
     
     for drug in enriched_drugs:
         drug_name = drug.get('drug_name', 'Unknown')
@@ -284,6 +368,8 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
         if not drug_targets:
             no_targets_count += 1
             continue
+        
+        drugs_with_targets.append(drug_name)
         
         # Calculate scores
         pathway_score, matched_pathways, target_details = calculate_pathway_score(
@@ -315,15 +401,28 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
     # Sort by score
     results.sort(key=lambda x: x['connection_score'], reverse=True)
     
-    # Logging
+    # Detailed logging
+    logger.info(f"📊 ENRICHMENT STATS:")
+    logger.info(f"   Input drugs: {len(drugs)}")
+    logger.info(f"   Drugs with targets: {len(drugs_with_targets)}")
+    logger.info(f"   Drugs without targets: {no_targets_count}")
+    
+    if no_targets_count > 0 and len(drugs_with_targets) > 0:
+        logger.info(f"   ✅ Sample drugs WITH targets: {drugs_with_targets[:5]}")
+    
     if results:
         logger.info(f"✅ FILTER RESULTS: {len(results)}/{len(drugs)} drugs passed (min_score={min_score})")
         top = results[0]
         logger.info(f"   Top: {top.get('drug_name')} (score: {top['connection_score']:.1f}, pathways: {len(top['matched_pathways'])})")
+        if len(results) > 1:
+            logger.info(f"   2nd: {results[1].get('drug_name')} (score: {results[1]['connection_score']:.1f})")
     else:
         logger.warning(f"⚠️ FILTER RESULTS: 0/{len(drugs)} drugs passed filter (min_score={min_score})")
         if no_targets_count > 0:
             logger.warning(f"   {no_targets_count} drugs had no target data")
+        if no_targets_count == len(drugs):
+            logger.error(f"   🔴 CRITICAL: NO drugs have target data!")
+            logger.error(f"   Check: (1) Is drug_interactions.json in repo root? (2) Are drug names correct?")
         logger.warning(f"   Consider: (1) lowering min_score, (2) checking interaction data, (3) using auto_enrich=True")
     
     return results
