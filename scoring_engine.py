@@ -1,6 +1,6 @@
 """
-Scoring Engine - JSON ONLY VERSION
-NO DATABASE - uses drugs.json, drug_interactions.json, protein_pathways.json
+Scoring Engine - IMPROVED WITH VALIDATION
+More discriminating factors, disease-specific scoring
 """
 import logging
 import json
@@ -9,125 +9,111 @@ logger = logging.getLogger(__name__)
 
 def score_drug(drug_name: str, disease: str = None) -> float:
     """
-    Score a drug using JSON data
-    Returns: 0.0 to 1.0 confidence score
+    Score drug with improved discrimination
+    Returns: 0.0 to 1.0 (more variation than before!)
     """
     try:
-        # Load drugs.json
+        # Load data
         with open('drugs.json', 'r') as f:
             drugs = json.load(f)
-        
-        # Load drug_interactions.json
         with open('drug_interactions.json', 'r') as f:
             interactions = json.load(f)
-        
-        # Load protein_pathways.json
         with open('protein_pathways.json', 'r') as f:
             protein_pathways = json.load(f)
         
-        # Try to find drug (flexible matching)
+        # Find drug with flexible matching
         drug_lower = drug_name.lower()
-        drug_key = None
+        clean = drug_lower.replace(' hydrochloride', '').replace(' sodium', '').replace(', sterile', '')
         
-        # Exact match
+        drug_key = None
         if drug_lower in drugs:
             drug_key = drug_lower
+        elif clean in drugs:
+            drug_key = clean
         else:
-            # Partial match
             for key in drugs.keys():
-                if drug_lower in key or key in drug_lower:
+                if clean in key or key in clean:
                     drug_key = key
                     break
         
         if not drug_key:
-            logger.warning(f"Drug {drug_name} not found in JSON")
+            logger.warning(f"Drug {drug_name} not found")
             return 0.0
         
         drug_info = drugs[drug_key]
-        
-        # Calculate score (0-1)
         score = 0.0
         
-        # Component 1: QED score (0-0.3)
+        # Component 1: QED score (0-0.25) - MORE DISCRIMINATING
         qed = drug_info.get('qed_score', 0)
-        if qed:
-            score += float(qed) * 0.3
+        if qed >= 0.8:
+            score += 0.25  # Excellent
+        elif qed >= 0.6:
+            score += 0.18  # Good
+        elif qed >= 0.4:
+            score += 0.10  # Fair
+        else:
+            score += 0.03  # Poor
         
-        # Component 2: Has targets (0-0.3)
+        # Component 2: Target confidence (0-0.35) - MOST IMPORTANT
         if drug_key in interactions:
             targets = interactions[drug_key]
-            high_conf = sum(1 for t in targets if t.get('confidence_score', 0) > 0.8)
-            score += min(0.3, high_conf * 0.1)
+            
+            # Sort by confidence
+            sorted_targets = sorted(targets, key=lambda x: x.get('confidence_score', 0), reverse=True)
+            
+            # Top target confidence matters most
+            if sorted_targets:
+                top_conf = sorted_targets[0].get('confidence_score', 0)
+                
+                if top_conf >= 0.9:
+                    score += 0.35  # Very high confidence
+                elif top_conf >= 0.8:
+                    score += 0.28  # High confidence
+                elif top_conf >= 0.7:
+                    score += 0.20  # Medium confidence
+                elif top_conf >= 0.5:
+                    score += 0.12  # Low confidence
+                else:
+                    score += 0.05  # Very low confidence
         
-        # Component 3: Has pathways (0-0.2)
-        if drug_key in interactions:
-            pathway_count = 0
+        # Component 3: Disease-specific pathways (0-0.25)
+        if disease and drug_key in interactions:
+            disease_lower = disease.lower()
+            disease_relevant_pathways = 0
+            
             for target in interactions[drug_key]:
                 gene = target.get('gene_symbol', '')
                 if gene in protein_pathways:
-                    pathway_count += len(protein_pathways[gene])
+                    # Check if pathways are disease-relevant
+                    for pathway_id in protein_pathways[gene]:
+                        # Disease-specific pathway matching
+                        if 'alzheimer' in disease_lower:
+                            if any(kw in pathway_id.lower() for kw in ['insulin', 'glucose', 'metabolic', 'ampk', 'ppar', 'neuro', 'synap']):
+                                disease_relevant_pathways += 1
+                        elif 'parkinson' in disease_lower:
+                            if any(kw in pathway_id.lower() for kw in ['dopamin', 'mao', 'catechol']):
+                                disease_relevant_pathways += 1
+                        elif 'diabetes' in disease_lower:
+                            if any(kw in pathway_id.lower() for kw in ['insulin', 'glucose', 'metabolic']):
+                                disease_relevant_pathways += 1
             
-            if pathway_count > 10:
-                score += 0.2
-            elif pathway_count > 5:
-                score += 0.15
-            elif pathway_count > 0:
-                score += 0.1
+            if disease_relevant_pathways >= 5:
+                score += 0.25
+            elif disease_relevant_pathways >= 3:
+                score += 0.18
+            elif disease_relevant_pathways >= 1:
+                score += 0.10
         
-        # Component 4: FDA approved (0-0.2)
+        # Component 4: FDA approval (0-0.15)
         if drug_info.get('approved'):
-            score += 0.2
+            score += 0.15
         
         logger.info(f"Score for {drug_name}: {score:.3f}")
-        return round(score, 3)
+        return min(1.0, score)
         
     except Exception as e:
         logger.error(f"Scoring failed for {drug_name}: {e}")
         return 0.0
 
 
-def rank_drugs_for_disease(drugs: list, disease: str) -> list:
-    """
-    Rank drugs by ML score using JSON data
-    
-    Args:
-        drugs: List of drug dicts or names
-        disease: Target disease
-    
-    Returns:
-        Sorted list of drugs
-    """
-    try:
-        scored_drugs = []
-        
-        for drug in drugs:
-            drug_name = drug['name'] if isinstance(drug, dict) else str(drug)
-            
-            # Calculate score
-            ml_score = score_drug(drug_name, disease)
-            
-            if isinstance(drug, dict):
-                drug_copy = drug.copy()
-                drug_copy['confidence'] = ml_score
-                drug_copy['ml_score'] = ml_score
-                scored_drugs.append(drug_copy)
-            else:
-                scored_drugs.append({
-                    'name': drug_name,
-                    'confidence': ml_score,
-                    'ml_score': ml_score
-                })
-        
-        # Sort by score
-        scored_drugs.sort(key=lambda x: x.get('ml_score', 0), reverse=True)
-        
-        logger.info(f"✅ Ranked {len(scored_drugs)} drugs for {disease}")
-        
-        return scored_drugs
-        
-    except Exception as e:
-        logger.error(f"Ranking failed: {e}")
-        return drugs
-
-
-__all__ = ['score_drug', 'rank_drugs_for_disease']
+__all__ = ['score_drug']
