@@ -333,13 +333,15 @@ class EvidenceGraphBuilder:
                     relevance_score = 0.5
                     
                     if 'alzheimer' in disease_name.lower():
-                        # STRICT Alzheimer's pathways only
-                        strong_keywords = ['insulin signaling', 'glucose metabolism', 'ampk', 'ppar signaling', 
-                                         'acetylcholine', 'cholinergic', 'amyloid', 'tau', 'neurodegeneration']
-                        moderate_keywords = ['synaptic', 'neurotransmitter', 'brain energy', 'mitochondrial']
+                        # Match actual Reactome pathway names!
+                        strong_keywords = ['insulin', 'glucose', 'ampk', 'ppar', 
+                                         'acetylcholine', 'cholin', 'amyloid', 'tau']
+                        moderate_keywords = ['synaptic', 'neurotransmitter', 'metabol', 'mitochondrial']
+                        
+                        pathway_lower = pathway_name.lower()
                         
                         for keyword in strong_keywords:
-                            if keyword in pathway_name:
+                            if keyword in pathway_lower:
                                 disease_match = True
                                 match_reason = f"Strong: '{keyword}'"
                                 relevance_score = 0.9
@@ -347,19 +349,21 @@ class EvidenceGraphBuilder:
                         
                         if not disease_match:
                             for keyword in moderate_keywords:
-                                if keyword in pathway_name:
+                                if keyword in pathway_lower:
                                     disease_match = True
                                     match_reason = f"Moderate: '{keyword}'"
                                     relevance_score = 0.6
                                     break
                     
                     elif 'parkinson' in disease_name.lower():
-                        # STRICT Parkinson's pathways
-                        strong_keywords = ['dopamin', 'dopamine receptor', 'mao', 'catecholamine']
-                        moderate_keywords = ['motor', 'basal ganglia']
+                        # Match Parkinson's pathways
+                        strong_keywords = ['dopamin', 'mao', 'monoamine', 'catecholamine']
+                        moderate_keywords = ['motor', 'basal', 'neurotransmitter', 'synaptic']
+                        
+                        pathway_lower = pathway_name.lower()
                         
                         for keyword in strong_keywords:
-                            if keyword in pathway_name:
+                            if keyword in pathway_lower:
                                 disease_match = True
                                 match_reason = f"Strong: '{keyword}'"
                                 relevance_score = 0.9
@@ -367,7 +371,11 @@ class EvidenceGraphBuilder:
                         
                         if not disease_match:
                             for keyword in moderate_keywords:
-                                if keyword in pathway_name:
+                                if keyword in pathway_lower:
+                                    disease_match = True
+                                    match_reason = f"Moderate: '{keyword}'"
+                                    relevance_score = 0.6
+                                    break
                                     disease_match = True
                                     match_reason = f"Moderate: '{keyword}'"
                                     relevance_score = 0.6
@@ -393,10 +401,14 @@ class EvidenceGraphBuilder:
                         if pathway_disease_connections <= 10:
                             logger.info(f"   ✅ {pathway_name[:50]}... → {disease_name} ({match_reason}, {relevance_score})")
                 
-                # NO FALLBACK! If no strong connections, that's valuable info!
+                # CRITICAL: If no pathway-disease connections, return EMPTY graph!
+                # Don't mislead user with disconnected evidence!
                 if pathway_disease_connections == 0:
-                    logger.warning(f"⚠️ No strong pathway-disease connections found for {disease_name}")
-                    logger.warning(f"   This suggests weak evidence for repurposing to this disease")
+                    logger.warning(f"⚠️ No pathway-disease connections for {disease_name}")
+                    logger.warning(f"   Drug may not be relevant for this disease - returning empty graph")
+                    
+                    # Return empty - app will skip this drug
+                    return pd.DataFrame(), pd.DataFrame()
                 
                 logger.info(f"✅ FINAL: Connected {pathway_disease_connections} pathways to {disease_name}")
             else:
