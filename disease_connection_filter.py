@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 _INTERACTIONS_CACHE = None
 
-def load_interactions_database(file_path='data/hetionet_drug_interactions.json'):
+def load_interactions_database(file_path='drug_interactions.json'):
     """Load drug-target interactions from JSON file"""
     try:
         if os.path.exists(file_path):
