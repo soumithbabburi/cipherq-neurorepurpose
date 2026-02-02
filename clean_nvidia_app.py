@@ -7532,143 +7532,157 @@ def render_professional_drug_discovery_chatbox():
                     category_drugs = categorizer.get_drugs_by_category(db_category)
                     
                     if category_drugs:
-                        # Show actual count only
-                        st.info(f"Found {len(category_drugs)} {drug_category}")
+                        # Show initial count
+                        st.info(f"Found {len(category_drugs)} {drug_category}, filtering by disease relevance...")
                         
-                        # Score drugs using JSON-based scoring
-                        for drug in category_drugs:
-                            drug_name = drug.get('name', '')
-                            targets = drug.get('targets', [])
+                        # CRITICAL: Filter by disease connection FIRST!
+                        from disease_connection_filter import filter_drugs_by_disease_connection
+                        
+                        filtered_drugs = filter_drugs_by_disease_connection(category_drugs, selected_disease)
+                        
+                        if len(filtered_drugs) > 0:
+                            st.success(f"{len(filtered_drugs)} drugs with {selected_disease}-relevant pathways (filtered from {len(category_drugs)})")
                             
-                            # Calculate REAL score from JSON data
-                            score = score_drug(drug_name, selected_disease)
+                            # NOW score only the filtered drugs
+                            for drug in filtered_drugs:
+                                drug_name = drug.get('name', '')
+                                disease_pw_count = drug.get('disease_pathway_count', 0)
+                                
+                                # Score with disease connection strength
+                                score = score_drug(drug_name, selected_disease, disease_pathway_count=disease_pw_count)
+                                
+                                drug['repurposing_score'] = score * 100
+                                drug['confidence'] = score
+                                drug['can_optimize'] = True
+                                drug['optimization_class'] = 'Small molecule'
                             
-                            drug['repurposing_score'] = score * 100  # Convert to percentage
-                            drug['confidence'] = score
-                            drug['can_optimize'] = True  # All small molecules can be optimized
-                            drug['optimization_class'] = 'Small molecule'
+                            # Sort by score
+                            scored_drugs = sorted(filtered_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
+                        else:
+                            st.warning(f"None of the {drug_category} have pathways connecting to {selected_disease}")
+                            st.info("Try a different drug category or disease.")
+                            scored_drugs = []
                         
-                        # Sort by score
-                        scored_drugs = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
+                        if scored_drugs:
                         
-                        # Count how many are optimizable vs biologics
-                        optimizable_drugs = [d for d in scored_drugs if d['can_optimize']]
-                        biologic_drugs = [d for d in scored_drugs if not d['can_optimize']]
+                            # Count how many are optimizable vs biologics
+                            optimizable_drugs = [d for d in scored_drugs if d['can_optimize']]
+                            biologic_drugs = [d for d in scored_drugs if not d['can_optimize']]
                         
-                        # TOP 3 CANDIDATES SECTION
-                        st.markdown("### Top 3 Repurposing Candidates")
-                        st.markdown(f"*Best candidates from {drug_category} for {selected_disease}*")
+                            # TOP 3 CANDIDATES SECTION
+                            st.markdown("### Top 3 Repurposing Candidates")
+                            st.markdown(f"*Best candidates from {drug_category} for {selected_disease}*")
                         
-                        # Show stats about drug types
-                        col_stat1, col_stat2 = st.columns(2)
-                        with col_stat1:
-                            st.metric("Small Molecules (Optimizable)", len(optimizable_drugs))
-                        with col_stat2:
-                            st.metric("Biologics (Direct Use Only)", len(biologic_drugs))
+                            # Show stats about drug types
+                            col_stat1, col_stat2 = st.columns(2)
+                            with col_stat1:
+                                st.metric("Small Molecules (Optimizable)", len(optimizable_drugs))
+                            with col_stat2:
+                                st.metric("Biologics (Direct Use Only)", len(biologic_drugs))
                         
-                        # Show helpful message if many biologics
-                        if len(biologic_drugs) > len(optimizable_drugs):
-                            st.info(f"Many {drug_category} are biologics (proteins/peptides). These cannot be chemically optimized but can still be analyzed for docking and PBPK simulation.")
+                            # Show helpful message if many biologics
+                            if len(biologic_drugs) > len(optimizable_drugs):
+                                st.info(f"Many {drug_category} are biologics (proteins/peptides). These cannot be chemically optimized but can still be analyzed for docking and PBPK simulation.")
                         
-                        top_3 = scored_drugs[:3]
-                        cols = st.columns(3)
-                        for idx, drug in enumerate(top_3):
-                            with cols[idx]:
-                                drug_name = drug.get('name', 'Unknown')
-                                score = drug.get('overall_score', 0) * 100
-                                can_opt = drug.get('can_optimize', False)
-                                mol_type = drug.get('molecule_type', 'unknown')
-                                
-                                # Color based on optimization suitability
-                                if can_opt:
-                                    border_color = "#22c55e"  # Green
-                                    bg_color = "#f0fdf4"
-                                    opt_badge = "Can Optimize"
-                                    badge_color = "#16a34a"
-                                else:
-                                    border_color = "#f59e0b"  # Amber
-                                    bg_color = "#fffbeb"
-                                    opt_badge = "Direct Use"
-                                    badge_color = "#d97706"
-                                
-                                st.markdown(f"""
-                                <div style="background: {bg_color}; padding: 1rem; border-radius: 10px; border-left: 5px solid {border_color}; margin-bottom: 0.5rem; min-height: 180px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="background: gold; color: #1a1a1a; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">#{idx+1}</span>
-                                        <span style="background: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">{opt_badge}</span>
-                                    </div>
-                                    <h4 style="margin: 0.5rem 0; color: #1e293b; font-size: 1.1rem;">{drug_name}</h4>
-                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Score:</b> {score:.0f}%</p>
-                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Class:</b> {drug.get('class', 'Unknown')}</p>
-                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.8rem;"><b>Target:</b> {drug.get('target', 'Unknown')[:30]}</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        
-                        # Button to analyze Top 3
-                        if st.button(f"Analyze Top 3 {drug_category}", type="primary", use_container_width=True, key="analyze_top3"):
-                            drugs_with_defaults = []
+                            top_3 = scored_drugs[:3]
+                            cols = st.columns(3)
                             for idx, drug in enumerate(top_3):
-                                drug_with_defaults = drug.copy()
-                                # USE REAL SCORE from scoring_engine, not fake hardcoded values!
-                                drug_with_defaults['confidence'] = drug.get('confidence', 0.5)  # From score_drug()
-                                drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {', '.join(drug.get('targets', ['Unknown'])[:2])}")
-                                drug_with_defaults['targets'] = drug.get('targets', ['Unknown'])
-                                drug_with_defaults['indication'] = drug.get('category', 'Drug repurposing candidate')
-                                drugs_with_defaults.append(drug_with_defaults)
-                            st.session_state.selected_drugs = drugs_with_defaults
-                            st.session_state.current_query = f"Top 3 {drug_category}"
-                            st.session_state.user_query = f"Top 3 {drug_category}"
-                            st.rerun()
+                                with cols[idx]:
+                                    drug_name = drug.get('name', 'Unknown')
+                                    score = drug.get('overall_score', 0) * 100
+                                    can_opt = drug.get('can_optimize', False)
+                                    mol_type = drug.get('molecule_type', 'unknown')
+                                
+                                    # Color based on optimization suitability
+                                    if can_opt:
+                                        border_color = "#22c55e"  # Green
+                                        bg_color = "#f0fdf4"
+                                        opt_badge = "Can Optimize"
+                                        badge_color = "#16a34a"
+                                    else:
+                                        border_color = "#f59e0b"  # Amber
+                                        bg_color = "#fffbeb"
+                                        opt_badge = "Direct Use"
+                                        badge_color = "#d97706"
+                                
+                                    st.markdown(f"""
+                                    <div style="background: {bg_color}; padding: 1rem; border-radius: 10px; border-left: 5px solid {border_color}; margin-bottom: 0.5rem; min-height: 180px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="background: gold; color: #1a1a1a; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">#{idx+1}</span>
+                                            <span style="background: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">{opt_badge}</span>
+                                        </div>
+                                        <h4 style="margin: 0.5rem 0; color: #1e293b; font-size: 1.1rem;">{drug_name}</h4>
+                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Score:</b> {score:.0f}%</p>
+                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Class:</b> {drug.get('class', 'Unknown')}</p>
+                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.8rem;"><b>Target:</b> {drug.get('target', 'Unknown')[:30]}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
                         
-                        # FULL CATEGORY SECTION
-                        with st.expander(f"View All {len(category_drugs)} {drug_category}", expanded=False):
-                            # Display in a nice card format (show up to 15 drugs)
-                            display_drugs = scored_drugs[:15]
-                            for i in range(0, len(display_drugs), 3):
-                                cols = st.columns(3)
-                                for j, col in enumerate(cols):
-                                    if i + j < len(display_drugs):
-                                        drug = display_drugs[i + j]
-                                        with col:
-                                            drug_class = drug.get('class', 'Unknown')
-                                            target = drug.get('target', 'Multiple targets')
-                                            mechanism = drug.get('mechanism', f"{drug_class} mechanism")
-                                            can_opt = drug.get('can_optimize', False)
-                                            score = drug.get('overall_score', 0) * 100
-                                            
-                                            opt_icon = "" if can_opt else ""
-                                            border_color = "#22c55e" if can_opt else "#94a3b8"
-                                            
-                                            st.markdown(f"""
-                                            <div style="background: #f8fafc; padding: 0.8rem; border-radius: 8px; border-left: 4px solid {border_color}; margin-bottom: 0.5rem;">
-                                                <h4 style="margin: 0; color: #166534; font-size: 0.95rem;">{opt_icon} {drug.get('name', 'Unknown')}</h4>
-                                                <p style="margin: 0.2rem 0; color: #64748b; font-size: 0.8rem;"><b>Score:</b> {score:.0f}% | <b>Class:</b> {drug_class}</p>
-                                                <p style="margin: 0; color: #64748b; font-size: 0.75rem;">{str(mechanism)[:40]}...</p>
-                                            </div>
-                                            """, unsafe_allow_html=True)
-                            
-                            # Show total count if more drugs available
-                            if len(category_drugs) > 15:
-                                st.info(f"Showing 15 of {len(category_drugs)} {drug_category}.")
-                            
-                            # Button to analyze all drugs in category
-                            if st.button(f"Analyze All {drug_category}", type="secondary", use_container_width=True, key="analyze_all"):
+                            # Button to analyze Top 3
+                            if st.button(f"Analyze Top 3 {drug_category}", type="primary", use_container_width=True, key="analyze_top3"):
                                 drugs_with_defaults = []
-                                for idx, drug in enumerate(scored_drugs[:20]):
+                                for idx, drug in enumerate(top_3):
                                     drug_with_defaults = drug.copy()
-                                    drug_with_defaults['confidence'] = drug.get('overall_score', 0.80 - (idx * 0.01))
-                                    drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
-                                    drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
-                                    drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
+                                    # USE REAL SCORE from scoring_engine, not fake hardcoded values!
+                                    drug_with_defaults['confidence'] = drug.get('confidence', 0.5)  # From score_drug()
+                                    drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {', '.join(drug.get('targets', ['Unknown'])[:2])}")
+                                    drug_with_defaults['targets'] = drug.get('targets', ['Unknown'])
+                                    drug_with_defaults['indication'] = drug.get('category', 'Drug repurposing candidate')
                                     drugs_with_defaults.append(drug_with_defaults)
                                 st.session_state.selected_drugs = drugs_with_defaults
-                                st.session_state.current_query = drug_category.lower()
-                                st.session_state.user_query = drug_category.lower()
+                                st.session_state.current_query = f"Top 3 {drug_category}"
+                                st.session_state.user_query = f"Top 3 {drug_category}"
                                 st.rerun()
                         
-                        return  # Skip the rest of the function
+                            # FULL CATEGORY SECTION
+                            with st.expander(f"View All {len(category_drugs)} {drug_category}", expanded=False):
+                                # Display in a nice card format (show up to 15 drugs)
+                                display_drugs = scored_drugs[:15]
+                                for i in range(0, len(display_drugs), 3):
+                                    cols = st.columns(3)
+                                    for j, col in enumerate(cols):
+                                        if i + j < len(display_drugs):
+                                            drug = display_drugs[i + j]
+                                            with col:
+                                                drug_class = drug.get('class', 'Unknown')
+                                                target = drug.get('target', 'Multiple targets')
+                                                mechanism = drug.get('mechanism', f"{drug_class} mechanism")
+                                                can_opt = drug.get('can_optimize', False)
+                                                score = drug.get('overall_score', 0) * 100
+                                            
+                                                opt_icon = "" if can_opt else ""
+                                                border_color = "#22c55e" if can_opt else "#94a3b8"
+                                            
+                                                st.markdown(f"""
+                                                <div style="background: #f8fafc; padding: 0.8rem; border-radius: 8px; border-left: 4px solid {border_color}; margin-bottom: 0.5rem;">
+                                                    <h4 style="margin: 0; color: #166534; font-size: 0.95rem;">{opt_icon} {drug.get('name', 'Unknown')}</h4>
+                                                    <p style="margin: 0.2rem 0; color: #64748b; font-size: 0.8rem;"><b>Score:</b> {score:.0f}% | <b>Class:</b> {drug_class}</p>
+                                                    <p style="margin: 0; color: #64748b; font-size: 0.75rem;">{str(mechanism)[:40]}...</p>
+                                                </div>
+                                                """, unsafe_allow_html=True)
+                            
+                                # Show total count if more drugs available
+                                if len(category_drugs) > 15:
+                                    st.info(f"Showing 15 of {len(category_drugs)} {drug_category}.")
+                            
+                                # Button to analyze all drugs in category
+                                if st.button(f"Analyze All {drug_category}", type="secondary", use_container_width=True, key="analyze_all"):
+                                    drugs_with_defaults = []
+                                    for idx, drug in enumerate(scored_drugs[:20]):
+                                        drug_with_defaults = drug.copy()
+                                        drug_with_defaults['confidence'] = drug.get('overall_score', 0.80 - (idx * 0.01))
+                                        drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
+                                        drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
+                                        drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
+                                        drugs_with_defaults.append(drug_with_defaults)
+                                    st.session_state.selected_drugs = drugs_with_defaults
+                                    st.session_state.current_query = drug_category.lower()
+                                    st.session_state.user_query = drug_category.lower()
+                                    st.rerun()
+                        
+                            return  # Skip the rest of the function
                     else:
-                        st.warning(f"No drugs found in {drug_category} category")
+                            st.warning(f"No drugs found in {drug_category} category")
                 except Exception as e:
                     st.error(f"Error loading drugs: {str(e)}")
         
