@@ -7536,8 +7536,8 @@ def render_professional_drug_discovery_chatbox():
             "-- Select Category --": None,
             "Diabetic Drugs": "Diabetic",
             "Cardiovascular Drugs": "Cardiovascular", 
-            "Parkinson's Drugs": "Parkinsons",
-            "Alzheimer's Drugs": "Alzheimers",
+            "Dopaminergic Drugs (Parkinson's targets)": "Parkinsons",
+            "Cholinergic Drugs (Alzheimer's targets)": "Alzheimers",
             "Pain/Anti-inflammatory": "Pain",
             "Psychiatric Drugs": "Psychiatric"
         }
@@ -11798,7 +11798,8 @@ def render_molecular_docking_section():
                                 with st.spinner(f"Running molecular docking for {selected_drug}..."):
                                     vina_result = run_autodock_vina_docking(
                                         drug_name=selected_drug,
-                                        target_protein=target_protein
+                                        target_protein=target_protein,
+                                        protein_pdb_data=protein_pdb_data  # CRITICAL: Pass protein structure!
                                     )
                                     
                                 if vina_result and vina_result.get('success'):
@@ -11847,7 +11848,8 @@ def render_molecular_docking_section():
                             with st.spinner(f"Running molecular docking for {selected_drug}..."):
                                 vina_result = run_autodock_vina_docking(
                                     drug_name=selected_drug,
-                                    target_protein=target_protein
+                                    target_protein=target_protein,
+                                    protein_pdb_data=protein_pdb_data  # Pass protein structure!
                                 )
                             
                             if vina_result and vina_result.get('success'):
