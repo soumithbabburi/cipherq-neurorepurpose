@@ -7539,7 +7539,8 @@ def render_professional_drug_discovery_chatbox():
             "Dopaminergic Drugs (Parkinson's targets)": "Parkinsons",
             "Cholinergic Drugs (Alzheimer's targets)": "Alzheimers",
             "Pain/Anti-inflammatory": "Pain",
-            "Psychiatric Drugs": "Psychiatric"
+            "Psychiatric Drugs": "Psychiatric",
+            "General Drugs": "General"
         }
         
         drug_category = st.selectbox(
@@ -12579,17 +12580,14 @@ def process_drug_discovery_query(query: str) -> list:
     """
     query_lower = query.lower()
     
-    # Category mappings
+    # Category mappings - MUST match drug_therapeutic_categories.json!
     category_mappings = {
-        'diabetes': 'Diabetes', 'diabetic': 'Diabetes',
-        'cardiovascular': 'Cardiovascular', 'heart': 'Cardiovascular', 
-        'cardiac': 'Cardiovascular',
-        'cancer': 'Cancer', 'oncology': 'Cancer', 'tumor': 'Cancer',
-        'alzheimer': 'Neurological', 'dementia': 'Neurological', 
-        'neurological': 'Neurological',
-        'pain': 'Pain', 'analgesic': 'Pain',
-        'inflammation': 'Anti-inflammatory', 'inflammatory': 'Anti-inflammatory',
-        'antibiotic': 'Antibiotic', 'antiviral': 'Antiviral',
+        'diabetes': 'Diabetic', 'diabetic': 'Diabetic', 'insulin': 'Diabetic',
+        'cardiovascular': 'Cardiovascular', 'heart': 'Cardiovascular', 'cardiac': 'Cardiovascular',
+        'parkinson': 'Parkinsons', 'dopamin': 'Parkinsons', 'dopamine': 'Parkinsons',
+        'alzheimer': 'Alzheimers', 'dementia': 'Alzheimers', 'acetylcholine': 'Alzheimers',
+        'pain': 'Pain', 'analgesic': 'Pain', 'anti-inflammatory': 'Pain',
+        'psychiatric': 'Psychiatric', 'depression': 'Psychiatric', 'anxiety': 'Psychiatric',
     }
     
     # Match category
