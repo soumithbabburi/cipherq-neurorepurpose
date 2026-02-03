@@ -296,8 +296,12 @@ except ImportError as e:
         return None
 
 # Import Minimal Visualization Systems as fallback
-from minimal_network_renderer import render_network_graph
-from simple_3d_viewer import create_simple_3d_viewer
+try:
+    from minimal_network_renderer import render_network_graph
+    from simple_3d_viewer import create_simple_3d_viewer
+    MINIMAL_VIZ_AVAILABLE = True
+except ImportError:
+    MINIMAL_VIZ_AVAILABLE = False
 
 print("Minimal visualization systems loaded successfully")
 
