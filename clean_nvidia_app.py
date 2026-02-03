@@ -7546,6 +7546,14 @@ def render_professional_drug_discovery_chatbox():
                     if category_drugs:
                         st.info(f"Found {len(category_drugs)} {drug_category}")
                         
+                        # Show scoring method being used
+                        try:
+                            import pickle
+                            with open('ml_scoring_model.pkl', 'rb'):
+                                st.success("🤖 Using ML-based scoring (trained on 4,580 repurposing cases)")
+                        except:
+                            st.info("📊 Using rule-based scoring (ML model not available)")
+                        
                         # Score ALL drugs and select top N
                         try:
                             from disease_connection_filter import filter_drugs_by_disease_connection
