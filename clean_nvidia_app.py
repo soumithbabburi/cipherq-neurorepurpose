@@ -10839,15 +10839,19 @@ def render_optimization_strategies_section():
             if cache_key not in st.session_state:
                 with st.spinner("Fetching SMILES and calculating quantum properties..."):
                     try:
-                        # Import the real optimizer
-                        from real_molecular_optimizer import get_optimizer, RealMolecularOptimizer
-                        from optimization_comparison_ui import display_optimization_results, create_score_comparison_chart
-                        from pdb_structure_handler import PDBStructureHandler
+                        # Try to import optimizer - optional!
+                        try:
+                            from real_molecular_optimizer import get_optimizer, RealMolecularOptimizer
+                            from optimization_comparison_ui import display_optimization_results, create_score_comparison_chart
+                            OPTIMIZER_AVAILABLE = True
+                        except ImportError:
+                            OPTIMIZER_AVAILABLE = False
+                            st.warning("Molecular optimizer not available - this feature requires additional modules")
+                            st.session_state[cache_key] = None
                         
-                        # Get SMILES from PubChem via PDBStructureHandler
-                        pdb_handler = PDBStructureHandler()
-                        clean_name = selected_drug_for_real_opt.replace('Drug:', '').strip()
-                        drug_smiles = pdb_handler.get_drug_smiles(clean_name)
+                        if OPTIMIZER_AVAILABLE:
+                            # Get SMILES using our fixed function
+                            drug_smiles = get_drug_smiles(selected_drug_for_real_opt)
                         
                         # Check for biologics (antibodies, proteins) that can't be optimized
                         biologic_keywords = ['mab', 'umab', 'zumab', 'ximab', 'tinib', 'cept', 'nib']
@@ -11582,6 +11586,9 @@ def determine_target_protein_dynamically(drug_name: str) -> Optional[str]:
 
 def render_molecular_docking_section():
     """Render DiffDock molecular docking results with disease-specific target selection"""
+    
+    # Initialize protein_pdb_data to avoid scope errors
+    protein_pdb_data = None
     
     # Get current disease for disease-specific docking
     disease_name = st.session_state.get('target_disease', "Alzheimer's Disease")
