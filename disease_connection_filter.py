@@ -326,19 +326,20 @@ def calculate_cross_disease_score(source_category, target_disease, drug_targets)
 # ============================================================================
 
 def filter_drugs_by_disease_connection(drugs, target_disease, source_category=None, 
-                                       min_score=1.0, auto_enrich=True):
+                                       min_score=0.0, auto_enrich=True):
     """
-    Filter drugs based on biological connection to target disease
+    SCORE all drugs based on biological connection to target disease
+    Returns ALL drugs with their scores (no filtering by default)
     
     Args:
         drugs: List of drug dicts (will auto-enrich with targets if needed)
         target_disease: Disease name ('Alzheimers', 'Parkinsons', etc.)
         source_category: Source category for cross-disease scoring
-        min_score: Minimum connection score threshold
+        min_score: Minimum connection score threshold (default 0.0 = return all)
         auto_enrich: Automatically add targets from interactions DB
     
     Returns:
-        List of drugs with connection scores
+        List of ALL drugs with connection scores, sorted by score
     """
     
     if not drugs:
@@ -352,7 +353,7 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
             logger.error("❌ No interactions database loaded! Check file path.")
             return []
         
-        logger.info(f"Enriching {len(drugs)} drugs with target data...")
+        logger.info(f"Scoring {len(drugs)} drugs for {target_disease} relevance...")
         enriched_drugs = [enrich_drug_with_targets(d.copy(), interactions_db) for d in drugs]
     else:
         enriched_drugs = drugs
@@ -365,8 +366,18 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
         drug_name = drug.get('drug_name', 'Unknown')
         drug_targets = extract_gene_symbols(drug.get('targets', []))
         
+        # Even if no targets, still add with score 0
         if not drug_targets:
             no_targets_count += 1
+            drug_with_score = drug.copy()
+            drug_with_score['connection_score'] = 0.0
+            drug_with_score['pathway_score'] = 0.0
+            drug_with_score['cross_disease_score'] = 0.0
+            drug_with_score['matched_pathways'] = []
+            drug_with_score['cross_disease_pathways'] = []
+            drug_with_score['target_details'] = []
+            drug_with_score['num_targets'] = 0
+            results.append(drug_with_score)
             continue
         
         drugs_with_targets.append(drug_name)
@@ -395,37 +406,35 @@ def filter_drugs_by_disease_connection(drugs, target_disease, source_category=No
         drug_with_score['target_details'] = target_details
         drug_with_score['num_targets'] = len(drug_targets)
         
-        if total_score >= min_score:
-            results.append(drug_with_score)
+        results.append(drug_with_score)
     
-    # Sort by score
+    # Sort by score (highest first)
     results.sort(key=lambda x: x['connection_score'], reverse=True)
     
-    # Detailed logging
-    logger.info(f"📊 ENRICHMENT STATS:")
-    logger.info(f"   Input drugs: {len(drugs)}")
-    logger.info(f"   Drugs with targets: {len(drugs_with_targets)}")
-    logger.info(f"   Drugs without targets: {no_targets_count}")
-    
-    if no_targets_count > 0 and len(drugs_with_targets) > 0:
-        logger.info(f"   ✅ Sample drugs WITH targets: {drugs_with_targets[:5]}")
-    
-    if results:
-        logger.info(f"✅ FILTER RESULTS: {len(results)}/{len(drugs)} drugs passed (min_score={min_score})")
-        top = results[0]
-        logger.info(f"   Top: {top.get('drug_name')} (score: {top['connection_score']:.1f}, pathways: {len(top['matched_pathways'])})")
-        if len(results) > 1:
-            logger.info(f"   2nd: {results[1].get('drug_name')} (score: {results[1]['connection_score']:.1f})")
+    # Apply min_score filter if specified
+    if min_score > 0:
+        filtered_results = [d for d in results if d['connection_score'] >= min_score]
+        logger.info(f"📊 SCORING COMPLETE:")
+        logger.info(f"   Total drugs: {len(drugs)}")
+        logger.info(f"   Drugs with targets: {len(drugs_with_targets)}")
+        logger.info(f"   Drugs passing threshold (>={min_score}): {len(filtered_results)}")
+        if filtered_results:
+            logger.info(f"   Top drug: {filtered_results[0].get('drug_name')} (score: {filtered_results[0]['connection_score']:.1f})")
+        return filtered_results
     else:
-        logger.warning(f"⚠️ FILTER RESULTS: 0/{len(drugs)} drugs passed filter (min_score={min_score})")
-        if no_targets_count > 0:
-            logger.warning(f"   {no_targets_count} drugs had no target data")
-        if no_targets_count == len(drugs):
-            logger.error(f"   🔴 CRITICAL: NO drugs have target data!")
-            logger.error(f"   Check: (1) Is drug_interactions.json in repo root? (2) Are drug names correct?")
-        logger.warning(f"   Consider: (1) lowering min_score, (2) checking interaction data, (3) using auto_enrich=True")
-    
-    return results
+        # Return ALL drugs with scores
+        logger.info(f"📊 SCORING COMPLETE:")
+        logger.info(f"   Total drugs scored: {len(results)}")
+        logger.info(f"   Drugs with targets: {len(drugs_with_targets)}")
+        logger.info(f"   Drugs without targets: {no_targets_count}")
+        if results and results[0]['connection_score'] > 0:
+            logger.info(f"   Top drug: {results[0].get('drug_name')} (score: {results[0]['connection_score']:.1f})")
+            if len(results) > 1 and results[1]['connection_score'] > 0:
+                logger.info(f"   2nd: {results[1].get('drug_name')} (score: {results[1]['connection_score']:.1f})")
+            if len(results) > 2 and results[2]['connection_score'] > 0:
+                logger.info(f"   3rd: {results[2].get('drug_name')} (score: {results[2]['connection_score']:.1f})")
+        
+        return results
 
 # ============================================================================
 # UTILITY FUNCTIONS
