@@ -34,6 +34,14 @@ except ImportError:
     DATABASE_MODULES_AVAILABLE = False
     print("Warning: Database modules not available - using basic queries only")
 
+# Import top N selector
+try:
+    from top_n_selector import get_top_3_drugs, select_top_n_drugs
+    TOP_N_SELECTOR_AVAILABLE = True
+except ImportError:
+    TOP_N_SELECTOR_AVAILABLE = False
+    print("Warning: top_n_selector not available")
+
 # Import tier selection UI
 try:
     from tier_selector import render_tier_selector, get_tier_filtered_drugs
@@ -7538,29 +7546,38 @@ def render_professional_drug_discovery_chatbox():
                     if category_drugs:
                         st.info(f"Found {len(category_drugs)} {drug_category}")
                         
-                        # Score ALL drugs (no pre-filtering - let scoring handle it)
-                        for drug in category_drugs:
-                            drug_name = drug.get('name', '')
+                        # Score ALL drugs and select top N
+                        try:
+                            from disease_connection_filter import filter_drugs_by_disease_connection
+                            from top_n_selector import select_top_n_drugs
                             
-                            # Score with disease pathway count (scoring_engine will calculate it)
-                            score = score_drug(drug_name, selected_disease, disease_pathway_count=0)
+                            # Score all drugs
+                            scored_all = filter_drugs_by_disease_connection(
+                                category_drugs,
+                                target_disease=selected_disease,
+                                source_category=db_category,
+                                min_score=0.0,
+                                auto_enrich=True
+                            )
                             
-                            drug['repurposing_score'] = score * 100
-                            drug['confidence'] = score
-                            drug['can_optimize'] = True
-                            drug['optimization_class'] = 'Small molecule'
+                            # Select top 3
+                            filtered_drugs = select_top_n_drugs(scored_all, n=3)
+                            scored_drugs = filtered_drugs
+                            
+                        except ImportError:
+                            # Fallback: score manually
+                            for drug in category_drugs:
+                                drug_name = drug.get('name', '')
+                                score = score_drug(drug_name, selected_disease, disease_pathway_count=0)
+                                drug['repurposing_score'] = score * 100
+                                drug['confidence'] = score
+                            
+                            scored_drugs = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
                         
-                        # Sort by score and filter out very low scores (<10%)
-                        all_scored = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
-                        scored_drugs = [d for d in all_scored if d.get('repurposing_score', 0) >= 10]
-                        
-                        if len(scored_drugs) == 0:
-                            st.warning(f"No {drug_category} scored above 10% for {selected_disease}")
-                            st.info("These drugs may not be relevant for this disease. Try a different category.")
-                        else:
+                        if scored_drugs:
                             # Count optimizable vs biologics
-                            optimizable_drugs = [d for d in scored_drugs if d.get('can_optimize', False)]
-                            biologic_drugs = [d for d in scored_drugs if not d.get('can_optimize', False)]
+                            optimizable_drugs = [d for d in scored_drugs if d.get('can_optimize', True)]
+                            biologic_drugs = [d for d in scored_drugs if not d.get('can_optimize', True)]
                         
                             # TOP 3 CANDIDATES SECTION
                             st.markdown("### Top 3 Repurposing Candidates")
