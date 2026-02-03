@@ -48,13 +48,44 @@ def score_drug(drug_name: str, disease: str = None, disease_pathway_count: int =
         score = 0.0
         
         # Component 1: DISEASE CONNECTION STRENGTH (0-0.40) - MOST IMPORTANT!
+        # Calculate disease pathway count if not provided
+        if disease_pathway_count == 0 and disease:
+            try:
+                with open('protein_pathways.json', 'r') as f:
+                    protein_pathways = json.load(f)
+                with open('pathways.json', 'r') as f:
+                    pathways_data = json.load(f)
+                
+                # Get drug targets
+                if drug_key in interactions:
+                    disease_lower = disease.lower()
+                    
+                    for target in interactions[drug_key][:5]:
+                        gene = target.get('gene_symbol', '').upper()
+                        
+                        if gene in protein_pathways:
+                            for pw_id in protein_pathways[gene]:
+                                if pw_id in pathways_data:
+                                    pw_name = pathways_data[pw_id].get('name', '').lower()
+                                    
+                                    # Check disease relevance
+                                    if 'alzheimer' in disease_lower:
+                                        if any(kw in pw_name for kw in ['insulin', 'glucose', 'ampk', 'ppar', 'acetylcholine', 'cholin', 'metabol']):
+                                            disease_pathway_count += 1
+                                    elif 'parkinson' in disease_lower:
+                                        if any(kw in pw_name for kw in ['dopamin', 'mao', 'monoamine']):
+                                            disease_pathway_count += 1
+            except:
+                pass
+        
+        # Score based on disease pathway count
         if disease_pathway_count >= 5:
-            score += 0.40  # Excellent disease connection
+            score += 0.40
         elif disease_pathway_count >= 3:
-            score += 0.30  # Good connection
+            score += 0.30
         elif disease_pathway_count >= 1:
-            score += 0.15  # Some connection
-        # else: 0.0 - no connection, don't recommend!
+            score += 0.15
+        # else: 0.0
         
         # Component 2: Target Confidence (0-0.30)
         if drug_key in interactions:
