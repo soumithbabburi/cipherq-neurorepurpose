@@ -1,0 +1,1531 @@
+{
+  "doxorubicin": [
+    "uterine cancer",
+    "bone cancer",
+    "lung cancer",
+    "hematologic cancer",
+    "kidney cancer",
+    "stomach cancer",
+    "peripheral nervous system neoplasm",
+    "pancreatic cancer",
+    "sarcoma",
+    "thyroid cancer",
+    "breast cancer",
+    "ovarian cancer",
+    "prostate cancer",
+    "urinary bladder cancer",
+    "testicular cancer",
+    "muscle cancer",
+    "liver cancer"
+  ],
+  "reserpine": [
+    "hypertension"
+  ],
+  "pindolol": [
+    "hypertension"
+  ],
+  "nilutamide": [
+    "prostate cancer"
+  ],
+  "bleomycin": [
+    "testicular cancer",
+    "melanoma",
+    "germ cell cancer",
+    "skin cancer",
+    "lymphatic system cancer",
+    "hematologic cancer"
+  ],
+  "saquinavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "lamotrigine": [
+    "epilepsy syndrome"
+  ],
+  "teniposide": [
+    "hematologic cancer",
+    "lymphatic system cancer",
+    "lung cancer"
+  ],
+  "prednisolone": [
+    "allergic rhinitis",
+    "chronic obstructive pulmonary disease",
+    "hematologic cancer",
+    "asthma",
+    "atopic dermatitis",
+    "ankylosing spondylitis",
+    "psoriatic arthritis",
+    "ulcerative colitis",
+    "gout",
+    "rheumatoid arthritis",
+    "systemic lupus erythematosus",
+    "multiple sclerosis",
+    "psoriasis"
+  ],
+  "prednisone": [
+    "hematologic cancer",
+    "asthma",
+    "prostate cancer",
+    "atopic dermatitis",
+    "systemic scleroderma",
+    "chronic obstructive pulmonary disease",
+    "ulcerative colitis",
+    "systemic lupus erythematosus",
+    "gout",
+    "psoriasis",
+    "ankylosing spondylitis",
+    "multiple sclerosis",
+    "Crohn's disease",
+    "psoriatic arthritis",
+    "rheumatoid arthritis"
+  ],
+  "dimenhydrinate": [
+    "allergic rhinitis",
+    "atopic dermatitis"
+  ],
+  "indapamide": [
+    "hypertension"
+  ],
+  "bepridil": [
+    "hypertension"
+  ],
+  "mechlorethamine": [
+    "hematologic cancer",
+    "lymphatic system cancer"
+  ],
+  "fluocinolone acetonide": [
+    "atopic dermatitis",
+    "psoriasis"
+  ],
+  "erlotinib": [
+    "lung cancer",
+    "pancreatic cancer",
+    "kidney cancer"
+  ],
+  "phentermine": [
+    "obesity"
+  ],
+  "triamcinolone": [
+    "ulcerative colitis",
+    "ankylosing spondylitis",
+    "atopic dermatitis",
+    "systemic lupus erythematosus",
+    "rheumatoid arthritis",
+    "hematologic cancer",
+    "allergic rhinitis",
+    "psoriasis",
+    "psoriatic arthritis",
+    "asthma",
+    "multiple sclerosis",
+    "alopecia areata"
+  ],
+  "temozolomide": [
+    "malignant glioma",
+    "skin cancer",
+    "melanoma",
+    "brain cancer"
+  ],
+  "latanoprost": [
+    "glaucoma"
+  ],
+  "estradiol": [
+    "prostate cancer",
+    "osteoporosis"
+  ],
+  "vemurafenib": [
+    "skin cancer",
+    "melanoma"
+  ],
+  "methotrexate": [
+    "systemic lupus erythematosus",
+    "lung cancer",
+    "multiple sclerosis",
+    "breast cancer",
+    "stomach cancer",
+    "psoriasis",
+    "muscle cancer",
+    "hematologic cancer",
+    "testicular cancer",
+    "psoriatic arthritis",
+    "systemic scleroderma",
+    "ankylosing spondylitis",
+    "lymphatic system cancer",
+    "urinary bladder cancer",
+    "rheumatoid arthritis",
+    "bone cancer",
+    "germ cell cancer",
+    "colon cancer",
+    "esophageal cancer"
+  ],
+  "hydrocortisone": [
+    "allergic rhinitis",
+    "rheumatoid arthritis",
+    "asthma",
+    "atopic dermatitis",
+    "psoriasis",
+    "systemic lupus erythematosus",
+    "gout",
+    "ulcerative colitis"
+  ],
+  "etoposide": [
+    "peripheral nervous system neoplasm",
+    "brain cancer",
+    "testicular cancer",
+    "muscle cancer",
+    "lung cancer",
+    "hematologic cancer",
+    "prostate cancer",
+    "sarcoma",
+    "germ cell cancer",
+    "uterine cancer",
+    "urinary bladder cancer"
+  ],
+  "azathioprine": [
+    "systemic scleroderma",
+    "ulcerative colitis",
+    "systemic lupus erythematosus",
+    "multiple sclerosis",
+    "Crohn's disease",
+    "rheumatoid arthritis"
+  ],
+  "hydralazine": [
+    "hypertension"
+  ],
+  "capecitabine": [
+    "stomach cancer",
+    "kidney cancer",
+    "breast cancer",
+    "prostate cancer",
+    "colon cancer",
+    "esophageal cancer"
+  ],
+  "nisoldipine": [
+    "hypertension"
+  ],
+  "glimepiride": [
+    "type 2 diabetes mellitus"
+  ],
+  "nelarabine": [
+    "hematologic cancer"
+  ],
+  "loratadine": [
+    "atopic dermatitis",
+    "asthma",
+    "allergic rhinitis"
+  ],
+  "mesalazine": [
+    "ulcerative colitis",
+    "Crohn's disease"
+  ],
+  "dapsone": [
+    "malaria",
+    "systemic lupus erythematosus",
+    "leprosy"
+  ],
+  "felodipine": [
+    "hypertension"
+  ],
+  "fluocinonide": [
+    "atopic dermatitis",
+    "psoriasis"
+  ],
+  "vincristine": [
+    "hematologic cancer",
+    "sarcoma",
+    "kidney cancer",
+    "lymphatic system cancer",
+    "muscle cancer",
+    "peripheral nervous system neoplasm",
+    "colon cancer"
+  ],
+  "betamethasone": [
+    "hematologic cancer",
+    "ankylosing spondylitis",
+    "psoriatic arthritis",
+    "allergic rhinitis",
+    "psoriasis",
+    "rheumatoid arthritis",
+    "multiple sclerosis",
+    "systemic lupus erythematosus",
+    "ulcerative colitis",
+    "atopic dermatitis",
+    "asthma"
+  ],
+  "dexamethasone": [
+    "psoriatic arthritis",
+    "systemic lupus erythematosus",
+    "ankylosing spondylitis",
+    "asthma",
+    "psoriasis",
+    "atopic dermatitis",
+    "hematologic cancer",
+    "rheumatoid arthritis",
+    "allergic rhinitis",
+    "ulcerative colitis",
+    "multiple sclerosis"
+  ],
+  "mycophenolate mofetil": [
+    "systemic scleroderma",
+    "psoriasis",
+    "systemic lupus erythematosus"
+  ],
+  "miglitol": [
+    "type 2 diabetes mellitus"
+  ],
+  "vinblastine": [
+    "testicular cancer",
+    "hematologic cancer",
+    "head and neck cancer",
+    "lung cancer",
+    "kidney cancer",
+    "breast cancer",
+    "germ cell cancer"
+  ],
+  "gemcitabine": [
+    "pancreatic cancer",
+    "hematologic cancer",
+    "breast cancer",
+    "lung cancer",
+    "urinary bladder cancer",
+    "kidney cancer"
+  ],
+  "verapamil": [
+    "migraine",
+    "hypertension"
+  ],
+  "pyrimethamine": [
+    "malaria"
+  ],
+  "methylprednisolone": [
+    "ankylosing spondylitis",
+    "rheumatoid arthritis",
+    "psoriatic arthritis",
+    "atopic dermatitis",
+    "asthma",
+    "allergic rhinitis",
+    "systemic lupus erythematosus",
+    "gout",
+    "ulcerative colitis",
+    "multiple sclerosis"
+  ],
+  "fluorouracil": [
+    "stomach cancer",
+    "colon cancer",
+    "pancreatic cancer",
+    "urinary bladder cancer",
+    "breast cancer",
+    "head and neck cancer",
+    "skin cancer"
+  ],
+  "clonazepam": [
+    "epilepsy syndrome"
+  ],
+  "altretamine": [
+    "ovarian cancer"
+  ],
+  "dactinomycin": [
+    "kidney cancer",
+    "muscle cancer",
+    "ocular cancer",
+    "sarcoma",
+    "melanoma",
+    "uterine cancer",
+    "germ cell cancer",
+    "skin cancer",
+    "peripheral nervous system neoplasm",
+    "testicular cancer"
+  ],
+  "valsartan": [
+    "coronary artery disease",
+    "hypertension",
+    "type 2 diabetes mellitus"
+  ],
+  "citalopram": [
+    "alcohol dependence"
+  ],
+  "colchicine": [
+    "gout",
+    "primary biliary cirrhosis"
+  ],
+  "fosphenytoin": [
+    "epilepsy syndrome"
+  ],
+  "ifosfamide": [
+    "hematologic cancer",
+    "germ cell cancer",
+    "testicular cancer"
+  ],
+  "echothiophate": [
+    "glaucoma"
+  ],
+  "omeprazole": [
+    "Barrett's esophagus"
+  ],
+  "cimetidine": [
+    "obesity"
+  ],
+  "sulfasalazine": [
+    "ulcerative colitis",
+    "Crohn's disease",
+    "ankylosing spondylitis",
+    "rheumatoid arthritis"
+  ],
+  "diphenhydramine": [
+    "allergic rhinitis",
+    "atopic dermatitis"
+  ],
+  "anagrelide": [
+    "hematologic cancer"
+  ],
+  "cyclosporine": [
+    "systemic lupus erythematosus",
+    "psoriasis",
+    "focal segmental glomerulosclerosis",
+    "rheumatoid arthritis"
+  ],
+  "methimazole": [
+    "Graves' disease"
+  ],
+  "rosuvastatin": [
+    "coronary artery disease",
+    "atherosclerosis"
+  ],
+  "captopril": [
+    "systemic scleroderma",
+    "hypertension",
+    "coronary artery disease"
+  ],
+  "zoledronate": [
+    "osteoporosis",
+    "Paget's disease of bone"
+  ],
+  "irbesartan": [
+    "hypertension",
+    "type 2 diabetes mellitus"
+  ],
+  "clofarabine": [
+    "hematologic cancer"
+  ],
+  "carteolol": [
+    "glaucoma"
+  ],
+  "guanethidine": [
+    "hypertension"
+  ],
+  "chlorambucil": [
+    "breast cancer",
+    "ovarian cancer",
+    "hematologic cancer",
+    "testicular cancer"
+  ],
+  "pemetrexed": [
+    "lung cancer"
+  ],
+  "simvastatin": [
+    "coronary artery disease",
+    "atherosclerosis"
+  ],
+  "ramipril": [
+    "type 1 diabetes mellitus",
+    "hypertension",
+    "type 2 diabetes mellitus",
+    "coronary artery disease"
+  ],
+  "cholecalciferol": [
+    "osteoporosis",
+    "ulcerative colitis",
+    "psoriasis"
+  ],
+  "mitoxantrone": [
+    "breast cancer",
+    "multiple sclerosis",
+    "sarcoma",
+    "hematologic cancer",
+    "prostate cancer",
+    "lymphatic system cancer"
+  ],
+  "rifampicin": [
+    "leprosy"
+  ],
+  "levetiracetam": [
+    "epilepsy syndrome"
+  ],
+  "ruxolitinib": [
+    "hematologic cancer"
+  ],
+  "gliclazide": [
+    "type 2 diabetes mellitus"
+  ],
+  "alitretinoin": [
+    "peripheral nervous system neoplasm",
+    "hematologic cancer"
+  ],
+  "dacarbazine": [
+    "melanoma",
+    "pancreatic cancer",
+    "hematologic cancer",
+    "muscle cancer",
+    "peripheral nervous system neoplasm",
+    "skin cancer",
+    "sarcoma"
+  ],
+  "isradipine": [
+    "hypertension"
+  ],
+  "guanadrel": [
+    "hypertension"
+  ],
+  "vismodegib": [
+    "skin cancer"
+  ],
+  "isotretinoin": [
+    "peripheral nervous system neoplasm"
+  ],
+  "diethylpropion": [
+    "obesity"
+  ],
+  "idarubicin": [
+    "breast cancer",
+    "hematologic cancer"
+  ],
+  "fosinopril": [
+    "hypertension"
+  ],
+  "dyphylline": [
+    "asthma"
+  ],
+  "mitomycin": [
+    "urinary bladder cancer",
+    "stomach cancer"
+  ],
+  "irinotecan": [
+    "pancreatic cancer",
+    "lung cancer",
+    "hematologic cancer",
+    "stomach cancer",
+    "colon cancer",
+    "breast cancer"
+  ],
+  "cisplatin": [
+    "germ cell cancer",
+    "lung cancer",
+    "testicular cancer",
+    "peripheral nervous system neoplasm",
+    "urinary bladder cancer",
+    "bone cancer",
+    "esophageal cancer",
+    "hematologic cancer"
+  ],
+  "ezetimibe": [
+    "atherosclerosis",
+    "coronary artery disease"
+  ],
+  "ciclesonide": [
+    "asthma"
+  ],
+  "indinavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "tacrolimus": [
+    "atopic dermatitis"
+  ],
+  "tirofiban": [
+    "coronary artery disease"
+  ],
+  "tioguanine": [
+    "hematologic cancer"
+  ],
+  "epirubicin": [
+    "stomach cancer",
+    "pancreatic cancer",
+    "liver cancer",
+    "prostate cancer",
+    "thyroid cancer",
+    "sarcoma",
+    "hematologic cancer",
+    "testicular cancer",
+    "peripheral nervous system neoplasm",
+    "uterine cancer",
+    "ovarian cancer",
+    "breast cancer",
+    "bone cancer",
+    "urinary bladder cancer"
+  ],
+  "fingolimod": [
+    "multiple sclerosis"
+  ],
+  "eprosartan": [
+    "hypertension"
+  ],
+  "liotrix": [
+    "hypothyroidism"
+  ],
+  "ticagrelor": [
+    "coronary artery disease"
+  ],
+  "sorafenib": [
+    "thyroid cancer",
+    "kidney cancer",
+    "liver cancer"
+  ],
+  "mometasone": [
+    "atopic dermatitis",
+    "asthma",
+    "systemic scleroderma"
+  ],
+  "docetaxel": [
+    "melanoma",
+    "skin cancer",
+    "breast cancer",
+    "lung cancer",
+    "pancreatic cancer",
+    "ovarian cancer",
+    "prostate cancer",
+    "head and neck cancer",
+    "stomach cancer"
+  ],
+  "apraclonidine": [
+    "glaucoma"
+  ],
+  "methoxsalen": [
+    "psoriasis",
+    "hematologic cancer",
+    "vitiligo"
+  ],
+  "desonide": [
+    "atopic dermatitis"
+  ],
+  "liothyronine": [
+    "hypothyroidism"
+  ],
+  "stavudine": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "alendronate": [
+    "Paget's disease of bone",
+    "osteoporosis"
+  ],
+  "carboplatin": [
+    "breast cancer",
+    "uterine cancer",
+    "ocular cancer",
+    "esophageal cancer",
+    "ovarian cancer",
+    "testicular cancer",
+    "urinary bladder cancer",
+    "brain cancer",
+    "bone cancer"
+  ],
+  "varenicline": [
+    "nicotine dependence"
+  ],
+  "hydroxyurea": [
+    "head and neck cancer",
+    "hematologic cancer",
+    "brain cancer",
+    "psoriasis"
+  ],
+  "indomethacin": [
+    "gout"
+  ],
+  "eribulin": [
+    "breast cancer"
+  ],
+  "metformin": [
+    "type 2 diabetes mellitus",
+    "polycystic ovary syndrome",
+    "metabolic syndrome X"
+  ],
+  "moexipril": [
+    "hypertension"
+  ],
+  "conjugated estrogens": [
+    "osteoporosis",
+    "prostate cancer"
+  ],
+  "cladribine": [
+    "hematologic cancer",
+    "multiple sclerosis"
+  ],
+  "risedronate": [
+    "osteoporosis",
+    "Paget's disease of bone"
+  ],
+  "thiotepa": [
+    "breast cancer",
+    "sarcoma",
+    "urinary bladder cancer",
+    "hematologic cancer"
+  ],
+  "tretinoin": [
+    "peripheral nervous system neoplasm"
+  ],
+  "etidronic acid": [
+    "Paget's disease of bone",
+    "osteoporosis"
+  ],
+  "arformoterol": [
+    "asthma",
+    "chronic obstructive pulmonary disease"
+  ],
+  "busulfan": [
+    "hematologic cancer"
+  ],
+  "valrubicin": [
+    "urinary bladder cancer"
+  ],
+  "dorzolamide": [
+    "glaucoma"
+  ],
+  "betaxolol": [
+    "glaucoma",
+    "hypertension"
+  ],
+  "acetazolamide": [
+    "glaucoma",
+    "epilepsy syndrome"
+  ],
+  "bimatoprost": [
+    "glaucoma"
+  ],
+  "chlorothiazide": [
+    "hypertension"
+  ],
+  "furosemide": [
+    "dilated cardiomyopathy",
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "pitavastatin": [
+    "coronary artery disease"
+  ],
+  "didanosine": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "losartan": [
+    "hypertension",
+    "coronary artery disease",
+    "type 2 diabetes mellitus"
+  ],
+  "beclomethasone": [
+    "psoriasis",
+    "asthma"
+  ],
+  "rivastigmine": [
+    "Alzheimer's disease"
+  ],
+  "propylthiouracil": [
+    "Graves' disease"
+  ],
+  "estrone": [
+    "prostate cancer"
+  ],
+  "esomeprazole": [
+    "Barrett's esophagus"
+  ],
+  "cetirizine": [
+    "allergic rhinitis"
+  ],
+  "melphalan": [
+    "hematologic cancer",
+    "breast cancer",
+    "ovarian cancer",
+    "peripheral nervous system neoplasm"
+  ],
+  "sitagliptin": [
+    "type 2 diabetes mellitus"
+  ],
+  "balsalazide": [
+    "Crohn's disease",
+    "ulcerative colitis"
+  ],
+  "carmustine": [
+    "malignant glioma",
+    "brain cancer",
+    "lymphatic system cancer",
+    "melanoma",
+    "hematologic cancer"
+  ],
+  "progesterone": [
+    "uterine cancer"
+  ],
+  "vinorelbine": [
+    "hematologic cancer",
+    "breast cancer",
+    "lung cancer",
+    "ovarian cancer"
+  ],
+  "ibandronate": [
+    "osteoporosis"
+  ],
+  "spironolactone": [
+    "hypertension",
+    "dilated cardiomyopathy"
+  ],
+  "adefovir dipivoxil": [
+    "hepatitis B"
+  ],
+  "telmisartan": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "proguanil": [
+    "malaria"
+  ],
+  "lovastatin": [
+    "atherosclerosis",
+    "coronary artery disease"
+  ],
+  "topiramate": [
+    "epilepsy syndrome",
+    "migraine",
+    "obesity"
+  ],
+  "floxuridine": [
+    "stomach cancer"
+  ],
+  "tolazamide": [
+    "type 2 diabetes mellitus"
+  ],
+  "tolbutamide": [
+    "type 2 diabetes mellitus"
+  ],
+  "felbamate": [
+    "epilepsy syndrome"
+  ],
+  "valproic acid": [
+    "epilepsy syndrome",
+    "migraine"
+  ],
+  "chlorpropamide": [
+    "type 2 diabetes mellitus"
+  ],
+  "timolol": [
+    "migraine",
+    "glaucoma",
+    "hypertension",
+    "coronary artery disease"
+  ],
+  "everolimus": [
+    "kidney cancer"
+  ],
+  "montelukast": [
+    "asthma",
+    "chronic obstructive pulmonary disease",
+    "allergic rhinitis"
+  ],
+  "clobetasol propionate": [
+    "psoriasis"
+  ],
+  "isoprenaline": [
+    "asthma"
+  ],
+  "terazosin": [
+    "hypertension"
+  ],
+  "ethinyl estradiol": [
+    "prostate cancer",
+    "osteoporosis"
+  ],
+  "clomifene": [
+    "azoospermia"
+  ],
+  "paclitaxel": [
+    "lung cancer",
+    "kidney cancer",
+    "breast cancer",
+    "ovarian cancer"
+  ],
+  "nedocromil": [
+    "asthma"
+  ],
+  "thalidomide": [
+    "hematologic cancer",
+    "leprosy"
+  ],
+  "tamoxifen": [
+    "pancreatic cancer",
+    "breast cancer"
+  ],
+  "bromocriptine": [
+    "type 2 diabetes mellitus"
+  ],
+  "brimonidine": [
+    "glaucoma"
+  ],
+  "pioglitazone": [
+    "type 2 diabetes mellitus"
+  ],
+  "crizotinib": [
+    "lung cancer"
+  ],
+  "acamprosate": [
+    "alcohol dependence"
+  ],
+  "theophylline": [
+    "asthma"
+  ],
+  "procarbazine": [
+    "hematologic cancer",
+    "brain cancer"
+  ],
+  "ursodeoxycholic acid": [
+    "primary biliary cirrhosis"
+  ],
+  "auranofin": [
+    "psoriatic arthritis",
+    "rheumatoid arthritis"
+  ],
+  "nifedipine": [
+    "hypertension"
+  ],
+  "nadolol": [
+    "hypertension"
+  ],
+  "lapatinib": [
+    "breast cancer"
+  ],
+  "tiotropium": [
+    "asthma",
+    "chronic obstructive pulmonary disease"
+  ],
+  "budesonide": [
+    "asthma",
+    "ulcerative colitis"
+  ],
+  "abiraterone": [
+    "prostate cancer"
+  ],
+  "amprenavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "lamivudine": [
+    "hepatitis B",
+    "acquired immunodeficiency syndrome"
+  ],
+  "roflumilast": [
+    "chronic obstructive pulmonary disease"
+  ],
+  "chenodeoxycholic acid": [
+    "primary biliary cirrhosis"
+  ],
+  "nicardipine": [
+    "hypertension"
+  ],
+  "carvedilol": [
+    "hypertension"
+  ],
+  "cromoglicic acid": [
+    "asthma"
+  ],
+  "fenoldopam": [
+    "hypertension"
+  ],
+  "guanabenz": [
+    "hypertension"
+  ],
+  "hydroflumethiazide": [
+    "hypertension"
+  ],
+  "propantheline": [
+    "pancreatitis"
+  ],
+  "propranolol": [
+    "migraine",
+    "hypertension"
+  ],
+  "mycophenolic acid": [
+    "systemic scleroderma",
+    "psoriasis"
+  ],
+  "cytarabine": [
+    "hematologic cancer",
+    "lymphatic system cancer"
+  ],
+  "salmeterol": [
+    "asthma"
+  ],
+  "hydrochlorothiazide": [
+    "hypertension",
+    "nephrolithiasis"
+  ],
+  "lenalidomide": [
+    "hematologic cancer"
+  ],
+  "niacin": [
+    "coronary artery disease",
+    "atherosclerosis"
+  ],
+  "sulfadiazine": [
+    "malaria"
+  ],
+  "eplerenone": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "letrozole": [
+    "breast cancer"
+  ],
+  "fulvestrant": [
+    "breast cancer"
+  ],
+  "formoterol": [
+    "asthma",
+    "chronic obstructive pulmonary disease"
+  ],
+  "esmolol": [
+    "hypertension"
+  ],
+  "oxcarbazepine": [
+    "epilepsy syndrome"
+  ],
+  "vitamin c": [
+    "prostate cancer"
+  ],
+  "flunisolide": [
+    "asthma",
+    "allergic rhinitis"
+  ],
+  "calcium acetate": [
+    "osteoporosis"
+  ],
+  "estramustine": [
+    "prostate cancer"
+  ],
+  "ergocalciferol": [
+    "rheumatoid arthritis",
+    "osteoporosis"
+  ],
+  "calcipotriol": [
+    "psoriasis"
+  ],
+  "metoprolol": [
+    "hypertension"
+  ],
+  "temsirolimus": [
+    "kidney cancer"
+  ],
+  "pentostatin": [
+    "hematologic cancer"
+  ],
+  "fluoxymesterone": [
+    "breast cancer"
+  ],
+  "tazarotene": [
+    "psoriasis"
+  ],
+  "lisinopril": [
+    "dilated cardiomyopathy",
+    "coronary artery disease",
+    "systemic scleroderma",
+    "hypertension"
+  ],
+  "salbutamol": [
+    "asthma",
+    "chronic obstructive pulmonary disease"
+  ],
+  "goserelin": [
+    "prostate cancer",
+    "breast cancer"
+  ],
+  "toremifene": [
+    "breast cancer"
+  ],
+  "sunitinib": [
+    "pancreatic cancer",
+    "kidney cancer"
+  ],
+  "bendroflumethiazide": [
+    "hypertension"
+  ],
+  "bupropion": [
+    "obesity"
+  ],
+  "zonisamide": [
+    "epilepsy syndrome"
+  ],
+  "olmesartan": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "clonidine": [
+    "hypertension",
+    "glaucoma"
+  ],
+  "vorinostat": [
+    "hematologic cancer"
+  ],
+  "dipivefrin": [
+    "glaucoma"
+  ],
+  "amiloride": [
+    "hypertension"
+  ],
+  "quinapril": [
+    "hypertension"
+  ],
+  "ritonavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "clindamycin": [
+    "malaria"
+  ],
+  "trandolapril": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "methyldopa": [
+    "hypertension"
+  ],
+  "chlorthalidone": [
+    "hypertension"
+  ],
+  "lomustine": [
+    "brain cancer",
+    "hematologic cancer"
+  ],
+  "anastrozole": [
+    "breast cancer"
+  ],
+  "atorvastatin": [
+    "hypertension",
+    "coronary artery disease"
+  ],
+  "quinidine barbiturate": [
+    "malaria"
+  ],
+  "leflunomide": [
+    "rheumatoid arthritis",
+    "systemic scleroderma",
+    "systemic lupus erythematosus"
+  ],
+  "minoxidil": [
+    "hypertension"
+  ],
+  "vandetanib": [
+    "thyroid cancer"
+  ],
+  "zafirlukast": [
+    "asthma"
+  ],
+  "dasatinib": [
+    "hematologic cancer"
+  ],
+  "sibutramine": [
+    "obesity"
+  ],
+  "trimethadione": [
+    "epilepsy syndrome"
+  ],
+  "ketotifen": [
+    "asthma"
+  ],
+  "bortezomib": [
+    "hematologic cancer"
+  ],
+  "methazolamide": [
+    "glaucoma"
+  ],
+  "enalapril": [
+    "hypertension",
+    "coronary artery disease"
+  ],
+  "estropipate": [
+    "osteoporosis"
+  ],
+  "glyburide": [
+    "gestational diabetes",
+    "type 2 diabetes mellitus"
+  ],
+  "olsalazine": [
+    "ulcerative colitis"
+  ],
+  "nelfinavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "quinine": [
+    "malaria"
+  ],
+  "galantamine": [
+    "Alzheimer's disease"
+  ],
+  "pimecrolimus": [
+    "atopic dermatitis"
+  ],
+  "indacaterol": [
+    "asthma"
+  ],
+  "entecavir": [
+    "hepatitis B"
+  ],
+  "benzphetamine": [
+    "obesity"
+  ],
+  "octreotide": [
+    "thymus cancer"
+  ],
+  "ixabepilone": [
+    "breast cancer"
+  ],
+  "fenofibrate": [
+    "coronary artery disease"
+  ],
+  "quinidine": [
+    "malaria"
+  ],
+  "degarelix": [
+    "prostate cancer"
+  ],
+  "fludarabine": [
+    "lymphatic system cancer",
+    "hematologic cancer"
+  ],
+  "travoprost": [
+    "glaucoma"
+  ],
+  "orlistat": [
+    "obesity",
+    "type 2 diabetes mellitus"
+  ],
+  "lacosamide": [
+    "epilepsy syndrome"
+  ],
+  "cyproheptadine": [
+    "allergic rhinitis"
+  ],
+  "allopurinol": [
+    "gout"
+  ],
+  "nebivolol": [
+    "hypertension"
+  ],
+  "bexarotene": [
+    "hematologic cancer"
+  ],
+  "pazopanib": [
+    "kidney cancer"
+  ],
+  "acarbose": [
+    "type 2 diabetes mellitus"
+  ],
+  "raloxifene": [
+    "osteoporosis",
+    "breast cancer"
+  ],
+  "levothyroxine": [
+    "hypothyroidism"
+  ],
+  "lopinavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "vigabatrin": [
+    "epilepsy syndrome"
+  ],
+  "penbutolol": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "clobazam": [
+    "epilepsy syndrome"
+  ],
+  "delavirdine": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "diclofenamide": [
+    "glaucoma"
+  ],
+  "levobunolol": [
+    "glaucoma"
+  ],
+  "doxycycline": [
+    "malaria"
+  ],
+  "memantine": [
+    "Alzheimer's disease"
+  ],
+  "gemfibrozil": [
+    "coronary artery disease"
+  ],
+  "abacavir": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "zidovudine": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "aminophylline": [
+    "chronic obstructive pulmonary disease",
+    "asthma"
+  ],
+  "glipizide": [
+    "type 2 diabetes mellitus"
+  ],
+  "rosiglitazone": [
+    "type 2 diabetes mellitus"
+  ],
+  "phenobarbital": [
+    "epilepsy syndrome"
+  ],
+  "wf10": [
+    "asthma"
+  ],
+  "pirbuterol": [
+    "asthma"
+  ],
+  "nateglinide": [
+    "type 2 diabetes mellitus"
+  ],
+  "probenecid": [
+    "gout"
+  ],
+  "triamterene": [
+    "hypertension"
+  ],
+  "donepezil": [
+    "Alzheimer's disease"
+  ],
+  "rufinamide": [
+    "epilepsy syndrome"
+  ],
+  "prazosin": [
+    "hypertension"
+  ],
+  "methamphetamine": [
+    "obesity"
+  ],
+  "gefitinib": [
+    "lung cancer"
+  ],
+  "acetylsalicylic acid": [
+    "coronary artery disease",
+    "Kawasaki disease"
+  ],
+  "amitriptyline": [
+    "migraine"
+  ],
+  "imatinib": [
+    "hematologic cancer"
+  ],
+  "fluticasone propionate": [
+    "asthma"
+  ],
+  "calcitriol": [
+    "psoriasis",
+    "osteoporosis"
+  ],
+  "exemestane": [
+    "breast cancer"
+  ],
+  "phenylpropanolamine": [
+    "obesity"
+  ],
+  "naproxen": [
+    "gout"
+  ],
+  "mercaptopurine": [
+    "ulcerative colitis",
+    "hematologic cancer",
+    "Crohn's disease"
+  ],
+  "diltiazem": [
+    "hypertension"
+  ],
+  "pilocarpine": [
+    "glaucoma"
+  ],
+  "perindopril": [
+    "coronary artery disease",
+    "hypertension"
+  ],
+  "benazepril": [
+    "hypertension"
+  ],
+  "bicalutamide": [
+    "prostate cancer"
+  ],
+  "candesartan": [
+    "hypertension"
+  ],
+  "linagliptin": [
+    "type 2 diabetes mellitus"
+  ],
+  "artemether": [
+    "malaria"
+  ],
+  "topotecan": [
+    "cervical cancer",
+    "ovarian cancer",
+    "peripheral nervous system neoplasm",
+    "lung cancer"
+  ],
+  "pentoxifylline": [
+    "malaria",
+    "systemic scleroderma"
+  ],
+  "riluzole": [
+    "amyotrophic lateral sclerosis"
+  ],
+  "midazolam": [
+    "epilepsy syndrome"
+  ],
+  "cabazitaxel": [
+    "prostate cancer"
+  ],
+  "ethacrynic acid": [
+    "hypertension"
+  ],
+  "propofol": [
+    "epilepsy syndrome"
+  ],
+  "acitretin": [
+    "psoriasis"
+  ],
+  "carbachol": [
+    "glaucoma"
+  ],
+  "isoetarine": [
+    "asthma"
+  ],
+  "doxazosin": [
+    "hypertension"
+  ],
+  "dextrothyroxine": [
+    "hypothyroidism"
+  ],
+  "guanfacine": [
+    "hypertension"
+  ],
+  "gabapentin": [
+    "epilepsy syndrome",
+    "migraine"
+  ],
+  "zileuton": [
+    "asthma"
+  ],
+  "metolazone": [
+    "hypertension"
+  ],
+  "nevirapine": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "penicillamine": [
+    "rheumatoid arthritis"
+  ],
+  "imiquimod": [
+    "skin cancer"
+  ],
+  "nilotinib": [
+    "hematologic cancer"
+  ],
+  "brinzolamide": [
+    "glaucoma"
+  ],
+  "pravastatin": [
+    "atherosclerosis",
+    "coronary artery disease"
+  ],
+  "efavirenz": [
+    "acquired immunodeficiency syndrome"
+  ],
+  "nicotine": [
+    "ulcerative colitis"
+  ],
+  "naltrexone": [
+    "alcohol dependence"
+  ],
+  "terbutaline": [
+    "asthma"
+  ],
+  "torasemide": [
+    "hypertension"
+  ],
+  "olopatadine": [
+    "allergic rhinitis"
+  ],
+  "physostigmine": [
+    "glaucoma"
+  ],
+  "phendimetrazine": [
+    "obesity"
+  ],
+  "pregabalin": [
+    "epilepsy syndrome"
+  ],
+  "repaglinide": [
+    "type 2 diabetes mellitus"
+  ],
+  "metipranolol": [
+    "glaucoma"
+  ],
+  "clopidogrel": [
+    "coronary artery disease"
+  ],
+  "tiludronate": [
+    "Paget's disease of bone"
+  ],
+  "labetalol": [
+    "hypertension"
+  ],
+  "primidone": [
+    "epilepsy syndrome"
+  ],
+  "flutamide": [
+    "prostate cancer"
+  ],
+  "pamidronate": [
+    "osteoporosis",
+    "Paget's disease of bone"
+  ],
+  "estradiol valerate/dienogest": [
+    "prostate cancer"
+  ],
+  "bumetanide": [
+    "hypertension"
+  ],
+  "carbamazepine": [
+    "epilepsy syndrome"
+  ],
+  "desloratadine": [
+    "allergic rhinitis"
+  ],
+  "ipratropium bromide": [
+    "asthma"
+  ],
+  "hyoscyamine": [
+    "pancreatitis"
+  ],
+  "diazepam": [
+    "epilepsy syndrome"
+  ],
+  "disulfiram": [
+    "alcohol dependence"
+  ],
+  "phenytoin": [
+    "epilepsy syndrome"
+  ],
+  "amobarbital": [
+    "epilepsy syndrome"
+  ],
+  "acebutolol": [
+    "hypertension"
+  ],
+  "amlodipine": [
+    "hypertension"
+  ],
+  "mecamylamine": [
+    "hypertension"
+  ],
+  "fluticasone furoate": [
+    "asthma"
+  ],
+  "daunorubicin": [
+    "hematologic cancer"
+  ],
+  "orciprenaline": [
+    "asthma"
+  ],
+  "telbivudine": [
+    "hepatitis B"
+  ],
+  "medroxyprogesterone acetate": [
+    "uterine cancer"
+  ]
+}
