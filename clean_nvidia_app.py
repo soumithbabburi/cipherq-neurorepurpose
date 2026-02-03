@@ -7666,7 +7666,7 @@ def render_professional_drug_discovery_chatbox():
                                                 target = drug.get('target', 'Multiple targets')
                                                 mechanism = drug.get('mechanism', f"{drug_class} mechanism")
                                                 can_opt = drug.get('can_optimize', False)
-                                                score = drug.get('overall_score', 0) * 100
+                                                score = drug.get('repurposing_score', 0)  # FIX: Use repurposing_score!
                                             
                                                 opt_icon = "" if can_opt else ""
                                                 border_color = "#22c55e" if can_opt else "#94a3b8"
