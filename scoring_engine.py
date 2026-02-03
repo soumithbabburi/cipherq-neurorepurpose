@@ -1,54 +1,75 @@
 """
-Scoring Engine - IMPROVED WITH VALIDATION
-More discriminating factors, disease-specific scoring
+Scoring Engine - ML + Rule-based Hybrid
+Uses ML model when available, falls back to rules
 """
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 
+# Try to load ML model
+ML_MODEL = None
+try:
+    import pickle
+    with open('ml_scoring_model.pkl', 'rb') as f:
+        ML_MODEL = pickle.load(f)
+    logger.info("✅ ML scoring model loaded")
+except:
+    logger.info("ML model not available, using rule-based scoring")
+
+
 def score_drug(drug_name: str, disease: str = None, disease_pathway_count: int = 0) -> float:
-    """
-    Score drug with disease connection as PRIMARY factor
-    
-    Args:
-        drug_name: Drug name
-        disease: Target disease
-        disease_pathway_count: Number of pathways connecting to disease (from pre-filter)
-    
-    Returns: 0.0 to 1.0 score
-    """
+    """Score drug using ML (preferred) or rules (fallback)"""
     try:
-        # Load data
         with open('drugs.json', 'r') as f:
             drugs = json.load(f)
         with open('drug_interactions.json', 'r') as f:
             interactions = json.load(f)
         
-        # Find drug
         drug_lower = drug_name.lower()
         clean = drug_lower.replace(' hydrochloride', '').replace(' sodium', '').replace(', sterile', '')
         
-        drug_key = None
-        if drug_lower in drugs:
-            drug_key = drug_lower
-        elif clean in drugs:
-            drug_key = clean
-        else:
+        drug_key = drug_lower if drug_lower in drugs else (clean if clean in drugs else None)
+        
+        if not drug_key:
             for key in drugs.keys():
                 if clean in key or key in clean:
                     drug_key = key
                     break
         
         if not drug_key:
-            logger.warning(f"Drug {drug_name} not found")
             return 0.0
         
         drug_info = drugs[drug_key]
+        
+        # TRY ML MODEL FIRST
+        if ML_MODEL is not None:
+            try:
+                import pandas as pd
+                
+                mw = drug_info.get('molecular_weight', 0)
+                
+                if drug_key in interactions:
+                    targets = interactions[drug_key]
+                    target_conf = max(t.get('confidence_score', 0) for t in targets) if targets else 0
+                    num_targets = len(targets)
+                else:
+                    target_conf = 0
+                    num_targets = 0
+                
+                if mw > 0 and target_conf > 0:
+                    X = pd.DataFrame([[mw, target_conf, num_targets]], 
+                                   columns=['mw', 'target_conf', 'num_targets'])
+                    prob = ML_MODEL.predict_proba(X)[0][1]
+                    logger.info(f"ML score: {drug_name} = {prob:.3f}")
+                    return float(prob)
+            except Exception as ml_err:
+                logger.warning(f"ML failed: {ml_err}")
+        
+        # RULE-BASED FALLBACK
         score = 0.0
         
-        # Component 1: DISEASE CONNECTION STRENGTH (0-0.40) - MOST IMPORTANT!
-        # Calculate disease pathway count if not provided
+        # Calculate pathways
         if disease_pathway_count == 0 and disease:
             try:
                 with open('protein_pathways.json', 'r') as f:
@@ -56,76 +77,56 @@ def score_drug(drug_name: str, disease: str = None, disease_pathway_count: int =
                 with open('pathways.json', 'r') as f:
                     pathways_data = json.load(f)
                 
-                # Get drug targets
                 if drug_key in interactions:
                     disease_lower = disease.lower()
-                    
                     for target in interactions[drug_key][:5]:
                         gene = target.get('gene_symbol', '').upper()
-                        
                         if gene in protein_pathways:
                             for pw_id in protein_pathways[gene]:
                                 if pw_id in pathways_data:
                                     pw_name = pathways_data[pw_id].get('name', '').lower()
-                                    
-                                    # Check disease relevance
                                     if 'alzheimer' in disease_lower:
-                                        if any(kw in pw_name for kw in ['insulin', 'glucose', 'ampk', 'ppar', 'acetylcholine', 'cholin', 'metabol']):
-                                            disease_pathway_count += 1
-                                    elif 'parkinson' in disease_lower:
-                                        if any(kw in pw_name for kw in ['dopamin', 'mao', 'monoamine']):
+                                        if any(kw in pw_name for kw in ['insulin', 'glucose', 'metabol']):
                                             disease_pathway_count += 1
             except:
                 pass
         
-        # Score based on disease pathway count
+        # Pathway score
         if disease_pathway_count >= 5:
             score += 0.40
         elif disease_pathway_count >= 3:
             score += 0.30
         elif disease_pathway_count >= 1:
             score += 0.15
-        # else: 0.0
         
-        # Component 2: Target Confidence (0-0.30)
+        # Target confidence
         if drug_key in interactions:
             targets = interactions[drug_key]
-            sorted_targets = sorted(targets, key=lambda x: x.get('confidence_score', 0), reverse=True)
-            
-            if sorted_targets:
-                top_conf = sorted_targets[0].get('confidence_score', 0)
-                
+            if targets:
+                top_conf = max(t.get('confidence_score', 0) for t in targets)
                 if top_conf >= 0.9:
                     score += 0.30
-                elif top_conf >= 0.8:
-                    score += 0.24
                 elif top_conf >= 0.7:
-                    score += 0.18
+                    score += 0.20
                 elif top_conf >= 0.5:
                     score += 0.10
-                else:
-                    score += 0.05
         
-        # Component 3: Molecular Quality (0-0.20)
+        # QED
         qed = drug_info.get('qed_score', 0)
-        if qed >= 0.8:
-            score += 0.20
-        elif qed >= 0.6:
+        if qed >= 0.6:
             score += 0.15
         elif qed >= 0.4:
             score += 0.10
-        else:
-            score += 0.05
         
-        # Component 4: FDA Approval (0-0.10)
+        # FDA approval
         if drug_info.get('approved'):
             score += 0.10
         
-        logger.info(f"Score for {drug_name}: {score:.3f} (disease pathways: {disease_pathway_count})")
+        logger.info(f"Rule score: {drug_name} = {score:.3f}")
         return min(1.0, score)
         
     except Exception as e:
-        logger.error(f"Scoring failed for {drug_name}: {e}")
+        logger.error(f"Scoring failed: {e}")
         return 0.0
 
 
