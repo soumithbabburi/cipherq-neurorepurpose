@@ -10851,7 +10851,11 @@ def render_optimization_strategies_section():
                         
                         if OPTIMIZER_AVAILABLE:
                             # Get SMILES using our fixed function
-                            drug_smiles = get_drug_smiles(selected_drug_for_real_opt)
+                            clean_name = selected_drug_for_real_opt.replace('Drug:', '').strip()
+                            drug_smiles = get_drug_smiles(clean_name)
+                        else:
+                            clean_name = selected_drug_for_real_opt
+                            drug_smiles = None
                         
                         # Check for biologics (antibodies, proteins) that can't be optimized
                         biologic_keywords = ['mab', 'umab', 'zumab', 'ximab', 'tinib', 'cept', 'nib']
@@ -11944,22 +11948,27 @@ def render_molecular_docking_section():
                 import os
                 import time
                 
-                # PDB ID mappings
-                pdb_ids = {
-                    'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
-                    'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
-                    'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK',
-                    'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2',
-                    'PTGS2': '5F19', 'PTGS1': '2OYE', 'COX8A': '5Z62',
-                    'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O',
-                    'BCHE': '1P0I', 'PRKAA1': '4CFF', 'PRKAA2': '4CFF',
-                    'PRKAG1': '4CFF', 'PRKAG2': '4CFF', 'PRKAG3': '4CFF',
-                    'PRKAB1': '4CFF', 'PRKAB2': '4CFF'
-                }
-                pdb_id = pdb_ids.get(target_protein.upper())
+                # DYNAMIC PDB LOOKUP - Query RCSB API (no hardcoding!)
+                pdb_id = None
+                pdb_debug_info.append(f"Searching RCSB PDB API for: {target_protein}")
+                
+                try:
+                    # Query RCSB Search API for this gene
+                    search_url = f'https://search.rcsb.org/rcsbsearch/v2/query?json={{"query":{{"type":"terminal","service":"text","parameters":{{"attribute":"rcsb_entity_source_organism.rcsb_gene_name.value","operator":"exact_match","value":"{target_protein}"}}}},"return_type":"entry"}}'
+                    
+                    search_response = requests.get(search_url, timeout=15)
+                    
+                    if search_response.status_code == 200:
+                        search_data = search_response.json()
+                        if search_data.get('result_set'):
+                            pdb_id = search_data['result_set'][0]['identifier']
+                            pdb_debug_info.append(f"✅ Found via API: {pdb_id}")
+                            logger.info(f"Dynamic PDB: {target_protein} → {pdb_id}")
+                except Exception as search_err:
+                    pdb_debug_info.append(f"API search failed: {str(search_err)[:100]}")
                 
                 if pdb_id:
-                    pdb_debug_info.append(f"Target: {target_protein} → PDB ID: {pdb_id}")
+                    pdb_debug_info.append(f"Using PDB ID: {pdb_id}")
                     
                     # Try local file first
                     local_pdb_path = f"pdb_structures/{target_protein.upper()}_{pdb_id}.pdb"
