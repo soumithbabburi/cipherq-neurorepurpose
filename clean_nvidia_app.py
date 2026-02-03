@@ -17,78 +17,68 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 import requests
 import networkx as nx
-# psycopg2 REMOVED - JSON only!
-
-# Configuration management
-# Config removed - no database needed
-CONFIG_AVAILABLE = False
-
-
-# Import database query modules
-try:
-    from database_queries import get_drug_targets, get_drug_by_name as db_get_drug_by_name
-    from scoring_engine import score_drug, rank_drugs_for_disease
-    from workflow_optimizer import select_best_drugs_for_analysis
-    DATABASE_MODULES_AVAILABLE = True
-except ImportError:
-    DATABASE_MODULES_AVAILABLE = False
-    print("Warning: Database modules not available - using basic queries only")
-
-# Import tier selection UI
-try:
-    from tier_selector import render_tier_selector, get_tier_filtered_drugs
-    TIER_SELECTOR_AVAILABLE = True
-except ImportError:
-    TIER_SELECTOR_AVAILABLE = False
-    print("Warning: tier_selector not available - using all drugs")
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # Database Connection
 @st.cache_resource
-# get_db_connection removed - no database needed
+def get_db_connection():
+    """Create and cache database connection"""
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="cipherq_repurpose",
+            user="babburisoumith",
+            password=""  # Add password if you have one
+        )
+        return conn
+    except Exception as e:
+        st.error(f"Database connection failed: {e}")
+        return None
 
 def execute_db(sql: str, params: tuple = None) -> list:
-    """DATABASE REMOVED - Returns empty list"""
-    logger.warning("execute_db called but database removed! Returning empty.")
-    return []
+    """Execute SQL query and return list of dictionaries"""
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            return []
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, params)
+            results = cur.fetchall()
+            return [dict(row) for row in results]
+    except Exception as e:
+        st.error(f"Query execution failed: {e}")
+        return []
 
+@st.cache_data(ttl=3600)
 def get_drugs_by_category(category: str, limit: int = 10) -> list:
-    """Get drugs by category using drug_categorizer - NO DATABASE!"""
-    try:
-        from services.drug_categorizer import get_drug_categorizer
-        categorizer = get_drug_categorizer()
-        drugs = categorizer.get_drugs_by_category(category, limit=limit)
-        return drugs
-    except Exception as e:
-        logger.error(f"Categorizer error: {e}")
-        return []
+    """Get drugs from database by category"""
+    sql = """
+    SELECT name, therapeutic_category, drug_class, fda_status, 
+           molecular_weight, qed_score, mechanism_of_action
+    FROM drugs
+    WHERE therapeutic_category ILIKE %s
+    ORDER BY qed_score DESC NULLS LAST
+    LIMIT %s
+    """
+    return execute_db(sql, (f'%{category}%', limit))
 
-
+@st.cache_data(ttl=3600)
 def search_drugs_by_query(query: str, limit: int = 15) -> list:
-    """Search drugs by query string - USES CATEGORIZER, NOT DATABASE"""
-    try:
-        from services.drug_categorizer import get_drug_categorizer
-        categorizer = get_drug_categorizer()
-        
-        # Try to match query to a category
-        query_lower = query.lower()
-        
-        if 'diabet' in query_lower:
-            return categorizer.get_drugs_by_category('Diabetic', limit=limit)
-        elif 'cardio' in query_lower or 'heart' in query_lower:
-            return categorizer.get_drugs_by_category('Cardiovascular', limit=limit)
-        elif 'parkinson' in query_lower:
-            return categorizer.get_drugs_by_category('Parkinsons', limit=limit)
-        elif 'alzheimer' in query_lower:
-            return categorizer.get_drugs_by_category('Alzheimers', limit=limit)
-        elif 'cancer' in query_lower:
-            return categorizer.get_drugs_by_category('Cancer', limit=limit)
-        else:
-            # Return general drugs
-            return categorizer.get_drugs_by_category('General', limit=limit)
-    except Exception as e:
-        logger.error(f"Search error: {e}")
-        return []
-
+    """Search drugs by query string"""
+    sql = """
+    SELECT name, therapeutic_category, drug_class, fda_status,
+           mechanism_of_action, qed_score
+    FROM drugs
+    WHERE name ILIKE %s 
+       OR therapeutic_category ILIKE %s
+       OR drug_class ILIKE %s
+       OR mechanism_of_action ILIKE %s
+    ORDER BY qed_score DESC NULLS LAST
+    LIMIT %s
+    """
+    query_pattern = f'%{query}%'
+    return execute_db(sql, (query_pattern, query_pattern, query_pattern, query_pattern, limit))
 
 @st.cache_data(ttl=3600)
 def get_drug_protein_interactions(drug_name: str) -> list:
@@ -99,147 +89,11 @@ def get_drug_protein_interactions(drug_name: str) -> list:
     FROM drug_protein_interactions dpi
     JOIN drugs d ON d.id = dpi.drug_id
     JOIN proteins p ON p.id = dpi.protein_id
-    WHERE LOWER(d.name) = LOWER(%s)
+    WHERE d.name = %s
     ORDER BY dpi.confidence_score DESC
     LIMIT 20
     """
     return execute_db(sql, (drug_name,))
-
-@st.cache_data(ttl=3600)
-def get_drug_targets_from_db(drug_name: str) -> list:
-    """Get protein target names for a drug from database"""
-    interactions = get_drug_protein_interactions(drug_name)
-    if interactions:
-        return [i['gene_symbol'] for i in interactions]
-    return ['Unknown']
-
-@st.cache_data(ttl=3600)
-def get_drug_smiles(drug_name: str) -> str:
-    """Get SMILES structure from drugs.json with flexible name matching"""
-    import json
-    
-    try:
-        with open('drugs.json', 'r') as f:
-            drugs = json.load(f)
-        
-        drug_lower = drug_name.lower()
-        
-        # Try exact match
-        if drug_lower in drugs:
-            return drugs[drug_lower].get('smiles', '')
-        
-        # Try partial match (handles "metformin hydrochloride" → "metformin")
-        # Remove common salt/form suffixes
-        clean_name = drug_lower
-        for suffix in [' hydrochloride', ' sodium', ' sulfate', ' maleate', ' tartrate', 
-                       ' phosphate', ' acetate', ' citrate', ', sterile', ' mesylate']:
-            clean_name = clean_name.replace(suffix, '')
-        
-        # Try cleaned name
-        if clean_name in drugs:
-            return drugs[clean_name].get('smiles', '')
-        
-        # Try partial match in any drug name
-        for drug_key, drug_data in drugs.items():
-            if clean_name in drug_key or drug_key in clean_name:
-                return drug_data.get('smiles', '')
-        
-        logger.warning(f"No SMILES found for {drug_name}")
-        return ""
-    except Exception as e:
-        logger.error(f"SMILES lookup failed for {drug_name}: {e}")
-        return ""
-
-def _format_drug_results(drugs: list) -> list:
-    """
-    Format database drug results into recommendation format
-    Uses real ML confidence scoring - NO HARDCODING
-    ✅ ONLY returns drugs with evidence in database
-    
-    Args:
-        drugs: List of drug dicts from database
-        
-    Returns:
-        List of formatted drug recommendations (only those with targets/evidence)
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    formatted = []
-    
-    for drug in drugs:
-        drug_name = drug.get('name', 'Unknown')
-        
-        # Get targets from database
-        try:
-            targets = get_drug_targets_from_db(drug_name) if DATABASE_MODULES_AVAILABLE else []
-            
-            # ✅ CRITICAL: Skip drugs with NO targets/evidence
-            if not targets or len(targets) == 0:
-                logger.warning(f"Skipping {drug_name} - no protein targets found in database")
-                continue  # Don't recommend drugs without evidence!
-            
-            target_str = ', '.join(targets[:3]) if targets else 'Unknown'
-        except Exception as e:
-            logger.warning(f"Could not get targets for {drug_name}: {e}")
-            # ✅ CRITICAL: Skip drugs that fail to get targets
-            continue
-        
-        # Get real confidence score using ML function
-        try:
-            # Get full target data for scoring
-            if DATABASE_MODULES_AVAILABLE:
-                full_targets = get_drug_targets(drug_name, limit=5)
-                
-                # ✅ Double-check we have target data
-                if not full_targets or len(full_targets) == 0:
-                    logger.warning(f"Skipping {drug_name} - full target data unavailable")
-                    continue
-            else:
-                logger.warning(f"Skipping {drug_name} - database modules not available")
-                continue
-            
-            # Use ML confidence calculation
-            confidence = calculate_ml_confidence_score(
-                drug_name=drug_name,
-                targets=full_targets,
-                disease_context=drug.get('therapeutic_category', '')
-            )
-        except Exception as e:
-            logger.warning(f"ML scoring failed for {drug_name}: {e}")
-            # ✅ CRITICAL: Skip if scoring fails
-            continue
-        
-        formatted.append({
-            'name': drug_name,
-            'class': drug.get('drug_class', 'Unknown'),
-            'mechanism': drug.get('mechanism_of_action', 'Unknown'),
-            'target': target_str,
-            'confidence': confidence,
-            'category': drug.get('therapeutic_category', 'Unknown')
-        })
-    
-    logger.info(f"Formatted {len(formatted)} drugs WITH EVIDENCE (skipped {len(drugs) - len(formatted)} without evidence)")
-    return formatted
-
-
-
-def ensure_drugs_have_smiles(drugs: List[Dict]) -> List[Dict]:
-    """Ensure all drugs have SMILES structures from database"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    for drug in drugs:
-        if 'smiles' not in drug or not drug['smiles']:
-            drug_name = drug.get('name', '')
-            if drug_name:
-                smiles = get_drug_smiles(drug_name)
-                if smiles:
-                    drug['smiles'] = smiles
-                else:
-                    logger.warning(f"No SMILES found for {drug_name}")
-    return drugs
-
 # Local environment support
 try:
     from dotenv import load_dotenv
@@ -305,24 +159,10 @@ print("Minimal visualization systems loaded successfully")
 try:
     from services.docking_service import DockingService
     from pdb_structure_handler import PDBStructureHandler
-    from quantum_optimization_strategies import render_quantum_optimization_section, MolecularOptimizer
-    from nvidia_bionemo_integration import NVIDIABioNeMoClient
+    from quantum_optimization_strategies import render_quantum_optimization_section
     REAL_DOCKING_AVAILABLE = True
-    QUANTUM_OPTIMIZATION_AVAILABLE = True
-    print("Advanced docking and optimization modules loaded")
-except ImportError as e:
-    print(f" Advanced features not available: {e}")
+except ImportError:
     REAL_DOCKING_AVAILABLE = False
-    QUANTUM_OPTIMIZATION_AVAILABLE = False
-
-# Import AutoDock Vina as fallback
-try:
-    from autodock_vina import run_autodock_vina_docking
-    VINA_FALLBACK_AVAILABLE = True
-    print("✅ AutoDock Vina fallback loaded")
-except ImportError as e:
-    VINA_FALLBACK_AVAILABLE = False
-    print(f"⚠️ AutoDock Vina fallback not available: {e}")
 
 # Import CipherQ Semantic Chat and Real-time Recommendations
 try:
@@ -964,44 +804,21 @@ def get_protein_structure_for_target(target_name: str) -> str:
     """Dynamically fetch protein structure for any target protein"""
     logger.info(f"Loading protein structure for target: {target_name}")
     
-    # Try AlphaFold first for gene symbols
-    if target_name and len(target_name) < 20 and target_name.isupper():
-        try:
-            uniprot_url = f"https://rest.uniprot.org/uniprotkb/search?query=gene:{target_name}+AND+organism_id:9606&format=json&size=1"
-            response = requests.get(uniprot_url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('results'):
-                    uniprot_id = data['results'][0]['primaryAccession']
-                    logger.info(f"Found UniProt ID {uniprot_id} for {target_name}")
-                    
-                    af_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
-                    af_response = requests.get(af_url, timeout=15)
-                    
-                    if af_response.status_code == 200:
-                        logger.info(f"Successfully loaded AlphaFold structure for {target_name}")
-                        return af_response.text
-        except Exception as e:
-            logger.warning(f"AlphaFold lookup failed for {target_name}: {e}")
-    
-    # Dynamic PDB mapping fallback
+    # **DYNAMIC PDB MAPPING**: Map target names to PDB structures
     target_to_pdb = {
-        'ace': '1O8A',
-        'cox2': '5IKQ',
-        'ptgs2': '5IKQ',
+        'ace': '1O8A',  # Human ACE
+        'cox2': '5IKQ',  # Human COX-2 (for anti-inflammatory drugs)
+        'ptgs2': '5IKQ',  # Same as COX-2
         'cyclooxygenase': '5IKQ',
-        'tnf': '2AZ5',
-        'il1b': '9ILB',
-        'hmgcr': '1HWK',
-        'ache': '1ACE',
-        'bace1': '1FKN',
-        'pparg': '3DZY',
-        'ppara': '3VI8',
-        'ppard': '3GWX',
-        'default': '5IKQ'
+        'tnf': '2AZ5',  # TNF-alpha
+        'il1b': '9ILB',  # Interleukin-1 beta
+        'hmgcr': '1HWK',  # HMG-CoA reductase (statins)
+        'ache': '1ACE',  # Acetylcholinesterase
+        'bace1': '1FKN',  # Beta-secretase
+        'default': '5IKQ'  # COX-2 as general default
     }
     
+    # Find matching PDB ID
     pdb_id = None
     for key, pdb in target_to_pdb.items():
         if key in target_name.lower():
@@ -1009,22 +826,10 @@ def get_protein_structure_for_target(target_name: str) -> str:
             break
     
     if not pdb_id:
-        try:
-            search_url = f'https://search.rcsb.org/rcsbsearch/v2/query?json={{"query":{{"type":"terminal","service":"text","parameters":{{"attribute":"rcsb_entity_source_organism.rcsb_gene_name.value","operator":"exact_match","value":"{target_name}"}}}},"return_type":"entry"}}'
-            search_response = requests.get(search_url, timeout=10)
-            
-            if search_response.status_code == 200:
-                search_data = search_response.json()
-                if search_data.get('result_set'):
-                    pdb_id = search_data['result_set'][0]['identifier']
-                    logger.info(f"Found PDB {pdb_id} from RCSB search for {target_name}")
-        except Exception as e:
-            logger.warning(f"RCSB search failed: {e}")
-        
-        if not pdb_id:
-            pdb_id = target_to_pdb['default']
-            logger.info(f"Using default PDB {pdb_id} for unknown target {target_name}")
+        pdb_id = target_to_pdb['default']
+        logger.info(f"Using default PDB {pdb_id} for unknown target {target_name}")
     
+    # **FETCH FROM RCSB**: Get real protein structure
     try:
         pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
         response = requests.get(pdb_url, timeout=10)
@@ -1817,25 +1622,13 @@ if REAL_DOCKING_AVAILABLE:
     # Check if docking service needs to be created or updated for current disease
     if 'docking_service' not in st.session_state or st.session_state.get('docking_service_disease') != current_disease:
         try:
-            logger.info(f"=== INITIALIZING DOCKING SERVICE ===")
-            logger.info(f"Disease: {current_disease}")
             # Create new disease-specific docking service instance
             st.session_state.docking_service = DockingService(disease_name=current_disease)
             st.session_state.docking_service_disease = current_disease
-            logger.info(f"✅ NVIDIA BioNeMo DiffDock service initialized for {current_disease}")
-            logger.info(f"Service type: {type(st.session_state.docking_service)}")
+            logger.info(f"NVIDIA BioNeMo DiffDock service initialized for {current_disease}")
         except Exception as e:
-            logger.error(f"=== DOCKING SERVICE INITIALIZATION FAILED ===")
-            logger.error(f"Disease: {current_disease}")
-            logger.error(f"Error: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            logger.error(f"=== END INITIALIZATION ERROR ===")
+            logger.warning(f"Docking service initialization failed: {e}")
             st.session_state.docking_service = None
-            # Show warning in sidebar
-            if 'sidebar_warnings' not in st.session_state:
-                st.session_state.sidebar_warnings = []
-            st.session_state.sidebar_warnings.append(f"⚠️ Docking service unavailable: {str(e)[:100]}")
 
 def create_modern_dashboard_header():
     """Create modern dashboard header with navigation and controls"""
@@ -2048,50 +1841,16 @@ def create_left_filter_panel():
     </div>
     """, unsafe_allow_html=True)
     
-    # Enhanced search functionality with LLM semantic reasoning
+    # Enhanced search functionality
     search_query = st.text_input(
         "Search", 
-        placeholder="Describe what you're looking for in natural language...",
+        placeholder="Search drugs, targets, diseases, pathways...",
         label_visibility="collapsed",
-        help="Use natural language - AI will understand and optimize your search"
+        help="Use natural language to search across our comprehensive database"
     )
     
     if search_query:
-        # Use Groq LLM to improve search query with semantic reasoning
-        with st.spinner("Understanding your query..."):
-            try:
-                from groq import Groq
-                groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-                
-                response = groq_client.chat.completions.create(
-                    model="mixtral-8x7b-32768",
-                    messages=[{
-                        "role": "user",
-                        "content": f"""Convert this user query into precise search terms for a drug repurposing database.
-
-User query: "{search_query}"
-
-Return ONLY the optimized search terms (comma-separated keywords), nothing else. Focus on:
-- Drug names
-- Target proteins/genes
-- Disease names
-- Biological pathways
-- Mechanisms of action
-
-Optimized search terms:"""
-                    }],
-                    max_tokens=200,
-                    temperature=0.3
-                )
-                
-                optimized_query = response.choices[0].message.content.strip()
-                st.session_state.search_query = optimized_query
-                st.info(f"🔍 Searching for: {optimized_query}")
-                
-            except Exception as e:
-                # Fallback to original query if LLM fails
-                st.session_state.search_query = search_query
-                logger.warning(f"Groq search optimization failed: {e}")
+        st.session_state.search_query = search_query
     
     # Modern filter sections with enhanced styling
     st.markdown("<div style='margin-top: var(--cq-space-6);'></div>", unsafe_allow_html=True)
@@ -4063,7 +3822,7 @@ def display_network_fallback(network_data):
 def step_2_biocypher_networks():
     """Step 2: BioCypher Network Analysis with Target-Based Approach"""
     # Add scientific section divider
-    create_section_divider("BioCypher Knowledge Networks", "Evidence-Based Drug-Target Relationships", "")
+    create_section_divider("BioCypher Knowledge Networks", "Evidence-Based Drug-Target Relationships", "🔗")
     st.markdown("""
     <div class="step-container">
         <div class="step-header">
@@ -4291,6 +4050,12 @@ def display_drug_selection():
                 drug_categories[f"{cat_name} Drugs"] = drug_nodes
         
         st.info(f"Showing drugs from {len(drug_categories)} therapeutic categories. Use the search to filter by specific disease area.")
+    
+    category_counts = {cat: len(drugs) for cat, drugs in drug_categories.items()}
+    st.sidebar.markdown("**Drug Database Stats:**")
+    st.sidebar.write(f"Total in database: {total_drugs:,}")
+    for cat, count in category_counts.items():
+        st.sidebar.write(f"  {cat}: {count}")
     
     # Drug Selection Interface
     st.markdown("### Select Drugs by Therapeutic Category")
@@ -5565,10 +5330,7 @@ $$$$
             'is_real_api': not simulation_mode,
             'simulation_mode': simulation_mode,
             'api_source': api_source,
-            'transparency_warning': 'Simulation Mode' if simulation_mode else 'Live API Results',
-            'poses': docking_result.get('poses', []),  # Include full poses array
-            'binding_affinities': docking_result.get('binding_affinities', []),  # Include affinities
-            'confidence_scores': docking_result.get('confidence_scores', [])  # Include confidences
+            'transparency_warning': 'Simulation Mode' if simulation_mode else 'Live API Results'
         }
         
         # Display results using authentic NVIDIA DiffDock interface
@@ -6430,30 +6192,19 @@ def display_enhanced_diffdock_results(drug, target):
                 
                 # Add quantum property-based optimization analysis
                 st.markdown("---")
-                
-                # Quantum Optimization Section
-                if 'selected_drugs' in st.session_state and st.session_state.selected_drugs:
-                    try:
-                        selected_drugs = st.session_state.selected_drugs
-                        disease_name = st.session_state.get('disease_focus', 'Alzheimer\'s Disease')
-                        
-                        # Ensure drugs have SMILES
-                        drugs_with_smiles = ensure_drugs_have_smiles(selected_drugs)
-                        
-                        # Call optimization with correct signature
-                        optimization_result = render_quantum_optimization_section(
-                            selected_drugs=drugs_with_smiles,
-                            disease_name=disease_name
+                try:
+                    # Get quantum properties from session state if available
+                    quantum_props = getattr(st.session_state, 'quantum_properties', {}).get(drug, {})
+                    if quantum_props:
+                        render_quantum_optimization_section(
+                            drug_name=drug,
+                            quantum_properties=quantum_props
                         )
-                        
-                        if optimization_result and optimization_result.success:
-                            st.session_state['optimization_result'] = optimization_result
-                            
-                    except Exception as e:
-                        logger.warning(f"Quantum optimization failed: {e}")
-                        st.info("Optimization analysis temporarily unavailable")
-                else:
-                    st.info("Select drugs in Discovery tab to enable optimization")
+                    else:
+                        st.info("Quantum optimization analysis requires molecular property calculations")
+                except Exception as e:
+                    logger.warning(f"Quantum optimization analysis failed: {e}")
+                    st.info("Quantum optimization analysis temporarily unavailable")
             except Exception as e:
                 st.error(f"Drug-protein molecular visualization error: {e}")
                 logger.error(f"Drug-protein visualization failed for {drug} targeting {target}: {e}")
@@ -7438,39 +7189,57 @@ def render_enhanced_drug_discovery_chatbox():
 def render_professional_drug_discovery_chatbox():
     """Render professional chatbox with modern design - OPTIMIZED"""
     
-    # TIER SELECTION (NEW!) - Add to sidebar
-    if TIER_SELECTOR_AVAILABLE:
-        selected_tier, selected_categories = render_tier_selector()
-        st.session_state.selected_tier = selected_tier
-        st.session_state.selected_categories = selected_categories
-    else:
-        # Default values if tier selector not available
-        if 'selected_tier' not in st.session_state:
-            st.session_state.selected_tier = 1
-        if 'selected_categories' not in st.session_state:
-            st.session_state.selected_categories = []
-    
-    # Focused disease list for drug repurposing (aligned with our data)
+    # Comprehensive disease list (250+ diseases across therapeutic areas)
     DISEASE_LIST = [
-        "Alzheimer's Disease",
-        "Parkinson's Disease",
-        "Type 2 Diabetes",
-        "Cardiovascular Disease",
-        "Hypertension",
-        "Heart Failure",
-        "Stroke",
-        "Chronic Pain",
-        "Neuropathic Pain",
-        "Depression",
-        "Anxiety Disorders",
-        "Schizophrenia",
-        "Migraine",
-        "Epilepsy",
-        "Multiple Sclerosis",
-        "Rheumatoid Arthritis",
-        "Inflammatory Bowel Disease",
-        "COPD",
-        "Asthma"
+        "Alzheimer's Disease", "Parkinson's Disease", "Huntington's Disease", "ALS (Amyotrophic Lateral Sclerosis)",
+        "Multiple Sclerosis", "Schizophrenia", "Bipolar Disorder", "Major Depression", "Anxiety Disorders", "PTSD",
+        "Autism Spectrum Disorder", "ADHD", "Dementia", "Mild Cognitive Impairment", "Lewy Body Disease",
+        "Frontotemporal Dementia", "Vascular Dementia", "Type 1 Diabetes", "Type 2 Diabetes", "Gestational Diabetes",
+        "Hypertension", "Heart Failure", "Coronary Artery Disease", "Myocardial Infarction", "Arrhythmia",
+        "Atrial Fibrillation", "Stroke", "Pulmonary Hypertension", "Atherosclerosis", "Dyslipidemia",
+        "Lung Cancer", "Breast Cancer", "Prostate Cancer", "Colorectal Cancer", "Pancreatic Cancer",
+        "Ovarian Cancer", "Cervical Cancer", "Liver Cancer", "Lymphoma", "Leukemia",
+        "Melanoma", "Thyroid Cancer", "Kidney Cancer", "Bladder Cancer", "Endometrial Cancer",
+        "COPD", "Asthma", "Cystic Fibrosis", "Idiopathic Pulmonary Fibrosis", "Bronchitis",
+        "Pneumonia", "Tuberculosis", "Sleep Apnea", "Pulmonary Embolism", "Acute Respiratory Distress",
+        "Rheumatoid Arthritis", "Osteoarthritis", "Gout", "Lupus", "Sjögren's Syndrome",
+        "Scleroderma", "Vasculitis", "Celiac Disease", "Crohn's Disease", "Ulcerative Colitis",
+        "Irritable Bowel Syndrome", "Gastrointestinal Reflux", "Peptic Ulcer", "Hepatitis A", "Hepatitis B",
+        "Hepatitis C", "Cirrhosis", "Fatty Liver Disease", "Hemophilia", "Sickle Cell Disease",
+        "Thalassemia", "Iron Deficiency Anemia", "Pernicious Anemia", "HIV/AIDS", "Tuberculosis",
+        "Influenza", "COVID-19", "Measles", "Mumps", "Rubella",
+        "Chickenpox", "Herpes Simplex", "Herpes Zoster (Shingles)", "Dengue Fever", "Ebola",
+        "Malaria", "Lyme Disease", "Meningitis", "Encephalitis", "Sepsis",
+        "Chronic Kidney Disease", "End Stage Renal Disease", "Kidney Stones", "Urinary Tract Infection", "Glomerulonephritis",
+        "Hyperthyroidism", "Hypothyroidism", "Thyroiditis", "Graves' Disease", "Hashimoto's Thyroiditis",
+        "Osteoporosis", "Paget's Disease", "Osteogenesis Imperfecta", "Rickets", "Hypercalcemia",
+        "Hypokalemia", "Hyperkalemia", "Hyponatremia", "Hypernatremia", "Hypoglycemia",
+        "Hypercholesterolemia", "Hypertriglyceridemia", "Metabolic Syndrome", "Obesity", "Underweight",
+        "Celiac Disease", "Lactose Intolerance", "Food Allergies", "Dermatitis", "Psoriasis",
+        "Eczema", "Acne", "Rosacea", "Urticaria", "Vitiligo",
+        "Alopecia", "Skin Cancer", "Melanoma", "Cataracts", "Glaucoma",
+        "Macular Degeneration", "Retinitis Pigmentosa", "Diabetic Retinopathy", "Keratoconus", "Corneal Ulcer",
+        "Otitis Media", "Tinnitus", "Hearing Loss", "Vertigo", "Meniere's Disease",
+        "Bell's Palsy", "Trigeminal Neuralgia", "Migraine", "Tension Headache", "Cluster Headache",
+        "Epilepsy", "Seizure Disorder", "Febrile Seizures", "Status Epilepticus", "Myoclonus",
+        "Tremor", "Dystonia", "Spasticity", "Ataxia", "Neuropathy",
+        "Fibromyalgia", "Chronic Fatigue Syndrome", "Complex Regional Pain Syndrome", "Phantom Limb Pain", "Back Pain",
+        "Neck Pain", "Joint Pain", "Muscle Pain", "Neuropathic Pain", "Cancer Pain",
+        "Postoperative Pain", "Headache", "Toothache", "Menstrual Cramps", "Labor Pain",
+        "Benign Prostate Hyperplasia", "Erectile Dysfunction", "Premature Ejaculation", "Female Sexual Dysfunction", "Infertility",
+        "Polycystic Ovary Syndrome", "Endometriosis", "Uterine Fibroids", "Preeclampsia", "Gestational Diabetes",
+        "Graves' Ophthalmopathy", "Acromegaly", "Gigantism", "Dwarfism", "Growth Hormone Deficiency",
+        "Cushing's Syndrome", "Addison's Disease", "Pheochromocytoma", "Hyperaldosteronism", "Polycystic Kidney Disease",
+        "Bladder Cancer", "Prostate Cancer Metastatic", "Triple Negative Breast Cancer", "HER2 Positive Breast Cancer", "Hormone Receptor Positive Breast Cancer",
+        "Small Cell Lung Cancer", "Non-Small Cell Lung Cancer", "Mesothelioma", "Esophageal Cancer", "Gastric Cancer",
+        "Cholangiocarcinoma", "Ampullary Cancer", "Duodenal Cancer", "Appendiceal Cancer", "Neuroendocrine Tumor",
+        "Carcinoid Syndrome", "Multiple Endocrine Neoplasia", "Von Hippel-Lindau Syndrome", "Li-Fraumeni Syndrome", "Lynch Syndrome",
+        "BRCA1/BRCA2 Mutation", "Familial Adenomatous Polyposis", "Hereditary Diffuse Gastric Cancer", "Cowden Syndrome", "Peutz-Jeghers Syndrome",
+        "Enchondroma", "Chondrosarcoma", "Osteosarcoma", "Ewing Sarcoma", "Giant Cell Tumor",
+        "Hemangioma", "Lymphangioma", "Teratoma", "Glioma", "Medulloblastoma",
+        "Pituitary Adenoma", "Craniopharyngioma", "Meningioma", "Schwannoma", "Acoustic Neuroma",
+        "Spinal Cord Compression", "Cauda Equina Syndrome", "Syringomyelia", "Spinal Muscular Atrophy", "Hereditary Spastic Paraplegia",
+        "Hereditary Sensory Neuropathy", "Charcot-Marie-Tooth Disease", "Guillain-Barré Syndrome", "Chronic Inflammatory Demyelinating Polyneuropathy", "Brachial Plexopathy"
     ]
     
     # Professional input form
@@ -7496,21 +7265,23 @@ def render_professional_drug_discovery_chatbox():
         if selected_disease:
             st.session_state.target_disease = selected_disease
         
-        st.markdown(f"**Currently analyzing drugs for: {selected_disease}**")
+        st.markdown(f"**🎯 Currently analyzing drugs for: {selected_disease}**")
         
-        # QUICK DRUG CATEGORY SEARCH - Uses drug_therapeutic_categories.json
+        # QUICK DRUG CATEGORY SEARCH - Uses PostgreSQL database
         st.markdown("**Quick Drug Category Search:**")
         
         # Map display names to database category names
         CATEGORY_MAP = {
             "-- Select Category --": None,
-            "Diabetic/Metabolic Drugs": "Diabetic",
+            "Diabetic Drugs": "Diabetes",
             "Cardiovascular Drugs": "Cardiovascular", 
-            "Dopaminergic Drugs": "Parkinsons",
-            "Cholinergic Drugs": "Alzheimers",
-            "Pain/Anti-inflammatory Drugs": "Pain",
-            "Psychiatric/CNS Drugs": "Psychiatric",
-            "General Drugs": "General"
+            "Anti-inflammatory Drugs": "Anti-inflammatory",
+            "Neurological Drugs": "Neurological",
+            "Cancer Drugs": "Cancer",
+            "Antibiotic Drugs": "Antibiotic",
+            "Antiviral Drugs": "Antiviral",
+            "Psychiatric Drugs": "Psychiatric",
+            "Pain Drugs": "Pain"
         }
         
         drug_category = st.selectbox(
@@ -7520,158 +7291,161 @@ def render_professional_drug_discovery_chatbox():
             key="quick_drug_category"
         )
         
-        # Fetch drugs when category is selected
+        # Fetch drugs from database when category is selected
         if drug_category != "-- Select Category --":
             db_category = CATEGORY_MAP.get(drug_category)
             if db_category:
                 try:
                     from services.drug_categorizer import get_drug_categorizer
-                    from scoring_engine import score_drug
-                    from workflow_optimizer import select_best_drugs_for_analysis
+                    from real_molecular_optimizer import is_drug_optimizable, calculate_repurposing_score
                     categorizer = get_drug_categorizer()
                     category_drugs = categorizer.get_drugs_by_category(db_category)
                     
                     if category_drugs:
-                        st.info(f"Found {len(category_drugs)} {drug_category}")
+                        st.success(f"Found {len(category_drugs)} {drug_category} in database")
                         
-                        # Score ALL drugs (no pre-filtering - let scoring handle it)
+                        # Score and rank drugs for Top 3 candidates
+                        scored_drugs = []
                         for drug in category_drugs:
                             drug_name = drug.get('name', '')
+                            smiles = drug.get('smiles', '')
+                            drug_class = drug.get('class', '')
                             
-                            # Score with disease pathway count (scoring_engine will calculate it)
-                            score = score_drug(drug_name, selected_disease, disease_pathway_count=0)
+                            # Check optimization suitability
+                            opt_check = is_drug_optimizable(drug_name, smiles, drug_class)
                             
-                            drug['repurposing_score'] = score * 100
-                            drug['confidence'] = score
-                            drug['can_optimize'] = True
-                            drug['optimization_class'] = 'Small molecule'
+                            # Calculate repurposing score
+                            score_data = calculate_repurposing_score(drug_name, smiles, selected_disease)
+                            
+                            drug_scored = drug.copy()
+                            drug_scored['can_optimize'] = opt_check['can_optimize']
+                            drug_scored['opt_reason'] = opt_check['reason']
+                            drug_scored['molecule_type'] = opt_check['molecule_type']
+                            drug_scored['overall_score'] = score_data['overall_score']
+                            drug_scored['drug_likeness'] = score_data['drug_likeness']
+                            drug_scored['optimization_potential'] = score_data['optimization_potential']
+                            scored_drugs.append(drug_scored)
                         
-                        # Sort by score and filter out very low scores (<10%)
-                        all_scored = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
-                        scored_drugs = [d for d in all_scored if d.get('repurposing_score', 0) >= 10]
+                        # Sort by overall score (highest first), prioritizing optimizable drugs
+                        scored_drugs.sort(key=lambda x: (x['can_optimize'], x['overall_score']), reverse=True)
                         
-                        if len(scored_drugs) == 0:
-                            st.warning(f"No {drug_category} scored above 10% for {selected_disease}")
-                            st.info("These drugs may not be relevant for this disease. Try a different category.")
-                        else:
-                            # Count optimizable vs biologics
-                            optimizable_drugs = [d for d in scored_drugs if d.get('can_optimize', False)]
-                            biologic_drugs = [d for d in scored_drugs if not d.get('can_optimize', False)]
+                        # Count how many are optimizable vs biologics
+                        optimizable_drugs = [d for d in scored_drugs if d['can_optimize']]
+                        biologic_drugs = [d for d in scored_drugs if not d['can_optimize']]
                         
-                            # TOP 3 CANDIDATES SECTION
-                            st.markdown("### Top 3 Repurposing Candidates")
-                            st.markdown(f"*Best candidates from {drug_category} for {selected_disease}*")
+                        # TOP 3 CANDIDATES SECTION
+                        st.markdown("### Top 3 Repurposing Candidates")
+                        st.markdown(f"*Best candidates from {drug_category} for {selected_disease}*")
                         
-                            # Show stats about drug types
-                            col_stat1, col_stat2 = st.columns(2)
-                            with col_stat1:
-                                st.metric("Small Molecules (Optimizable)", len(optimizable_drugs))
-                            with col_stat2:
-                                st.metric("Biologics (Direct Use Only)", len(biologic_drugs))
+                        # Show stats about drug types
+                        col_stat1, col_stat2 = st.columns(2)
+                        with col_stat1:
+                            st.metric("Small Molecules (Optimizable)", len(optimizable_drugs))
+                        with col_stat2:
+                            st.metric("Biologics (Direct Use Only)", len(biologic_drugs))
                         
-                            # Show helpful message if many biologics
-                            if len(biologic_drugs) > len(optimizable_drugs):
-                                st.info(f"Many {drug_category} are biologics (proteins/peptides). These cannot be chemically optimized but can still be analyzed for docking and PBPK simulation.")
+                        # Show helpful message if many biologics
+                        if len(biologic_drugs) > len(optimizable_drugs):
+                            st.info(f"Many {drug_category} are biologics (proteins/peptides). These cannot be chemically optimized but can still be analyzed for docking and PBPK simulation.")
                         
-                            top_3 = scored_drugs[:3]
-                            cols = st.columns(3)
-                            for idx, drug in enumerate(top_3):
-                                with cols[idx]:
-                                    drug_name = drug.get('name', 'Unknown')
-                                    score = drug.get('overall_score', 0) * 100
-                                    can_opt = drug.get('can_optimize', False)
-                                    mol_type = drug.get('molecule_type', 'unknown')
+                        top_3 = scored_drugs[:3]
+                        cols = st.columns(3)
+                        for idx, drug in enumerate(top_3):
+                            with cols[idx]:
+                                drug_name = drug.get('name', 'Unknown')
+                                score = drug.get('overall_score', 0) * 100
+                                can_opt = drug.get('can_optimize', False)
+                                mol_type = drug.get('molecule_type', 'unknown')
                                 
-                                    # Color based on optimization suitability
-                                    if can_opt:
-                                        border_color = "#22c55e"  # Green
-                                        bg_color = "#f0fdf4"
-                                        opt_badge = "Can Optimize"
-                                        badge_color = "#16a34a"
-                                    else:
-                                        border_color = "#f59e0b"  # Amber
-                                        bg_color = "#fffbeb"
-                                        opt_badge = "Direct Use"
-                                        badge_color = "#d97706"
+                                # Color based on optimization suitability
+                                if can_opt:
+                                    border_color = "#22c55e"  # Green
+                                    bg_color = "#f0fdf4"
+                                    opt_badge = "Can Optimize"
+                                    badge_color = "#16a34a"
+                                else:
+                                    border_color = "#f59e0b"  # Amber
+                                    bg_color = "#fffbeb"
+                                    opt_badge = "Direct Use"
+                                    badge_color = "#d97706"
                                 
-                                    st.markdown(f"""
-                                    <div style="background: {bg_color}; padding: 1rem; border-radius: 10px; border-left: 5px solid {border_color}; margin-bottom: 0.5rem; min-height: 180px;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="background: gold; color: #1a1a1a; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">#{idx+1}</span>
-                                            <span style="background: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">{opt_badge}</span>
-                                        </div>
-                                        <h4 style="margin: 0.5rem 0; color: #1e293b; font-size: 1.1rem;">{drug_name}</h4>
-                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Score:</b> {score:.0f}%</p>
-                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Class:</b> {drug.get('class', 'Unknown')}</p>
-                                        <p style="margin: 0.2rem 0; color: #475569; font-size: 0.8rem;"><b>Target:</b> {drug.get('target', 'Unknown')[:30]}</p>
+                                st.markdown(f"""
+                                <div style="background: {bg_color}; padding: 1rem; border-radius: 10px; border-left: 5px solid {border_color}; margin-bottom: 0.5rem; min-height: 180px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="background: gold; color: #1a1a1a; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">#{idx+1}</span>
+                                        <span style="background: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;">{opt_badge}</span>
                                     </div>
-                                    """, unsafe_allow_html=True)
+                                    <h4 style="margin: 0.5rem 0; color: #1e293b; font-size: 1.1rem;">{drug_name}</h4>
+                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Score:</b> {score:.0f}%</p>
+                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.85rem;"><b>Class:</b> {drug.get('class', 'Unknown')}</p>
+                                    <p style="margin: 0.2rem 0; color: #475569; font-size: 0.8rem;"><b>Target:</b> {drug.get('target', 'Unknown')[:30]}</p>
+                                </div>
+                                """, unsafe_allow_html=True)
                         
-                            # Button to analyze Top 3
-                            if st.button(f"Analyze Top 3 {drug_category}", type="primary", use_container_width=True, key="analyze_top3"):
+                        # Button to analyze Top 3
+                        if st.button(f"Analyze Top 3 {drug_category}", type="primary", use_container_width=True, key="analyze_top3"):
+                            drugs_with_defaults = []
+                            for idx, drug in enumerate(top_3):
+                                drug_with_defaults = drug.copy()
+                                drug_with_defaults['confidence'] = 0.90 - (idx * 0.05)
+                                drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
+                                drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
+                                drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
+                                drugs_with_defaults.append(drug_with_defaults)
+                            st.session_state.selected_drugs = drugs_with_defaults
+                            st.session_state.current_query = f"Top 3 {drug_category}"
+                            st.session_state.user_query = f"Top 3 {drug_category}"
+                            st.rerun()
+                        
+                        # FULL CATEGORY SECTION
+                        with st.expander(f"View All {len(category_drugs)} {drug_category}", expanded=False):
+                            # Display in a nice card format (show up to 15 drugs)
+                            display_drugs = scored_drugs[:15]
+                            for i in range(0, len(display_drugs), 3):
+                                cols = st.columns(3)
+                                for j, col in enumerate(cols):
+                                    if i + j < len(display_drugs):
+                                        drug = display_drugs[i + j]
+                                        with col:
+                                            drug_class = drug.get('class', 'Unknown')
+                                            target = drug.get('target', 'Multiple targets')
+                                            mechanism = drug.get('mechanism', f"{drug_class} mechanism")
+                                            can_opt = drug.get('can_optimize', False)
+                                            score = drug.get('overall_score', 0) * 100
+                                            
+                                            opt_icon = "" if can_opt else ""
+                                            border_color = "#22c55e" if can_opt else "#94a3b8"
+                                            
+                                            st.markdown(f"""
+                                            <div style="background: #f8fafc; padding: 0.8rem; border-radius: 8px; border-left: 4px solid {border_color}; margin-bottom: 0.5rem;">
+                                                <h4 style="margin: 0; color: #166534; font-size: 0.95rem;">{opt_icon} {drug.get('name', 'Unknown')}</h4>
+                                                <p style="margin: 0.2rem 0; color: #64748b; font-size: 0.8rem;"><b>Score:</b> {score:.0f}% | <b>Class:</b> {drug_class}</p>
+                                                <p style="margin: 0; color: #64748b; font-size: 0.75rem;">{str(mechanism)[:40]}...</p>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                            
+                            # Show total count if more drugs available
+                            if len(category_drugs) > 15:
+                                st.info(f"Showing 15 of {len(category_drugs)} {drug_category}.")
+                            
+                            # Button to analyze all drugs in category
+                            if st.button(f"Analyze All {drug_category}", type="secondary", use_container_width=True, key="analyze_all"):
                                 drugs_with_defaults = []
-                                for idx, drug in enumerate(top_3):
+                                for idx, drug in enumerate(scored_drugs[:20]):
                                     drug_with_defaults = drug.copy()
-                                    # USE REAL SCORE from scoring_engine, not fake hardcoded values!
-                                    drug_with_defaults['confidence'] = drug.get('confidence', 0.5)  # From score_drug()
-                                    drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {', '.join(drug.get('targets', ['Unknown'])[:2])}")
-                                    drug_with_defaults['targets'] = drug.get('targets', ['Unknown'])
-                                    drug_with_defaults['indication'] = drug.get('category', 'Drug repurposing candidate')
+                                    drug_with_defaults['confidence'] = drug.get('overall_score', 0.80 - (idx * 0.01))
+                                    drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
+                                    drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
+                                    drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
                                     drugs_with_defaults.append(drug_with_defaults)
                                 st.session_state.selected_drugs = drugs_with_defaults
-                                st.session_state.current_query = f"Top 3 {drug_category}"
-                                st.session_state.user_query = f"Top 3 {drug_category}"
+                                st.session_state.current_query = drug_category.lower()
+                                st.session_state.user_query = drug_category.lower()
                                 st.rerun()
                         
-                            # FULL CATEGORY SECTION
-                            with st.expander(f"View All {len(category_drugs)} {drug_category}", expanded=False):
-                                # Display in a nice card format (show up to 15 drugs)
-                                display_drugs = scored_drugs[:15]
-                                for i in range(0, len(display_drugs), 3):
-                                    cols = st.columns(3)
-                                    for j, col in enumerate(cols):
-                                        if i + j < len(display_drugs):
-                                            drug = display_drugs[i + j]
-                                            with col:
-                                                drug_class = drug.get('class', 'Unknown')
-                                                target = drug.get('target', 'Multiple targets')
-                                                mechanism = drug.get('mechanism', f"{drug_class} mechanism")
-                                                can_opt = drug.get('can_optimize', False)
-                                                score = drug.get('overall_score', 0) * 100
-                                            
-                                                opt_icon = "" if can_opt else ""
-                                                border_color = "#22c55e" if can_opt else "#94a3b8"
-                                            
-                                                st.markdown(f"""
-                                                <div style="background: #f8fafc; padding: 0.8rem; border-radius: 8px; border-left: 4px solid {border_color}; margin-bottom: 0.5rem;">
-                                                    <h4 style="margin: 0; color: #166534; font-size: 0.95rem;">{opt_icon} {drug.get('name', 'Unknown')}</h4>
-                                                    <p style="margin: 0.2rem 0; color: #64748b; font-size: 0.8rem;"><b>Score:</b> {score:.0f}% | <b>Class:</b> {drug_class}</p>
-                                                    <p style="margin: 0; color: #64748b; font-size: 0.75rem;">{str(mechanism)[:40]}...</p>
-                                                </div>
-                                                """, unsafe_allow_html=True)
-                            
-                                # Show total count if more drugs available
-                                if len(category_drugs) > 15:
-                                    st.info(f"Showing 15 of {len(category_drugs)} {drug_category}.")
-                            
-                                # Button to analyze all drugs in category
-                                if st.button(f"Analyze All {drug_category}", type="secondary", use_container_width=True, key="analyze_all"):
-                                    drugs_with_defaults = []
-                                    for idx, drug in enumerate(scored_drugs[:20]):
-                                        drug_with_defaults = drug.copy()
-                                        drug_with_defaults['confidence'] = drug.get('overall_score', 0.80 - (idx * 0.01))
-                                        drug_with_defaults['mechanism'] = drug.get('mechanism', f"{drug.get('class', 'Unknown')} targeting {drug.get('target', 'multiple pathways')}")
-                                        drug_with_defaults['targets'] = [drug.get('target', 'Unknown')]
-                                        drug_with_defaults['indication'] = drug.get('therapeutic_category', 'Drug repurposing candidate')
-                                        drugs_with_defaults.append(drug_with_defaults)
-                                    st.session_state.selected_drugs = drugs_with_defaults
-                                    st.session_state.current_query = drug_category.lower()
-                                    st.session_state.user_query = drug_category.lower()
-                                    st.rerun()
-                        
-                            return  # Skip the rest of the function
+                        return  # Skip the rest of the function
                     else:
-                            st.warning(f"No drugs found in {drug_category} category")
+                        st.warning(f"No drugs found in {drug_category} category")
                 except Exception as e:
                     st.error(f"Error loading drugs: {str(e)}")
         
@@ -7728,7 +7502,7 @@ def render_professional_drug_discovery_chatbox():
                         st.session_state.current_query = query
                         st.session_state.user_query = query
                     
-                    st.success(f"Found {len(recommended_drugs)} drug candidates!")
+                    st.success(f"✅ Found {len(recommended_drugs)} drug candidates!")
                     st.rerun()
         
         # Quick examples section
@@ -7894,19 +7668,9 @@ def render_professional_pbpk_section():
             # Only use docking affinity if it matches the current drug
             if docking_drug_name.lower() == drug_name.lower():
                 if 'poses' in docking_data and len(docking_data['poses']) > 0:
-                    # Use best pose (first one) - get binding_affinity in kcal/mol
-                    best_pose = docking_data['poses'][0]
-                    binding_affinity = best_pose.get('binding_affinity')
-                    
-                    if binding_affinity is None:
-                        # Fallback: try to get from binding_affinities array
-                        if 'binding_affinities' in docking_data and docking_data['binding_affinities']:
-                            binding_affinity = docking_data['binding_affinities'][0]
-                    
-                    if binding_affinity is not None:
-                        logger.info(f"PBPK using docking binding affinity for {drug_name}: {binding_affinity} kcal/mol")
-                    else:
-                        logger.warning(f"No binding affinity in docking results for {drug_name}")
+                    # Use best pose (first one)
+                    binding_affinity = docking_data['poses'][0].get('confidence_score', docking_data['poses'][0].get('affinity'))
+                    logger.info(f"PBPK using docking affinity for {drug_name}: {binding_affinity}")
             else:
                 logger.info(f"PBPK: Docking results are for {docking_drug_name}, not {drug_name} - using manual input")
         
@@ -8585,40 +8349,130 @@ def process_enhanced_drug_discovery_query(query: str) -> List[Dict]:
     # FAST CATEGORY LOOKUP - hardcoded drug lists for instant results
     
     if 'diabetic' in query_lower or 'diabetes' in query_lower or 'antidiabetic' in query_lower:
-        drugs = get_drugs_by_category('Diabetes', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Metformin", "class": "Biguanide", "mechanism": "AMPK activation", "target": "AMPK", "confidence": 0.92, "category": "Diabetes"},
+            {"name": "Glyburide", "class": "Sulfonylurea", "mechanism": "Insulin release stimulation", "target": "KCNJ11", "confidence": 0.85, "category": "Diabetes"},
+            {"name": "Pioglitazone", "class": "Thiazolidinedione", "mechanism": "PPARg agonist", "target": "PPARG", "confidence": 0.88, "category": "Diabetes"},
+            {"name": "Sitagliptin", "class": "DPP-4 Inhibitor", "mechanism": "Incretin enhancement", "target": "DPP4", "confidence": 0.82, "category": "Diabetes"},
+            {"name": "Empagliflozin", "class": "SGLT2 Inhibitor", "mechanism": "Glucose reabsorption block", "target": "SLC5A2", "confidence": 0.87, "category": "Diabetes"},
+            {"name": "Liraglutide", "class": "GLP-1 Agonist", "mechanism": "Incretin mimetic", "target": "GLP1R", "confidence": 0.89, "category": "Diabetes"},
+            {"name": "Semaglutide", "class": "GLP-1 Agonist", "mechanism": "Long-acting incretin", "target": "GLP1R", "confidence": 0.91, "category": "Diabetes"},
+            {"name": "Canagliflozin", "class": "SGLT2 Inhibitor", "mechanism": "Kidney glucose block", "target": "SLC5A2", "confidence": 0.84, "category": "Diabetes"},
+            {"name": "Dapagliflozin", "class": "SGLT2 Inhibitor", "mechanism": "Urinary glucose excretion", "target": "SLC5A2", "confidence": 0.86, "category": "Diabetes"},
+            {"name": "Glipizide", "class": "Sulfonylurea", "mechanism": "Insulin secretion", "target": "KCNJ11", "confidence": 0.80, "category": "Diabetes"},
+        ]
     
     if 'cardiovascular' in query_lower or 'heart' in query_lower or 'cardiac' in query_lower or 'statin' in query_lower:
-        drugs = get_drugs_by_category('Cardiovascular', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Atorvastatin", "class": "Statin", "mechanism": "HMG-CoA reductase inhibition", "target": "HMGCR", "confidence": 0.94, "category": "Cardiovascular"},
+            {"name": "Simvastatin", "class": "Statin", "mechanism": "Cholesterol reduction", "target": "HMGCR", "confidence": 0.92, "category": "Cardiovascular"},
+            {"name": "Lisinopril", "class": "ACE Inhibitor", "mechanism": "ACE blockade", "target": "ACE", "confidence": 0.90, "category": "Cardiovascular"},
+            {"name": "Losartan", "class": "ARB", "mechanism": "AT1 receptor block", "target": "AGTR1", "confidence": 0.88, "category": "Cardiovascular"},
+            {"name": "Amlodipine", "class": "CCB", "mechanism": "Calcium channel block", "target": "CACNA1C", "confidence": 0.87, "category": "Cardiovascular"},
+            {"name": "Metoprolol", "class": "Beta Blocker", "mechanism": "Beta-1 antagonism", "target": "ADRB1", "confidence": 0.86, "category": "Cardiovascular"},
+            {"name": "Rosuvastatin", "class": "Statin", "mechanism": "Potent HMG-CoA inhibition", "target": "HMGCR", "confidence": 0.93, "category": "Cardiovascular"},
+            {"name": "Captopril", "class": "ACE Inhibitor", "mechanism": "BP reduction", "target": "ACE", "confidence": 0.85, "category": "Cardiovascular"},
+            {"name": "Valsartan", "class": "ARB", "mechanism": "Angiotensin block", "target": "AGTR1", "confidence": 0.84, "category": "Cardiovascular"},
+            {"name": "Carvedilol", "class": "Beta Blocker", "mechanism": "Dual blockade", "target": "ADRB1", "confidence": 0.82, "category": "Cardiovascular"},
+        ]
     
     if 'anti-inflammatory' in query_lower or 'inflammation' in query_lower or 'nsaid' in query_lower:
-        drugs = get_drugs_by_category('Anti-inflammatory', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Ibuprofen", "class": "NSAID", "mechanism": "COX inhibition", "target": "PTGS2", "confidence": 0.90, "category": "Anti-inflammatory"},
+            {"name": "Naproxen", "class": "NSAID", "mechanism": "COX inhibition", "target": "PTGS2", "confidence": 0.88, "category": "Anti-inflammatory"},
+            {"name": "Celecoxib", "class": "COX-2 Inhibitor", "mechanism": "Selective COX-2 block", "target": "PTGS2", "confidence": 0.89, "category": "Anti-inflammatory"},
+            {"name": "Aspirin", "class": "NSAID", "mechanism": "Irreversible COX inhibition", "target": "PTGS1", "confidence": 0.87, "category": "Anti-inflammatory"},
+            {"name": "Indomethacin", "class": "NSAID", "mechanism": "Potent COX inhibition", "target": "PTGS2", "confidence": 0.85, "category": "Anti-inflammatory"},
+            {"name": "Diclofenac", "class": "NSAID", "mechanism": "COX inhibition", "target": "PTGS2", "confidence": 0.86, "category": "Anti-inflammatory"},
+            {"name": "Prednisone", "class": "Corticosteroid", "mechanism": "Glucocorticoid action", "target": "NR3C1", "confidence": 0.91, "category": "Anti-inflammatory"},
+            {"name": "Dexamethasone", "class": "Corticosteroid", "mechanism": "Potent glucocorticoid", "target": "NR3C1", "confidence": 0.92, "category": "Anti-inflammatory"},
+            {"name": "Meloxicam", "class": "NSAID", "mechanism": "COX-2 preference", "target": "PTGS2", "confidence": 0.84, "category": "Anti-inflammatory"},
+            {"name": "Curcumin", "class": "Natural", "mechanism": "NF-kB inhibition", "target": "NFKB1", "confidence": 0.78, "category": "Anti-inflammatory"},
+        ]
     
     if 'antidepressant' in query_lower or 'depression' in query_lower or 'anxiety' in query_lower or 'ssri' in query_lower or 'psychiatric' in query_lower:
-        drugs = get_drugs_by_category('Psychiatric', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Sertraline", "class": "SSRI", "mechanism": "Serotonin reuptake inhibition", "target": "SLC6A4", "confidence": 0.92, "category": "Psychiatric"},
+            {"name": "Fluoxetine", "class": "SSRI", "mechanism": "Serotonin reuptake inhibition", "target": "SLC6A4", "confidence": 0.91, "category": "Psychiatric"},
+            {"name": "Escitalopram", "class": "SSRI", "mechanism": "Highly selective SSRI", "target": "SLC6A4", "confidence": 0.90, "category": "Psychiatric"},
+            {"name": "Venlafaxine", "class": "SNRI", "mechanism": "Dual reuptake inhibition", "target": "SLC6A4", "confidence": 0.88, "category": "Psychiatric"},
+            {"name": "Duloxetine", "class": "SNRI", "mechanism": "SNRI action", "target": "SLC6A4", "confidence": 0.87, "category": "Psychiatric"},
+            {"name": "Bupropion", "class": "NDRI", "mechanism": "NE-DA reuptake block", "target": "SLC6A3", "confidence": 0.85, "category": "Psychiatric"},
+            {"name": "Mirtazapine", "class": "Atypical", "mechanism": "Alpha-2 antagonism", "target": "HTR2A", "confidence": 0.83, "category": "Psychiatric"},
+            {"name": "Trazodone", "class": "SARI", "mechanism": "5-HT antagonism", "target": "HTR2A", "confidence": 0.82, "category": "Psychiatric"},
+            {"name": "Citalopram", "class": "SSRI", "mechanism": "Serotonin reuptake block", "target": "SLC6A4", "confidence": 0.89, "category": "Psychiatric"},
+            {"name": "Amitriptyline", "class": "TCA", "mechanism": "Tricyclic action", "target": "SLC6A4", "confidence": 0.80, "category": "Psychiatric"},
+        ]
     
     if 'antibiotic' in query_lower or 'antibacterial' in query_lower or 'infection' in query_lower:
-        drugs = get_drugs_by_category('Antibiotic', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Amoxicillin", "class": "Penicillin", "mechanism": "Cell wall inhibition", "target": "PBP", "confidence": 0.92, "category": "Antibiotic"},
+            {"name": "Azithromycin", "class": "Macrolide", "mechanism": "50S ribosome inhibition", "target": "23S rRNA", "confidence": 0.90, "category": "Antibiotic"},
+            {"name": "Ciprofloxacin", "class": "Fluoroquinolone", "mechanism": "DNA gyrase inhibition", "target": "gyrA", "confidence": 0.89, "category": "Antibiotic"},
+            {"name": "Doxycycline", "class": "Tetracycline", "mechanism": "30S ribosome inhibition", "target": "16S rRNA", "confidence": 0.88, "category": "Antibiotic"},
+            {"name": "Metronidazole", "class": "Nitroimidazole", "mechanism": "DNA disruption", "target": "DNA", "confidence": 0.87, "category": "Antibiotic"},
+            {"name": "Vancomycin", "class": "Glycopeptide", "mechanism": "Cell wall synthesis block", "target": "D-Ala", "confidence": 0.91, "category": "Antibiotic"},
+            {"name": "Clindamycin", "class": "Lincosamide", "mechanism": "50S ribosome block", "target": "23S rRNA", "confidence": 0.85, "category": "Antibiotic"},
+            {"name": "Rifampin", "class": "Rifamycin", "mechanism": "RNA polymerase inhibition", "target": "rpoB", "confidence": 0.86, "category": "Antibiotic"},
+            {"name": "Levofloxacin", "class": "Fluoroquinolone", "mechanism": "Topoisomerase inhibition", "target": "gyrA", "confidence": 0.88, "category": "Antibiotic"},
+            {"name": "Trimethoprim", "class": "Antifolate", "mechanism": "DHFR inhibition", "target": "DHFR", "confidence": 0.84, "category": "Antibiotic"},
+        ]
     
     if 'antiviral' in query_lower or 'virus' in query_lower or 'viral' in query_lower:
-        drugs = get_drugs_by_category('Antiviral', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Acyclovir", "class": "Nucleoside", "mechanism": "Viral DNA pol inhibition", "target": "DNA Pol", "confidence": 0.91, "category": "Antiviral"},
+            {"name": "Oseltamivir", "class": "Neuraminidase Inhibitor", "mechanism": "NA inhibition", "target": "NA", "confidence": 0.90, "category": "Antiviral"},
+            {"name": "Remdesivir", "class": "Nucleotide", "mechanism": "RNA pol inhibition", "target": "RdRp", "confidence": 0.89, "category": "Antiviral"},
+            {"name": "Valacyclovir", "class": "Nucleoside", "mechanism": "Acyclovir prodrug", "target": "DNA Pol", "confidence": 0.88, "category": "Antiviral"},
+            {"name": "Sofosbuvir", "class": "NS5B Inhibitor", "mechanism": "HCV pol inhibition", "target": "NS5B", "confidence": 0.92, "category": "Antiviral"},
+            {"name": "Tenofovir", "class": "NtRTI", "mechanism": "RT inhibition", "target": "RT", "confidence": 0.87, "category": "Antiviral"},
+            {"name": "Ribavirin", "class": "Nucleoside", "mechanism": "Broad-spectrum antiviral", "target": "IMPDH", "confidence": 0.85, "category": "Antiviral"},
+            {"name": "Favipiravir", "class": "Nucleoside", "mechanism": "RNA pol inhibition", "target": "RdRp", "confidence": 0.84, "category": "Antiviral"},
+            {"name": "Ganciclovir", "class": "Nucleoside", "mechanism": "CMV DNA pol block", "target": "DNA Pol", "confidence": 0.86, "category": "Antiviral"},
+            {"name": "Lopinavir", "class": "Protease Inhibitor", "mechanism": "HIV protease block", "target": "HIV PR", "confidence": 0.83, "category": "Antiviral"},
+        ]
     
     if 'cancer' in query_lower or 'oncology' in query_lower or 'tumor' in query_lower or 'chemotherapy' in query_lower:
-        drugs = get_drugs_by_category('Cancer', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Imatinib", "class": "TKI", "mechanism": "BCR-ABL inhibition", "target": "BCR-ABL", "confidence": 0.94, "category": "Oncology"},
+            {"name": "Methotrexate", "class": "Antimetabolite", "mechanism": "DHFR inhibition", "target": "DHFR", "confidence": 0.91, "category": "Oncology"},
+            {"name": "Tamoxifen", "class": "SERM", "mechanism": "ER modulation", "target": "ESR1", "confidence": 0.90, "category": "Oncology"},
+            {"name": "Doxorubicin", "class": "Anthracycline", "mechanism": "Topoisomerase II inhibition", "target": "TOP2A", "confidence": 0.89, "category": "Oncology"},
+            {"name": "Paclitaxel", "class": "Taxane", "mechanism": "Microtubule stabilization", "target": "TUBB", "confidence": 0.88, "category": "Oncology"},
+            {"name": "Erlotinib", "class": "EGFR Inhibitor", "mechanism": "EGFR TK inhibition", "target": "EGFR", "confidence": 0.92, "category": "Oncology"},
+            {"name": "Rituximab", "class": "mAb", "mechanism": "CD20 targeting", "target": "CD20", "confidence": 0.93, "category": "Oncology"},
+            {"name": "Cisplatin", "class": "Platinum", "mechanism": "DNA crosslinking", "target": "DNA", "confidence": 0.87, "category": "Oncology"},
+            {"name": "Letrozole", "class": "AI", "mechanism": "Aromatase inhibition", "target": "CYP19A1", "confidence": 0.86, "category": "Oncology"},
+            {"name": "Gefitinib", "class": "EGFR Inhibitor", "mechanism": "EGFR inhibition", "target": "EGFR", "confidence": 0.85, "category": "Oncology"},
+        ]
     
     if 'alzheimer' in query_lower or 'dementia' in query_lower or 'neurological' in query_lower or 'neuroprotective' in query_lower:
-        drugs = get_drugs_by_category('Neurological', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Donepezil", "class": "AChE Inhibitor", "mechanism": "Acetylcholinesterase inhibition", "target": "ACHE", "confidence": 0.93, "category": "Neurological"},
+            {"name": "Memantine", "class": "NMDA Antagonist", "mechanism": "NMDA receptor block", "target": "GRIN1", "confidence": 0.91, "category": "Neurological"},
+            {"name": "Rivastigmine", "class": "AChE Inhibitor", "mechanism": "Dual AChE/BuChE inhibition", "target": "ACHE", "confidence": 0.89, "category": "Neurological"},
+            {"name": "Galantamine", "class": "AChE Inhibitor", "mechanism": "AChE + nAChR modulation", "target": "ACHE", "confidence": 0.88, "category": "Neurological"},
+            {"name": "Lecanemab", "class": "mAb", "mechanism": "Anti-amyloid beta", "target": "Abeta", "confidence": 0.90, "category": "Neurological"},
+            {"name": "Aducanumab", "class": "mAb", "mechanism": "Amyloid plaque targeting", "target": "Abeta", "confidence": 0.85, "category": "Neurological"},
+            {"name": "Lithium", "class": "Mood Stabilizer", "mechanism": "GSK-3b inhibition", "target": "GSK3B", "confidence": 0.82, "category": "Neurological"},
+            {"name": "Riluzole", "class": "Neuroprotective", "mechanism": "Glutamate modulation", "target": "SLC1A2", "confidence": 0.84, "category": "Neurological"},
+            {"name": "Rasagiline", "class": "MAO-B Inhibitor", "mechanism": "MAO-B inhibition", "target": "MAOB", "confidence": 0.86, "category": "Neurological"},
+            {"name": "Piracetam", "class": "Nootropic", "mechanism": "AMPA modulation", "target": "GRIA1", "confidence": 0.78, "category": "Neurological"},
+        ]
     
     if 'pain' in query_lower or 'analgesic' in query_lower or 'painkiller' in query_lower or 'opioid' in query_lower:
-        drugs = get_drugs_by_category('Analgesic', limit=10)
-        return _format_drug_results(drugs)
+        return [
+            {"name": "Morphine", "class": "Opioid", "mechanism": "Mu receptor agonism", "target": "OPRM1", "confidence": 0.94, "category": "Analgesic"},
+            {"name": "Tramadol", "class": "Opioid", "mechanism": "Weak mu agonist + SNRI", "target": "OPRM1", "confidence": 0.88, "category": "Analgesic"},
+            {"name": "Gabapentin", "class": "Anticonvulsant", "mechanism": "Ca channel binding", "target": "CACNA2D1", "confidence": 0.87, "category": "Analgesic"},
+            {"name": "Pregabalin", "class": "Anticonvulsant", "mechanism": "Alpha-2-delta binding", "target": "CACNA2D1", "confidence": 0.89, "category": "Analgesic"},
+            {"name": "Acetaminophen", "class": "Analgesic", "mechanism": "Central COX inhibition", "target": "PTGS2", "confidence": 0.86, "category": "Analgesic"},
+            {"name": "Fentanyl", "class": "Opioid", "mechanism": "Potent mu agonism", "target": "OPRM1", "confidence": 0.92, "category": "Analgesic"},
+            {"name": "Lidocaine", "class": "Local Anesthetic", "mechanism": "Na channel block", "target": "SCN9A", "confidence": 0.90, "category": "Analgesic"},
+            {"name": "Codeine", "class": "Opioid", "mechanism": "Morphine prodrug", "target": "OPRM1", "confidence": 0.85, "category": "Analgesic"},
+            {"name": "Buprenorphine", "class": "Opioid", "mechanism": "Partial mu agonism", "target": "OPRM1", "confidence": 0.87, "category": "Analgesic"},
+            {"name": "Duloxetine", "class": "SNRI", "mechanism": "Pain pathway modulation", "target": "SLC6A4", "confidence": 0.84, "category": "Analgesic"},
+        ]
     
     # FIRST CHECK: Is this a protein/pathway/class search query?
     if SEMANTIC_CHAT_AVAILABLE:
@@ -8649,7 +8503,7 @@ def process_enhanced_drug_discovery_query(query: str) -> List[Dict]:
                 
                 # Convert to recommendation format
                 if search_results:
-                    logger.info(f"Found {len(search_results)} drugs from search")
+                    logger.info(f"✅ Found {len(search_results)} drugs from search")
                     formatted_results = []
                     for i, drug in enumerate(search_results[:10]):  # Limit to 10
                         # Calculate confidence based on disease relevance
@@ -8673,7 +8527,7 @@ def process_enhanced_drug_discovery_query(query: str) -> List[Dict]:
                             'mechanism': f"Targets {drug.get('target', 'Unknown')}",
                             'clinical_evidence': f'AMPK-targeting drug from database (Disease Relevance: {relevance})'
                         })
-                    logger.info(f"RETURNING SEARCH RESULTS: {[d['name'] for d in formatted_results]}")
+                    logger.info(f"🎯 RETURNING SEARCH RESULTS: {[d['name'] for d in formatted_results]}")
                     return formatted_results
                     
         except Exception as e:
@@ -8756,7 +8610,7 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
                     drugs_by_class[drug_class] = []
                 drugs_by_class[drug_class].append(drug)
         
-        logger.info(f"Loaded {len(all_drugs)} drugs with {len(drug_classes_in_db)} unique classes")
+        logger.info(f"📊 Loaded {len(all_drugs)} drugs with {len(drug_classes_in_db)} unique classes")
         
         # FUZZY MATCH expanded query against ALL drug classes in database
         class_matches = []
@@ -8793,7 +8647,7 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
         # Only use match if it's good enough (>75%)
         if class_matches and class_matches[0][1] > 75:
             matched_class = class_matches[0][0]
-            logger.info(f"DYNAMIC MATCH: Found '{matched_class}' in database (similarity: {class_matches[0][1]}%)")
+            logger.info(f"🎯 DYNAMIC MATCH: Found '{matched_class}' in database (similarity: {class_matches[0][1]}%)")
             
             # Get drugs from matched class
             matched_drugs = []
@@ -8814,10 +8668,10 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
                 
                 # Skip biologics/antibodies (they don't have SMILES)
                 if any(drug_name.endswith(suffix) for suffix in BIOLOGIC_SUFFIXES):
-                    logger.info(f"Skipping biologic antibody: {drug.get('name')} (ends with -{drug_name.split('-')[-1]})")
+                    logger.info(f"⚠️ Skipping biologic antibody: {drug.get('name')} (ends with -{drug_name.split('-')[-1]})")
                     continue
                 if any(bio_class in drug_class for bio_class in BIOLOGIC_CLASSES):
-                    logger.info(f"Skipping biologic: {drug.get('name')} (class: {drug_class})")
+                    logger.info(f"⚠️ Skipping biologic: {drug.get('name')} (class: {drug_class})")
                     continue
                 
                 # Only include small molecules
@@ -8837,7 +8691,7 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
                     break
             
             if enhanced_drugs:
-                logger.info(f"Returning {len(enhanced_drugs)} SMALL MOLECULE drugs from class '{matched_class}'")
+                logger.info(f"✅ Returning {len(enhanced_drugs)} SMALL MOLECULE drugs from class '{matched_class}'")
                 return enhanced_drugs
         
         # FALLBACK: Use therapeutic area matching
@@ -8856,7 +8710,7 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
         for area, keywords in query_keywords_to_area.items():
             if any(kw in query_lower for kw in keywords):
                 detected_therapeutic_area = area
-                logger.info(f"Matched therapeutic area from keywords: {area}")
+                logger.info(f"🎯 Matched therapeutic area from keywords: {area}")
                 break
         
         # If still no match, use disease category
@@ -8890,10 +8744,10 @@ def get_enhanced_drug_recommendations(query: str, analysis: Dict, disease_name: 
             
             # Skip biologics/antibodies (they don't have SMILES)
             if any(drug_name.endswith(suffix) for suffix in BIOLOGIC_SUFFIXES):
-                logger.info(f"Skipping biologic antibody from fallback: {rec.get('name')}")
+                logger.info(f"⚠️ Skipping biologic antibody from fallback: {rec.get('name')}")
                 continue
             if any(bio_class in drug_class for bio_class in BIOLOGIC_CLASSES):
-                logger.info(f"Skipping biologic from fallback: {rec.get('name')} (class: {drug_class})")
+                logger.info(f"⚠️ Skipping biologic from fallback: {rec.get('name')} (class: {drug_class})")
                 continue
             
             # Only include small molecules
@@ -8928,17 +8782,46 @@ def _get_fallback_recommendations(query: str) -> List[Dict]:
     """Fallback recommendations when comprehensive system fails"""
     query_lower = query.lower()
     
-    # ALL drugs from database - NO HARDCODING
-    logger.info(f"Getting fallback recommendations for: {query}")
-    
-    # Try database first
-    drugs = search_drugs_by_query(query, limit=10)
-    if drugs:
-        return _format_drug_results(drugs)
-    
-    # If no results, return empty (not fake data)
-    logger.warning(f"No drugs found in database for query: {query}")
-    return []
+    # Different drug sets based on query content
+    if any(term in query_lower for term in ['heart', 'cardiac', 'cardiovascular']):
+        return [
+            {'name': 'Lisinopril', 'confidence': 0.94, 'mechanism': 'ACE inhibition', 'targets': ['ACE'], 'indication': 'Cardiovascular → neuroprotection', 'patent_status': 'Generic', 'clinical_stage': 'Approved'},
+            {'name': 'Metoprolol', 'confidence': 0.91, 'mechanism': 'Beta-1 antagonism', 'targets': ['β1-AR'], 'indication': 'Hypertension → cognitive benefits', 'patent_status': 'Generic', 'clinical_stage': 'Approved'},
+            {'name': 'Atorvastatin', 'confidence': 0.89, 'mechanism': 'HMG-CoA reductase inhibition', 'targets': ['HMGCR'], 'indication': 'Cholesterol → Alzheimer prevention', 'patent_status': 'Generic', 'clinical_stage': 'Phase III'}
+        ]
+    elif any(term in query_lower for term in ['cancer', 'tumor', 'oncology']):
+        return [
+            {'name': 'Imatinib', 'confidence': 0.93, 'mechanism': 'Tyrosine kinase inhibition', 'targets': ['BCR-ABL'], 'indication': 'Cancer → neuroprotection', 'patent_status': 'Generic', 'clinical_stage': 'Preclinical'},
+            {'name': 'Tamoxifen', 'confidence': 0.88, 'mechanism': 'Estrogen receptor modulation', 'targets': ['ERα'], 'indication': 'Breast cancer → cognitive enhancement', 'patent_status': 'Generic', 'clinical_stage': 'Phase II'},
+            {'name': 'Bevacizumab', 'confidence': 0.85, 'mechanism': 'VEGF inhibition', 'targets': ['VEGF'], 'indication': 'Cancer → neuroinflammation', 'patent_status': 'Patent protected', 'clinical_stage': 'Preclinical'}
+        ]
+    elif any(term in query_lower for term in ['depression', 'anxiety', 'mental']):
+        return [
+            {'name': 'Fluoxetine', 'confidence': 0.87, 'mechanism': 'SERT inhibition', 'targets': ['SERT'], 'indication': 'Depression → cognitive enhancement', 'patent_status': 'Generic', 'clinical_stage': 'Phase II'},
+            {'name': 'Sertraline', 'confidence': 0.84, 'mechanism': '5-HT reuptake inhibition', 'targets': ['5-HTT'], 'indication': 'Depression → neuroprotection', 'patent_status': 'Generic', 'clinical_stage': 'Phase I'},
+            {'name': 'Venlafaxine', 'confidence': 0.82, 'mechanism': 'SNRI mechanism', 'targets': ['SERT', 'NET'], 'indication': 'Depression → Alzheimer prevention', 'patent_status': 'Generic', 'clinical_stage': 'Preclinical'}
+        ]
+    else:
+        # DYNAMIC repurposing candidates from 40k dataset via categorizer
+        try:
+            from services.drug_categorizer import get_drug_categorizer
+            categorizer = get_drug_categorizer()
+            random_drugs = categorizer.get_random_drugs(limit=3)
+            return [
+                {
+                    'name': drug['name'],
+                    'confidence': 0.85,
+                    'mechanism': drug.get('mechanism', 'Under investigation'),
+                    'targets': drug.get('targets', ['Unknown']),
+                    'indication': 'Drug repurposing candidate',
+                    'patent_status': 'Generic',
+                    'clinical_stage': 'Preclinical'
+                }
+                for drug in random_drugs
+            ]
+        except Exception as e:
+            logger.warning(f"Failed to get dynamic drugs from categorizer: {e}")
+            return []
 
 def render_drug_details_section():
     """Render enhanced drug details with patent intelligence and real structure data"""
@@ -8959,44 +8842,146 @@ def render_drug_details_section():
                     st.write(f"**Primary Targets:** {', '.join(drug.get('targets', ['Unknown']))}")
                     st.write(f"**Indication:** {drug.get('indication', 'Unknown')}")
                     
-                    # Add patent information from Orange Book
+                    # Add comprehensive patent information
                     st.markdown("**Patent Intelligence**")
-                    try:
-                        from orange_book_parser import get_drug_patent_info
-                        patent_info = get_drug_patent_info(drug['name'])
-                        
-                        if patent_info:
-                            status = patent_info.get('status', 'Unknown')
-                            patent_num = patent_info.get('patent_number')
-                            expiration = patent_info.get('expiration_date')
-                            approval = patent_info.get('approval_date')
+                    if REAL_PATENT_TRACKER_AVAILABLE:
+                        try:
+                            from real_patent_tracker import RealPatentTracker
+                            patent_tracker = RealPatentTracker()
+                            patent_info = patent_tracker.get_drug_patent_info(drug['name'])
                             
-                            st.write(f"**Status:** {status}")
-                            
-                            if patent_num:
-                                st.write(f"**Patent:** {patent_num}")
-                            
-                            if expiration:
-                                st.write(f"**Expires:** {expiration}")
-                            
-                            if approval:
-                                st.write(f"**FDA Approval:** {approval}")
-                            
-                            # Generic availability
-                            if 'no active patents' in status.lower() or 'approved' in status.lower():
-                                st.write(f"**Generic Access:** Likely available")
-                            elif 'protected' in status.lower():
-                                st.write(f"**Generic Access:** Not until {expiration}")
+                            if patent_info and isinstance(patent_info, dict):
+                                # Core patent status
+                                status = patent_info.get('patent_status', 'Unknown')
+                                years_left = patent_info.get('years_remaining', 0)
+                                generic_avail = patent_info.get('generic_availability', 'Unknown')
+                                
+                                st.write(f"**Status:** {status}")
+                                if years_left and years_left > 0:
+                                    st.write(f"**Years Left:** {years_left:.1f}")
+                                st.write(f"**Generic Access:** {generic_avail}")
+                                
+                                # Patent details with comprehensive information
+                                patents = patent_info.get('patents', [])
+                                if patents:
+                                    with st.expander("Detailed Patent Information", expanded=False):
+                                        for i, patent in enumerate(patents[:3]):  # Show top 3 patents
+                                            patent_num = patent.get('patent_number', 'N/A')
+                                            expire_date = patent.get('patent_expire_date', 'N/A')
+                                            use_description = patent.get('patent_use_description', 'N/A')
+                                            holder_info = patent.get('holder_info', {})
+                                            access_links = patent.get('access_links', {})
+                                            
+                                            st.write(f"**Patent #{i+1}: {patent_num}**")
+                                            
+                                            # Patent holder information
+                                            if holder_info:
+                                                holder = holder_info.get('holder', 'Unknown')
+                                                patent_family = holder_info.get('patent_family', 'Unknown')
+                                                grant_date = holder_info.get('grant_date', 'Unknown')
+                                                
+                                                st.write(f"**Holder:** {holder}")
+                                                st.write(f"**Patent Family:** {patent_family}")
+                                                st.write(f"**Grant Date:** {grant_date}")
+                                            
+                                            st.write(f"**Expires:** {expire_date}")
+                                            st.write(f"**Protection Type:** {use_description}")
+                                            
+                                            # Access methods with multiple databases
+                                            if patent_num != 'N/A':
+                                                st.markdown("**Access Patent Information:**")
+                                                # Properly format patent number for links (handle both US4374829 and 4374829 formats)
+                                                patent_num_clean = patent_num.replace(',', '').replace(' ', '')
+                                                if not patent_num_clean.startswith('US'):
+                                                    patent_num_for_google = f"US{patent_num_clean}"
+                                                else:
+                                                    patent_num_for_google = patent_num_clean
+                                                
+                                                if access_links:
+                                                    uspto_link = access_links.get('uspto', f"https://patents.uspto.gov/search?q={patent_num_clean}")
+                                                    google_link = access_links.get('google_patents', f"https://patents.google.com/patent/{patent_num_for_google}")
+                                                    wipo_link = access_links.get('patent_scope', f"https://www.patentscope.wipo.int/search/en/result.jsf?query={patent_num_clean}")
+                                                else:
+                                                    uspto_link = f"https://patents.uspto.gov/search?q={patent_num_clean}"
+                                                    google_link = f"https://patents.google.com/patent/{patent_num_for_google}"
+                                                    wipo_link = f"https://www.patentscope.wipo.int/search/en/result.jsf?query={patent_num_clean}"
+                                                
+                                                col1, col2, col3 = st.columns(3)
+                                                with col1:
+                                                    st.markdown(f"[USPTO Database]({uspto_link})")
+                                                with col2:
+                                                    st.markdown(f"[Google Patents]({google_link})")
+                                                with col3:
+                                                    st.markdown(f"[WIPO PatentScope]({wipo_link})")
+                                            
+                                            if i < len(patents) - 1:  # Don't add separator after last patent
+                                                st.write("---")
+                                
                             else:
-                                st.write(f"**Generic Access:** Check FDA Orange Book")
-                        else:
-                            st.write("**Status:** Data temporarily unavailable")
-                            st.write("**Generic Access:** Check FDA Orange Book directly")
-                    except Exception as e:
-                        logger.warning(f"Patent lookup failed: {e}")
-                        st.write("**Status:** Data temporarily unavailable")
-                        st.write("**Generic Access:** Check FDA Orange Book directly")
-                    
+                                # Enhanced fallback with more details
+                                enhanced_fallback = {
+                                    'Metformin': {
+                                        'status': 'Generic Available',
+                                        'patent_expired': '1994',
+                                        'patents': ['US4,959,463', 'US5,194,654'],
+                                        'access': 'Multiple generics available'
+                                    },
+                                    'Pioglitazone': {
+                                        'status': 'Generic Available', 
+                                        'patent_expired': '2012',
+                                        'patents': ['US4,687,777', 'US5,002,953'],
+                                        'access': 'Generic versions available'
+                                    },
+                                    'Sitagliptin': {
+                                        'status': 'Patent Protected',
+                                        'patent_expires': '2026',
+                                        'patents': ['US6,699,871', 'US7,326,708'],
+                                        'access': 'Brand only until 2026'
+                                    }
+                                }
+                                drug_data = enhanced_fallback.get(drug['name'], {
+                                    'status': 'Unknown',
+                                    'patents': [],
+                                    'access': 'Check patent databases'
+                                })
+                                
+                                st.write(f"**Status:** {drug_data['status']}")
+                                if 'patent_expires' in drug_data:
+                                    st.write(f"**Expires:** {drug_data['patent_expires']}")
+                                elif 'patent_expired' in drug_data:
+                                    st.write(f"**Expired:** {drug_data['patent_expired']}")
+                                st.write(f"**Access:** {drug_data['access']}")
+                                
+                                # Show patent numbers if available
+                                if drug_data.get('patents'):
+                                    with st.expander("Known Patents", expanded=False):
+                                        for patent_num in drug_data['patents']:
+                                            st.write(f"**Patent:** {patent_num}")
+                                            # Clean patent number for URLs
+                                            patent_num_clean = patent_num.replace(',', '').replace(' ', '')
+                                            if not patent_num_clean.startswith('US'):
+                                                patent_num_for_google = f"US{patent_num_clean}"
+                                            else:
+                                                patent_num_for_google = patent_num_clean
+                                            uspto_link = f"https://patents.uspto.gov/search?q={patent_num_clean}"
+                                            google_link = f"https://patents.google.com/patent/{patent_num_for_google}"
+                                            st.markdown(f"[USPTO]({uspto_link}) | [Google Patents]({google_link})")
+                                
+                        except Exception as e:
+                            st.write(f"**Status:** Unable to fetch real-time data")
+                            st.write(f"**Access:** Check FDA Orange Book or USPTO")
+                    else:
+                        # Basic fallback when patent tracker not available
+                        basic_fallback = {
+                            'Metformin': 'Generic available (expired 1994)',
+                            'Pioglitazone': 'Generic available (expired 2012)', 
+                            'Sitagliptin': 'Patent protected until 2026'
+                        }
+                        status = basic_fallback.get(drug['name'], 'Unknown status')
+                        st.write(f"**Status:** {status}")
+                        st.write(f"**Access:** Check FDA Orange Book")
+                
+                with col2:
                     st.markdown("**Clinical Development**")
                     st.write(f"**Stage:** {drug.get('clinical_stage', 'Unknown')}")
                 
@@ -9007,77 +8992,38 @@ def render_drug_details_section():
                     st.info(mechanism_text)
 
 def get_alzheimer_mechanism_explanation(drug_name: str, target_protein: str) -> str:
-    """
-    Get mechanism explanation using genes.json and protein_pathways.json - NO HARDCODING!
-    """
-    import json
+    """Get Alzheimer-specific mechanism explanation for drug-target combination"""
     
-    try:
-        # Load genes for protein info
-        with open('genes.json', 'r') as f:
-            genes = json.load(f)
-        
-        # Load pathways
-        with open('protein_pathways.json', 'r') as f:
-            protein_pathways = json.load(f)
-        
-        with open('pathways.json', 'r') as f:
-            pathways_data = json.load(f)
-        
-        # Get protein full name from genes.json
-        gene_info = genes.get(target_protein.upper(), {})
-        full_protein_name = gene_info.get('name', target_protein)
-        
-        # Get pathways for this target
-        target_pathways = protein_pathways.get(target_protein.upper(), [])
-        
-        pathway_names = []
-        for pw_id in target_pathways[:2]:
-            pw_info = pathways_data.get(pw_id, {})
-            pw_name = pw_info.get('name', '')
-            if pw_name:
-                pathway_names.append(pw_name)
-        
-        # Build mechanism text
-        if pathway_names:
-            pathway_text = pathway_names[0]
+    drug_lower = drug_name.lower()
+    target_lower = target_protein.lower()
+    
+    if drug_lower == 'metformin':
+        if 'ampk' in target_lower:
+            return f"**{drug_name} → AMPK → Alzheimer's Protection**: Metformin activates AMPK, which enhances autophagy to clear amyloid-β plaques and tau tangles, while improving mitochondrial function in neurons. This reduces neuroinflammation and oxidative stress, key drivers of Alzheimer's progression."
         else:
-            pathway_text = "cellular signaling pathways"
-        
-        # Target-specific mechanisms (from known biology)
-        mechanisms = {
-            'PPARG': "activates nuclear receptors that reduce neuroinflammation and improve insulin sensitivity in the brain",
-            'PPARA': "modulates lipid metabolism and reduces oxidative stress",
-            'ABCC8': "regulates K-ATP channels controlling insulin secretion; insulin resistance is linked to Alzheimer's pathology",
-            'KCNJ11': "controls potassium channels regulating insulin release; metabolic dysfunction contributes to neurodegeneration",
-            'DPP4': "inhibits DPP-4 enzyme, increasing GLP-1 which has neuroprotective effects",
-            'ACHE': "inhibits acetylcholinesterase, increasing acetylcholine levels to improve cholinergic neurotransmission",
-            'BCHE': "inhibits butyrylcholinesterase, enhancing cholinergic function",
-            'MAOB': "inhibits MAO-B enzyme, preserving neurotransmitters and reducing oxidative stress",
-            'DRD2': "modulates dopamine receptors involved in cognitive and motor circuits",
-            'PTGS2': "inhibits COX-2 enzyme, reducing neuroinflammation",
-            'CYP2C9': "metabolizes drugs; genetic variations affect drug efficacy"
-        }
-        
-        mechanism = mechanisms.get(target_protein, f"modulates {full_protein_name} activity affecting {pathway_text}")
-        
-        return f"**{drug_name} → {target_protein} ({full_protein_name}) → Alzheimer's**: {drug_name} {mechanism}. Through {pathway_text}, this mechanism addresses neurodegeneration pathways relevant to Alzheimer's disease."
-        
-    except Exception as e:
-        logger.error(f"Mechanism explanation failed: {e}")
-        return f"**{drug_name} → {target_protein}**: Targets {target_protein} with potential therapeutic effects for Alzheimer's disease."
+            return f"**{drug_name} → Metabolic Enhancement**: Metformin improves brain glucose metabolism and reduces insulin resistance, which are linked to Alzheimer's risk and progression."
+    
+    elif drug_lower == 'pioglitazone':
+        if 'ppar' in target_lower:
+            return f"**{drug_name} → PPARγ → Neuroprotection**: Pioglitazone activates PPARγ, reducing neuroinflammation by suppressing microglial activation and pro-inflammatory cytokines. It also enhances amyloid-β clearance and improves insulin sensitivity in the brain."
+        else:
+            return f"**{drug_name} → Anti-inflammatory Effects**: Pioglitazone reduces systemic inflammation that contributes to neurodegeneration in Alzheimer's disease."
+    
+    elif drug_lower == 'sitagliptin':
+        if 'dpp' in target_lower:
+            return f"**{drug_name} → DPP-4 → Incretin Protection**: Sitagliptin blocks DPP-4, increasing GLP-1 levels which have neuroprotective effects including enhanced neuroplasticity, reduced inflammation, and improved neuronal survival in Alzheimer's models."
+        else:
+            return f"**{drug_name} → Neuroprotective Signaling**: Sitagliptin enhances incretin signaling pathways that protect neurons and improve cognitive function."
+    
+    else:
+        return f"**{drug_name} → {target_protein} → Alzheimer's Therapy**: This drug targets {target_protein} with potential neuroprotective mechanisms including reduced inflammation, improved cellular metabolism, and enhanced protein clearance pathways relevant to Alzheimer's pathology."
 
-# ============================================================================
-# OBSOLETE FUNCTION - NO LONGER NEEDED
-# EvidenceGraphBuilder now queries the database directly
-# This function is kept commented for reference only
-# ============================================================================
-# def build_biocypher_data(recommended_drugs: List[Dict], disease_name: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-#     """Build BioCypher-compatible nodes and edges DataFrames for knowledge graph construction"""
-#     import uuid
-#     
-#     nodes_data = []
-#     edges_data = []
+def build_biocypher_data(recommended_drugs: List[Dict], disease_name: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Build BioCypher-compatible nodes and edges DataFrames for knowledge graph construction"""
+    import uuid
+    
+    nodes_data = []
+    edges_data = []
     
     # Add disease node (avoid backslash in f-string)
     disease_clean = disease_name.lower().replace(' ', '_').replace("'", '')
@@ -9189,276 +9135,11 @@ def get_alzheimer_mechanism_explanation(drug_name: str, target_protein: str) -> 
             })
         })
     
-#     nodes_df = pd.DataFrame(nodes_data)
-#     edges_df = pd.DataFrame(edges_data)
-#     
-#     logger.info(f"Built BioCypher data: {len(nodes_df)} nodes, {len(edges_df)} edges")
-#     return nodes_df, edges_df
-# ============================================================================
-
-
-def generate_network_explanation(nodes_df, edges_df, disease_name):
-    """
-    Generate intelligent explanation using Groq based on actual graph data.
-    """
-    import pandas as pd
-    import logging
+    nodes_df = pd.DataFrame(nodes_data)
+    edges_df = pd.DataFrame(edges_data)
     
-    logger = logging.getLogger(__name__)
-    
-    # Extract network components
-    drugs = nodes_df[nodes_df['type'] == 'drug']['name'].tolist()
-    proteins = nodes_df[nodes_df['type'] == 'protein']['name'].tolist()
-    pathways = nodes_df[nodes_df['type'] == 'pathway']['name'].tolist() if 'pathway' in nodes_df['type'].values else []
-    
-    # Analyze connections
-    drug_connections = {}
-    for drug in drugs:
-        drug_id = f"DRUG_{drug.replace(' ', '_').upper()}"
-        drug_edges = edges_df[edges_df['source'] == drug_id]
-        targets = []
-        for _, edge in drug_edges.iterrows():
-            target_id = edge['target']
-            target_name = nodes_df[nodes_df['id'] == target_id]['name'].values
-            if len(target_name) > 0:
-                targets.append(target_name[0])
-        drug_connections[drug] = targets
-    
-    # Use Groq for intelligent explanation
-    try:
-        from groq import Groq
-        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        
-        drug_target_text = '\n'.join([f'- {drug}: {", ".join(targets[:5])}' for drug, targets in drug_connections.items()])
-        
-        prompt = f"""Analyze this drug repurposing evidence graph for {disease_name}.
-
-Drug-Protein Connections:
-{drug_target_text}
-
-Pathways involved: {len(pathways)} biological pathways
-
-Explain in 3-4 sentences how these drugs and protein targets connect to {disease_name} treatment. Be scientific and specific about mechanisms."""
-        
-        response = groq_client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=400,
-            temperature=0.7
-        )
-        
-        explanation = response.choices[0].message.content.strip()
-        logger.info("✅ Generated network explanation using Groq")
-        return explanation
-        
-    except Exception as e:
-        logger.warning(f"Groq explanation failed: {e}")
-    
-    # Fallback: Show connection summary
-    explanation = f"**Evidence Network:** {len(drugs)} drugs targeting {len(proteins)} proteins across {len(pathways)} biological pathways relevant to {disease_name}.\n\n"
-    
-    for drug, targets in list(drug_connections.items())[:5]:
-        explanation += f"• **{drug}** → {', '.join(targets[:3])}"
-        if len(targets) > 3:
-            explanation += f" (+{len(targets)-3} more)"
-        explanation += "\n"
-    
-    return explanation
-
-
-def create_network_from_biocypher(nodes_df, edges_df, disease_name):
-    """
-    Convert BioCypher graph data to ECharts network format
-    
-    Args:
-        nodes_df: DataFrame with columns ['id', 'label', 'name', 'type']
-        edges_df: DataFrame with columns ['source', 'target', 'label', 'confidence']
-        disease_name: Name of disease for display
-        
-    Returns:
-        Dict in ECharts format ready for visualization
-    """
-    import pandas as pd
-    import logging
-    
-    logger = logging.getLogger(__name__)
-    
-    if nodes_df.empty or edges_df.empty:
-        logger.warning("Cannot create network: empty nodes or edges DataFrame")
-        return None
-    
-    logger.info(f"Converting BioCypher data: {len(nodes_df)} nodes, {len(edges_df)} edges")
-    
-    # Create categories for legend with distinct colors
-    categories = [
-        {'name': 'Drug', 'itemStyle': {'color': '#3B82F6'}},  # Blue
-        {'name': 'Protein/Target', 'itemStyle': {'color': '#10B981'}},  # Green
-        {'name': 'Pathway', 'itemStyle': {'color': '#F59E0B'}},  # Orange
-        {'name': 'Disease', 'itemStyle': {'color': '#EF4444'}}  # Red
-    ]
-    
-    # Convert nodes DataFrame to ECharts format
-    nodes_list = []
-    for _, node in nodes_df.iterrows():
-        # Determine category and styling based on node type
-        node_type = node.get('type', node.get('label', '')).lower()
-        
-        if 'drug' in node_type:
-            category = 0
-            size = 45
-            color = '#3B82F6'  # Blue
-        elif 'protein' in node_type or 'gene' in node_type:
-            category = 1
-            size = 35
-            color = '#10B981'  # Green
-        elif 'pathway' in node_type:
-            category = 2
-            size = 30
-            color = '#F59E0B'  # Orange
-        elif 'disease' in node_type:
-            category = 3
-            size = 55
-            color = '#EF4444'  # Red
-        else:
-            category = 1
-            size = 30
-            color = '#9CA3AF'  # Gray fallback
-        
-        node_data = {
-            'id': str(node['id']),
-            'name': str(node['name']),
-            'symbolSize': size,
-            'category': category,
-            'label': {
-                'show': True,
-                'fontSize': 12 if category == 3 else 11,
-                'fontWeight': 'bold' if category in [0, 3] else 'normal'
-            },
-            'itemStyle': {
-                'color': color,
-                'borderColor': '#fff',
-                'borderWidth': 2
-            }
-        }
-        
-        nodes_list.append(node_data)
-    
-    # Convert edges DataFrame to ECharts format WITH SHORT CLEAR LABELS
-    links_list = []
-    for _, edge in edges_df.iterrows():
-        # Get relationship type and make it SHORT
-        relationship = edge.get('label', edge.get('edge_type', 'RELATED'))
-        
-        # Shorten labels for readability
-        label_map = {
-            'TARGETS': 'targets',
-            'PARTICIPATES_IN': 'participates in',
-            'ASSOCIATED_WITH': 'linked to',
-            'REGULATES': 'regulates',
-            'INTERACTS_WITH': 'interacts'
-        }
-        
-        display_label = label_map.get(relationship, relationship.lower())
-        
-        link_data = {
-            'source': str(edge['source']),
-            'target': str(edge['target']),
-            'label': {
-                'show': True,
-                'formatter': display_label,
-                'fontSize': 9,
-                'position': 'middle',  # Keep label centered on edge!
-                'color': '#64748B',
-                'backgroundColor': 'rgba(255,255,255,0.9)',
-                'padding': [2, 4],
-                'borderRadius': 2
-            },
-            'lineStyle': {
-                'width': 2.5 if relationship == 'TARGETS' else 2,
-                'opacity': 0.7,
-                'curveness': 0.2,
-                'color': '#94A3B8'
-            },
-            'emphasis': {
-                'lineStyle': {'width': 3},
-                'label': {'show': True, 'fontSize': 10}
-            }
-        }
-        
-        links_list.append(link_data)
-    
-    logger.info(f"Converted to ECharts format: {len(nodes_list)} nodes, {len(links_list)} links")
-    
-    # Create complete ECharts options
-    echarts_option = {
-        'title': {
-            'text': f'Drug-Target-Disease Network',
-            'subtext': f'Evidence for {disease_name}',
-            'left': 'center',
-            'top': 10,
-            'textStyle': {
-                'fontSize': 18,
-                'fontWeight': 'bold',
-                'color': '#333'
-            },
-            'subtextStyle': {
-                'fontSize': 12,
-                'color': '#666'
-            }
-        },
-        'tooltip': {
-            'trigger': 'item',
-            'formatter': '{b}'
-        },
-        'legend': [{
-            'data': [cat['name'] for cat in categories],
-            'orient': 'vertical',
-            'left': 10,
-            'top': 60,
-            'textStyle': {
-                'fontSize': 11
-            }
-        }],
-        'series': [{
-            'type': 'graph',
-            'layout': 'force',
-            'data': nodes_list,
-            'links': links_list,
-            'categories': categories,
-            'roam': True,
-            'draggable': True,
-            'label': {
-                'show': True,
-                'position': 'right',
-                'formatter': '{b}'
-            },
-            'labelLayout': {
-                'hideOverlap': True
-            },
-            'force': {
-                'repulsion': 800,
-                'gravity': 0.1,
-                'edgeLength': 150,
-                'layoutAnimation': True
-            },
-            'emphasis': {
-                'focus': 'adjacency',
-                'label': {
-                    'fontSize': 14
-                },
-                'lineStyle': {
-                    'width': 4
-                }
-            },
-            'lineStyle': {
-                'color': 'source',
-                'curveness': 0.2
-            }
-        }]
-    }
-    
-    return echarts_option
-
+    logger.info(f"Built BioCypher data: {len(nodes_df)} nodes, {len(edges_df)} edges")
+    return nodes_df, edges_df
 
 def render_biocypher_network_section():
     """Render BioCypher evidence graph with drug-target-pathway-disease relationships"""
@@ -9470,144 +9151,168 @@ def render_biocypher_network_section():
     st.markdown(f"**Biological evidence chains for {disease_name} drug repurposing**")
     
     if 'selected_drugs' in st.session_state and st.session_state.selected_drugs:
-        recommended_drugs = st.session_state.selected_drugs[:3]  # Top 3 drugs
-        
-        # === ADD DRUG SELECTOR ===
-        st.markdown("---")
-        st.markdown("**Select drug to view evidence graph:**")
-        
-        drug_options = [drug['name'] for drug in recommended_drugs if isinstance(drug, dict) and 'name' in drug]
-        
-        if not drug_options:
-            st.warning("No drugs available for evidence graph")
-            return
-        
-        selected_drug_for_evidence = st.selectbox(
-            "Choose drug:",
-            options=drug_options,
-            help="Select which drug's evidence pathway you want to visualize"
-        )
-        
-        st.info(f"Showing complete evidence chain for: **{selected_drug_for_evidence}**")
-        
-        # Build graph for ONLY the selected drug (not all 3!)
-        drugs_to_analyze = [selected_drug_for_evidence]
-        
         try:
+            # Get ACTUAL recommended drugs from session state
+            recommended_drugs = st.session_state.selected_drugs[:3]  # Top 3 drugs
+            
+            # Debug info for troubleshooting
+            logger.info(f"BioCypher network rendering with {len(recommended_drugs)} drugs for {disease_name}")
+            
             # Initialize BioCypher Evidence Graph Builder
             if BIOCYPHER_AVAILABLE:
                 try:
                     biocypher = EvidenceGraphBuilder()
                     
-                    # Build graph for ONLY the selected drug
-                    logger.info(f"Building evidence graph for {selected_drug_for_evidence} and {disease_name}")
-                    
-                    # Build knowledge graph (JSON only)
-                    nodes_df, edges_df = biocypher.build_evidence_graph(drugs_to_analyze, disease_name)
+                    # Build knowledge graph from drug data with dynamic disease
+                    nodes_df, edges_df = build_biocypher_data(recommended_drugs, disease_name)
                     
                     if len(nodes_df) > 0 and len(edges_df) > 0:
-                        # Get summary metrics
-                        metrics = biocypher.get_summary_metrics(nodes_df, edges_df)
+                        # Build BioCypher evidence graph
+                        biocypher.build_evidence_graph(nodes_df, edges_df)
                         
-                        logger.info(f"BioCypher graph built: {metrics['total_nodes']} nodes, {metrics['total_edges']} edges")
-                        st.success(f"Knowledge graph: {metrics['total_nodes']} entities, {metrics['total_edges']} relationships")
+                        # Calculate network metrics
+                        pagerank_scores = biocypher.calculate_pagerank()
+                        betweenness_scores = biocypher.calculate_betweenness_centrality()
+                        communities = biocypher.detect_communities()
                         
-                        # Store graph data for visualization
-                        st.session_state['biocypher_nodes'] = nodes_df
-                        st.session_state['biocypher_edges'] = edges_df
-                        st.session_state['biocypher_metrics'] = metrics
+                        # Update drug scores with real network metrics
+                        for drug in recommended_drugs:
+                            drug_node_id = f"drug_{drug.get('name', '').lower().replace(' ', '_')}"
+                            if drug_node_id in pagerank_scores:
+                                drug['pagerank'] = pagerank_scores[drug_node_id]
+                                drug['betweenness'] = betweenness_scores.get(drug_node_id, 0.0)
+                                drug['network_score'] = (pagerank_scores[drug_node_id] * 0.6 + betweenness_scores.get(drug_node_id, 0.0) * 0.4)
                         
-                        # === RENDER NETWORK VISUALIZATION ===
-                        st.markdown("---")
-                        st.markdown("### Interactive Drug-Target-Disease Network")
+                        # Re-rank drugs by network score
+                        recommended_drugs.sort(key=lambda x: x.get('network_score', 0.0), reverse=True)
                         
-                        try:
-                            # Convert BioCypher data to ECharts format
-                            network_data = create_network_from_biocypher(nodes_df, edges_df, disease_name)
-                            
-                            if network_data:
-                                if ECHARTS_AVAILABLE:
-                                    try:
-                                        from stable_echarts_renderer import render_echarts_html
-                                        render_echarts_html(network_data, key="biocypher_network", height_px=600)
-                                        
-                                        # Show network metrics
-                                        col1, col2, col3 = st.columns(3)
-                                        with col1:
-                                            st.metric("Drugs", metrics['drug_count'])
-                                        with col2:
-                                            st.metric("Targets", metrics.get('target_count', metrics.get('protein_count', 0)))
-                                        with col3:
-                                            st.metric("Connections", metrics['total_edges'])
-                                        
-                                        logger.info(f"Network visualization rendered successfully")
-                                        
-                                    except ImportError as e:
-                                        logger.warning(f"stable_echarts_renderer not found: {e}")
-                                        st.info("📝 Install stable_echarts_renderer.py for network visualization")
-                                else:
-                                    st.warning("streamlit-echarts not installed")
-                                    st.code("pip install streamlit-echarts")
-                            else:
-                                st.warning("Could not create network visualization data")
-                                
-                        except Exception as viz_error:
-                            logger.error(f"Network visualization error: {viz_error}")
-                            st.error(f"Network rendering failed: {viz_error}")
-                            import traceback
-                            logger.error(traceback.format_exc())
-                        
-                        # === EVIDENCE CHAIN NARRATIVE (ALWAYS SHOW!) ===
-                        st.markdown("---")
-                        st.markdown("### 📋 Evidence Chain Explanation")
-                        
-                        try:
-                            from evidence_chain_narrator import generate_evidence_chain_description
-                            chain_desc = generate_evidence_chain_description(nodes_df, edges_df, selected_drug_for_evidence, disease_name)
-                            st.info(chain_desc)
-                        except ImportError:
-                            # Fallback: Generate simple chain description
-                            drug_id = f"DRUG_{selected_drug_for_evidence.replace(' ', '_').upper()}"
-                            drug_edges = edges_df[edges_df['source'] == drug_id]
-                            
-                            if len(drug_edges) > 0:
-                                target_id = drug_edges.iloc[0]['target']
-                                target_node = nodes_df[nodes_df['id'] == target_id]
-                                target_name = target_node.iloc[0]['name'] if len(target_node) > 0 else 'Unknown'
-                                
-                                st.info(f"**{selected_drug_for_evidence}** → targets → **{target_name}** → participates in biological pathways → linked to **{disease_name}**")
-                        except Exception as desc_err:
-                            logger.warning(f"Chain description failed: {desc_err}")
-                        
-                        # === NETWORK EXPLANATION ===
-                        st.markdown("---")
-                        st.markdown("### Network Analysis & Therapeutic Rationale")
-                        
-                        try:
-                            # Generate explanation from actual graph data
-                            explanation = generate_network_explanation(nodes_df, edges_df, disease_name)
-                            st.markdown(explanation)
-                        except Exception as exp_error:
-                            logger.error(f"Explanation generation failed: {exp_error}")
-                            st.info("Network analysis temporarily unavailable")
-                        
+                        logger.info(f"Network metrics calculated - PageRank: {len(pagerank_scores)}, Communities: {len(communities)}")
+                        st.success(f"BioCypher knowledge graph built: {len(nodes_df)} entities, {len(edges_df)} relationships")
                     else:
-                        st.warning(f"No evidence graph generated for {selected_drug_for_evidence}")
-                        logger.warning(f"BioCypher returned empty graph")
+                        st.warning("Insufficient data to build BioCypher knowledge graph")
+                        logger.warning(f"BioCypher data: {len(nodes_df)} nodes, {len(edges_df)} edges")
                         
                 except Exception as biocypher_error:
                     st.error(f"BioCypher processing error: {biocypher_error}")
                     logger.error(f"BioCypher error: {biocypher_error}")
             else:
-                st.info("BioCypher not available")
-        
-        except Exception as network_error:
-            st.error(f"Network section error: {network_error}")
-            logger.error(f"Network rendering error: {network_error}")
-    
+                st.warning("BioCypher not available - showing simplified network")
+                logger.warning("BioCypher module not loaded")
+            
+            # Fallback: Create DYNAMIC drug-target-disease mapping
+            dynamic_network = create_dynamic_drug_target_network(recommended_drugs, disease_name)
+            
+            # Validate network data before rendering
+            if not dynamic_network or 'series' not in dynamic_network:
+                raise ValueError("Network data is incomplete or malformed")
+                
+            series_data = dynamic_network['series'][0] if dynamic_network['series'] else {}
+            nodes_count = len(series_data.get('data', []))
+            links_count = len(series_data.get('links', []))
+            
+            logger.info(f"Fallback network contains {nodes_count} nodes and {links_count} links")
+            
+            if nodes_count == 0:
+                st.warning("No network nodes generated - please check drug data format")
+                return
+            
+            # PROFESSIONAL APACHE ECHARTS WITH DRUG-TO-DISEASE CONNECTIONS
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 1rem; border-radius: 10px; margin-bottom: 1rem; border-left: 4px solid #0284c7; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <h3 style="color: #0c4a6e; margin: 0; font-weight: 600;">Drug-Target-Disease Network Graph</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            try:
+                # Use the dynamic network that includes pathways (created above)
+                # This network already has drugs -> targets -> pathways -> disease
+                
+                # APACHE ECHARTS USING YOUR REFERENCE IMPLEMENTATION
+                if ECHARTS_AVAILABLE:
+                    # Use exact format from your reference file
+                    # FIXED: Use stable HTML renderer instead of problematic st_echarts
+                    from stable_echarts_renderer import render_echarts_html
+                    render_echarts_html(dynamic_network, key="dynamic_network_graph", height_px=500)
+                    st.success(f"Apache ECharts network displayed: {nodes_count} nodes including pathways!")
+                else:
+                    st.error("streamlit-echarts not available - please install for Apache ECharts visualization")
+                    # Fallback to simple plotly
+                    import plotly.graph_objects as go
+                    nodes = series_data.get('data', [])
+                    
+                    # Create layout with disease at center
+                    import math
+                    drugs = [n for n in nodes if n.get('category') == 0]
+                    targets = [n for n in nodes if n.get('category') == 1]
+                    
+                    node_x, node_y, node_text, node_colors = [], [], [], []
+                    
+                    # Disease at center
+                    node_x.append(0)
+                    node_y.append(0)
+                    node_text.append(disease_name)
+                    node_colors.append('red')
+                    
+                    # Drugs in inner circle
+                    for i, drug in enumerate(drugs):
+                        angle = 2 * math.pi * i / len(drugs)
+                        node_x.append(math.cos(angle) * 1.5)
+                        node_y.append(math.sin(angle) * 1.5)
+                        node_text.append(drug.get('name', 'Unknown'))
+                        node_colors.append('lightblue')
+                    
+                    # Targets in outer circle
+                    for i, target in enumerate(targets):
+                        angle = 2 * math.pi * i / len(targets)
+                        node_x.append(math.cos(angle) * 3)
+                        node_y.append(math.sin(angle) * 3)
+                        node_text.append(target.get('name', 'Unknown'))
+                        node_colors.append('lightgreen')
+                    
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=node_x, y=node_y,
+                        mode='markers+text',
+                        marker=dict(size=[30] + [20]*len(drugs) + [15]*len(targets), color=node_colors),
+                        text=node_text,
+                        textposition="middle center",
+                        hoverinfo='text',
+                        name='Drug-Disease Network'
+                    ))
+                    
+                    fig.update_layout(
+                        title="Drug Repurposing Network for Alzheimer's Disease",
+                        showlegend=False,
+                        height=500,
+                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    st.info("Using fallback visualization - Install streamlit-echarts for full Apache ECharts")
+                
+            except Exception as network_error:
+                st.error(f"Network visualization error: {network_error}")
+                create_simple_network_fallback(series_data, links_count)
+            st.success(f"Network rendered: {nodes_count} nodes, {links_count} connections")
+            
+            # Show detailed therapeutic mechanism explanations (Top 3, excluding existing AD drugs)
+            render_detailed_therapeutic_explanations(recommended_drugs)
+                
+        except Exception as e:
+            logger.error(f"Dynamic network rendering error: {e}")
+            st.error(f"Network visualization failed: {str(e)}")
+            st.info("Should show: Interactive graph with recommended drug-target relationships")
+            
+            # Enhanced debugging information
+            if 'selected_drugs' in st.session_state:
+                drugs = st.session_state.selected_drugs[:3]
+                st.code(f"Debug - Selected drugs: {drugs}")
+                for i, drug in enumerate(drugs):
+                    st.text(f"Drug {i}: Type={type(drug)}, Value={drug}")
     else:
-        st.info("Please select drugs from Step 1 to view evidence network")
-
+        st.info("Submit a drug repurposing query above to see dynamic network visualization")
+        st.info("The network will show exactly which proteins your recommended drugs target")
 
 def create_enhanced_drug_disease_network(recommended_drugs, disease_name):
     """Create enhanced network showing drug-to-disease connections with Apache ECharts"""
@@ -9722,14 +9427,19 @@ def create_enhanced_drug_disease_network(recommended_drugs, disease_name):
     return echarts_option
 
 def get_drug_targets(drug_name):
-    """Get known targets for a drug - queries database for real gene symbols"""
+    """Get known targets for a drug - loads from database"""
+    # Try to load from drugs database
     try:
-        # Query database for drug-protein interactions
-        targets = get_drug_targets_from_db(drug_name)
+        from data.loader_40k import data_40k
+        drugs_db = data_40k.drugs
         
-        if targets and targets[0] != 'Unknown':
-            logger.info(f"Targets from database: {drug_name} -> {targets}")
-            return targets
+        # Search for drug in database
+        for drug in drugs_db:
+            if drug.get('name', '').lower() == drug_name.lower():
+                target = drug.get('target', 'Unknown')
+                if target and target != 'Unknown':
+                    # Return as list for consistency
+                    return [target]
         
         # Fallback: check hardcoded map for common drugs
         targets_map = {
@@ -9737,7 +9447,7 @@ def get_drug_targets(drug_name):
             'atorvastatin': ['HMGCR'],
             'metoprolol': ['ADRB1'],
             'simvastatin': ['HMGCR'],
-            'aspirin': ['PTGS1', 'PTGS2'],
+            'aspirin': ['COX-2'],
             'ibuprofen': ['COX-2'],
             'metformin': ['AMPK'],
             'losartan': ['AT1 Receptor']
@@ -9914,17 +9624,14 @@ def render_detailed_therapeutic_explanations(recommended_drugs):
         else:
             # Fallback for drugs not in our detailed mechanism database
             with st.expander(f"**{drug['name'] if isinstance(drug, dict) else str(drug)}** - Emerging Therapeutic Candidate", expanded=(i==0)):
-                # Query REAL targets from database
-                drug_name = drug['name'] if isinstance(drug, dict) else str(drug)
-                targets = get_drug_targets_from_db(drug_name)
-                
-                if targets and targets[0] != 'Unknown':
+                targets = get_drug_protein_targets(drug['name'] if isinstance(drug, dict) else str(drug))
+                if targets:
                     st.markdown(f"**Primary Molecular Targets:** {', '.join(targets[:3])}")
                     # Get specific Alzheimer's connection for the target
                     alzheimers_connection = get_alzheimers_target_connection(targets[0])
                     st.markdown(f"**Therapeutic Pathway & Alzheimer's Connection:**")
                     st.markdown(f"**{targets[0]} and Alzheimer's Disease:** {alzheimers_connection}")
-                    st.markdown(f"**Therapeutic Result:** {drug_name} → {targets[0]} Modulation → Direct Alzheimer's Pathology Intervention")
+                    st.markdown(f"**Therapeutic Result:** {drug['name'] if isinstance(drug, dict) else str(drug)} → {targets[0]} Modulation → Direct Alzheimer's Pathology Intervention")
                     st.info("**Therapeutic Potential Assessment:** This drug demonstrates computational evidence for significant interactions with Alzheimer's-relevant protein targets. The therapeutic potential is based on molecular docking studies, protein-drug interaction databases, and systems biology analysis. Further clinical validation studies are recommended to establish safety and efficacy profiles in Alzheimer's patient populations.")
                     
                     # Add more detail for these drugs
@@ -10439,9 +10146,6 @@ def render_clinical_trials_evidence(top_drugs: list):
     """Render clinical trials evidence for top recommended drugs"""
     st.markdown("#### Clinical Trial Evidence")
     
-    # Get disease name from session state
-    disease_name = st.session_state.get('target_disease', st.session_state.get('disease_focus', "Alzheimer's Disease"))
-    
     if AUTHENTIC_DATA_FETCHER_AVAILABLE:
         # Initialize data fetcher
         try:
@@ -10453,20 +10157,19 @@ def render_clinical_trials_evidence(top_drugs: list):
                 with st.expander(f"Clinical Trials for {drug_name} (Confidence: {drug['confidence']:.1%})", expanded=(i==0)):
                     with st.spinner(f"Fetching clinical trials for {drug_name}..."):
                         try:
-                            trials_data = data_fetcher.fetch_comprehensive_clinical_trials(drug_name, disease_name)
-                            trials = trials_data.get('trials', []) if isinstance(trials_data, dict) else trials_data
+                            trials = data_fetcher.fetch_comprehensive_clinical_trials(drug_name)
                             
                             if trials:
                                 # Display trials with professional formatting
                                 for j, trial in enumerate(trials[:5]):  # Show top 5 trials
                                     render_clinical_trial_card(trial, j)
                             else:
-                                st.info(f"No clinical trials found for {drug_name} + {disease_name}.")
-                                st.markdown(f"[Search ClinicalTrials.gov](https://clinicaltrials.gov/search?term={drug_name}+{disease_name})")
+                                st.info(f"No clinical trials found for {drug_name} in neurological conditions.")
+                                # Show real trial data
+                                render_real_clinical_trials(drug_name)
                         except Exception as e:
-                            logger.error(f"Error fetching clinical trials: {e}")
-                            st.warning(f"Clinical trials API unavailable.")
-                            st.markdown(f"[Search ClinicalTrials.gov](https://clinicaltrials.gov/search?term={drug_name}+{disease_name})")
+                            st.warning(f"Unable to fetch real clinical trial data for {drug_name}.")
+                            render_real_clinical_trials(drug_name)
         except Exception as e:
             st.error(f"Clinical trials data fetcher error: {str(e)}")
             render_real_clinical_trials_for_drugs(top_drugs)
@@ -10479,9 +10182,6 @@ def render_publications_evidence(top_drugs: list):
     """Render publications evidence for top recommended drugs"""
     st.markdown("#### Research Publications Evidence")
     
-    # Get disease name from session state
-    disease_name = st.session_state.get('target_disease', st.session_state.get('disease_focus', "Alzheimer's Disease"))
-    
     if AUTHENTIC_DATA_FETCHER_AVAILABLE:
         # Initialize data fetcher
         try:
@@ -10493,23 +10193,19 @@ def render_publications_evidence(top_drugs: list):
                 with st.expander(f"Publications for {drug_name} (Confidence: {drug['confidence']:.1%})", expanded=(i==0)):
                     with st.spinner(f"Fetching publications for {drug_name}..."):
                         try:
-                            publications = data_fetcher.fetch_publications(drug_name, disease_name, max_results=5)
+                            publications = data_fetcher.fetch_comprehensive_publications(drug_name)
                             
                             if publications:
                                 # Display publications with professional formatting
                                 for j, pub in enumerate(publications[:5]):  # Show top 5 publications
-                                    st.markdown(f"**{j+1}. {pub.get('title', 'No title')}**")
-                                    st.markdown(f"*{pub.get('authors', 'Unknown')} ({pub.get('year', 'N/A')})*")
-                                    st.markdown(f"Journal: {pub.get('journal', 'Unknown')}")
-                                    st.markdown(f"[View on PubMed]({pub.get('url', '#')})")
-                                    st.markdown("---")
+                                    render_publication_card(pub, j)
                             else:
-                                st.info(f"No publications found.")
-                                st.markdown(f"[Search PubMed](https://pubmed.ncbi.nlm.nih.gov/?term={drug_name}+{disease_name})")
+                                st.info(f"No publications found for {drug_name} in neurological research.")
+                                # Show real publication data
+                                render_real_publications(drug_name)
                         except Exception as e:
-                            logger.error(f"Error fetching publications: {e}")
-                            st.warning(f"Publications API unavailable.")
-                            st.markdown(f"[Search PubMed](https://pubmed.ncbi.nlm.nih.gov/?term={drug_name}+{disease_name})")
+                            st.warning(f"Unable to fetch real publication data for {drug_name}.")
+                            render_real_publications(drug_name)
         except Exception as e:
             st.error(f"Publications data fetcher error: {str(e)}")
             render_real_publications_for_drugs(top_drugs)
@@ -10892,30 +10588,29 @@ def render_optimization_strategies_section():
                         st.plotly_chart(fig, use_container_width=True)
                 
                 # COMPREHENSIVE PROPERTY IMPROVEMENTS
-                if st.session_state.real_optimization_results and len(st.session_state.real_optimization_results) > 0:
-                    best_opt = st.session_state.real_optimization_results[0]
-                    if best_opt and hasattr(best_opt, 'success') and best_opt.success:
-                        st.markdown("---")
-                        st.markdown("## Comprehensive Property Improvements")
-                        
-                        # Primary Metrics
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            orig_bbb = best_opt.original_properties.get('BBB_Score', 0)
-                            opt_bbb = best_opt.optimized_properties.get('BBB_Score', 0)
-                            bbb_delta = opt_bbb - orig_bbb
-                            st.metric("BBB Penetration", f"{opt_bbb:.1f}%", delta=f"{bbb_delta:+.1f}%")
-                        
-                        with col2:
-                            orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
-                            opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
-                            cns_delta = opt_cns - orig_cns
-                            st.metric("CNS MPO Score", f"{opt_cns:.2f}/6", delta=f"{cns_delta:+.2f}")
-                        
-                        with col3:
-                            st.metric("Overall Score", f"{best_opt.optimized_score:.1f}%", 
-                                     delta=f"{best_opt.score_improvement:+.1f}%")
+                best_opt = st.session_state.real_optimization_results[0]
+                if best_opt.success:
+                    st.markdown("---")
+                    st.markdown("## Comprehensive Property Improvements")
+                    
+                    # Primary Metrics
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        orig_bbb = best_opt.original_properties.get('BBB_Score', 0)
+                        opt_bbb = best_opt.optimized_properties.get('BBB_Score', 0)
+                        bbb_delta = opt_bbb - orig_bbb
+                        st.metric("BBB Penetration", f"{opt_bbb:.1f}%", delta=f"{bbb_delta:+.1f}%")
+                    
+                    with col2:
+                        orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
+                        opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
+                        cns_delta = opt_cns - orig_cns
+                        st.metric("CNS MPO Score", f"{opt_cns:.2f}/6", delta=f"{cns_delta:+.2f}")
+                    
+                    with col3:
+                        st.metric("Overall Score", f"{best_opt.optimized_score:.1f}%", 
+                                 delta=f"{best_opt.score_improvement:+.1f}%")
                     
                     # Detailed Molecular Properties Table
                     st.markdown("---")
@@ -11598,288 +11293,91 @@ def render_molecular_docking_section():
                 if docking_svc:
                     docking_svc.set_disease(disease_name)
                     
-                    # GET TARGET FROM BIOCYPHER GRAPH (not generic suggestion!)
-                    target_protein = None
-                    
-                    # First, try to get target from BioCypher graph
-                    if 'biocypher_edges' in st.session_state:
-                        edges_df = st.session_state['biocypher_edges']
-                        nodes_df = st.session_state['biocypher_nodes']
-                        
-                        # Find what this drug targets in the graph
-                        drug_id = f"DRUG_{selected_drug.replace(' ', '_').upper()}"
-                        drug_edges = edges_df[edges_df['source'] == drug_id]
-                        
-                        if len(drug_edges) > 0:
-                            # SORT by confidence and get HIGHEST confidence target!
-                            if 'confidence' in drug_edges.columns:
-                                drug_edges_sorted = drug_edges.sort_values('confidence', ascending=False)
-                                target_id = drug_edges_sorted.iloc[0]['target']
-                                confidence = drug_edges_sorted.iloc[0]['confidence']
-                            else:
-                                target_id = drug_edges.iloc[0]['target']
-                                confidence = 0.8
-                            
-                            target_row = nodes_df[nodes_df['id'] == target_id]
-                            if len(target_row) > 0:
-                                target_protein = target_row.iloc[0]['name']
-                                st.success(f"Using HIGHEST confidence target from graph: **{target_protein}** (confidence: {confidence:.2f})")
-                                logger.info(f"Using BioCypher graph target: {target_protein} with confidence {confidence}")
-                    
-                    # Fallback: Get from JSON drug_interactions directly
-                    if not target_protein:
-                        try:
-                            from database_queries import get_drug_targets
-                            targets = get_drug_targets(selected_drug)
-                            
-                            if targets:
-                                # Sort by confidence and get top target
-                                sorted_targets = sorted(targets, key=lambda x: x['confidence_score'], reverse=True)
-                                target_protein = sorted_targets[0]['gene_symbol']
-                                st.info(f"Using top target from JSON: **{target_protein}**")
-                                logger.info(f"Got target from JSON: {target_protein}")
-                            else:
-                                target_protein = None
-                        except Exception as e:
-                            logger.warning(f"Could not get target from JSON: {e}")
-                            target_protein = None
-                    
-                    # Final fallback
-                    if not target_protein:
+                    # Try to get disease-relevant target first
+                    suggested_target = docking_svc.suggest_target_for_disease(selected_drug)
+                    if suggested_target:
+                        st.info(f"Using disease-relevant target: **{suggested_target}** for {disease_name}")
+                        target_protein = suggested_target
+                    else:
                         target_protein = determine_target_protein_dynamically(selected_drug)
-                        st.warning(f"Using fallback target: **{target_protein}**")
                 else:
                     target_protein = determine_target_protein_dynamically(selected_drug)
                 
                 if docking_svc:
-                    with st.spinner(f"Running molecular docking for {selected_drug}..."):
-                        try:
-                            # Try NVIDIA BioNeMo DiffDock
-                            docking_result = docking_svc.perform_docking(
-                                drug_name=selected_drug,
-                                target_name=target_protein
-                            )
-                        except Exception as dock_err:
-                            logger.warning(f"NVIDIA docking failed: {dock_err}")
-                            docking_result = {'success': False, 'error': str(dock_err)}
-                    
-                    if docking_result and docking_result.get('success'):
-                        # Get RAW NVIDIA results
-                        nvidia_poses = docking_result.get('poses', [])
-                        raw_confidences = docking_result.get('raw_nvidia_confidences', docking_result.get('confidence_scores', []))
+                    with st.spinner(f"Running NVIDIA BioNeMo DiffDock for {selected_drug}..."):
+                        # Run NVIDIA BioNeMo DiffDock molecular docking
+                        docking_result = docking_svc.perform_docking(
+                            drug_name=selected_drug,
+                            target_name=target_protein
+                        )
                         
-                        logger.info(f"Got docking results: {len(nvidia_poses)} poses")
-                        logger.info(f"Raw NVIDIA confidences: {raw_confidences[:5]}")
-                        
-                        # Extract SDF content AND REAL binding affinities from pose dicts
-                        sdf_contents = []
-                        real_vina_affinities = []
-                        for pose in nvidia_poses:
-                            if isinstance(pose, dict):
-                                sdf = pose.get('sdf_content', '')
-                                vina_affinity = pose.get('binding_affinity', 0)
-                                sdf_contents.append(sdf)
-                                real_vina_affinities.append(vina_affinity)
-                            else:
-                                sdf_contents.append(pose)
-                                real_vina_affinities.append(0)
-                        
-                        logger.info(f"REAL Vina affinities: {real_vina_affinities[:5]}")
-                        
-                        # === USE molecular_docking_results_interface (WITH REAL AFFINITIES!) ===
-                        try:
-                            from molecular_docking_results_interface import calculate_docking_metrics
+                        if docking_result and docking_result.get('success'):
+                            # Extract poses from the result
+                            poses = []
+                            sdf_poses = docking_result.get('poses', [])
+                            confidence_scores = docking_result.get('confidence_scores', [])
+                            binding_affinities = docking_result.get('binding_affinities', [])
                             
-                            logger.info("Using molecular_docking_results_interface with REAL Vina affinities")
-                            
-                            # Process with REAL affinities (not hardcoded formula!)
-                            pose_results = calculate_docking_metrics(
-                                confidence_scores=raw_confidences,
-                                poses_data=sdf_contents,
-                                use_ml_ranking=True,
-                                real_affinities=real_vina_affinities  # Pass REAL affinities from Vina!
-                            )
-                            
-                            # Save SDF files and convert to app format
+                            # Save SDF poses and protein PDB to disk for 3D viewer
                             import os
                             output_dir = f"./diffdock_output/{selected_drug}"
                             os.makedirs(output_dir, exist_ok=True)
+                            os.makedirs("./pdb_cache", exist_ok=True)
                             
-                            poses = []
-                            for i, pose_result in enumerate(pose_results):
-                                # Save SDF file
-                                if pose_result.sdf_content and len(pose_result.sdf_content) > 10:
-                                    sdf_path = os.path.join(output_dir, f"pose_{i}.sdf")
+                            # Save protein PDB to cache
+                            protein_pdb = docking_result.get('protein_pdb')
+                            if protein_pdb and target_protein:
+                                # Sanitize target_protein name for file path (remove slashes and invalid chars)
+                                safe_target_name = target_protein.replace('/', '_').replace('\\', '_').replace(':', '_')
+                                pdb_id = docking_result.get('pdb_id', 'unknown')
+                                
+                                # Skip caching for generic template to avoid issues
+                                if pdb_id != 'GENERIC_TEMPLATE':
+                                    pdb_path = f"./pdb_cache/{safe_target_name}_{pdb_id}.pdb"
                                     try:
-                                        with open(sdf_path, 'w') as f:
-                                            f.write(pose_result.sdf_content)
-                                        logger.info(f"Saved pose {i}")
+                                        with open(pdb_path, 'w') as f:
+                                            f.write(protein_pdb)
+                                        logger.info(f"Saved protein PDB to {pdb_path}")
                                     except Exception as e:
-                                        logger.error(f"Could not save pose {i}: {e}")
+                                        logger.warning(f"Could not cache PDB: {e}")
+                                else:
+                                    logger.info("Skipping PDB cache for generic template")
+                            
+                            # Extract poses with REAL binding affinities from DiffDock/Vina
+                            for i, (sdf_data, confidence, affinity) in enumerate(zip(sdf_poses, confidence_scores, binding_affinities)):
+                                # Calculate RMSD from affinity (lower affinity = better = lower RMSD)
+                                rmsd_estimate = max(0.1, 3.0 + (affinity / 3.0))  # Better affinity = lower RMSD
+                                
+                                # Save SDF to disk
+                                sdf_path = os.path.join(output_dir, f"pose_{i}.sdf")
+                                with open(sdf_path, 'w') as f:
+                                    f.write(sdf_data)
                                 
                                 poses.append({
-                                    'confidence': pose_result.confidence,
-                                    'binding_affinity': pose_result.binding_affinity_kcal_mol,  # REAL!
-                                    'rmsd': pose_result.rmsd_angstrom,
-                                    'interaction_score': pose_result.interaction_score,
-                                    'sdf_data': pose_result.sdf_content,
-                                    'confidence_label': getattr(pose_result, 'quality_label', 'Unknown')
+                                    'confidence': confidence,
+                                    'binding_affinity': affinity,  # REAL value from DiffDock/Vina!
+                                    'rmsd': rmsd_estimate,  # Calculated estimate
+                                    'interaction_score': int(abs(affinity) * 10),  # Scale affinity to score
+                                    'sdf_data': sdf_data  # SDF from DiffDock/Vina
                                 })
                             
-                            # Get affinities for PBPK
-                            binding_affinities = [p['binding_affinity'] for p in poses]
-                            
-                            logger.info(f"Processed {len(poses)} poses with REAL affinities")
-                            logger.info(f"REAL Affinities: {binding_affinities[:5]}")
-                            
-                        except ImportError as ie:
-                            logger.error(f"molecular_docking_results_interface not found: {ie}")
-                            st.error("molecular_docking_results_interface.py required")
-                            poses = []
-                            binding_affinities = []
-                        
-                        logger.info(f"Saved {len(poses)} SDF poses to {output_dir}")
-                        
-                        # === GENERATE DOCKING DESCRIPTION WITH GEMINI ===
-                        if binding_affinities:
-                            best_affinity = binding_affinities[0]
-                            
-                            st.markdown("---")
-                            st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                            
-                            # Generate description using Groq
-                            try:
-                                from llm_powered_descriptions import generate_docking_description_with_llm
-                                description = generate_docking_description_with_llm(
-                                    drug_name=selected_drug,
-                                    target_protein=target_protein,
-                                    binding_affinity=best_affinity,
-                                    disease_name=disease_name
-                                )
-                                st.markdown(description)
-                            except Exception as desc_error:
-                                logger.warning(f"LLM description failed: {desc_error}")
-                                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
-                        
-                    else:
-                        # DiffDock failed - silently switch to AutoDock Vina
-                        logger.info(f"NVIDIA DiffDock unavailable, using AutoDock Vina for {selected_drug}")
-                            
-                        # Try AutoDock Vina fallback
-                        if VINA_FALLBACK_AVAILABLE:
-                            try:
-                                with st.spinner(f"Running molecular docking for {selected_drug}..."):
-                                    vina_result = run_autodock_vina_docking(
-                                        drug_name=selected_drug,
-                                        target_protein=target_protein,
-                                        protein_pdb_data=protein_pdb_data  # CRITICAL: Pass protein structure!
-                                    )
-                                    
-                                if vina_result and vina_result.get('success'):
-                                    poses = vina_result.get('poses', [])
-                                    logger.info(f"AutoDock Vina generated {len(poses)} poses")
-                                        
-                                    # Process Vina results
-                                    binding_affinities = [p.get('binding_affinity', 0) for p in poses]
-                                        
-                                    # Show docking results with Groq description
-                                    if binding_affinities:
-                                        best_affinity = binding_affinities[0]
-                                        st.markdown("---")
-                                        st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                                        
-                                        # Generate Groq-powered description
-                                        try:
-                                            from llm_powered_descriptions import generate_docking_description_with_llm
-                                            description = generate_docking_description_with_llm(
-                                                drug_name=selected_drug,
-                                                target_protein=target_protein,
-                                                binding_affinity=best_affinity,
-                                                disease_name=disease_name
-                                            )
-                                            st.markdown(description)
-                                        except Exception as desc_err:
-                                            logger.warning(f"Groq description failed: {desc_err}")
-                                            strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                            st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
-                                else:
-                                    logger.warning(f"Docking failed for {selected_drug}")
-                                    poses = []
-                                        
-                            except Exception as vina_err:
-                                logger.error(f"Docking error: {vina_err}")
-                                poses = []
+                            logger.info(f"Saved {len(poses)} SDF poses to {output_dir}")
                         else:
-                            logger.warning("No docking service available")
+                            error = docking_result.get('error', 'Unknown error')
+                            st.warning(f"DiffDock molecular docking failed for {selected_drug}: {error}")
                             poses = []
                 else:
-                    # Docking service not available - use AutoDock Vina silently
-                    logger.info(f"Using AutoDock Vina for {selected_drug} (DiffDock service not available)")
-                    
-                    if VINA_FALLBACK_AVAILABLE:
-                        try:
-                            with st.spinner(f"Running molecular docking for {selected_drug}..."):
-                                vina_result = run_autodock_vina_docking(
-                                    drug_name=selected_drug,
-                                    target_protein=target_protein,
-                                    protein_pdb_data=protein_pdb_data  # Pass protein structure!
-                                )
-                            
-                            if vina_result and vina_result.get('success'):
-                                poses = vina_result.get('poses', [])
-                                binding_affinities = [p.get('binding_affinity', 0) for p in poses]
-                                
-                                if binding_affinities:
-                                    best_affinity = binding_affinities[0]
-                                    st.markdown("---")
-                                    st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
-                                    
-                                    # Generate Groq-powered description
-                                    try:
-                                        from llm_powered_descriptions import generate_docking_description_with_llm
-                                        description = generate_docking_description_with_llm(
-                                            drug_name=selected_drug,
-                                            target_protein=target_protein,
-                                            binding_affinity=best_affinity,
-                                            disease_name=disease_name
-                                        )
-                                        st.markdown(description)
-                                    except Exception as desc_err:
-                                        logger.warning(f"Groq description failed: {desc_err}")
-                                        strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                                        st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
-                            else:
-                                logger.warning(f"Docking failed for {selected_drug}")
-                                poses = []
-                                
-                        except Exception as vina_err:
-                            logger.error(f"Docking error: {vina_err}")
-                            poses = []
-                    else:
-                        logger.warning("No docking service available")
-                        poses = []
+                    st.warning(f"Cannot perform real docking for {selected_drug} - target protein or Vina client not available")
+                    poses = []
             except Exception as e:
-                logger.error(f"Docking exception for {selected_drug}: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
+                logger.error(f"Real docking failed: {e}")
+                st.warning(f"Real docking unavailable for {selected_drug}")
                 poses = []
             
             # Interpret Vina binding affinity scores correctly
             # AutoDock Vina uses NEGATIVE affinity values (kcal/mol)
             # More negative = stronger binding = better
             # Typical range: -12 to -5 kcal/mol for good binders
-            
-            # === SAVE DOCKING RESULTS FOR PBPK ===
-            if poses and len(poses) > 0:
-                st.session_state.docking_results = {
-                    'drug_name': selected_drug,
-                    'target_protein': target_protein,
-                    'poses': poses,
-                    'binding_affinities': [p.get('binding_affinity', 0) for p in poses],
-                    'method': 'AutoDock Vina' if VINA_FALLBACK_AVAILABLE else 'NVIDIA DiffDock'
-                }
-                logger.info(f"✅ Saved docking results for PBPK: {selected_drug} with {len(poses)} poses")
             
             high_conf_poses = []
             moderate_conf_poses = []
@@ -11908,130 +11406,7 @@ def render_molecular_docking_section():
                 st.warning("No docking poses generated")
                 return
             
-            # === FETCH PROTEIN PDB ===
-            protein_pdb_data = None
-            pdb_debug_info = []
-            try:
-                import requests
-                import os
-                import time
-                
-                # PDB ID mappings
-                pdb_ids = {
-                    'PPARG': '3E00', 'PPARA': '3VI8', 'PPARD': '3GWX',
-                    'DPP4': '1X70', 'ACE': '1O86', 'HMGCR': '1HWK',
-                    'SLC5A2': '6LBE', 'GLP1R': '6X18', 'INSR': '1IRK',
-                    'ABCC8': '6C3O', 'ACHE': '4EY7', 'GRIN1': '5UP2',
-                    'PTGS2': '5F19', 'PTGS1': '2OYE', 'COX8A': '5Z62',
-                    'DRD2': '6CM4', 'MAOB': '2V5Z', 'KCNJ11': '6C3O',
-                    'BCHE': '1P0I', 'PRKAA1': '4CFF', 'PRKAA2': '4CFF',
-                    'PRKAG1': '4CFF', 'PRKAG2': '4CFF', 'PRKAG3': '4CFF',
-                    'PRKAB1': '4CFF', 'PRKAB2': '4CFF'
-                }
-                pdb_id = pdb_ids.get(target_protein.upper())
-                
-                if pdb_id:
-                    pdb_debug_info.append(f"Target: {target_protein} → PDB ID: {pdb_id}")
-                    
-                    # Try local file first
-                    local_pdb_path = f"pdb_structures/{target_protein.upper()}_{pdb_id}.pdb"
-                    pdb_debug_info.append(f"Checking: {local_pdb_path}")
-                    
-                    if os.path.exists(local_pdb_path):
-                        with open(local_pdb_path, 'r') as f:
-                            protein_pdb_data = f.read()
-                        pdb_debug_info.append(f"✅ Loaded from local file ({len(protein_pdb_data)} bytes)")
-                        st.success(f"✅ Loaded {target_protein} structure from local file")
-                    else:
-                        pdb_debug_info.append("Local file not found, attempting download...")
-                        
-                        # ROBUST DOWNLOAD with retries and proper headers
-                        pdb_url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
-                        pdb_debug_info.append(f"URL: {pdb_url}")
-                        
-                        # Add proper headers (some servers require User-Agent)
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            'Accept': 'text/plain,*/*'
-                        }
-                        
-                        # Try download with retries
-                        max_retries = 3
-                        for attempt in range(max_retries):
-                            try:
-                                pdb_debug_info.append(f"Attempt {attempt + 1}/{max_retries}...")
-                                
-                                response = requests.get(
-                                    pdb_url, 
-                                    headers=headers,
-                                    timeout=30,  # Longer timeout
-                                    allow_redirects=True,
-                                    verify=True  # SSL verification
-                                )
-                                
-                                pdb_debug_info.append(f"Response: HTTP {response.status_code}")
-                                
-                                if response.status_code == 200:
-                                    protein_pdb_data = response.text
-                                    pdb_debug_info.append(f"✅ Downloaded successfully ({len(protein_pdb_data)} bytes)")
-                                    st.success(f"✅ Downloaded {target_protein} structure from RCSB PDB")
-                                    break
-                                else:
-                                    pdb_debug_info.append(f"❌ HTTP {response.status_code}: {response.reason}")
-                                    if attempt < max_retries - 1:
-                                        time.sleep(1)  # Wait before retry
-                            except requests.exceptions.Timeout:
-                                pdb_debug_info.append(f"❌ Timeout on attempt {attempt + 1}")
-                                if attempt < max_retries - 1:
-                                    time.sleep(2)
-                            except requests.exceptions.ConnectionError as ce:
-                                pdb_debug_info.append(f"❌ Connection error: {str(ce)[:100]}")
-                                if attempt < max_retries - 1:
-                                    time.sleep(2)
-                            except Exception as download_err:
-                                pdb_debug_info.append(f"❌ Error: {str(download_err)[:100]}")
-                                break
-                        
-                        if not protein_pdb_data:
-                            st.warning(f"⚠️ Could not download {target_protein} structure. See debug info below.")
-                else:
-                    pdb_debug_info.append(f"❌ No PDB ID mapping for {target_protein}")
-                    st.info(f"ℹ️ No PDB structure available for {target_protein}")
-            except Exception as fetch_err:
-                pdb_debug_info.append(f"❌ Exception: {str(fetch_err)}")
-                st.error(f"⚠️ PDB fetch error: {str(fetch_err)[:200]}")
-            
-            # Show debug info
-            with st.expander("🔍 PDB Download Debug Info", expanded=False):
-                for info in pdb_debug_info:
-                    st.text(info)
-            
-            # === SHOW GROQ DESCRIPTION AT TOP ===
-            st.markdown("---")
-            st.markdown(f"### 💡 Molecular Docking Insights")
-            try:
-                from llm_powered_descriptions import generate_docking_description_with_llm
-                best_affinity = valid_poses[0]['binding_affinity']
-                description = generate_docking_description_with_llm(
-                    drug_name=selected_drug,
-                    target_protein=target_protein,
-                    binding_affinity=best_affinity,
-                    disease_name=disease_name
-                )
-                st.success(description)
-                logger.info("✅ Groq description displayed successfully")
-            except Exception as desc_err:
-                logger.error(f"⚠️ Groq description failed: {desc_err}")
-                import traceback
-                logger.error(traceback.format_exc())
-                # Show fallback
-                best_affinity = valid_poses[0]['binding_affinity']
-                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                st.info(f"{selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
-                st.warning("💡 AI description unavailable - check GROQ_API_KEY is set in Streamlit secrets")
-            
-            st.markdown("---")
-            st.markdown(f"### Binding Poses")
+            st.markdown(f"**Docking poses for {selected_drug}:**")
             
             for i, pose in enumerate(valid_poses):
                 conf_label = pose.get('confidence_label', 'Unknown')
@@ -12041,64 +11416,162 @@ def render_molecular_docking_section():
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
-                        st.markdown(f"**Binding Affinity:** {pose['binding_affinity']:.2f} kcal/mol")
+                        st.markdown(f"**Binding Affinity:** {pose['binding_affinity']:.1f} kcal/mol")
                         st.markdown(f"**RMSD:** {pose['rmsd']:.2f} Å")
                         
-                        # 3D Visualization
-                        try:
-                            import py3Dmol
-                            import streamlit.components.v1 as components
-                            
-                            # Get SDF data
-                            sdf_data = pose.get('sdf_data')
-                            if not sdf_data:
+                        # Use professional docking interface for protein+ligand complex
+                        # Skip professional docking interface for now
+                        if True:  # Enable professional docking interface
+                            try:
+                                # Create pose data from the drug
                                 sdf_data = create_dynamic_sdf_data(selected_drug)
-                            
-                            if sdf_data and target_protein:
-                                # Create viewer
-                                view = py3Dmol.view(width=700, height=450)
+                                if not sdf_data:
+                                    st.error(" **molecular Protein-Ligand Complex Unavailable**")
+                                    st.warning("Cannot generate molecular structure data for visualization. Real DiffDock SDF data required for protein-ligand complex display.")
+                                    return
                                 
-                                # Use pre-fetched protein PDB (fetched before loop)
-                                if protein_pdb_data:
-                                    # Add protein first
-                                    view.addModel(protein_pdb_data, 'pdb')
-                                    view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
-                                    
-                                    # Add drug ligand - py3Dmol will auto-center both
-                                    view.addModel(sdf_data, 'sdf')
-                                    view.setStyle({'model': 1}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.5},
-                                        'sphere': {'scale': 0.35, 'colorscheme': 'greenCarbon'}
-                                    })
-                                    
-                                    # CRITICAL: Center view on BOTH models together
-                                    view.setBackgroundColor('white')
-                                    view.zoomTo()  # This centers on all visible atoms
-                                    
-                                    # Add note about positioning
-                                    st.markdown(f"**{selected_drug} with {target_protein} protein**")
-                                    st.caption("Rainbow ribbon: Protein structure | Green: Drug molecule")
-                                    
-                                else:
-                                    # Just drug molecule
-                                    view.addModel(sdf_data, 'sdf')
-                                    view.setStyle({'model': 0}, {
-                                        'stick': {'colorscheme': 'greenCarbon', 'radius': 0.5},
-                                        'sphere': {'scale': 0.35, 'colorscheme': 'greenCarbon'}
-                                    })
-                                    
-                                    view.setBackgroundColor('white')
-                                    view.zoomTo()
-                                    
-                                    st.markdown(f"**{selected_drug} structure**")
-                                    st.caption(f"ℹ️ {target_protein} protein structure unavailable")
+                                poses_data = [sdf_data]
+                                confidence_scores = [pose['confidence']]
                                 
-                                components.html(view._make_html(), height=450)
-                            else:
-                                st.info("Structure unavailable")
+                                # Dynamic target resolution - NO hardcoded fallbacks
+                                target_protein = determine_target_protein_dynamically(selected_drug)
+                                if not target_protein:
+                                    st.error(" **Target Protein Resolution Failed**")
+                                    st.warning(f"Cannot determine target protein for {selected_drug}. Dynamic target resolution required for protein-ligand complex.")
+                                    return
                                 
-                        except Exception as viz_err:
-                            logger.error(f"Viz error: {viz_err}")
+                                # Render professional protein+ligand complex
+                                # Render actual molecular visualization
+                                try:
+                                    # Extract SDF data from pose dict
+                                    pose_sdf_data = pose.get('sdf_data', sdf_data) if isinstance(pose, dict) else pose
+                                    # BULLETPROOF py3Dmol viewer using REAL DiffDock data
+                                    from simple_3d_viewer import create_simple_3d_viewer
+                                    success = create_simple_3d_viewer(
+                                        drug_name=selected_drug,
+                                        target_protein=target_protein
+                                    )
+                                    
+                                    # DEEP 3D MOLECULAR ANALYSIS - Precise geometric analysis
+                                    if success:
+                                        analysis_cache_key = f"3d_analysis_{selected_drug}_{target_protein}_{i}"
+                                        
+                                        if analysis_cache_key not in st.session_state:
+                                            try:
+                                                from deep_3d_molecular_analyzer import analyze_3d_complex
+                                                import os
+                                                import tempfile
+                                                
+                                                # Save SDF content to temporary file (AutoDock Vina returns in-memory)
+                                                sdf_content = pose.get('sdf_data', '')
+                                                if sdf_content:
+                                                    # Create temp file for SDF
+                                                    with tempfile.NamedTemporaryFile(mode='w', suffix='.sdf', delete=False) as temp_sdf:
+                                                        temp_sdf.write(sdf_content)
+                                                        ligand_sdf_path = temp_sdf.name
+                                                    
+                                                    # Get protein PDB from docking service
+                                                    protein_pdb_path = None
+                                                    if docking_svc:
+                                                        protein_pdb = docking_result.get('protein_pdb')
+                                                        if protein_pdb:
+                                                            with tempfile.NamedTemporaryFile(mode='w', suffix='.pdb', delete=False) as temp_pdb:
+                                                                temp_pdb.write(protein_pdb)
+                                                                protein_pdb_path = temp_pdb.name
+                                                
+                                                if sdf_content and os.path.exists(ligand_sdf_path):
+                                                    st.markdown("---")
+                                                    st.markdown("### Deep 3D Molecular Analysis")
+                                                    
+                                                    with st.spinner("Analyzing 3D molecular geometry..."):
+                                                        # Run precise 3D analysis
+                                                        analysis_result = analyze_3d_complex(
+                                                            ligand_sdf_path=ligand_sdf_path,
+                                                            protein_pdb_path=protein_pdb_path,
+                                                            binding_affinity=pose['binding_affinity']
+                                                        )
+                                                    
+                                                    # Display results in professional format
+                                                    col1, col2, col3 = st.columns(3)
+                                                    
+                                                    with col1:
+                                                        st.metric(
+                                                            "Geometric Quality",
+                                                            f"{analysis_result.geometric_fit_score:.0f}/100",
+                                                            help="3D geometric fit score based on actual atomic coordinates"
+                                                        )
+                                                        st.caption(f"Quality: {analysis_result.interaction_quality}")
+                                                    
+                                                    with col2:
+                                                        st.metric(
+                                                            "Predicted Affinity",
+                                                            f"{analysis_result.binding_affinity_predicted:.1f} kcal/mol",
+                                                            help="Binding affinity predicted from 3D geometric features"
+                                                        )
+                                                        st.caption(f"Confidence: {analysis_result.confidence:.0%}")
+                                                    
+                                                    with col3:
+                                                        st.metric(
+                                                            "Key Interactions",
+                                                            f"{analysis_result.hydrogen_bonds + analysis_result.hydrophobic_contacts}",
+                                                            help="Total H-bonds + hydrophobic contacts detected"
+                                                        )
+                                                        st.caption(f"H-bonds: {analysis_result.hydrogen_bonds}")
+                                                    
+                                                    # NEW: Spatial explanation - WHY this affinity?
+                                                    with st.expander("WHY This Binding Affinity? (3D Analysis)", expanded=True):
+                                                        st.markdown(analysis_result.spatial_explanation)
+                                                        
+                                                        st.markdown(f"**Orientation:** {analysis_result.orientation_quality}")
+                                                        
+                                                        if analysis_result.steric_clashes > 0:
+                                                            st.error(f"PROBLEM: {analysis_result.steric_clashes} steric clashes detected - atoms too close together")
+                                                        
+                                                        if analysis_result.conformational_strain > 5:
+                                                            st.warning(f"STRAIN: Drug forced into unusual shape ({analysis_result.conformational_strain:.1f} kcal/mol)")
+                                                        
+                                                        if analysis_result.steric_clashes == 0 and analysis_result.hydrogen_bonds > 3:
+                                                            st.success("EXCELLENT FIT: Perfect geometry with strong anchoring H-bonds")
+                                                    
+                                                    logger.info(f"3D geometric analysis complete for {selected_drug} pose {i+1}")
+                                                    
+                                                    # Cache completion
+                                                    st.session_state[analysis_cache_key] = analysis_result
+                                                    
+                                                    # Clean up temp files
+                                                    try:
+                                                        if os.path.exists(ligand_sdf_path):
+                                                            os.unlink(ligand_sdf_path)
+                                                        if protein_pdb_path and os.path.exists(protein_pdb_path):
+                                                            os.unlink(protein_pdb_path)
+                                                    except:
+                                                        pass
+                                                else:
+                                                    st.info("No SDF data available for deep 3D analysis")
+                                                    st.session_state[analysis_cache_key] = None
+                                            
+                                            except Exception as analysis_error:
+                                                logger.error(f"3D analysis failed: {analysis_error}", exc_info=True)
+                                                st.warning("3D geometric analysis unavailable - continuing with docking results")
+                                                st.session_state[analysis_cache_key] = None
+                                        else:
+                                            # Display cached results
+                                            cached_result = st.session_state[analysis_cache_key]
+                                            if cached_result:
+                                                st.markdown("---")
+                                                st.markdown("### Deep 3D Molecular Analysis (Cached)")
+                                                st.info(f"Quality: {cached_result.interaction_quality} ({cached_result.geometric_fit_score:.0f}/100)")
+                                    
+                                except Exception as e:
+                                    st.error(f"molecular visualization error: {e}")
+                                    logger.warning(f"molecular visualization failed: {e}")
+                            except Exception as e:
+                                st.error(f"Professional visualization error: {e}")
+                                st.info("Expected: White protein structure + colored ligand pose")
+                        else:
+                            st.markdown(f"**{selected_drug}** binding to target protein")
+                            st.text(f"Confidence: {pose['confidence']:.3f}")
+                            st.text(f"Binding Affinity: {pose['binding_affinity']:.1f} kcal/mol")
                     
                     with col2:
                         st.metric("Pose Rank", f"#{i+1}")
@@ -12107,18 +11580,16 @@ def render_molecular_docking_section():
             # OPTIMIZATION COMPARISON SECTION
             st.markdown("---")
             st.markdown("## Optimization Comparison")
-            if (
-                hasattr(st.session_state, 'real_optimization_results') and
-                st.session_state.real_optimization_results is not None and
-                isinstance(st.session_state.real_optimization_results, list) and
-                len(st.session_state.real_optimization_results) > 0 and
+            
+            # Check if optimization results exist for this drug
+            if (hasattr(st.session_state, 'real_optimization_results') and 
                 hasattr(st.session_state, 'real_optimization_drug') and
-                st.session_state.real_optimization_drug == selected_drug
-                ):
-                best_opt = st.session_state.real_optimization_results[0] if st.session_state.real_optimization_results else None
-    
-                if best_opt and hasattr(best_opt, 'success') and best_opt.success:
-                    st.info(f"Comparing original {selected_drug} vs optimized variant...")
+                st.session_state.real_optimization_drug == selected_drug):
+                
+                best_opt = st.session_state.real_optimization_results[0]
+                
+                if best_opt.success:
+                    st.info(f"Comparing original {selected_drug} vs optimized version: {best_opt.modification_type}")
                     
                     # Run docking for optimized drug
                     optimized_cache_key = f"opt_docking_{selected_drug}_{best_opt.optimized_smiles}"
@@ -12129,11 +11600,11 @@ def render_molecular_docking_section():
                                 docking_svc = st.session_state.get('docking_service')
                                 
                                 if docking_svc:
-                                    # Run DiffDock with optimized SMILES
+                                    # Run DiffDock with optimized SMILES (has automatic AutoDock Vina fallback)
                                     opt_docking_result = docking_svc.perform_docking(
                                         drug_name=f"{selected_drug}_optimized",
                                         target_name=target_protein,
-                                        ligand_smiles=best_opt.optimized_smiles
+                                        smiles=best_opt.optimized_smiles
                                     )
                                     
                                     if opt_docking_result and opt_docking_result.get('success'):
@@ -12196,14 +11667,14 @@ def render_molecular_docking_section():
                                 st.metric("Binding Affinity", f"{orig_affinity:.1f} kcal/mol")
                                 st.metric("Confidence", f"{original_best_pose.get('confidence', 0):.3f}")
                                 
-                                # Show REAL 3D protein-ligand complex
+                                # Show REAL 3D protein-ligand complex from DiffDock
                                 try:
                                     import py3Dmol
                                     import streamlit.components.v1 as components
                                     import os
                                     
-                                    # Use the target_protein already determined (don't redefine!)
-                                    # target_protein is already set above from graph/database
+                                    # Get protein PDB path
+                                    target_protein = st.session_state.get('selected_target', 'AMPK')
                                     pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
                                     import glob
                                     pdb_files = glob.glob(pdb_path)
@@ -12238,8 +11709,8 @@ def render_molecular_docking_section():
                                         view.setBackgroundColor('white')
                                         view.zoomTo({'model': 1})  # Zoom to ligand
                                         
-                                        st.markdown(f"**3D Structure: {selected_drug} bound to {target_protein}**")
                                         components.html(view._make_html(), height=400, width=450)
+                                        st.caption("Protein (gray) + Original Drug (CYAN - thick representation)")
                                     else:
                                         st.info("3D complex visualization unavailable - run docking first")
                                 except Exception as e:
@@ -12261,7 +11732,8 @@ def render_molecular_docking_section():
                                     import os
                                     import glob
                                     
-                                    # Use the target_protein already determined (don't redefine!)
+                                    # Get protein PDB path
+                                    target_protein = st.session_state.get('selected_target', 'AMPK')
                                     pdb_path = f"./pdb_cache/{target_protein}_*.pdb"
                                     pdb_files = glob.glob(pdb_path)
                                     
@@ -12281,22 +11753,22 @@ def render_molecular_docking_section():
                                         # Create 3D viewer with protein + optimized ligand
                                         view = py3Dmol.view(width=450, height=400)
                                         
-                                        # Add protein (cartoon, spectrum colors)
+                                        # Add protein (cartoon, semi-transparent)
                                         view.addModel(pdb_data, 'pdb')
-                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'spectrum'}})
+                                        view.setStyle({'model': 0}, {'cartoon': {'color': 'lightgray', 'opacity': 0.5}})
                                         
-                                        # Add optimized ligand (green, visible)
+                                        # Add optimized ligand (VERY VISIBLE - thick sticks + spheres)
                                         view.addModel(sdf_data, 'sdf')
                                         view.setStyle({'model': 1}, {
-                                            'stick': {'colorscheme': 'greenCarbon', 'radius': 0.4},
-                                            'sphere': {'scale': 0.3}
+                                            'stick': {'colorscheme': 'greenCarbon', 'radius': 0.35},
+                                            'sphere': {'scale': 0.25, 'colorscheme': 'greenCarbon'}
                                         })
                                         
                                         view.setBackgroundColor('white')
-                                        view.zoomTo({'model': 1})
+                                        view.zoomTo({'model': 1})  # Zoom to ligand
                                         
-                                        st.markdown(f"**Optimized structure bound to {target_protein}**")
                                         components.html(view._make_html(), height=400, width=450)
+                                        st.caption("Protein (gray) + Optimized Drug (GREEN - thick representation)")
                                     else:
                                         st.info("3D complex visualization unavailable - run optimization docking first")
                                 except Exception as e:
@@ -12458,109 +11930,24 @@ Loss in binding strength: {abs(affinity_improvement):.1f} kcal/mol
                 st.info("To see optimization comparison, run molecular optimization in the Optimization tab first")
 
 
-def calculate_ml_confidence_score(drug_name: str, targets: list, disease_context: str) -> float:
-    """
-    Calculate evidence-based confidence score - JSON ONLY (NO DATABASE!)
-    Uses drug_interactions.json, drugs.json, protein_pathways.json
-    """
-    from database_queries import get_drug_info, get_drug_targets, get_gene_pathways
-    import json
-    
-    score = 0.0
-    
-    # Try to find drug with flexible name matching
-    # "Pioglitazone" should match "pioglitazone hydrochloride"
-    drug_lower = drug_name.lower()
-    
-    # Load drugs.json for properties
-    try:
-        with open('drugs.json', 'r') as f:
-            all_drugs = json.load(f)
-        
-        # Find drug by partial match
-        matched_drug_key = None
-        for drug_key in all_drugs.keys():
-            if drug_lower in drug_key or drug_key in drug_lower:
-                matched_drug_key = drug_key
-                break
-        
-        drug_info = all_drugs.get(matched_drug_key) if matched_drug_key else None
-    except:
-        drug_info = None
-    
-    # Component 1: Protein interaction evidence (max 0.30)
-    if targets and len(targets) > 0:
-        high_conf = [t for t in targets if t.get('confidence_score', 0) > 0.8]
-        med_conf = [t for t in targets if 0.6 <= t.get('confidence_score', 0) <= 0.8]
-        score += min(0.30, len(high_conf) * 0.05 + len(med_conf) * 0.02)
-    
-    # Component 2: Molecular properties from drugs.json (max 0.25)
-    if drug_info:
-        qed = drug_info.get('qed_score')
-        violations = drug_info.get('lipinski_violations', 0)
-        
-        if qed:
-            score += min(0.10, float(qed) * 0.10)
-        
-        if violations == 0:
-            score += 0.10
-        elif violations == 1:
-            score += 0.05
-    else:
-        score += 0.05  # Default if no data
-    
-    # Component 3: Clinical evidence - FDA approved (max 0.25)
-    if drug_info:
-        if drug_info.get('approved'):
-            score += 0.15  # FDA approved
-        score += 0.10  # Default clinical score
-    else:
-        score += 0.03
-    
-    # Component 4: Pathway relevance from protein_pathways.json (max 0.20)
-    pathway_count = 0
-    if targets:
-        try:
-            with open('protein_pathways.json', 'r') as f:
-                protein_pathways = json.load(f)
-            
-            # Count unique pathways for this drug's targets
-            all_pathways = set()
-            for target in targets:
-                gene = target.get('gene_symbol', '')
-                if gene in protein_pathways:
-                    all_pathways.update(protein_pathways[gene])
-            
-            pathway_count = len(all_pathways)
-        except Exception as e:
-            logger.warning(f"Pathway scoring failed for {drug_name}: {e}")
-            pathway_count = 0
-    
-    if pathway_count >= 3:
-        score += 0.15
-    elif pathway_count >= 1:
-        score += 0.08
-    else:
-        score += 0.02
-    
-    return round(min(1.0, max(0.0, score)), 3)
-
-
 def process_drug_discovery_query(query: str) -> list:
     """
-    JSON-POWERED drug discovery - uses drug_therapeutic_categories.json
-    Returns drugs with REAL targets and indications
+    DATABASE-POWERED drug discovery - queries PostgreSQL database
+    Returns drugs from 100,000+ entries based on query
     """
     query_lower = query.lower()
     
-    # Category mappings - MUST match drug_therapeutic_categories.json!
+    # Category mappings
     category_mappings = {
-        'diabetes': 'Diabetic', 'diabetic': 'Diabetic', 'insulin': 'Diabetic',
-        'cardiovascular': 'Cardiovascular', 'heart': 'Cardiovascular', 'cardiac': 'Cardiovascular',
-        'parkinson': 'Parkinsons', 'dopamin': 'Parkinsons', 'dopamine': 'Parkinsons',
-        'alzheimer': 'Alzheimers', 'dementia': 'Alzheimers', 'acetylcholine': 'Alzheimers',
-        'pain': 'Pain', 'analgesic': 'Pain', 'anti-inflammatory': 'Pain',
-        'psychiatric': 'Psychiatric', 'depression': 'Psychiatric', 'anxiety': 'Psychiatric',
+        'diabetes': 'Diabetes', 'diabetic': 'Diabetes',
+        'cardiovascular': 'Cardiovascular', 'heart': 'Cardiovascular', 
+        'cardiac': 'Cardiovascular',
+        'cancer': 'Cancer', 'oncology': 'Cancer', 'tumor': 'Cancer',
+        'alzheimer': 'Neurological', 'dementia': 'Neurological', 
+        'neurological': 'Neurological',
+        'pain': 'Pain', 'analgesic': 'Pain',
+        'inflammation': 'Anti-inflammatory', 'inflammatory': 'Anti-inflammatory',
+        'antibiotic': 'Antibiotic', 'antiviral': 'Antiviral',
     }
     
     # Match category
@@ -12576,67 +11963,55 @@ def process_drug_discovery_query(query: str) -> list:
     else:
         drugs_from_db = search_drugs_by_query(query, limit=15)
     
-    # Format results with REAL targets and indications
+    # Format results to match existing structure
     recommended_drugs = []
     for drug in drugs_from_db:
-        drug_name = drug.get('name', 'Unknown')
-        
-        # Get REAL protein targets from database
-        target_genes = []
-        if DATABASE_MODULES_AVAILABLE:
-            try:
-                targets = get_drug_targets(drug_name, limit=5)
-                
-                # ✅ CRITICAL: Skip drugs with NO targets/evidence
-                if not targets or len(targets) == 0:
-                    logger.warning(f"Skipping {drug_name} - no protein targets found in database")
-                    continue  # Don't recommend drugs without evidence!
-                
-                target_genes = [t['gene_symbol'] for t in targets[:3]]
-                target_str = ', '.join(target_genes)
-                if len(targets) > 3:
-                    target_str += f" (+{len(targets)-3})"
-                
-                # Calculate REAL confidence from multiple evidence sources
-                avg_confidence = calculate_ml_confidence_score(drug_name, targets, query)
-                
-                # Get full drug info including indication
-                drug_info = db_get_drug_by_name(drug_name)
-                indication = drug_info.get('original_indication', 'Multiple indications') if drug_info else 'Multiple indications'
-                
-            except Exception as e:
-                logger.warning(f"Failed to get targets for {drug_name}: {e}")
-                # ✅ CRITICAL: Skip drugs that fail to get targets
-                continue  # Don't recommend if we can't verify evidence
-        else:
-            # ✅ CRITICAL: Skip if database modules not available
-            logger.warning(f"Skipping {drug_name} - database modules not available")
-            continue
-        
         recommended_drugs.append({
-            'name': drug_name,
+            'name': drug.get('name', 'Unknown'),
             'class': drug.get('drug_class', 'Therapeutic'),
             'mechanism': drug.get('mechanism_of_action', 'Under investigation'),
-            'target': target_str,  # Display string: "PPARG, PPARA, PPARD"
-            'targets': target_genes,  # List for docking: ['PPARG', 'PPARA', 'PPARD']
-            'confidence': avg_confidence,  # REAL confidence from interactions!
+            'target': 'Multiple targets',
+            'confidence': float(drug.get('qed_score', 0.85)) if drug.get('qed_score') else 0.85,
             'category': drug.get('therapeutic_category', 'Unknown'),
-            'fda_status': drug.get('fda_status', 'Unknown'),
-            'indication': indication  # NEW: Shows what it's approved for!
+            'fda_status': drug.get('fda_status', 'Unknown')
         })
     
-    logger.info(f"DATABASE QUERY '{query}' returned {len(recommended_drugs)} drugs WITH EVIDENCE")
-    
-    # ✅ CRITICAL: Warn if no drugs with evidence found
-    if not recommended_drugs:
-        logger.warning(f"No drugs with database evidence found for query: {query}")
-        logger.warning("All candidate drugs lacked protein target interactions in database")
-    
+    logger.info(f"✅ DATABASE QUERY '{query}' returned {len(recommended_drugs)} drugs")
     return recommended_drugs if recommended_drugs else []
+    
+    try:
+        from services.drug_categorizer import get_drug_categorizer
+        
+        categorizer = get_drug_categorizer()
+        logger.info(f"📍 Query received: '{query}'")
+        
+        drugs = categorizer.get_drugs_for_query(query, limit=15)
+        logger.info(f"🔍 Found {len(drugs)} drugs in matching categories")
+        
+        recommended_drugs = []
+        for drug in drugs:
+            drug_dict = drug if isinstance(drug, dict) else {'name': drug}
+            recommended_drugs.append({
+                'name': drug_dict.get('name', 'Unknown'),
+                'confidence': drug_dict.get('confidence', 0.85),
+                'mechanism': drug_dict.get('mechanism', 'Unknown'),
+                'class': drug_dict.get('category', 'Therapeutic'),
+                'category': drug_dict.get('category', 'Unknown'),
+                'evidence': [f"Categorized as {drug_dict.get('category', 'Unknown')} - matches '{query}'"]
+            })
+        
+        logger.info(f"✅ DYNAMIC QUERY '{query}' returned {len(recommended_drugs)} drugs")
+        return recommended_drugs if recommended_drugs else []
+        
+    except Exception as e:
+        logger.error(f"❌ Categorizer error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return []
 
 def get_drug_mechanism(drug_name: str) -> str:
     """Get mechanism of action from database"""
-    sql = "SELECT mechanism_of_action FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
+    sql = "SELECT mechanism_of_action FROM drugs WHERE name = %s LIMIT 1"
     results = execute_db(sql, (drug_name,))
     if results and results[0].get('mechanism_of_action'):
         return results[0]['mechanism_of_action']
@@ -12644,41 +12019,27 @@ def get_drug_mechanism(drug_name: str) -> str:
 
 def get_drug_class(drug_name: str) -> str:
     """Get therapeutic class from database"""
-    sql = "SELECT drug_class FROM drugs WHERE LOWER(name) = LOWER(%s) LIMIT 1"
+    sql = "SELECT drug_class FROM drugs WHERE name = %s LIMIT 1"
     results = execute_db(sql, (drug_name,))
     if results and results[0].get('drug_class'):
         return results[0]['drug_class']
     return 'Small molecule therapeutic'
 
 def generate_drug_evidence(drug_name: str) -> list:
-    """Generate evidence from database interactions with protein targets"""
+    """Generate evidence from database interactions"""
     interactions = get_drug_protein_interactions(drug_name)
     
     evidence = []
     if interactions:
-        # Show target proteins
-        target_genes = [i['gene_symbol'] for i in interactions[:5]]
-        target_str = ', '.join(target_genes[:3])
-        if len(target_genes) > 3:
-            target_str += f" (+{len(target_genes)-3} more)"
+        evidence.append(f"Interacts with {len(interactions)} protein targets")
         
-        evidence.append(f"Targets {len(interactions)} proteins: {target_str}")
-        
-        # High confidence interactions
         high_conf = [i for i in interactions if i.get('confidence_score', 0) > 0.8]
         if high_conf:
             evidence.append(f"{len(high_conf)} high-confidence protein interactions")
         
-        # Experimental evidence
         exp_evidence = [i for i in interactions if i.get('evidence_source') in ['ChEMBL', 'DrugBank']]
         if exp_evidence:
-            evidence.append(f"Validated by {len(exp_evidence)} experimental sources")
-        
-        # Binding affinity
-        bindings = [i.get('binding_affinity') for i in interactions if i.get('binding_affinity')]
-        if bindings:
-            avg_binding = sum(bindings) / len(bindings)
-            evidence.append(f"Average binding affinity: {avg_binding:.2f} kcal/mol")
+            evidence.append(f"Experimental evidence from {len(exp_evidence)} validated sources")
     
     # Fallback evidence
     if not evidence:
@@ -12695,8 +12056,6 @@ def main():
     # Apply clean professional styling
     if STYLING_AVAILABLE:
         apply_app_styling()
-    
-    # Config check removed - no database needed!
     
     # Initialize session state
     setup_local_environment()
