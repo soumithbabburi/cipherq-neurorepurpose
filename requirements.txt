@@ -19,6 +19,7 @@ typing-extensions>=4.0.0
 psycopg2-binary>=2.9.0
 biopython
 LightGBM
-XGBoost
 ipython-genutils
 py3Dmol
+xgboost>=1.7.0
+scikit-learn>=1.0.0
