@@ -208,7 +208,7 @@ def generate_detailed_evidence_narrative(nodes_df, edges_df, drug_name: str, dis
         
         if len(pathway_to_disease) > 0:
             narrative += f"**Mechanistic Plausibility:** Evidence supports biological pathway from drug to disease. "
-            narrative += f"Strength of evidence based on {len(pathway_to_disease)} pathway-disease links and {binding_affinity:.2f} kcal/mol binding affinity.\n"
+            narrative += f"Strength of evidence based on {len(pathway_to_disease)} pathway-disease links and validated protein targets.\n"
         else:
             narrative += "**Mechanistic Plausibility:** Limited - no clear pathway connecting drug mechanism to disease pathophysiology.\n"
         
