@@ -24,15 +24,30 @@ import networkx as nx
 CONFIG_AVAILABLE = False
 
 
-# Import database query modules
+# Import database query modules (optional - we use JSON now)
 try:
     from database_queries import get_drug_targets, get_drug_by_name as db_get_drug_by_name
-    from scoring_engine import score_drug, rank_drugs_for_disease
-    from workflow_optimizer import select_best_drugs_for_analysis
     DATABASE_MODULES_AVAILABLE = True
-except ImportError:
+except:
     DATABASE_MODULES_AVAILABLE = False
-    print("Warning: Database modules not available - using basic queries only")
+
+# Import scoring always (required!)
+try:
+    from scoring_engine import score_drug
+    SCORING_AVAILABLE = True
+except ImportError as e:
+    SCORING_AVAILABLE = False
+    print(f"Warning: scoring_engine not available: {e}")
+
+# Import workflow optimizer (optional)
+try:
+    from workflow_optimizer import select_best_drugs_for_analysis, rank_drugs_for_disease
+    WORKFLOW_OPTIMIZER_AVAILABLE = True
+except:
+    WORKFLOW_OPTIMIZER_AVAILABLE = False
+
+if not DATABASE_MODULES_AVAILABLE:
+    print("Using JSON-based queries (database_queries not needed)")
 
 # Import top N selector
 try:
