@@ -7553,33 +7553,17 @@ def render_professional_drug_discovery_chatbox():
                         else:
                             st.info("📊 Using rule-based scoring")
                         
-                        # Score ALL drugs
-                        try:
-                            from disease_connection_filter import filter_drugs_by_disease_connection
-                            from top_n_selector import select_top_n_drugs
-                            
-                            # Score all drugs
-                            scored_all = filter_drugs_by_disease_connection(
-                                category_drugs,
-                                target_disease=selected_disease,
-                                source_category=db_category,
-                                min_score=0.0,
-                                auto_enrich=True
-                            )
-                            
-                            # Select top 3
-                            filtered_drugs = select_top_n_drugs(scored_all, n=3)
-                            scored_drugs = filtered_drugs
-                            
-                        except ImportError:
-                            # Fallback: score manually
-                            for drug in category_drugs:
-                                drug_name = drug.get('name', '')
-                                score = score_drug(drug_name, selected_disease, disease_pathway_count=0)
-                                drug['repurposing_score'] = score * 100
-                                drug['confidence'] = score
-                            
-                            scored_drugs = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)
+                        # Score ALL drugs directly
+                        for drug in category_drugs:
+                            drug_name = drug.get('name', '')
+                            score = score_drug(drug_name, selected_disease, disease_pathway_count=0)
+                            drug['repurposing_score'] = score * 100
+                            drug['confidence'] = score
+                            drug['can_optimize'] = True
+                            drug['optimization_class'] = 'Small molecule'
+                        
+                        # Sort and take top 3
+                        scored_drugs = sorted(category_drugs, key=lambda x: x.get('repurposing_score', 0), reverse=True)[:3]
                         
                         if scored_drugs:
                             # Count optimizable vs biologics
@@ -10298,7 +10282,7 @@ def render_quantum_chemistry_section():
                      border-left: 4px solid #f97316; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <h4 style="color: #7c2d12; margin: 0 0 1rem 0; font-weight: 600; 
                          font-size: 1.2rem; letter-spacing: -0.025em;">
-                        Drug Repurposing Score for Alzheimer's Disease
+                        Drug Repurposing Score for {disease_name}
                     </h4>
                 </div>
                 """, unsafe_allow_html=True)
