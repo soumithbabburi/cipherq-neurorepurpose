@@ -9589,9 +9589,9 @@ def render_biocypher_network_section():
                         st.markdown("### 📋 Evidence Chain Explanation")
                         
                         try:
-                            from evidence_chain_narrator import generate_evidence_chain_description
-                            chain_desc = generate_evidence_chain_description(nodes_df, edges_df, selected_drug_for_evidence, disease_name)
-                            st.info(chain_desc)
+                            from evidence_chain_detailed_narrator import generate_detailed_evidence_narrative
+                            chain_desc = generate_detailed_evidence_narrative(nodes_df, edges_df, selected_drug_for_evidence, disease_name)
+                            st.markdown(chain_desc)
                         except ImportError:
                             # Fallback: Generate simple chain description
                             drug_id = f"DRUG_{selected_drug_for_evidence.replace(' ', '_').upper()}"
@@ -11785,18 +11785,19 @@ def render_molecular_docking_section():
                             st.markdown("---")
                             st.markdown(f"### Molecular Docking Analysis: {selected_drug} → {target_protein}")
                             
-                            # Generate description using Groq
+                            # Use intelligent docking narrator
                             try:
-                                from llm_powered_descriptions import generate_docking_description_with_llm
-                                description = generate_docking_description_with_llm(
+                                from docking_narrator import analyze_docking_result
+                                docking_description = analyze_docking_result(
                                     drug_name=selected_drug,
                                     target_protein=target_protein,
                                     binding_affinity=best_affinity,
-                                    disease_name=disease_name
+                                    protein_pdb_data=protein_pdb_data,
+                                    drug_sdf=poses[0].get('sdf_data') if poses else None
                                 )
-                                st.markdown(description)
+                                st.markdown(docking_description)
                             except Exception as desc_error:
-                                logger.warning(f"LLM description failed: {desc_error}")
+                                logger.warning(f"Docking narrator failed: {desc_error}")
                                 strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
                                 st.info(f"**Binding Analysis**: {selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
                         
