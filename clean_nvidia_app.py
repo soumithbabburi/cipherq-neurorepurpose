@@ -12504,8 +12504,32 @@ Loss in binding strength: {abs(affinity_improvement):.1f} kcal/mol
                             
                             st.info(f"Note: In molecular docking, MORE NEGATIVE binding affinity = STRONGER binding")
                     else:
-                        st.warning("Optimization comparison unavailable: Docking analysis failed for the optimized structure")
-                        st.info("Try running the optimization again or check the logs for details")
+                        # Docking comparison not available - show optimization results anyway
+                        st.info("Docking comparison unavailable - showing property improvements only")
+                        
+                        if best_opt and hasattr(best_opt, 'success') and best_opt.success:
+                            st.markdown("### Property Improvements")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                orig_bbb = best_opt.original_properties.get('BBB_Score', 0)
+                                st.metric("Original BBB", f"{orig_bbb:.1f}%")
+                                orig_cns = best_opt.original_properties.get('CNS_MPO', 0)
+                                st.metric("Original CNS MPO", f"{orig_cns:.2f}")
+                            
+                            with col2:
+                                opt_bbb = best_opt.optimized_properties.get('BBB_Score', 0)
+                                bbb_delta = opt_bbb - orig_bbb
+                                st.metric("Optimized BBB", f"{opt_bbb:.1f}%", delta=f"{bbb_delta:+.1f}%")
+                                opt_cns = best_opt.optimized_properties.get('CNS_MPO', 0)
+                                cns_delta = opt_cns - orig_cns
+                                st.metric("Optimized CNS MPO", f"{opt_cns:.2f}", delta=f"{cns_delta:+.2f}")
+                            
+                            if bbb_delta > 10 or cns_delta > 0.5:
+                                st.success(f"✅ Optimization improved CNS properties!")
+                            else:
+                                st.info("Optimization showed minimal property changes")
             else:
                 st.info("To see optimization comparison, run molecular optimization in the Optimization tab first")
 
