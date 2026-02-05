@@ -3739,7 +3739,15 @@ def get_real_drug_trials(drug_name: str):
         disease = st.session_state.get('target_disease', 'Unknown Disease')
         
         # Fetch real trials for this drug
-        raw_trials = fetcher.fetch_comprehensive_clinical_trials(drug_name, disease)
+        try:
+            raw_trials = fetcher.fetch_clinical_trials(drug_name, disease)
+        except AttributeError:
+            # Method name changed or doesn't exist
+            try:
+                raw_trials = fetcher.fetch_clinical_trials(drug_name, disease)
+            except:
+                raw_trials = []
+                logger.warning(f"Clinical trials fetch failed for {drug_name}")
         
         # Transform API response to match expected format - FIX: Show ALL trials
         formatted_trials = []
@@ -5079,7 +5087,7 @@ Selected through AI-driven analysis of molecular properties, target interactions
                     
                     # Use the enhanced data fetcher that we know works
                     drug_clean = drug.replace('Drug:', '').strip()
-                    trials = data_fetcher.fetch_comprehensive_clinical_trials(drug_clean, disease)
+                    trials = data_fetcher.fetch_clinical_trials(drug_clean, disease)
                     # Format the trials data for display
                     for trial in trials:
                         formatted_trial = {
@@ -10480,7 +10488,7 @@ def render_clinical_trials_evidence(top_drugs: list):
                 with st.expander(f"Clinical Trials for {drug_name} (Confidence: {drug['confidence']:.1%})", expanded=(i==0)):
                     with st.spinner(f"Fetching clinical trials for {drug_name}..."):
                         try:
-                            trials_data = data_fetcher.fetch_comprehensive_clinical_trials(drug_name, disease_name)
+                            trials_data = data_fetcher.fetch_clinical_trials(drug_name, disease_name)
                             trials = trials_data.get('trials', []) if isinstance(trials_data, dict) else trials_data
                             
                             if trials:
@@ -10633,7 +10641,7 @@ def render_real_clinical_trials(drug_name: str):
         from enhanced_authentic_data_fetcher import EnhancedAuthenticDataFetcher
         data_fetcher = EnhancedAuthenticDataFetcher()
         
-        trials = data_fetcher.fetch_comprehensive_clinical_trials(drug_name)
+        trials = data_fetcher.fetch_clinical_trials(drug_name)
         if trials:
             for i, trial in enumerate(trials[:5]):  # Show top 5 trials
                 render_clinical_trial_card(trial, i)
