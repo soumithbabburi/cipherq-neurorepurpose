@@ -4488,7 +4488,7 @@ def generate_comprehensive_quantum_data(drug_list):
     
     # Initialize quantum calculator with disease-specific configuration
     if QUANTUM_CALCULATOR_AVAILABLE:
-        quantum_calc = QuantumMolecularCalculator(disease_name=disease_name)
+        quantum_calc = QuantumMolecularCalculator(protein_pdb_data=protein_pdb_data)
         logger.info(f"Using real RDKit quantum chemistry calculations configured for {disease_name}")
     else:
         logger.warning("QuantumMolecularCalculator not available, using fallback")
@@ -6228,7 +6228,7 @@ def display_pbpk_simulation(drug_name: str, molecular_weight: float = None, logp
         from services.pbpk_simulation import PBPKSimulator
         
         # Create disease-specific PBPK simulator
-        pbpk_simulator = PBPKSimulator(disease_name=disease_name)
+        pbpk_simulator = PBPKSimulator(protein_pdb_data=protein_pdb_data)
         target_tissues = pbpk_simulator.get_primary_target_tissue()
         
         col1, col2 = st.columns(2)
@@ -6478,7 +6478,7 @@ def display_enhanced_diffdock_results(drug, target):
                         # Call optimization with correct signature
                         optimization_result = render_quantum_optimization_section(
                             selected_drugs=drugs_with_smiles,
-                            disease_name=disease_name
+                            protein_pdb_data=protein_pdb_data
                         )
                         
                         if optimization_result and optimization_result.success:
@@ -7904,7 +7904,7 @@ def render_professional_pbpk_section():
         
         try:
             from quantum_calculator import QuantumMolecularCalculator
-            quantum_calc = QuantumMolecularCalculator(disease_name=disease_name)
+            quantum_calc = QuantumMolecularCalculator(protein_pdb_data=protein_pdb_data)
             mol_profile = quantum_calc.calculate_comprehensive_profile(drug_name)
             
             if mol_profile:
@@ -7953,7 +7953,7 @@ def render_professional_pbpk_section():
             from services.pbpk_simulation import PBPKSimulator
             
             # Create disease-specific PBPK simulator
-            pbpk_simulator = PBPKSimulator(disease_name=disease_name)
+            pbpk_simulator = PBPKSimulator(protein_pdb_data=protein_pdb_data)
             primary_target = pbpk_simulator.get_primary_target_tissue()
             
             col1, col2, col3 = st.columns(3)
@@ -10069,7 +10069,7 @@ def render_quantum_chemistry_section():
         disease_name = st.session_state.get('target_disease', "Alzheimer's Disease")
         
         # Initialize quantum calculator with disease configuration
-        quantum_calc = QuantumMolecularCalculator(disease_name=disease_name)
+        quantum_calc = QuantumMolecularCalculator(protein_pdb_data=protein_pdb_data)
         
         st.info(f"Analyzing properties optimized for **{disease_name}** ({quantum_calc.disease_category} focus)")
         
@@ -10416,7 +10416,7 @@ def render_quantum_chemistry_section():
             
             with st.spinner(f"Calculating {disease_name}-optimized properties for all TOP 3 drugs..."):
                 comparison_data = []
-                quantum_calc = QuantumMolecularCalculator(disease_name=disease_name)
+                quantum_calc = QuantumMolecularCalculator(protein_pdb_data=protein_pdb_data)
                 
                 for drug in top_3_drugs:
                     try:
@@ -10893,7 +10893,7 @@ def render_optimization_strategies_section():
                         else:
                             # Run REAL optimization with disease-specific scoring
                             with st.spinner(f"Performing {disease_name}-optimized chemical modifications..."):
-                                optimizer = RealMolecularOptimizer(disease_name=disease_name)
+                                optimizer = RealMolecularOptimizer(protein_pdb_data=protein_pdb_data)
                                 results = optimizer.optimize_molecule(drug_smiles, selected_drug_for_real_opt)
                             
                             # Store in session state cache
@@ -11838,12 +11838,12 @@ def render_molecular_docking_section():
                                         
                                         # Generate Groq-powered description
                                         try:
-                                            from llm_powered_descriptions import generate_docking_description_with_llm
-                                            description = generate_docking_description_with_llm(
+                                            from docking_narrator import analyze_docking_result
+                                            description = analyze_docking_result(
                                                 drug_name=selected_drug,
                                                 target_protein=target_protein,
                                                 binding_affinity=best_affinity,
-                                                disease_name=disease_name
+                                                protein_pdb_data=protein_pdb_data
                                             )
                                             st.markdown(description)
                                         except Exception as desc_err:
@@ -11884,12 +11884,12 @@ def render_molecular_docking_section():
                                     
                                     # Generate Groq-powered description
                                     try:
-                                        from llm_powered_descriptions import generate_docking_description_with_llm
-                                        description = generate_docking_description_with_llm(
+                                        from docking_narrator import analyze_docking_result
+                                        description = analyze_docking_result(
                                             drug_name=selected_drug,
                                             target_protein=target_protein,
                                             binding_affinity=best_affinity,
-                                            disease_name=disease_name
+                                            protein_pdb_data=protein_pdb_data
                                         )
                                         st.markdown(description)
                                     except Exception as desc_err:
@@ -12062,13 +12062,13 @@ def render_molecular_docking_section():
             st.markdown("---")
             st.markdown(f"### 💡 Molecular Docking Insights")
             try:
-                from llm_powered_descriptions import generate_docking_description_with_llm
+                from docking_narrator import analyze_docking_result
                 best_affinity = valid_poses[0]['binding_affinity']
-                description = generate_docking_description_with_llm(
+                description = analyze_docking_result(
                     drug_name=selected_drug,
                     target_protein=target_protein,
                     binding_affinity=best_affinity,
-                    disease_name=disease_name
+                    protein_pdb_data=protein_pdb_data
                 )
                 st.success(description)
                 logger.info("✅ Groq description displayed successfully")
