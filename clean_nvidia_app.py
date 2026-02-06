@@ -6228,7 +6228,7 @@ def display_pbpk_simulation(drug_name: str, molecular_weight: float = None, logp
         from services.pbpk_simulation import PBPKSimulator
         
         # Create disease-specific PBPK simulator
-        pbpk_simulator = PBPKSimulator(protein_pdb_data=protein_pdb_data)
+        pbpk_simulator = PBPKSimulator()
         target_tissues = pbpk_simulator.get_primary_target_tissue()
         
         col1, col2 = st.columns(2)
@@ -7953,7 +7953,7 @@ def render_professional_pbpk_section():
             from services.pbpk_simulation import PBPKSimulator
             
             # Create disease-specific PBPK simulator
-            pbpk_simulator = PBPKSimulator(protein_pdb_data=protein_pdb_data)
+            pbpk_simulator = PBPKSimulator()
             primary_target = pbpk_simulator.get_primary_target_tissue()
             
             col1, col2, col3 = st.columns(3)
@@ -10893,7 +10893,7 @@ def render_optimization_strategies_section():
                         else:
                             # Run REAL optimization with disease-specific scoring
                             with st.spinner(f"Performing {disease_name}-optimized chemical modifications..."):
-                                optimizer = RealMolecularOptimizer(protein_pdb_data=protein_pdb_data)
+                                optimizer = RealMolecularOptimizer()
                                 results = optimizer.optimize_molecule(drug_smiles, selected_drug_for_real_opt)
                             
                             # Store in session state cache
@@ -12057,30 +12057,6 @@ def render_molecular_docking_section():
             with st.expander("🔍 PDB Download Debug Info", expanded=False):
                 for info in pdb_debug_info:
                     st.text(info)
-            
-            # === SHOW GROQ DESCRIPTION AT TOP ===
-            st.markdown("---")
-            st.markdown(f"### 💡 Molecular Docking Insights")
-            try:
-                from docking_narrator import analyze_docking_result
-                best_affinity = valid_poses[0]['binding_affinity']
-                description = analyze_docking_result(
-                    drug_name=selected_drug,
-                    target_protein=target_protein,
-                    binding_affinity=best_affinity,
-                    protein_pdb_data=protein_pdb_data
-                )
-                st.success(description)
-                logger.info("✅ Groq description displayed successfully")
-            except Exception as desc_err:
-                logger.error(f"⚠️ Groq description failed: {desc_err}")
-                import traceback
-                logger.error(traceback.format_exc())
-                # Show fallback
-                best_affinity = valid_poses[0]['binding_affinity']
-                strength = "strong" if best_affinity < -8 else ("moderate" if best_affinity < -6 else "weak")
-                st.info(f"{selected_drug} shows {strength} binding to {target_protein} ({best_affinity:.2f} kcal/mol)")
-                st.warning("💡 AI description unavailable - check GROQ_API_KEY is set in Streamlit secrets")
             
             st.markdown("---")
             st.markdown(f"### Binding Poses")
