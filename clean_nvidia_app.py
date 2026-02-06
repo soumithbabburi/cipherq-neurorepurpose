@@ -10069,7 +10069,7 @@ def render_quantum_chemistry_section():
         disease_name = st.session_state.get('target_disease', "Alzheimer's Disease")
         
         # Initialize quantum calculator with disease configuration
-        quantum_calc = QuantumMolecularCalculator(protein_pdb_data=protein_pdb_data)
+        quantum_calc = QuantumMolecularCalculator()
         
         st.info(f"Analyzing properties optimized for **{disease_name}** ({quantum_calc.disease_category} focus)")
         
