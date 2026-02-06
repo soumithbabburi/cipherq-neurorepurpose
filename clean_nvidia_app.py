@@ -12215,23 +12215,11 @@ def render_molecular_docking_section():
                         # Extract best poses
                         original_best_pose = valid_poses[0] if valid_poses else None
                         
-                        # Convert optimized SDF strings to pose dictionaries (same as original docking)
-                        opt_sdf_poses = opt_docking_result.get('poses', [])
-                        opt_confidence_scores = opt_docking_result.get('confidence_scores', [])
-                        opt_binding_affinities = opt_docking_result.get('binding_affinities', [])
+                        # Handle Vina result format (poses list contains dicts)
+                        opt_poses = opt_docking_result.get('poses', [])
                         
-                        opt_poses_dicts = []
-                        for i, (sdf_data, confidence, affinity) in enumerate(zip(opt_sdf_poses, opt_confidence_scores, opt_binding_affinities)):
-                            opt_poses_dicts.append({
-                                'confidence': confidence,
-                                'binding_affinity': affinity,
-                                'rmsd': max(0.1, 3.0 + (affinity / 3.0)),
-                                'interaction_score': int(abs(affinity) * 10),
-                                'sdf_data': sdf_data
-                            })
-                        
-                        if opt_poses_dicts and original_best_pose:
-                            opt_best_pose = opt_poses_dicts[0]
+                        if opt_poses and original_best_pose:
+                            opt_best_pose = opt_poses[0]  # Already a dict with all data!
                             
                             # Get binding affinities
                             orig_affinity = original_best_pose.get('binding_affinity', 0)
