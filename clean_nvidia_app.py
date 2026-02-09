@@ -7174,14 +7174,14 @@ def render_clean_homepage():
             st.session_state.current_page = 'drug_discovery'
             st.rerun()
     
-    # Add POZ Finder button below navigation
+    # POZ Candidate Finder button (Serina Therapeutics mode)
     st.markdown("<br>", unsafe_allow_html=True)
     col_poz1, col_poz2, col_poz3 = st.columns([1, 2, 1])
     with col_poz2:
-        if st.button("🔬 POZ Candidate Finder (Serina Mode)", key="poz_finder_btn", use_container_width=True, type="secondary"):
+        if st.button("🔬 POZ Candidate Finder (Serina Mode)", key="poz_btn", use_container_width=True, type="secondary"):
             st.session_state.current_page = 'poz_finder'
             st.rerun()
-        st.caption("Disease-agnostic small molecule screening for polymer conjugation")
+        st.caption("Disease-agnostic molecular screening • 1,333 POZ candidates")
     
     # Content based on navigation selection
     if st.session_state.nav_section == 'home':
@@ -12739,38 +12739,24 @@ def generate_drug_evidence(drug_name: str) -> list:
     return evidence
 
 
-"""
-POZ Candidate Finder UI - Complete Implementation
-Disease-agnostic small molecule filtering for Serina Therapeutics
-"""
-
-import streamlit as st
-import pandas as pd
-import json
-import os
 
 def render_poz_candidate_finder():
     """
-    Serina Therapeutics POZ Candidate Finder
-    Filters small molecules by molecular properties ONLY (no disease/protein filtering)
+    POZ Candidate Finder - Serina Therapeutics
+    Disease-agnostic small molecule filtering for polymer conjugation
     """
     
     st.markdown("# 🔬 POZ Candidate Finder")
-    st.markdown("*Disease-Agnostic Small Molecule Screening for Polymer Conjugation*")
+    st.markdown("### Disease-Agnostic Small Molecule Screening for Polymer Conjugation")
+    st.markdown("*Serina Therapeutics - Customized molecular property filtering*")
     st.markdown("---")
     
-    # EXPLANATION
-    with st.expander("ℹ️ About POZ Candidate Finder", expanded=False):
-        st.markdown("""
-        **Purpose:** Identify small molecules suitable for POZ (Polyoxazoline) polymer conjugation
-        
-        **Approach:** Filter by molecular properties only - independent of disease, therapeutic area, or protein targets
-        
-        **Data:** 4,822 clinical-stage small molecules from ChEMBL database
-        """)
-    
-    # LOAD DATA
+    # Load data
     try:
+        import json
+        import os
+        import pandas as pd
+        
         all_molecules = []
         phase_files = [
             'data_small_molecules/chembl_phase1.json',
@@ -12785,136 +12771,77 @@ def render_poz_candidate_finder():
                     molecules = json.load(f)
                     all_molecules.extend(molecules)
         
-        # Load POZ properties
         with open('data_small_molecules/poz_properties.json', 'r') as f:
             poz_props = json.load(f)
         
-        st.success(f"✅ Loaded {len(all_molecules):,} small molecules from ChEMBL database")
+        st.success(f"✅ Loaded {len(all_molecules):,} clinical-stage small molecules from ChEMBL")
         
     except FileNotFoundError as e:
-        st.error(f"❌ Data files not found: {e}")
-        st.info("Please upload data_small_molecules/ folder to GitHub")
+        st.error(f"❌ Data not found: {e}")
+        st.info("Upload data_small_molecules/ folder to GitHub")
         return
     
     st.markdown("---")
     
-    # SERINA'S FILTER INTERFACE
-    st.markdown("## Filter Criteria")
-    st.markdown("*Set ranges to match Serina's POZ conjugation requirements*")
+    # FILTER INTERFACE
+    st.markdown("## 🎯 Filter Criteria (Serina Requirements)")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("### Molecular Properties")
+        st.markdown("**Molecular Properties**")
+        mw_range = st.slider("MW (Da)", 100, 900, (200, 500), 50)
         
-        # MW Range
-        mw_range = st.slider(
-            "Molecular Weight (Da)",
-            min_value=100,
-            max_value=900,
-            value=(200, 500),
-            step=50,
-            help="Small MW leaves more room for 25 kDa POZ conjugation"
-        )
-        
-        # Therapeutic Window
         st.markdown("**Therapeutic Window (ng/mL)**")
-        window_min = st.number_input(
-            "Minimum (ng/mL)", 
-            min_value=0.1, 
-            max_value=1000.0,
-            value=1.0, 
-            step=0.5,
-            help="Lower bound of concentration range"
-        )
-        window_max = st.number_input(
-            "Maximum (ng/mL)",
-            min_value=0.1,
-            max_value=1000.0, 
-            value=100.0,
-            step=10.0,
-            help="Upper bound of concentration range"
-        )
+        window_min = st.number_input("Min (ng/mL)", 0.1, 1000.0, 1.0, 0.5)
+        window_max = st.number_input("Max (ng/mL)", 0.1, 1000.0, 100.0, 10.0)
     
     with col2:
-        st.markdown("### Clinical & Chemical")
-        
-        # Clinical Phase (Required: Phase 1+)
+        st.markdown("**Clinical & Quality**")
         phase_options = st.multiselect(
-            "Clinical Phase (Phase 1+ tested in humans)",
+            "Phase (Phase 1+ required)",
             ['Phase 1', 'Phase 2', 'Phase 3', 'Launched'],
-            default=['Phase 1', 'Phase 2', 'Phase 3', 'Launched'],
-            help="Phase 1+ = safety validated in human trials"
+            default=['Phase 1', 'Phase 2', 'Phase 3', 'Launched']
         )
         
-        # POZ Handles
-        min_handles = st.number_input(
-            "Minimum POZ Handles",
-            min_value=0,
-            max_value=10,
-            value=1,
-            help="Chemical groups for POZ linker attachment (amines, hydroxyls, carboxyls)"
-        )
-        
-        # Lipinski
-        max_lipinski = st.selectbox(
-            "Max Lipinski Violations",
-            [0, 1, 2],
-            index=1,
-            help="≤1 violation = drug-like properties"
-        )
+        min_handles = st.number_input("Min POZ Handles", 0, 10, 1)
+        max_lipinski = st.selectbox("Max Lipinski Violations", [0, 1, 2], index=1)
     
     with col3:
-        st.markdown("### Data Quality")
-        
-        # IC50 requirement
-        require_ic50 = st.checkbox(
-            "Require validated therapeutic window",
-            value=True,
-            help="Only show molecules with REAL IC50 data from ChEMBL bioassays"
-        )
-        
-        # Handle type filter
-        handle_types = st.multiselect(
-            "Required Handle Types",
-            ['Primary Amine', 'Secondary Amine', 'Hydroxyl', 'Carboxyl'],
-            default=[],
-            help="Leave empty to accept any handle type"
-        )
+        st.markdown("**Data Requirements**")
+        require_ic50 = st.checkbox("Require validated IC50 data", value=True,
+                                   help="Only molecules with real bioactivity from ChEMBL")
     
     st.markdown("---")
     
     # FILTER BUTTON
     if st.button("🔍 Find POZ Candidates", type="primary", use_container_width=True):
         
-        with st.spinner("Filtering molecules by Serina requirements..."):
+        with st.spinner("Filtering by Serina requirements..."):
             
             filtered = []
             
             for mol in all_molecules:
                 name = mol['name']
-                
-                # Get POZ properties
                 poz_data = poz_props.get(name, {})
                 
-                # FILTER 1: Clinical Phase (Required: Phase 1+)
+                # Filter: Clinical Phase
                 if mol.get('clinical_phase') not in phase_options:
                     continue
                 
-                # FILTER 2: Molecular Weight
-                mol_mw = mol.get('mw', 0)
-                if not (mw_range[0] <= mol_mw <= mw_range[1]):
+                # Filter: MW
+                if not (mw_range[0] <= mol.get('mw', 0) <= mw_range[1]):
                     continue
                 
-                # FILTER 3: Lipinski Rules
+                # Filter: Lipinski
                 if mol.get('lipinski_violations', 2) > max_lipinski:
                     continue
                 
-                # FILTER 4: POZ Handles (chemical groups for attachment)
+                # Filter: POZ Handles
                 if poz_data.get('poz_handles', 0) < min_handles:
                     continue
                 
-                # FILTER 5: Therapeutic Window (1-100 ng/mL with REAL IC50 data)
+                # Filter: Therapeutic Window
                 has_window = poz_data.get('has_real_window', False)
                 
                 if require_ic50 and not has_window:
@@ -12923,110 +12850,159 @@ def render_poz_candidate_finder():
                 if has_window:
                     mol_min = poz_data.get('min_ng_ml', 0)
                     mol_max = poz_data.get('max_ng_ml', 0)
-                    
-                    # Check overlap with Serina's range
                     overlaps = (mol_min <= window_max and mol_max >= window_min)
                     if not overlaps:
                         continue
                 
-                # FILTER 6: Handle Type (optional)
-                if handle_types:
-                    has_required_handles = False
-                    if 'Primary Amine' in handle_types and poz_data.get('primary_amines', 0) > 0:
-                        has_required_handles = True
-                    if 'Secondary Amine' in handle_types and poz_data.get('secondary_amines', 0) > 0:
-                        has_required_handles = True
-                    if 'Hydroxyl' in handle_types and poz_data.get('hydroxyls', 0) > 0:
-                        has_required_handles = True
-                    if 'Carboxyl' in handle_types and poz_data.get('carboxyls', 0) > 0:
-                        has_required_handles = True
-                    
-                    if not has_required_handles:
-                        continue
-                
-                # PASSED ALL FILTERS!
                 mol_combined = mol.copy()
                 mol_combined.update(poz_data)
                 filtered.append(mol_combined)
             
-            # RESULTS
-            st.markdown("---")
-            st.markdown("## 🎯 POZ Candidate Results")
-            
             if len(filtered) == 0:
-                st.warning("No molecules match all filter criteria. Try adjusting ranges.")
+                st.warning("No molecules match criteria. Adjust filters.")
                 return
             
-            st.success(f"✅ Found **{len(filtered):,} POZ candidates** meeting ALL Serina requirements")
+            st.success(f"✅ Found {len(filtered):,} molecules meeting ALL Serina requirements")
             
-            # SUMMARY STATS
-            col1, col2, col3, col4 = st.columns(4)
+            # SCORE AND RANK
+            st.markdown("---")
+            st.markdown("## 🏆 Top 20 Recommended POZ Candidates")
+            st.markdown("*Ranked by: Small MW + Multiple handles + Clinical phase + Window quality*")
+            
+            # Score each
+            for mol in filtered:
+                score = 0.0
+                mw = mol.get('mw', 500)
+                if mw < 250: score += 30
+                elif mw < 350: score += 25
+                elif mw < 450: score += 15
+                else: score += 5
+                
+                handles = mol.get('poz_handles', 0)
+                if handles >= 3: score += 25
+                elif handles == 2: score += 20
+                elif handles == 1: score += 10
+                
+                if mol.get('primary_amines', 0) > 0: score += 5
+                
+                phase = mol.get('clinical_phase')
+                if phase == 'Launched': score += 25
+                elif phase == 'Phase 3': score += 20
+                elif phase == 'Phase 2': score += 15
+                elif phase == 'Phase 1': score += 10
+                
+                if mol.get('has_real_window'):
+                    window_span = mol.get('max_ng_ml', 100) - mol.get('min_ng_ml', 0)
+                    if window_span < 20: score += 20
+                    elif window_span < 50: score += 15
+                    elif window_span < 100: score += 10
+                
+                mol['poz_score'] = score
+            
+            # Sort by score
+            filtered_sorted = sorted(filtered, key=lambda x: x.get('poz_score', 0), reverse=True)
+            
+            # TOP 20
+            top_20 = filtered_sorted[:20]
+            
+            for i, mol in enumerate(top_20):
+                with st.expander(f"#{i+1} {mol['name']} - POZ Score: {mol.get('poz_score', 0):.0f}/100", expanded=(i < 3)):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Molecular Properties:**")
+                        st.write(f"MW: {mol.get('mw'):.1f} Da")
+                        st.write(f"Therapeutic Window: {mol.get('therapeutic_window_ng_ml', 'No data')}")
+                        st.write(f"LogP: {mol.get('logp', 0):.2f}")
+                        st.write(f"Clinical Phase: {mol.get('clinical_phase')}")
+                    
+                    with col2:
+                        st.markdown("**POZ Compatibility:**")
+                        st.write(f"Total POZ Handles: {mol.get('poz_handles', 0)}")
+                        st.write(f"  Primary Amines: {mol.get('primary_amines', 0)}")
+                        st.write(f"  Hydroxyls: {mol.get('hydroxyls', 0)}")
+                        st.write(f"  Carboxyls: {mol.get('carboxyls', 0)}")
+                        
+                        if mol.get('primary_amines', 0) > 0:
+                            st.success("✅ Linker: NHS ester (primary amine)")
+                        elif mol.get('carboxyls', 0) > 0:
+                            st.info("Linker: EDC coupling (carboxyl)")
+                        elif mol.get('hydroxyls', 0) > 0:
+                            st.info("Linker: CDI activation (hydroxyl)")
+            
+            st.markdown("---")
+            
+            # STATISTICS (FIXED BINNING!)
+            st.markdown("### 📊 Dataset Statistics")
+            
+            col1, col2 = st.columns(2)
             
             with col1:
-                st.metric("Total Candidates", f"{len(filtered):,}")
+                st.markdown("**Therapeutic Window Distribution:**")
+                # FIXED: Count overlaps, not exact containment
+                w_1_10 = len([m for m in filtered if m.get('has_real_window') and 
+                             m.get('min_ng_ml', 1000) <= 10 and m.get('max_ng_ml', 0) >= 1])
+                w_10_50 = len([m for m in filtered if m.get('has_real_window') and 
+                              m.get('min_ng_ml', 1000) <= 50 and m.get('max_ng_ml', 0) >= 10])
+                w_50_100 = len([m for m in filtered if m.get('has_real_window') and 
+                               m.get('min_ng_ml', 1000) <= 100 and m.get('max_ng_ml', 0) >= 50])
+                
+                st.write(f"  1-10 ng/mL: {w_1_10}")
+                st.write(f"  10-50 ng/mL: {w_10_50}")
+                st.write(f"  50-100 ng/mL: {w_50_100}")
+                st.caption("*Windows can overlap multiple ranges*")
+                
+                st.markdown("**MW Distribution:**")
+                st.write(f"  200-300 Da: {len([m for m in filtered if 200 <= m.get('mw', 0) < 300])} (Best!)")
+                st.write(f"  300-400 Da: {len([m for m in filtered if 300 <= m.get('mw', 0) < 400])}")
+                st.write(f"  400-500 Da: {len([m for m in filtered if 400 <= m.get('mw', 0) < 500])}")
             
             with col2:
-                avg_mw = sum(m.get('mw', 0) for m in filtered) / len(filtered)
-                st.metric("Average MW", f"{avg_mw:.0f} Da")
-            
-            with col3:
-                avg_handles = sum(m.get('poz_handles', 0) for m in filtered) / len(filtered)
-                st.metric("Avg POZ Handles", f"{avg_handles:.1f}")
-            
-            with col4:
-                with_ic50 = len([m for m in filtered if m.get('has_real_window')])
-                st.metric("With IC50 Data", f"{with_ic50:,}")
-            
-            st.markdown("---")
-            
-            # PHASE DISTRIBUTION
-            st.markdown("### Distribution by Clinical Phase")
-            
-            df_temp = pd.DataFrame(filtered)
-            phase_counts = df_temp['clinical_phase'].value_counts()
-            
-            cols = st.columns(len(phase_counts))
-            for i, (phase, count) in enumerate(phase_counts.items()):
-                with cols[i]:
-                    st.metric(phase, count)
+                st.markdown("**POZ Handle Distribution:**")
+                st.write(f"  3+ handles: {len([m for m in filtered if m.get('poz_handles', 0) >= 3])} (Most flexible!)")
+                st.write(f"  2 handles: {len([m for m in filtered if m.get('poz_handles') == 2])}")
+                st.write(f"  1 handle: {len([m for m in filtered if m.get('poz_handles') == 1])}")
+                
+                st.markdown("**Handle Type:**")
+                st.write(f"  Primary amines: {len([m for m in filtered if m.get('primary_amines', 0) > 0])} (Easiest!)")
+                st.write(f"  Hydroxyls: {len([m for m in filtered if m.get('hydroxyls', 0) > 0])}")
+                st.write(f"  Carboxyls: {len([m for m in filtered if m.get('carboxyls', 0) > 0])}")
             
             st.markdown("---")
             
-            # RESULTS TABLE
-            st.markdown("### Candidate Molecules (Top 100)")
+            # FULL RESULTS TABLE
+            st.markdown("### 📋 All Candidates (Top 100 shown)")
             
-            # Prepare DataFrame
             results_data = []
-            for mol in filtered[:100]:
+            for mol in filtered_sorted[:100]:
                 results_data.append({
-                    'Name': mol.get('name', 'Unknown'),
-                    'MW (Da)': mol.get('mw', 0),
-                    'Therapeutic Window (ng/mL)': mol.get('therapeutic_window_ng_ml', 'No data'),
-                    'Clinical Phase': mol.get('clinical_phase', 'Unknown'),
-                    'POZ Handles': mol.get('poz_handles', 0),
-                    'Primary Amines': mol.get('primary_amines', 0),
-                    'Hydroxyls': mol.get('hydroxyls', 0),
-                    'Carboxyls': mol.get('carboxyls', 0),
-                    'LogP': f"{mol.get('logp', 0):.2f}",
-                    'Lipinski Violations': mol.get('lipinski_violations', 0),
-                    'Has IC50': '✓' if mol.get('has_real_window') else '—'
+                    'Rank': filtered_sorted.index(mol) + 1,
+                    'Name': mol.get('name'),
+                    'POZ Score': f"{mol.get('poz_score', 0):.0f}",
+                    'MW (Da)': mol.get('mw'),
+                    'Window (ng/mL)': mol.get('therapeutic_window_ng_ml', 'No data'),
+                    'Phase': mol.get('clinical_phase'),
+                    'Handles': mol.get('poz_handles'),
+                    'Amines': mol.get('primary_amines', 0),
+                    'LogP': f"{mol.get('logp', 0):.2f}"
                 })
             
             df_display = pd.DataFrame(results_data)
             st.dataframe(df_display, use_container_width=True, height=400)
             
             if len(filtered) > 100:
-                st.info(f"Showing first 100 of {len(filtered):,} total candidates. Download CSV for complete list.")
+                st.info(f"Showing top 100 of {len(filtered):,}. Download CSV for complete list.")
             
             st.markdown("---")
             
             # CSV EXPORT
-            st.markdown("### 📥 Export Results")
+            st.markdown("### 📥 Export Complete Results")
             
-            # Prepare complete CSV
             csv_data = []
-            for mol in filtered:
+            for mol in filtered_sorted:
                 csv_data.append({
+                    'POZ_Rank': filtered_sorted.index(mol) + 1,
+                    'POZ_Score': mol.get('poz_score', 0),
                     'Name': mol.get('name'),
                     'SMILES': mol.get('smiles'),
                     'MW_Da': mol.get('mw'),
@@ -13043,13 +13019,12 @@ def render_poz_candidate_finder():
                     'Carboxyls': mol.get('carboxyls'),
                     'Recommended_Linker': 'NHS ester' if mol.get('primary_amines', 0) > 0 else 
                                         ('EDC coupling' if mol.get('carboxyls', 0) > 0 else 
-                                        ('CDI activation' if mol.get('hydroxyls', 0) > 0 else 'See chemistry')),
+                                        ('CDI activation' if mol.get('hydroxyls', 0) > 0 else 'Custom')),
                     'LogP': mol.get('logp'),
                     'TPSA': mol.get('psa'),
                     'HBD': mol.get('hbd'),
                     'HBA': mol.get('hba'),
                     'Rotatable_Bonds': mol.get('rotatable_bonds'),
-                    'Aromatic_Rings': mol.get('aromatic_rings'),
                     'Lipinski_Violations': mol.get('lipinski_violations')
                 })
             
@@ -13057,60 +13032,16 @@ def render_poz_candidate_finder():
             csv_string = df_csv.to_csv(index=False)
             
             st.download_button(
-                label=f"📥 Download All {len(filtered):,} POZ Candidates (CSV)",
+                label=f"📥 Download All {len(filtered):,} Ranked POZ Candidates (CSV)",
                 data=csv_string,
-                file_name=f"serina_poz_candidates_{len(filtered)}_molecules.csv",
+                file_name=f"serina_poz_candidates_ranked_{len(filtered)}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
             
-            # FILE CONTENTS PREVIEW
-            with st.expander("📄 CSV File Preview", expanded=False):
-                st.markdown("**Columns included in export:**")
-                st.code(', '.join(df_csv.columns), language='text')
-                st.markdown("**Sample row:**")
-                st.dataframe(df_csv.head(1))
-            
-            st.markdown("---")
-            
-            # DETAILED STATISTICS
-            st.markdown("### 📊 Detailed Statistics")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**By Therapeutic Window:**")
-                window_tiers = {
-                    '1-10 ng/mL': len([m for m in filtered if m.get('min_ng_ml', 1000) >= 1 and m.get('max_ng_ml', 0) <= 10]),
-                    '10-50 ng/mL': len([m for m in filtered if m.get('min_ng_ml', 1000) >= 10 and m.get('max_ng_ml', 0) <= 50]),
-                    '50-100 ng/mL': len([m for m in filtered if m.get('min_ng_ml', 1000) >= 50 and m.get('max_ng_ml', 0) <= 100]),
-                }
-                for tier, count in window_tiers.items():
-                    st.write(f"  {tier}: {count}")
-                
-                st.markdown("**By MW Range:**")
-                mw_tiers = {
-                    '200-300 Da': len([m for m in filtered if 200 <= m.get('mw', 0) < 300]),
-                    '300-400 Da': len([m for m in filtered if 300 <= m.get('mw', 0) < 400]),
-                    '400-500 Da': len([m for m in filtered if 400 <= m.get('mw', 0) < 500]),
-                }
-                for tier, count in mw_tiers.items():
-                    st.write(f"  {tier}: {count}")
-            
-            with col2:
-                st.markdown("**By POZ Handle Count:**")
-                handle_dist = {
-                    '1 handle': len([m for m in filtered if m.get('poz_handles') == 1]),
-                    '2 handles': len([m for m in filtered if m.get('poz_handles') == 2]),
-                    '3+ handles': len([m for m in filtered if m.get('poz_handles', 0) >= 3]),
-                }
-                for tier, count in handle_dist.items():
-                    st.write(f"  {tier}: {count}")
-                
-                st.markdown("**By Handle Type:**")
-                st.write(f"  Primary amines: {len([m for m in filtered if m.get('primary_amines', 0) > 0])}")
-                st.write(f"  Hydroxyls: {len([m for m in filtered if m.get('hydroxyls', 0) > 0])}")
-                st.write(f"  Carboxyls: {len([m for m in filtered if m.get('carboxyls', 0) > 0])}")
+            st.caption(f"CSV includes {len(df_csv.columns)} columns: POZ rank, molecular properties, therapeutic windows, POZ handles, linker recommendations")
+
+
 
 def main():
     """Clean, simple CipherQ drug discovery platform"""
