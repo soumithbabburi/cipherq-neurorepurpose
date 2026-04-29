@@ -369,6 +369,9 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     assets_folder="assets",
     title="NeuroRepurpose · CipherQ",
+    external_stylesheets=[
+        "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css",
+    ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"},
         {"charset": "UTF-8"},
@@ -377,33 +380,23 @@ app = dash.Dash(
 server = app.server
 
 
-# ── SVG icons ─────────────────────────────────────────────────────────────────
+# ── Icons (Bootstrap Icons via CDN — works in all Dash versions) ───────────────
 
-def _icon(name: str) -> html.Span:
-    paths = {
-        "dashboard": "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
-        "search":    "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
-        "flask":     "M9 3v11l-5 7h16l-5-7V3M9 3h6",
-        "graph":     "M4 6h4M4 12h7M4 18h4M16 6l4 4-4 4M20 10H9",
-        "database":  "M4 7c0-1.1 3.6-2 8-2s8 .9 8 2m-16 0v10c0 1.1 3.6 2 8 2s8-.9 8-2V7m-16 5c0 1.1 3.6 2 8 2s8-.9 8-2",
-        "sun":       "M12 3v1m0 16v1m9-9h-1M4 12H3m15.36-6.36-.71.71M6.34 17.66l-.7.7M17.66 17.66l.7.7M6.34 6.34l-.7-.7M12 8a4 4 0 000 8 4 4 0 000-8z",
-        "moon":      "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z",
-        "arrow-left":"M19 12H5m7-7-7 7 7 7",
-        "download":  "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4",
-        "external":  "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3",
+def _icon(name: str) -> html.I:
+    bi = {
+        "dashboard":  "bi-grid-3x3-gap",
+        "search":     "bi-search",
+        "flask":      "bi-eyedropper",
+        "graph":      "bi-diagram-3",
+        "database":   "bi-database",
+        "sun":        "bi-sun",
+        "moon":       "bi-moon-stars",
+        "arrow-left": "bi-arrow-left",
+        "download":   "bi-download",
+        "external":   "bi-box-arrow-up-right",
     }
-    d = paths.get(name, "")
-    svg_html = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
-        f'fill="none" stroke="currentColor" stroke-width="2" '
-        f'stroke-linecap="round" stroke-linejoin="round" '
-        f'style="width:16px;height:16px;display:inline-block;vertical-align:middle">'
-        f'<path d="{d}"/></svg>'
-    )
-    return html.Span(
-        dangerouslySetInnerHTML={"__html": svg_html},
-        style={"display": "inline-flex", "alignItems": "center"},
-    )
+    return html.I(className=f"bi {bi.get(name, 'bi-circle')}",
+                  style={"fontSize": "14px"})
 
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
@@ -1187,43 +1180,52 @@ app.layout = html.Div(
     State("disease-store", "data"),
 )
 def route(pathname, search, theme, compound, results, disease_store):
-    dark = (theme == "dark")
-    disease_name = (disease_store or {}).get("name", "") if disease_store else ""
-    mesh_ids     = (disease_store or {}).get("mesh_ids", []) if disease_store else []
+    try:
+        dark = (theme == "dark")
+        disease_name = (disease_store or {}).get("name", "") if disease_store else ""
+        mesh_ids     = (disease_store or {}).get("mesh_ids", []) if disease_store else []
 
-    # Parse query string for pre-filled search
-    query_from_url = ""
-    if search and "q=" in search:
-        query_from_url = search.split("q=")[-1].replace("+", " ").replace("%20", " ")
+        query_from_url = ""
+        if search and "q=" in search:
+            query_from_url = search.split("q=")[-1].replace("+", " ").replace("%20", " ")
 
-    p = (pathname or "/").rstrip("/") or "/"
+        p = (pathname or "/").rstrip("/") or "/"
 
-    if p == "/" or p == "":
-        page_key = "dashboard"
-        content = _page_dashboard(dark)
-    elif p == "/discover":
-        page_key = "discover"
-        # If URL has a query, auto-run search
-        if query_from_url and not results:
-            resolved, expanded, compounds = _resolve_and_fetch(query_from_url)
-            results = compounds
-            disease_name = resolved[0]["heading"] if resolved else query_from_url
-        content = _page_discover(results or [], disease_name, dark)
-    elif p == "/analysis":
-        page_key = "discover"  # keep nav on discover
-        content = _page_analysis(compound, mesh_ids, disease_name, dark)
-    elif p == "/graph":
-        page_key = "graph"
-        content = _page_graph(mesh_ids, disease_name, dark)
-    elif p == "/database":
-        page_key = "database"
-        content = _page_database(dark)
-    else:
-        page_key = "dashboard"
-        content = _page_dashboard(dark)
+        if p in ("/", ""):
+            page_key = "dashboard"
+            content = _page_dashboard(dark)
+        elif p == "/discover":
+            page_key = "discover"
+            if query_from_url and not results:
+                resolved, expanded, compounds = _resolve_and_fetch(query_from_url)
+                results = compounds
+                disease_name = resolved[0]["heading"] if resolved else query_from_url
+            content = _page_discover(results or [], disease_name, dark)
+        elif p == "/analysis":
+            page_key = "discover"
+            content = _page_analysis(compound, mesh_ids, disease_name, dark)
+        elif p == "/graph":
+            page_key = "graph"
+            content = _page_graph(mesh_ids, disease_name, dark)
+        elif p == "/database":
+            page_key = "database"
+            content = _page_database(dark)
+        else:
+            page_key = "dashboard"
+            content = _page_dashboard(dark)
 
-    sidebar = _sidebar(page_key, dark)
-    return sidebar, content
+        sidebar = _sidebar(page_key, dark)
+        return sidebar, content
+
+    except Exception as exc:
+        logger.error("Route callback error", exc_info=True)
+        err_div = html.Div([
+            html.H3("Startup Error", style={"color": "#f43f5e", "marginBottom": "0.5rem"}),
+            html.Pre(str(exc), style={"color": "#94a3b8", "fontSize": "0.78rem",
+                                       "background": "#0a1628", "padding": "1rem",
+                                       "borderRadius": "8px", "whiteSpace": "pre-wrap"}),
+        ], style={"padding": "2rem", "fontFamily": "monospace"})
+        return html.Div(), err_div
 
 
 @app.callback(
@@ -1263,7 +1265,7 @@ def run_search(n1, n2, hero_q, disc_q):
 
 @app.callback(
     Output("compound-store", "data"),
-    Output("url", "pathname"),
+    Output("url", "pathname", allow_duplicate=True),
     Input({"type": "compound-card", "index": ALL}, "n_clicks"),
     State("results-store", "data"),
     prevent_initial_call=True,
