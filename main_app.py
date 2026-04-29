@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 NeuroRepurpose Intelligence Platform
-ChEMBL 33 · HetioNet · MeSH ontology · PBPK · Docking · Clinical Evidence
+ChEMBL 33 · Knowledge Graph · MeSH · PBPK · Docking · Clinical Evidence
 """
 
 import logging
@@ -17,17 +17,14 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-st.set_page_config(
-    page_title="NeuroRepurpose",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="NeuroRepurpose", layout="wide",
+                   initial_sidebar_state="expanded")
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).parent
 
-# ─── Core services ────────────────────────────────────────────────────────────
+# ─── Service imports ─────────────────────────────────────────────────────────
 
 try:
     from services.neuro_db_service import (
@@ -35,10 +32,10 @@ try:
         get_compound_targets, get_compound_activities,
         get_compound_indications, get_hetionet_paths,
         get_stats, is_available as db_is_available,
-        get_disease_top_compounds, get_available_diseases,
+        get_available_diseases,
     )
     DB_AVAILABLE = db_is_available()
-except Exception as _e:
+except Exception:
     DB_AVAILABLE = False
     def get_compounds_for_disease(*a, **k): return []
     def db_search(*a, **k): return []
@@ -47,7 +44,6 @@ except Exception as _e:
     def get_compound_indications(*a, **k): return []
     def get_hetionet_paths(*a, **k): return []
     def get_stats(): return {}
-    def get_disease_top_compounds(*a, **k): return []
     def get_available_diseases(*a, **k): return []
 
 try:
@@ -67,8 +63,11 @@ try:
 except Exception:
     SCORER_AVAILABLE = False
     def score_compound_list(c, m):
-        for x in c: x.setdefault("score", float(x.get("max_phase") or 0)/4); x.setdefault("score_breakdown", {})
-        c.sort(key=lambda x: x["score"], reverse=True); return c
+        for x in c:
+            x.setdefault("score", float(x.get("max_phase") or 0) / 4)
+            x.setdefault("score_breakdown", {})
+        c.sort(key=lambda x: x["score"], reverse=True)
+        return c
 
 try:
     from services.compound_validator import validate_and_deduplicate
@@ -91,7 +90,7 @@ except Exception:
     _docking_svc = None
 
 try:
-    from quantum_optimization_strategies import render_quantum_optimization_section
+    from quantum_optimization_strategies import run_quantum_optimization
     QUANTUM_AVAILABLE = True
 except Exception:
     QUANTUM_AVAILABLE = False
@@ -105,14 +104,14 @@ except Exception:
     _viz = None
 
 
-# ─── External data (Clinical Trials · PubMed) ─────────────────────────────────
+# ─── External data ────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_clinical_trials(drug_name: str, disease: str, n: int = 8) -> List[Dict]:
+def fetch_trials(drug: str, disease: str, n: int = 8) -> List[Dict]:
     try:
         r = requests.get(
             "https://clinicaltrials.gov/api/v2/studies",
-            params={"query.cond": disease, "query.term": drug_name,
+            params={"query.cond": disease, "query.term": drug,
                     "pageSize": n, "format": "json"},
             timeout=12,
         )
@@ -122,11 +121,11 @@ def fetch_clinical_trials(drug_name: str, disease: str, n: int = 8) -> List[Dict
                 pm = s.get("protocolSection", {})
                 phases = pm.get("designModule", {}).get("phases", [])
                 out.append({
-                    "nct_id":  pm.get("identificationModule", {}).get("nctId", ""),
-                    "title":   pm.get("identificationModule", {}).get("briefTitle", ""),
-                    "status":  pm.get("statusModule", {}).get("overallStatus", ""),
-                    "phase":   ", ".join(phases) if phases else "N/A",
-                    "url":     f"https://clinicaltrials.gov/study/{pm.get('identificationModule',{}).get('nctId','')}",
+                    "nct_id": pm.get("identificationModule", {}).get("nctId", ""),
+                    "title":  pm.get("identificationModule", {}).get("briefTitle", ""),
+                    "status": pm.get("statusModule", {}).get("overallStatus", ""),
+                    "phase":  ", ".join(phases) or "N/A",
+                    "url":    f"https://clinicaltrials.gov/study/{pm.get('identificationModule',{}).get('nctId','')}",
                 })
             return out
     except Exception:
@@ -135,23 +134,23 @@ def fetch_clinical_trials(drug_name: str, disease: str, n: int = 8) -> List[Dict
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_pubmed(drug_name: str, disease: str, n: int = 8) -> List[Dict]:
+def fetch_papers(drug: str, disease: str, n: int = 8) -> List[Dict]:
     try:
         base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-        q = f"{drug_name}[tiab] AND {disease}[tiab]"
-        s = requests.get(f"{base}/esearch.fcgi",
-                         params={"db": "pubmed", "term": q, "retmax": n, "retmode": "json"},
-                         timeout=10)
-        ids = s.json().get("esearchresult", {}).get("idlist", [])
+        sr = requests.get(f"{base}/esearch.fcgi",
+            params={"db": "pubmed",
+                    "term": f"{drug}[tiab] AND {disease}[tiab]",
+                    "retmax": n, "retmode": "json"}, timeout=10)
+        ids = sr.json().get("esearchresult", {}).get("idlist", [])
         if not ids:
             return []
-        sm = requests.get(f"{base}/esummary.fcgi",
-                          params={"db": "pubmed", "id": ",".join(ids), "retmode": "json"},
-                          timeout=10)
-        res = sm.json().get("result", {})
+        smr = requests.get(f"{base}/esummary.fcgi",
+            params={"db": "pubmed", "id": ",".join(ids), "retmode": "json"}, timeout=10)
+        res = smr.json().get("result", {})
         return [
             {"pmid": p, "title": res[p].get("title", ""), "journal": res[p].get("source", ""),
-             "year": res[p].get("pubdate", "")[:4], "url": f"https://pubmed.ncbi.nlm.nih.gov/{p}/"}
+             "year": res[p].get("pubdate", "")[:4],
+             "url": f"https://pubmed.ncbi.nlm.nih.gov/{p}/"}
             for p in ids if p in res
         ]
     except Exception:
@@ -159,7 +158,7 @@ def fetch_pubmed(drug_name: str, disease: str, n: int = 8) -> List[Dict]:
     return []
 
 
-# ─── Cached discovery pipeline ────────────────────────────────────────────────
+# ─── Cached pipeline ──────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def resolve_and_fetch(query: str):
@@ -173,318 +172,412 @@ def resolve_and_fetch(query: str):
     return resolved, expanded, compounds
 
 
-# ─── Theme ────────────────────────────────────────────────────────────────────
+# ─── Theme CSS ────────────────────────────────────────────────────────────────
+
+_DARK_VARS = """
+    --bg:          #04080f;
+    --card:        #080f1e;
+    --raised:      #0d1729;
+    --surface:     #122038;
+    --border:      #1a2e4a;
+    --border-hi:   #243d62;
+    --cyan:        #38bdf8;
+    --cyan-glow:   rgba(56,189,248,0.12);
+    --violet:      #a78bfa;
+    --violet-glow: rgba(167,139,250,0.12);
+    --emerald:     #34d399;
+    --amber:       #fbbf24;
+    --rose:        #fb7185;
+    --text:        #f0f4ff;
+    --text-2:      #c5cfe8;
+    --muted:       #7c8daa;
+    --dim:         #1a2d48;
+    --invert:      0;
+"""
+
+_LIGHT_VARS = """
+    --bg:          #f4f7fb;
+    --card:        #ffffff;
+    --raised:      #eef2f8;
+    --surface:     #e4eaf4;
+    --border:      #d0daea;
+    --border-hi:   #b8c8de;
+    --cyan:        #0284c7;
+    --cyan-glow:   rgba(2,132,199,0.10);
+    --violet:      #6d28d9;
+    --violet-glow: rgba(109,40,217,0.10);
+    --emerald:     #059669;
+    --amber:       #b45309;
+    --rose:        #be123c;
+    --text:        #0c1629;
+    --text-2:      #253655;
+    --muted:       #4e6080;
+    --dim:         #dde6f0;
+    --invert:      1;
+"""
+
 
 def apply_theme():
-    st.markdown("""
+    light = st.session_state.get("light_mode", False)
+    vars_ = _LIGHT_VARS if light else _DARK_VARS
+    plot_bg = "rgba(240,244,251,0.6)" if light else "#080f1e"
+    grid_c  = "#d0daea" if light else "#1a2e4a"
+    sb_bg   = "#ffffff" if light else "#06101f"
+
+    st.markdown(f"""
     <style>
-    /* ── Fonts ── */
-    * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif !important; }
-    code, .stCode * { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important; }
+    :root {{ {vars_} }}
 
-    /* ── Design tokens ── */
-    :root {
-        --bg:         #060b18;
-        --card:       #0b1527;
-        --raised:     #0f1e38;
-        --surface:    #142040;
-        --border:     #1c304f;
-        --border-hi:  #2a4570;
-        --cyan:       #0ea5e9;
-        --cyan-dim:   rgba(14,165,233,0.12);
-        --violet:     #8b5cf6;
-        --violet-dim: rgba(139,92,246,0.12);
-        --emerald:    #10b981;
-        --amber:      #f59e0b;
-        --rose:       #f43f5e;
-        --text:       #eef2ff;
-        --muted:      #6b7d9f;
-        --dim:        #2a3d5c;
-        --grad:       linear-gradient(135deg, #0ea5e9, #8b5cf6);
-    }
+    * {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Helvetica, Arial, sans-serif !important; }}
+    code, pre, .stCode * {{ font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important; }}
 
-    /* ── Global ── */
-    .stApp, .main, [data-testid="stAppViewContainer"]  { background: var(--bg) !important; }
-    [data-testid="stSidebar"]  { background: var(--card) !important; border-right: 1px solid var(--border); }
-    .block-container           { padding: 1.5rem 2.5rem !important; max-width: 1500px; }
-    section[data-testid="stSidebar"] > div { padding-top: 1rem; }
+    /* ── Layout ── */
+    .stApp, .main, [data-testid="stAppViewContainer"] {{ background: var(--bg) !important; }}
+    [data-testid="stSidebar"] {{ background: {sb_bg} !important; border-right: 1px solid var(--border); }}
+    .block-container {{ padding: 1.5rem 2.5rem !important; max-width: 1540px; }}
 
-    /* ── Typography ── */
-    h1,h2,h3,h4,h5,h6 { color: var(--text) !important; letter-spacing: -0.02em; }
-    p, span, label, div, li { color: var(--text) !important; }
-    .stMarkdown p { line-height: 1.65; color: var(--muted) !important; }
-    small { color: var(--muted) !important; font-size: 0.78rem; }
+    /* ── Base text ── */
+    h1,h2,h3,h4,h5,h6 {{ color: var(--text) !important; letter-spacing: -0.025em; font-weight: 700; }}
+    p, span, div, li   {{ color: var(--text) !important; }}
+    .stMarkdown p       {{ color: var(--muted) !important; line-height: 1.7; }}
+    small               {{ color: var(--muted) !important; font-size: 0.77rem; }}
 
     /* ── Inputs ── */
-    .stTextInput input, .stTextArea textarea, .stNumberInput input {
+    .stTextInput input, .stTextArea textarea, .stNumberInput input {{
         background: var(--raised) !important;
         border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
+        border-radius: 9px !important;
         color: var(--text) !important;
-        font-size: 0.92rem !important;
-        transition: border-color .2s, box-shadow .2s;
-    }
-    .stTextInput input:focus {
+        font-size: 0.9rem !important;
+        padding: 0.55rem 0.9rem !important;
+        transition: border-color .18s, box-shadow .18s;
+    }}
+    .stTextInput input:focus {{
         border-color: var(--cyan) !important;
-        box-shadow: 0 0 0 3px var(--cyan-dim) !important;
+        box-shadow: 0 0 0 3px var(--cyan-glow) !important;
         outline: none !important;
-    }
-    .stSelectbox > div > div {
+    }}
+    .stSelectbox > div > div {{
         background: var(--raised) !important;
-        border-color: var(--border) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 9px !important;
         color: var(--text) !important;
-        border-radius: 8px !important;
-    }
+    }}
+    .stSlider [data-testid="stSlider"] {{ padding: 0; }}
 
-    /* ── Buttons — primary ── */
-    .stButton > button {
-        background: var(--grad) !important;
+    /* ── Buttons ── */
+    .stButton > button {{
+        background: linear-gradient(135deg, var(--cyan), var(--violet)) !important;
         color: #fff !important;
         border: none !important;
-        border-radius: 8px !important;
+        border-radius: 9px !important;
         font-weight: 600 !important;
         font-size: 0.85rem !important;
         padding: 0.5rem 1.4rem !important;
-        letter-spacing: 0.01em;
-        transition: opacity .18s, transform .12s, box-shadow .18s !important;
-    }
-    .stButton > button:hover {
-        opacity: 0.85 !important;
+        letter-spacing: 0.015em;
+        transition: opacity .15s, transform .1s, box-shadow .15s !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    }}
+    .stButton > button:hover {{
+        opacity: 0.84 !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 4px 20px rgba(14,165,233,0.25) !important;
-    }
-    .stButton > button[kind="secondary"] {
+        box-shadow: 0 6px 20px var(--cyan-glow) !important;
+    }}
+    .stButton > button[kind="secondary"] {{
         background: var(--raised) !important;
         border: 1px solid var(--border-hi) !important;
         color: var(--muted) !important;
-    }
-    .stButton > button[kind="secondary"]:hover {
+        box-shadow: none !important;
+    }}
+    .stButton > button[kind="secondary"]:hover {{
         border-color: var(--cyan) !important;
         color: var(--cyan) !important;
         box-shadow: none !important;
         opacity: 1 !important;
-    }
+        transform: none !important;
+    }}
 
     /* ── Metrics ── */
-    [data-testid="stMetric"] {
-        background: var(--raised);
+    [data-testid="stMetric"] {{
+        background: var(--card);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 1rem 1.25rem;
-    }
-    [data-testid="stMetricValue"] { color: var(--cyan) !important; font-size: 1.6rem !important; font-weight: 700 !important; }
-    [data-testid="stMetricLabel"] { color: var(--muted) !important; font-size: 0.78rem !important; text-transform: uppercase; letter-spacing: 0.06em; }
+        padding: 1rem 1.2rem;
+    }}
+    [data-testid="stMetricValue"] {{
+        color: var(--cyan) !important;
+        font-size: 1.55rem !important;
+        font-weight: 700 !important;
+    }}
+    [data-testid="stMetricLabel"] {{
+        color: var(--muted) !important;
+        font-size: 0.72rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+    }}
 
     /* ── Tabs ── */
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         gap: 0;
         border-bottom: 1px solid var(--border) !important;
         background: transparent !important;
-    }
-    .stTabs [data-baseweb="tab"] {
+        padding: 0;
+    }}
+    .stTabs [data-baseweb="tab"] {{
         background: transparent !important;
         color: var(--muted) !important;
         border: none !important;
         border-radius: 0 !important;
-        padding: 0.6rem 1.25rem !important;
-        font-size: 0.85rem !important;
+        padding: 0.55rem 1.1rem !important;
+        font-size: 0.83rem !important;
         font-weight: 500 !important;
-    }
-    .stTabs [aria-selected="true"] {
+        margin: 0;
+    }}
+    .stTabs [aria-selected="true"] {{
         color: var(--cyan) !important;
         border-bottom: 2px solid var(--cyan) !important;
         background: transparent !important;
-    }
+        font-weight: 600 !important;
+    }}
 
     /* ── DataFrame ── */
-    [data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
-    [data-testid="stDataFrame"] thead th { background: var(--raised) !important; color: var(--cyan) !important; font-size: 0.78rem !important; text-transform: uppercase; letter-spacing: 0.05em; }
-    [data-testid="stDataFrame"] tbody td { font-size: 0.84rem !important; color: var(--text) !important; }
-    [data-testid="stDataFrame"] tbody tr:nth-child(even) td { background: var(--raised) !important; }
-
-    /* ── Progress / spinner ── */
-    .stProgress > div > div { background: var(--grad) !important; border-radius: 4px; }
-    .stSpinner > div { border-top-color: var(--cyan) !important; }
-    [data-testid="stStatusWidget"] { display: none; }
+    [data-testid="stDataFrame"] {{
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+    }}
+    [data-testid="stDataFrame"] thead th {{
+        background: var(--raised) !important;
+        color: var(--cyan) !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }}
+    [data-testid="stDataFrame"] tbody td {{
+        font-size: 0.83rem !important;
+        color: var(--text) !important;
+    }}
+    [data-testid="stDataFrame"] tbody tr:nth-child(even) td {{
+        background: var(--raised) !important;
+    }}
 
     /* ── Expander ── */
-    .streamlit-expanderHeader { background: var(--raised) !important; border-radius: 8px; color: var(--muted) !important; font-size: 0.85rem !important; }
-    .streamlit-expanderContent { background: var(--card) !important; border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; }
+    .streamlit-expanderHeader {{
+        background: var(--raised) !important;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        color: var(--muted) !important;
+        font-size: 0.84rem !important;
+    }}
+    .streamlit-expanderContent {{
+        background: var(--card) !important;
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 9px 9px;
+    }}
 
-    hr { border-color: var(--border) !important; margin: 1.25rem 0; }
+    hr {{ border-color: var(--border) !important; margin: 1.1rem 0; }}
 
-    /* ════════════════ DESIGN COMPONENTS ════════════════ */
+    /* ════════════ COMPONENTS ════════════ */
 
     /* Hero */
-    .nr-hero {
-        background: linear-gradient(160deg, #0a1628 0%, #0f1e38 55%, #091424 100%);
+    .nr-hero {{
+        background: linear-gradient(160deg, var(--raised) 0%, var(--surface) 55%, var(--raised) 100%);
         border: 1px solid var(--border);
         border-radius: 20px;
         padding: 2.75rem 3rem;
         margin-bottom: 2rem;
         position: relative;
         overflow: hidden;
-    }
-    .nr-hero::after {
+    }}
+    .nr-hero::after {{
         content: '';
-        position: absolute; top: -100px; right: -80px;
-        width: 320px; height: 320px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 65%);
+        position: absolute; top: -120px; right: -80px;
+        width: 340px; height: 340px; border-radius: 50%;
+        background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 65%);
         pointer-events: none;
-    }
-    .nr-hero::before {
+    }}
+    .nr-hero::before {{
         content: '';
-        position: absolute; bottom: -60px; left: 30%;
-        width: 220px; height: 220px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 65%);
+        position: absolute; bottom: -80px; left: 25%;
+        width: 240px; height: 240px; border-radius: 50%;
+        background: radial-gradient(circle, var(--violet-glow) 0%, transparent 65%);
         pointer-events: none;
-    }
-    .nr-hero-label {
-        font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em;
-        text-transform: uppercase; color: var(--cyan) !important;
-        margin-bottom: 0.75rem;
-    }
-    .nr-hero-title {
-        font-size: 2.2rem; font-weight: 800; line-height: 1.15;
-        background: linear-gradient(90deg, #f0f4ff 30%, #0ea5e9 70%, #8b5cf6 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text; margin-bottom: 0.75rem;
-    }
-    .nr-hero-sub { font-size: 0.95rem; color: var(--muted) !important; line-height: 1.6; max-width: 680px; }
+    }}
+    .nr-hero-chip {{
+        display: inline-block;
+        background: var(--cyan-glow);
+        color: var(--cyan) !important;
+        border: 1px solid rgba(56,189,248,.25);
+        border-radius: 20px;
+        padding: 3px 12px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }}
+    .nr-hero-title {{
+        font-size: 2.4rem;
+        font-weight: 800;
+        line-height: 1.12;
+        background: linear-gradient(90deg, var(--text) 20%, var(--cyan) 60%, var(--violet) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.8rem;
+    }}
+    .nr-hero-sub {{
+        font-size: 0.95rem;
+        color: var(--muted) !important;
+        line-height: 1.65;
+        max-width: 660px;
+    }}
 
-    /* Standard card */
-    .nr-card {
+    /* Search wrapper */
+    .nr-search-wrap {{
         background: var(--card);
-        border: 1px solid var(--border);
+        border: 1px solid var(--border-hi);
         border-radius: 14px;
         padding: 1.25rem 1.5rem;
-        margin-bottom: 0.75rem;
-        transition: border-color .2s, box-shadow .2s;
-        position: relative;
-    }
-    .nr-card:hover {
-        border-color: var(--border-hi);
-        box-shadow: 0 0 24px rgba(14,165,233,0.06);
-    }
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }}
 
-    /* Highlight card (top-3) */
-    .nr-card-hi {
-        background: linear-gradient(160deg, #0d1d38, #0f1e3a);
+    /* Resolution pill */
+    .nr-resolve {{
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: var(--card);
         border: 1px solid var(--border-hi);
-        border-radius: 16px;
-        padding: 1.5rem;
+        border-left: 3px solid var(--cyan);
+        border-radius: 10px;
+        padding: 0.85rem 1.25rem;
+        margin-bottom: 1.25rem;
+    }}
+    .nr-resolve-heading {{ font-size: 0.95rem; font-weight: 700; color: var(--cyan) !important; }}
+    .nr-resolve-meta    {{ font-size: 0.74rem; color: var(--muted) !important; margin-top: 1px; }}
+
+    /* Compound card */
+    .cpd {{
+        display: flex;
+        gap: 1.25rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.1rem 1.4rem;
+        margin-bottom: 0.55rem;
+        transition: border-color .18s, box-shadow .18s;
+        position: relative;
+    }}
+    .cpd:hover {{ border-color: var(--border-hi); box-shadow: 0 2px 16px rgba(0,0,0,.06); }}
+    .cpd-left  {{ flex: 1; min-width: 0; }}
+    .cpd-right {{ flex-shrink: 0; width: 160px; display: flex; flex-direction: column; gap: 5px; justify-content: center; }}
+    .cpd-name  {{ font-size: 0.95rem; font-weight: 700; color: var(--text) !important; }}
+    .cpd-mech  {{ font-size: 0.77rem; color: var(--muted) !important; margin-top: 2px; line-height: 1.4; }}
+
+    /* Top-candidate card */
+    .top-cpd {{
+        background: var(--card);
+        border: 1px solid var(--border-hi);
+        border-radius: 14px;
+        padding: 1.4rem;
         margin-bottom: 0.75rem;
         position: relative;
         overflow: hidden;
-        transition: border-color .2s, box-shadow .2s;
-    }
-    .nr-card-hi::before {
-        content: '';
-        position: absolute; top: 0; left: 0; right: 0; height: 1px;
-        background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-    }
-    .nr-card-hi:hover {
-        border-color: rgba(14,165,233,0.5);
-        box-shadow: 0 0 30px rgba(14,165,233,0.1);
-    }
-
-    /* Step / how-it-works card */
-    .nr-step {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.25rem 1.25rem 1.25rem 1.5rem;
-        border-left: 3px solid var(--cyan);
-    }
-    .nr-step-num { font-size: 0.7rem; font-weight: 700; color: var(--cyan) !important; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.3rem; }
-    .nr-step-title { font-size: 0.9rem; font-weight: 700; color: var(--text) !important; margin-bottom: 0.4rem; }
-    .nr-step-body { font-size: 0.78rem; color: var(--muted) !important; line-height: 1.55; }
-
-    /* Compound card */
-    .cpd-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
-        margin-bottom: 0.6rem;
         transition: border-color .18s, box-shadow .18s;
-    }
-    .cpd-card:hover { border-color: var(--border-hi); box-shadow: 0 2px 20px rgba(14,165,233,0.05); }
-    .cpd-name { font-size: 1rem; font-weight: 700; color: var(--text) !important; }
-    .cpd-meta { font-size: 0.78rem; color: var(--muted) !important; margin-top: 2px; }
-
-    /* Badges */
-    .b-ph  { display:inline-block; background:var(--violet-dim); color:#a78bfa; border:1px solid rgba(139,92,246,.3); border-radius:5px; padding:2px 9px; font-size:0.72rem; font-weight:700; letter-spacing:.03em; }
-    .b-hi  { display:inline-block; background:rgba(16,185,129,.12); color:#34d399; border:1px solid rgba(16,185,129,.3); border-radius:5px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
-    .b-mid { display:inline-block; background:rgba(245,158,11,.12); color:#fbbf24; border:1px solid rgba(245,158,11,.3); border-radius:5px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
-    .b-lo  { display:inline-block; background:rgba(244,63,94,.12);  color:#fb7185; border:1px solid rgba(244,63,94,.3);  border-radius:5px; padding:2px 9px; font-size:0.72rem; font-weight:700; }
-    .b-tag { display:inline-block; background:var(--raised); color:var(--muted); border:1px solid var(--border); border-radius:5px; padding:2px 8px; font-size:0.7rem; font-weight:500; margin-right:4px; }
+    }}
+    .top-cpd::before {{
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, var(--cyan), var(--violet));
+    }}
+    .top-cpd:hover {{
+        border-color: var(--cyan);
+        box-shadow: 0 4px 24px var(--cyan-glow);
+    }}
 
     /* Score bars */
-    .sbar { display:flex; align-items:center; gap:8px; margin:3px 0; }
-    .sbar-lbl { width:82px; font-size:0.7rem; color:var(--muted) !important; flex-shrink:0; text-align:right; }
-    .sbar-track { flex:1; background:var(--dim); border-radius:3px; height:4px; overflow:hidden; }
-    .sbar-fill  { height:4px; border-radius:3px; }
-    .sbar-val   { width:30px; font-size:0.7rem; color:var(--text) !important; flex-shrink:0; font-variant-numeric:tabular-nums; }
+    .sbar {{ display:flex; align-items:center; gap:7px; margin:2px 0; }}
+    .sbar-l {{ width:76px; font-size:0.69rem; color:var(--muted) !important; flex-shrink:0; text-align:right; }}
+    .sbar-t {{ flex:1; background:var(--dim); border-radius:3px; height:4px; overflow:hidden; }}
+    .sbar-f {{ height:4px; border-radius:3px; transition:width .3s; }}
+    .sbar-v {{ width:28px; font-size:0.69rem; color:var(--text-2) !important; flex-shrink:0; font-variant-numeric:tabular-nums; }}
+
+    /* Badges */
+    .b-ph  {{ display:inline-flex;align-items:center;background:var(--violet-glow);color:var(--violet);border:1px solid rgba(167,139,250,.3);border-radius:5px;padding:1px 8px;font-size:0.7rem;font-weight:700;letter-spacing:.03em; }}
+    .b-hi  {{ display:inline-flex;align-items:center;background:rgba(52,211,153,.11);color:var(--emerald);border:1px solid rgba(52,211,153,.3);border-radius:5px;padding:1px 8px;font-size:0.7rem;font-weight:700; }}
+    .b-mid {{ display:inline-flex;align-items:center;background:rgba(251,191,36,.11);color:var(--amber);border:1px solid rgba(251,191,36,.3);border-radius:5px;padding:1px 8px;font-size:0.7rem;font-weight:700; }}
+    .b-lo  {{ display:inline-flex;align-items:center;background:rgba(251,113,133,.11);color:var(--rose);border:1px solid rgba(251,113,133,.3);border-radius:5px;padding:1px 8px;font-size:0.7rem;font-weight:700; }}
 
     /* Section label */
-    .sec-label {
-        font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;
-        text-transform: uppercase; color: var(--muted) !important;
-        margin-bottom: 0.75rem; padding-bottom: 0.5rem;
-        border-bottom: 1px solid var(--border);
-    }
+    .sec {{ font-size:0.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted) !important;padding-bottom:0.45rem;border-bottom:1px solid var(--border);margin-bottom:0.85rem; }}
 
-    /* Status row */
-    .st-row { display:flex; align-items:center; gap:6px; font-size:0.8rem; margin-bottom:4px; }
-    .dot-on  { width:6px; height:6px; border-radius:50%; background:var(--emerald); flex-shrink:0; }
-    .dot-off { width:6px; height:6px; border-radius:50%; background:var(--rose); flex-shrink:0; }
-    .dot-na  { width:6px; height:6px; border-radius:50%; background:var(--dim); flex-shrink:0; }
+    /* Status dot */
+    .srow {{ display:flex;align-items:center;gap:6px;font-size:0.79rem;margin-bottom:4px; }}
+    .dot-on  {{ width:6px;height:6px;border-radius:50%;background:var(--emerald);flex-shrink:0; }}
+    .dot-off {{ width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0; }}
 
-    /* Evidence card (trials / papers) */
-    .ev-card {
+    /* Evidence card */
+    .ev {{
         background: var(--raised);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-    .ev-title { font-size: 0.88rem; font-weight: 600; color: var(--text) !important; line-height: 1.4; margin-bottom: 0.3rem; }
-    .ev-meta  { font-size: 0.75rem; color: var(--muted) !important; }
-    .ev-link  { font-size: 0.75rem; color: var(--cyan) !important; text-decoration: none; }
+        border-radius: 9px;
+        padding: 0.9rem 1.1rem;
+        margin-bottom: 0.45rem;
+    }}
+    .ev-title {{ font-size:0.85rem;font-weight:600;color:var(--text) !important;line-height:1.4;margin-bottom:3px; }}
+    .ev-meta  {{ font-size:0.73rem;color:var(--muted) !important; }}
+    .ev-link  {{ font-size:0.73rem;color:var(--cyan) !important; }}
 
     /* PBPK metric pill */
-    .pk-pill {
+    .pk-pill {{
         background: var(--raised);
         border: 1px solid var(--border);
         border-radius: 10px;
-        padding: 0.75rem 1rem;
+        padding: 0.8rem 0.5rem;
         text-align: center;
-    }
-    .pk-val  { font-size: 1.1rem; font-weight: 700; color: var(--cyan) !important; }
-    .pk-lbl  { font-size: 0.68rem; color: var(--muted) !important; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+    }}
+    .pk-val {{ font-size:1.05rem;font-weight:700;color:var(--cyan) !important; }}
+    .pk-lbl {{ font-size:0.64rem;color:var(--muted) !important;text-transform:uppercase;letter-spacing:.06em;margin-top:2px; }}
 
-    /* Resolution pill */
-    .res-pill {
-        background: var(--raised);
-        border: 1px solid var(--border-hi);
+    /* Info / step card */
+    .step-card {{
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--cyan);
         border-radius: 10px;
-        padding: 0.9rem 1.25rem;
-        margin-bottom: 1.25rem;
+        padding: 1rem 1.25rem;
+    }}
+    .step-num   {{ font-size:0.65rem;font-weight:700;color:var(--cyan) !important;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem; }}
+    .step-title {{ font-size:0.88rem;font-weight:700;color:var(--text) !important;margin-bottom:.3rem; }}
+    .step-body  {{ font-size:0.77rem;color:var(--muted) !important;line-height:1.55; }}
+
+    /* Row KV pair */
+    .kv {{
+        display: flex;
+        justify-content: space-between;
+        background: var(--raised);
+        border-radius: 7px;
+        padding: 5px 13px;
+        margin-bottom: 3px;
+        font-size: 0.82rem;
+    }}
+    .kv-k {{ color: var(--muted) !important; }}
+    .kv-v {{ color: var(--text) !important; font-weight: 600; }}
+    .kv-fail {{ color: var(--rose) !important; font-weight: 700; font-size: 0.7rem; }}
+    .kv-pass {{ color: var(--emerald) !important; font-weight: 700; font-size: 0.7rem; }}
+
+    /* Toggle row */
+    .theme-row {{
         display: flex;
         align-items: center;
-        gap: 1.25rem;
-    }
-    .res-heading { font-size: 1rem; font-weight: 700; color: var(--cyan) !important; }
-    .res-meta    { font-size: 0.76rem; color: var(--muted) !important; margin-top: 1px; }
-
-    /* Sidebar nav */
-    .nav-active {
-        background: var(--cyan-dim) !important;
-        color: var(--cyan) !important;
-        border-left: 3px solid var(--cyan);
-        padding-left: calc(1rem - 3px);
-    }
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        font-size: 0.82rem;
+        color: var(--muted) !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -494,55 +587,61 @@ def apply_theme():
 def _phase_lbl(phase) -> str:
     try: p = int(float(phase or 0))
     except Exception: p = 0
-    return {4:"FDA Approved", 3:"Phase III", 2:"Phase II", 1:"Phase I"}.get(p, "Preclinical")
+    return {4:"FDA Approved",3:"Phase III",2:"Phase II",1:"Phase I"}.get(p,"Preclinical")
 
-
-def _phase_badge(phase) -> str:
+def _phase_b(phase) -> str:
     return f"<span class='b-ph'>{_phase_lbl(phase)}</span>"
 
-
-def _score_badge(s: float) -> str:
-    cls = "b-hi" if s >= 0.60 else "b-mid" if s >= 0.35 else "b-lo"
+def _score_b(s: float) -> str:
+    cls = "b-hi" if s >= .60 else "b-mid" if s >= .35 else "b-lo"
     return f"<span class='{cls}'>{s:.0%}</span>"
 
+def _bar_col(v: float) -> str:
+    return "var(--emerald)" if v >= .60 else "var(--amber)" if v >= .35 else "var(--rose)"
 
-def _bar_color(v: float) -> str:
-    if v >= 0.60: return "#10b981"
-    if v >= 0.35: return "#f59e0b"
-    return "#f43f5e"
-
-
-def _score_bars(bd: Dict, compact: bool = False) -> str:
+def _score_bars(bd: Dict) -> str:
     labels = [("Indication","indication_score"),("Target","target_score"),
               ("Activity","activity_score"),("Network","network_score")]
-    rows = ""
+    out = ""
     for lbl, key in labels:
         v = float(bd.get(key) or 0)
-        pct = round(v * 100, 1)
-        col = _bar_color(v)
-        rows += (f"<div class='sbar'>"
-                 f"<span class='sbar-lbl'>{lbl}</span>"
-                 f"<div class='sbar-track'><div class='sbar-fill' style='width:{pct}%;background:{col};'></div></div>"
-                 f"<span class='sbar-val'>{v:.0%}</span>"
-                 f"</div>")
-    return rows
+        out += (f"<div class='sbar'>"
+                f"<span class='sbar-l'>{lbl}</span>"
+                f"<div class='sbar-t'><div class='sbar-f' style='width:{v*100:.1f}%;background:{_bar_col(v)};'></div></div>"
+                f"<span class='sbar-v'>{v:.0%}</span>"
+                f"</div>")
+    return out
 
-
-def _status(label: str, ok: bool, na: bool = False):
-    dot = "dot-na" if na else ("dot-on" if ok else "dot-off")
-    st.markdown(f"<div class='st-row'><span class='{dot}'></span><span style='color:#6b7d9f;'>{label}</span></div>",
+def _status(label: str, ok: bool):
+    d = "dot-on" if ok else "dot-off"
+    st.markdown(f"<div class='srow'><span class='{d}'></span><span style='color:var(--muted);'>{label}</span></div>",
                 unsafe_allow_html=True)
 
+def _sec(t: str):
+    st.markdown(f"<div class='sec'>{t}</div>", unsafe_allow_html=True)
 
-def _sec(title: str):
-    st.markdown(f"<div class='sec-label'>{title}</div>", unsafe_allow_html=True)
+def _kv(k: str, v: str, fail: bool = None):
+    mark = ""
+    if fail is True:  mark = "<span class='kv-fail'>FAIL</span>"
+    if fail is False: mark = "<span class='kv-pass'>PASS</span>"
+    st.markdown(f"<div class='kv'><span class='kv-k'>{k}</span><span class='kv-v'>{v}</span>{mark}</div>",
+                unsafe_allow_html=True)
+
+def _plot_style(fig, light: bool):
+    bg   = "rgba(240,244,251,0.6)" if light else "#0d1729"
+    grid = "#d0daea" if light else "#1a2e4a"
+    fc   = "#0c1629" if light else "#f0f4ff"
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor=bg,
+                      font_color=fc, legend=dict(font=dict(color=fc)),
+                      xaxis=dict(gridcolor=grid), yaxis=dict(gridcolor=grid))
+    return fig
 
 
-# ─── Session ──────────────────────────────────────────────────────────────────
+# ─── Session init ─────────────────────────────────────────────────────────────
 
 def _init():
-    defs = {"page": "dashboard", "disease_query": "", "compounds": [],
-            "selected_compound": None}
+    defs = {"page":"dashboard","disease_query":"","selected_compound":None,
+            "light_mode":False}
     for k, v in defs.items():
         if k not in st.session_state: st.session_state[k] = v
 
@@ -550,37 +649,56 @@ def _init():
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 def _sidebar():
+    light = st.session_state.get("light_mode", False)
     with st.sidebar:
         st.markdown(
-            "<div style='padding:1rem 0 1.5rem;'>"
-            "<div style='font-size:1.35rem;font-weight:800;"
-            "background:linear-gradient(90deg,#0ea5e9,#8b5cf6);"
+            "<div style='padding:1.1rem 0 1.5rem;'>"
+            "<div style='font-size:1.3rem;font-weight:800;"
+            "background:linear-gradient(90deg,var(--cyan),var(--violet));"
             "-webkit-background-clip:text;-webkit-text-fill-color:transparent;"
             "background-clip:text;'>NeuroRepurpose</div>"
-            "<div style='font-size:0.72rem;color:#6b7d9f;margin-top:2px;letter-spacing:.04em;'>"
+            "<div style='font-size:0.7rem;color:var(--muted);margin-top:2px;letter-spacing:.05em;'>"
             "Drug Repurposing Intelligence</div></div>",
             unsafe_allow_html=True,
         )
 
+        # Theme toggle
+        st.markdown("<div style='font-size:0.7rem;color:var(--muted);text-transform:uppercase;"
+                    "letter-spacing:.1em;margin-bottom:4px;'>Appearance</div>", unsafe_allow_html=True)
+        col_dk, col_lt = st.columns(2)
+        with col_dk:
+            if st.button("Dark", key="thm_dk", use_container_width=True,
+                         type="secondary" if light else "primary"):
+                st.session_state.light_mode = False
+                st.rerun()
+        with col_lt:
+            if st.button("Light", key="thm_lt", use_container_width=True,
+                         type="primary" if light else "secondary"):
+                st.session_state.light_mode = True
+                st.rerun()
+
+        st.markdown("<div style='height:.5rem;'></div>", unsafe_allow_html=True)
+        st.markdown("---")
         _sec("Navigation")
-        nav_items = [("dashboard","Dashboard"),("discover","Discover"),
-                     ("network","Knowledge Network"),("database","Data Explorer")]
-        for pid, label in nav_items:
+
+        nav = [("dashboard","Dashboard"),("discover","Discover"),
+               ("graph","Knowledge Graph"),("database","Data Explorer")]
+        for pid, lbl in nav:
             active = st.session_state.page == pid
             t = "primary" if active else "secondary"
-            if st.button(label, key=f"nav_{pid}", use_container_width=True, type=t):
+            if st.button(lbl, key=f"nav_{pid}", use_container_width=True, type=t):
                 st.session_state.page = pid
                 st.rerun()
 
         st.markdown("---")
         _sec("Data Sources")
-        _status("ChEMBL 33",    DB_AVAILABLE)
-        _status("HetioNet",     DB_AVAILABLE)
-        _status("MeSH Ontology",MESH_AVAILABLE)
-        _status("Scoring Engine",SCORER_AVAILABLE)
-        _status("PBPK Simulator",PBPK_AVAILABLE)
-        _status("Molecular Docking",DOCKING_AVAILABLE)
-        _status("3D Viewer",    VIZ_3D_AVAILABLE)
+        _status("ChEMBL 33",         DB_AVAILABLE)
+        _status("MeSH Ontology",     MESH_AVAILABLE)
+        _status("Scoring Engine",    SCORER_AVAILABLE)
+        _status("PBPK Simulator",    PBPK_AVAILABLE)
+        _status("Molecular Docking", DOCKING_AVAILABLE)
+        _status("Quantum / RDKit",   QUANTUM_AVAILABLE)
+        _status("3D Viewer",         VIZ_3D_AVAILABLE)
 
         if DB_AVAILABLE:
             st.markdown("---")
@@ -590,31 +708,32 @@ def _sidebar():
                 for k, v in stats.items():
                     st.markdown(
                         f"<div style='display:flex;justify-content:space-between;"
-                        f"font-size:0.8rem;margin-bottom:2px;'>"
-                        f"<span style='color:#6b7d9f;'>{k.replace('_',' ').title()}</span>"
-                        f"<span style='color:#f0f4ff;font-weight:600;'>{v:,}</span></div>",
+                        f"font-size:0.78rem;margin-bottom:2px;'>"
+                        f"<span style='color:var(--muted);'>{k.replace('_',' ').title()}</span>"
+                        f"<span style='color:var(--text);font-weight:600;'>{v:,}</span></div>",
                         unsafe_allow_html=True,
                     )
-            except Exception:
-                pass
+            except Exception: pass
 
         st.markdown("---")
-        st.markdown("<div style='font-size:0.7rem;color:#3d5080;line-height:1.6;'>"
-                    "ChEMBL 33 · HetioNet · MeSH NLM<br>RDKit · ClinicalTrials.gov · PubMed</div>",
-                    unsafe_allow_html=True)
+        st.markdown("<div style='font-size:0.68rem;color:var(--muted);line-height:1.7;'>"
+                    "ChEMBL 33 · MeSH NLM · RDKit<br>"
+                    "ClinicalTrials.gov · PubMed</div>", unsafe_allow_html=True)
 
 
 # ─── Dashboard ────────────────────────────────────────────────────────────────
 
 def page_dashboard():
+    light = st.session_state.get("light_mode", False)
+
     st.markdown(
         "<div class='nr-hero'>"
-        "<div class='nr-hero-label'>Drug Repurposing Platform</div>"
+        "<div class='nr-hero-chip'>Drug Repurposing Platform</div>"
         "<div class='nr-hero-title'>NeuroRepurpose Intelligence</div>"
         "<div class='nr-hero-sub'>"
-        "Identify new therapeutic uses for approved drugs using ChEMBL 33, HetioNet knowledge graphs, "
-        "MeSH disease ontology, multi-signal evidence scoring, PBPK pharmacokinetics, and real clinical evidence. "
-        "Supports any disease — not just neurology."
+        "Identify new therapeutic applications for approved compounds using ChEMBL 33, "
+        "disease knowledge graphs, MeSH ontology, multi-signal evidence scoring, "
+        "PBPK pharmacokinetics, and real clinical trial data."
         "</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -622,8 +741,9 @@ def page_dashboard():
 
     col_q, col_btn = st.columns([6, 1])
     with col_q:
-        q = st.text_input("hero_q", placeholder="Search any disease — Alzheimer, MS, epilepsy, depression, ALS...",
-                          label_visibility="collapsed")
+        q = st.text_input("hero_q",
+            placeholder="Search any disease — Alzheimer, MS, epilepsy, depression, ALS...",
+            label_visibility="collapsed")
     with col_btn:
         if st.button("Search", use_container_width=True) and q:
             st.session_state.disease_query = q
@@ -641,7 +761,7 @@ def page_dashboard():
     with c1: st.metric("Compounds",       f"{stats.get('compounds',0):,}")
     with c2: st.metric("Protein Targets", f"{stats.get('targets',0):,}")
     with c3: st.metric("Drug Indications",f"{stats.get('indications',0):,}")
-    with c4: st.metric("KG Nodes",        f"{stats.get('hetionet_nodes',0):,}")
+    with c4: st.metric("Graph Nodes",     f"{stats.get('hetionet_nodes',0):,}")
     with c5: st.metric("MeSH Diseases",   f"{stats.get('mesh_diseases',0):,}")
 
     if not DB_AVAILABLE:
@@ -650,8 +770,7 @@ def page_dashboard():
 
     st.markdown("---")
     st.markdown("### Disease Areas")
-    st.caption("All diseases loaded from the database. Click any to run drug discovery.")
-
+    st.caption("Loaded live from the database. Click any to run drug discovery.")
     diseases = get_available_diseases(limit=20)
     if diseases:
         cols = st.columns(5)
@@ -665,29 +784,30 @@ def page_dashboard():
         st.info("No diseases in database.")
 
     st.markdown("---")
-    st.markdown("### Platform Pipeline")
+    st.markdown("### Analysis Pipeline")
     c1,c2,c3,c4 = st.columns(4)
     steps = [
-        ("01","MeSH Resolution",
-         "Free-text query matched against the full MeSH ontology — exact headings, entry terms, "
-         "and abbreviation aliases. Expanded to parent and child disease concepts."),
-        ("02","Evidence Scoring",
-         "Four signals: clinical indication evidence (40%), target mechanistic overlap (30%), "
-         "pChEMBL activity potency (20%), and HetioNet network path count (10%)."),
-        ("03","PBPK Simulation",
-         "One-compartment pharmacokinetic model predicts plasma, liver, brain, and kidney "
-         "concentration-time curves from MW + LogP. Disease-specific tissue adjustments."),
+        ("01","MeSH Disease Resolution",
+         "Free-text matched against the full MeSH ontology — headings, entry terms, "
+         "abbreviation aliases (AD, MS, ALS, ADHD...). Expanded to parent and child concepts."),
+        ("02","Evidence-Based Scoring",
+         "Four signals ranked per compound: clinical indication evidence (40%), "
+         "target mechanistic overlap (30%), pChEMBL activity potency (20%), "
+         "and knowledge graph path count (10%)."),
+        ("03","PBPK Pharmacokinetics",
+         "One-compartment PK model predicts plasma, liver, brain, and kidney "
+         "concentration-time curves from MW and LogP. Cmax, AUC, t½, safety margin."),
         ("04","Clinical Evidence",
-         "Real-time lookup of ClinicalTrials.gov studies and PubMed publications for "
-         "each drug-disease pair. No cached or synthetic data."),
+         "Live ClinicalTrials.gov and PubMed lookup per drug-disease pair. "
+         "Real NCT IDs, enrollment status, phase, and peer-reviewed publication links."),
     ]
-    for col,(num,title,body) in zip([c1,c2,c3,c4],steps):
+    for col, (num, title, body) in zip([c1,c2,c3,c4], steps):
         with col:
             st.markdown(
-                f"<div class='nr-step'>"
-                f"<div class='nr-step-num'>Step {num}</div>"
-                f"<div class='nr-step-title'>{title}</div>"
-                f"<div class='nr-step-body'>{body}</div>"
+                f"<div class='step-card'>"
+                f"<div class='step-num'>Step {num}</div>"
+                f"<div class='step-title'>{title}</div>"
+                f"<div class='step-body'>{body}</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -696,36 +816,33 @@ def page_dashboard():
 # ─── Discover ─────────────────────────────────────────────────────────────────
 
 def page_discover():
+    light = st.session_state.get("light_mode", False)
     st.markdown("## Discover")
-    st.caption("Enter any disease name. MeSH ontology resolves abbreviations, synonyms, and related concepts.")
+    st.caption("Enter any disease name. The platform resolves abbreviations, synonyms, and related MeSH concepts automatically.")
 
     col_inp, col_btn = st.columns([6, 1])
     with col_inp:
-        disease_input = st.text_input(
-            "discover_inp",
+        inp = st.text_input("disc_inp",
             value=st.session_state.disease_query,
-            placeholder="e.g. Parkinson disease · MS · ALS · schizophrenia · type 2 diabetes...",
-            label_visibility="collapsed",
-        )
+            placeholder="e.g. Parkinson disease · ALS · MS · schizophrenia · type 2 diabetes...",
+            label_visibility="collapsed")
     with col_btn:
         run = st.button("Analyse", use_container_width=True)
 
-    # Autocomplete suggestions
-    if disease_input and len(disease_input) >= 2 and MESH_AVAILABLE:
-        sugs = suggest_diseases(disease_input, limit=6)
-        if sugs and disease_input.strip().lower() not in [s.lower() for s in sugs]:
-            st.markdown("<div style='font-size:0.74rem;color:#6b7d9f;margin:4px 0 2px;'>Suggestions</div>",
+    if inp and len(inp) >= 2 and MESH_AVAILABLE:
+        sugs = suggest_diseases(inp, limit=5)
+        if sugs and inp.strip().lower() not in [s.lower() for s in sugs]:
+            st.markdown("<div style='font-size:0.73rem;color:var(--muted);margin:3px 0 2px;'>Suggestions</div>",
                         unsafe_allow_html=True)
-            scols = st.columns(min(len(sugs), 6))
+            scols = st.columns(min(len(sugs), 5))
             for i, sg in enumerate(sugs):
                 with scols[i]:
                     if st.button(sg, key=f"sug_{i}", use_container_width=True, type="secondary"):
                         st.session_state.disease_query = sg
                         st.rerun()
 
-    if run and disease_input.strip():
-        st.session_state.disease_query = disease_input.strip()
-
+    if run and inp.strip():
+        st.session_state.disease_query = inp.strip()
     if not st.session_state.disease_query:
         st.info("Enter a disease name above to begin.")
         return
@@ -734,36 +851,31 @@ def page_discover():
         try:
             resolved, expanded_ids, compounds = resolve_and_fetch(st.session_state.disease_query)
         except Exception as e:
-            st.error(f"Query failed: {e}")
-            return
+            st.error(f"Query failed: {e}"); return
 
     if not resolved:
-        st.warning(f"No MeSH match found for '{st.session_state.disease_query}'.")
+        st.warning(f"No MeSH match for '{st.session_state.disease_query}'.")
         if not MESH_AVAILABLE:
-            st.info("MeSH table empty. Run: `python database/mesh_importer.py`")
+            st.info("MeSH table empty — run: `python database/mesh_importer.py`")
         return
 
     primary = resolved[0]
-
-    # Resolution banner
     st.markdown(
-        f"<div class='res-pill'>"
-        f"<div style='flex:1;'>"
-        f"<div class='res-heading'>{primary.get('heading', st.session_state.disease_query)}</div>"
-        f"<div class='res-meta'>"
+        f"<div class='nr-resolve'>"
+        f"<div><div class='nr-resolve-heading'>{primary.get('heading', st.session_state.disease_query)}</div>"
+        f"<div class='nr-resolve-meta'>"
         f"MeSH {primary.get('mesh_id','N/A')} &nbsp;·&nbsp; "
-        f"{len(resolved)} record(s) matched &nbsp;·&nbsp; "
+        f"{len(resolved)} record(s) &nbsp;·&nbsp; "
         f"{len(expanded_ids)} expanded IDs (parents + children)"
-        f"</div></div>"
-        f"</div>",
+        f"</div></div></div>",
         unsafe_allow_html=True,
     )
 
     if not compounds:
-        st.warning("No compounds found for this disease in ChEMBL.")
+        st.warning("No compounds found for this disease.")
         return
 
-    with st.spinner(f"Scoring {len(compounds)} candidates..."):
+    with st.spinner(f"Scoring {len(compounds)} candidates across 4 evidence signals..."):
         try:
             scored = score_compound_list(list(compounds), expanded_ids)
         except Exception:
@@ -772,7 +884,7 @@ def page_discover():
                 c.setdefault("score", float(c.get("max_phase") or 0) / 4)
                 c.setdefault("score_breakdown", {})
 
-    # Top-3
+    # Top 3
     top3 = [c for c in scored if float(c.get("max_phase") or 0) >= 3][:3] or scored[:3]
     if top3:
         _sec("Top Candidates")
@@ -782,9 +894,8 @@ def page_discover():
 
     st.markdown("---")
 
-    # Filters
     fc1, fc2, fc3 = st.columns([1, 1, 2])
-    with fc1: min_ph = st.selectbox("Min phase", [0,1,2,3,4], key="d_ph")
+    with fc1: min_ph = st.selectbox("Min Phase", [0,1,2,3,4], key="d_ph")
     with fc2: show_n = st.slider("Show", 5, min(80,len(scored)), min(30,len(scored)), key="d_n")
     with fc3: sort_by = st.selectbox("Sort", ["Score","Phase","Name"], key="d_sort")
 
@@ -795,42 +906,43 @@ def page_discover():
 
     if len(filt) >= 4:
         with st.expander("Phase distribution", expanded=False):
-            _phase_chart(filt)
+            _phase_donut(filt, light)
 
-    _sec(f"{len(filt)} Repurposing Candidates")
+    _sec(f"{len(filt)} Repurposing Candidates — ranked by evidence score")
     for i, c in enumerate(filt):
-        _compound_card(c, i)
+        _compound_row(c, i)
 
     if filt:
         df_dl = pd.DataFrame([{
             "Name": c.get("name"), "ChEMBL": c.get("chembl_id"),
             "Phase": c.get("max_phase"),
             "Score": round(float(c.get("score") or 0), 4),
-            "Indication": round(float((c.get("score_breakdown") or {}).get("indication_score") or 0), 4),
-            "Target":     round(float((c.get("score_breakdown") or {}).get("target_score") or 0), 4),
-            "Activity":   round(float((c.get("score_breakdown") or {}).get("activity_score") or 0), 4),
-            "Network":    round(float((c.get("score_breakdown") or {}).get("network_score") or 0), 4),
+            "Indication Score": round(float((c.get("score_breakdown") or {}).get("indication_score") or 0), 4),
+            "Target Score":     round(float((c.get("score_breakdown") or {}).get("target_score") or 0), 4),
+            "Activity Score":   round(float((c.get("score_breakdown") or {}).get("activity_score") or 0), 4),
+            "Network Score":    round(float((c.get("score_breakdown") or {}).get("network_score") or 0), 4),
             "Mechanisms": c.get("mechanisms",""), "SMILES": c.get("smiles",""),
         } for c in filt])
         st.download_button("Download CSV", data=df_dl.to_csv(index=False),
-                           file_name=f"neurorepurpose_{primary.get('mesh_id','x')}.csv",
+                           file_name=f"repurposing_{primary.get('mesh_id','x')}.csv",
                            mime="text/csv")
 
 
 def _top_card(c: Dict, col, idx: int):
-    name = c.get("name") or "Unknown"
+    name  = c.get("name") or "Unknown"
     score = float(c.get("score") or 0)
-    bd = c.get("score_breakdown") or {}
+    bd    = c.get("score_breakdown") or {}
     mechs = (c.get("mechanisms") or "—")[:90]
     with col:
         st.markdown(
-            f"<div class='nr-card-hi'>"
-            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;'>"
-            f"<span style='font-size:.95rem;font-weight:700;color:#eef2ff;'>{name}</span>"
-            f"<span>{_score_badge(score)}</span>"
+            f"<div class='top-cpd'>"
+            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;"
+            f"margin-bottom:.55rem;'>"
+            f"<span style='font-size:.93rem;font-weight:700;color:var(--text);'>{name}</span>"
+            f"<span>{_score_b(score)}</span>"
             f"</div>"
-            f"<div style='margin-bottom:.5rem;'>{_phase_badge(c.get('max_phase'))}</div>"
-            f"<div style='font-size:.75rem;color:#6b7d9f;margin-bottom:.7rem;line-height:1.4;'>{mechs}</div>"
+            f"<div style='margin-bottom:.4rem;'>{_phase_b(c.get('max_phase'))}</div>"
+            f"<div style='font-size:.74rem;color:var(--muted);line-height:1.4;margin-bottom:.6rem;'>{mechs}</div>"
             f"{_score_bars(bd)}"
             f"</div>",
             unsafe_allow_html=True,
@@ -841,37 +953,41 @@ def _top_card(c: Dict, col, idx: int):
             st.rerun()
 
 
-def _compound_card(c: Dict, idx: int):
+def _compound_row(c: Dict, idx: int):
     name    = c.get("name") or "Unknown"
     score   = float(c.get("score") or 0)
     phase   = c.get("max_phase", 0)
     mechs   = (c.get("mechanisms") or "—")[:140]
-    targets = (c.get("targets") or "—")[:120]
+    targets = (c.get("targets") or "—")[:110]
     bd      = c.get("score_breakdown") or {}
 
     col_main, col_act = st.columns([7, 1])
     with col_main:
         st.markdown(
-            f"<div class='cpd-card'>"
-            f"<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.45rem;'>"
-            f"  <span class='cpd-name'>{name} &nbsp; {_phase_badge(phase)}</span>"
-            f"  <span>{_score_badge(score)}</span>"
+            f"<div class='cpd'>"
+            f"<div class='cpd-left'>"
+            f"<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;'>"
+            f"<span class='cpd-name'>{name}</span>{_phase_b(phase)}"
             f"</div>"
-            f"<div class='cpd-meta'><b style='color:#c4cde8;'>Mechanism:</b> {mechs}</div>"
-            f"<div class='cpd-meta' style='margin-bottom:.55rem;'><b style='color:#c4cde8;'>Targets:</b> {targets}</div>"
+            f"<div class='cpd-mech'><b style='color:var(--text-2);'>Mechanism:</b> {mechs}</div>"
+            f"<div class='cpd-mech'><b style='color:var(--text-2);'>Targets:</b> {targets}</div>"
+            f"</div>"
+            f"<div class='cpd-right'>"
+            f"<div style='text-align:right;margin-bottom:.35rem;'>{_score_b(score)}</div>"
             f"{_score_bars(bd)}"
+            f"</div>"
             f"</div>",
             unsafe_allow_html=True,
         )
     with col_act:
-        st.markdown("<div style='height:1.2rem;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:1.15rem;'></div>", unsafe_allow_html=True)
         if st.button("Analyse", key=f"ca_{idx}_{name[:6]}", use_container_width=True):
             st.session_state.selected_compound = c
             st.session_state.page = "analysis"
             st.rerun()
 
 
-def _phase_chart(compounds: List[Dict]):
+def _phase_donut(compounds: List[Dict], light: bool):
     pm = {4:"FDA Approved",3:"Phase III",2:"Phase II",1:"Phase I",0:"Preclinical"}
     cnt: Dict = {}
     for c in compounds:
@@ -879,19 +995,20 @@ def _phase_chart(compounds: List[Dict]):
         cnt[lbl] = cnt.get(lbl, 0) + 1
     df = pd.DataFrame(list(cnt.items()), columns=["Phase","Count"])
     fig = px.pie(df, values="Count", names="Phase", hole=.52,
-                 color_discrete_sequence=["#0ea5e9","#8b5cf6","#10b981","#f59e0b","#f43f5e"])
-    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                      font_color="#f0f4ff", margin=dict(t=10,b=10,l=10,r=10),
-                      legend=dict(font=dict(color="#6b7d9f")))
+                 color_discrete_sequence=["#38bdf8","#a78bfa","#34d399","#fbbf24","#fb7185"])
+    fig = _plot_style(fig, light)
+    fig.update_layout(margin=dict(t=10,b=10,l=10,r=10),
+                      legend=dict(font=dict(size=11)))
     st.plotly_chart(fig, use_container_width=True)
 
 
 # ─── Compound Analysis ────────────────────────────────────────────────────────
 
 def page_analysis():
+    light = st.session_state.get("light_mode", False)
     c = st.session_state.selected_compound
     if not c:
-        st.info("Select a compound from the Discover page.")
+        st.info("Select a compound from Discover.")
         if st.button("Go to Discover"):
             st.session_state.page = "discover"
             st.rerun()
@@ -904,90 +1021,54 @@ def page_analysis():
     score     = float(c.get("score") or 0)
     bd        = c.get("score_breakdown") or {}
     phase     = c.get("max_phase", 0)
+    # Per-compound state keys so switching compound resets results
+    pbpk_key  = f"pbpk_{cid}"
+    dock_key  = f"dock_{cid}"
 
-    # Header
     col_h, col_meta = st.columns([4, 1])
     with col_h:
         st.markdown(f"## {name}")
         if chembl_id:
             st.caption(f"ChEMBL ID: {chembl_id}")
         mech = c.get("mechanisms") or "—"
-        st.markdown(f"<div style='font-size:.88rem;color:#6b7d9f;margin-top:.25rem;'>Mechanism: "
-                    f"<span style='color:#c4cde8;'>{mech[:260]}</span></div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='font-size:.86rem;color:var(--muted);margin-top:.2rem;'>"
+            f"Mechanism of action: <span style='color:var(--text-2);'>{mech[:280]}</span></div>",
+            unsafe_allow_html=True,
+        )
     with col_meta:
         st.markdown(
-            f"<div style='text-align:right;padding-top:.5rem;'>"
-            f"{_phase_badge(phase)}"
-            f"<br><br>{_score_badge(score)} overall"
+            f"<div style='text-align:right;padding-top:.4rem;'>"
+            f"{_phase_b(phase)}"
+            f"<br><br>{_score_b(score)} overall score"
             f"</div>",
             unsafe_allow_html=True,
         )
         if bd:
-            st.markdown(f"<div style='margin-top:.75rem;'>{_score_bars(bd)}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-top:.6rem;'>{_score_bars(bd)}</div>",
+                        unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Build tab list
-    tab_labels = ["Properties","Targets","Activities","Indications",
-                  "Clinical Evidence","PBPK Simulation","Docking","Network"]
-    if QUANTUM_AVAILABLE: tab_labels.append("Quantum")
+    # Build tabs
+    tab_labels = ["Properties","Bioactivity","Indications","Clinical Evidence",
+                  "PBPK Simulation","Docking"]
+    if QUANTUM_AVAILABLE: tab_labels.append("Optimization")
     if VIZ_3D_AVAILABLE:  tab_labels.append("3D Structure")
     tabs = st.tabs(tab_labels)
     ti = 0
 
-    # ── Properties ─────────────────────────────────────────────────────────
+    # ── Properties ──────────────────────────────────────────────────────────
     with tabs[ti]:
-        _tab_properties(c, smiles)
+        _properties_tab(c, smiles, light)
     ti += 1
 
-    # ── Targets ────────────────────────────────────────────────────────────
+    # ── Bioactivity (Targets + Activities) ───────────────────────────────────
     with tabs[ti]:
-        tgts = get_compound_targets(int(cid)) if (DB_AVAILABLE and cid) else []
-        if tgts:
-            df_t = pd.DataFrame(tgts)
-            keep = [col for col in ["name","gene_symbol","target_type","mechanism","action_type","confidence","organism"] if col in df_t.columns]
-            st.dataframe(df_t[keep], use_container_width=True)
-            if "confidence" in df_t.columns and len(df_t) >= 2:
-                top_t = df_t.dropna(subset=["confidence"]).sort_values("confidence").tail(12)
-                nc = "gene_symbol" if "gene_symbol" in top_t.columns else "name"
-                fig = px.bar(top_t, x="confidence", y=nc, orientation="h",
-                             color="confidence",
-                             color_continuous_scale=[[0,"#f43f5e"],[.5,"#f59e0b"],[1,"#10b981"]],
-                             title="Target confidence")
-                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                  font_color="#f0f4ff", margin=dict(t=30,b=10))
-                st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No target data in database for this compound.")
+        _bioactivity_tab(cid, light)
     ti += 1
 
-    # ── Activities ─────────────────────────────────────────────────────────
-    with tabs[ti]:
-        acts = get_compound_activities(int(cid)) if (DB_AVAILABLE and cid) else []
-        if acts:
-            df_a = pd.DataFrame(acts)
-            st.dataframe(df_a, use_container_width=True)
-            if "pchembl_value" in df_a.columns:
-                dp = df_a.dropna(subset=["pchembl_value"]).sort_values("pchembl_value", ascending=False).head(15)
-                if not dp.empty:
-                    nc = "gene_symbol" if "gene_symbol" in dp.columns else "target_name"
-                    fig = px.bar(dp.sort_values("pchembl_value"), x="pchembl_value", y=nc,
-                                 orientation="h",
-                                 color="pchembl_value",
-                                 color_continuous_scale=[[0,"#8b5cf6"],[.5,"#f59e0b"],[1,"#10b981"]],
-                                 title="pChEMBL values (higher = more potent)")
-                    fig.add_vline(x=6, line_dash="dash", line_color="#f59e0b",
-                                  annotation=dict(text="1 µM", font_color="#f59e0b"))
-                    fig.add_vline(x=8, line_dash="dash", line_color="#10b981",
-                                  annotation=dict(text="10 nM", font_color="#10b981"))
-                    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                      font_color="#f0f4ff")
-                    st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No quantitative activity data available.")
-    ti += 1
-
-    # ── Indications ────────────────────────────────────────────────────────
+    # ── Indications ─────────────────────────────────────────────────────────
     with tabs[ti]:
         inds = get_compound_indications(int(cid)) if (DB_AVAILABLE and cid) else []
         if inds:
@@ -995,61 +1076,48 @@ def page_analysis():
             keep = [col for col in ["disease","mesh_id","max_phase","source"] if col in df_i.columns]
             st.dataframe(df_i[keep], use_container_width=True)
         elif c.get("indications"):
-            for i_str in str(c["indications"]).split(";"):
-                st.markdown(f"- {i_str.strip()}")
+            for ind in str(c["indications"]).split(";"):
+                st.markdown(f"- {ind.strip()}")
         else:
-            st.info("No indication data available.")
+            st.info("No indication data in database.")
     ti += 1
 
-    # ── Clinical Evidence ──────────────────────────────────────────────────
+    # ── Clinical Evidence ────────────────────────────────────────────────────
     with tabs[ti]:
-        _tab_clinical_evidence(name)
+        _clinical_tab(name)
     ti += 1
 
-    # ── PBPK Simulation ────────────────────────────────────────────────────
+    # ── PBPK ────────────────────────────────────────────────────────────────
     with tabs[ti]:
-        _tab_pbpk(c, smiles)
+        _pbpk_tab(c, smiles, light, pbpk_key)
     ti += 1
 
-    # ── Docking ────────────────────────────────────────────────────────────
+    # ── Docking ─────────────────────────────────────────────────────────────
     with tabs[ti]:
-        _tab_docking(name, smiles, cid)
+        _docking_tab(name, smiles, cid, light, dock_key)
     ti += 1
 
-    # ── Network ────────────────────────────────────────────────────────────
-    with tabs[ti]:
-        _tab_network(name)
-    ti += 1
-
-    # ── Quantum ────────────────────────────────────────────────────────────
+    # ── Quantum Optimization ─────────────────────────────────────────────────
     if QUANTUM_AVAILABLE:
         with tabs[ti]:
-            render_quantum_optimization_section(drug_name=name, smiles=smiles, drug_data=c)
+            _quantum_tab(name, smiles, light)
         ti += 1
 
-    # ── 3D Structure ───────────────────────────────────────────────────────
+    # ── 3D Structure ─────────────────────────────────────────────────────────
     if VIZ_3D_AVAILABLE:
         with tabs[ti]:
-            if not smiles:
-                st.warning(f"No SMILES available for {name}.")
-            elif _viz:
-                tgts2 = get_compound_targets(int(cid)) if (DB_AVAILABLE and cid) else []
-                tgt_name = tgts2[0]["name"] if tgts2 else ""
-                pdb = None
-                if tgt_name:
-                    try:
-                        from real_pdb_fetcher import RealPDBFetcher
-                        pdb = RealPDBFetcher().fetch_pdb(tgt_name)
-                    except Exception: pass
-                _viz.render_visualization(name, tgt_name or "", smiles, pdb)
+            _3d_tab(name, smiles, cid)
         ti += 1
 
 
-def _tab_properties(c: Dict, smiles: str):
-    mw = c.get("mw"); logp = c.get("alogp"); psa = c.get("psa")
-    hba = c.get("hba"); hbd = c.get("hbd"); qed = None
+# ── Tab: Properties ───────────────────────────────────────────────────────────
 
-    if smiles and not all([mw, logp, psa]):
+def _properties_tab(c: Dict, smiles: str, light: bool):
+    mw = c.get("mw"); logp = c.get("alogp"); psa = c.get("psa")
+    hba = c.get("hba"); hbd = c.get("hbd"); rtb = c.get("rtb")
+    ro5 = c.get("ro5_violations"); qed = None
+
+    if smiles:
         try:
             from rdkit import Chem
             from rdkit.Chem import Descriptors, rdMolDescriptors, QED as rdQED
@@ -1060,48 +1128,115 @@ def _tab_properties(c: Dict, smiles: str):
                 psa  = psa  or round(Descriptors.TPSA(mol), 1)
                 hba  = hba  or rdMolDescriptors.CalcNumHBA(mol)
                 hbd  = hbd  or rdMolDescriptors.CalcNumHBD(mol)
+                rtb  = rtb  or rdMolDescriptors.CalcNumRotatableBonds(mol)
                 qed  = round(rdQED.qed(mol), 3)
         except Exception: pass
 
-    col1,col2,col3,col4,col5 = st.columns(5)
-    with col1: st.metric("Mol Weight (Da)", f"{mw:.1f}" if mw else "N/A")
-    with col2: st.metric("LogP",            f"{logp:.2f}" if logp is not None else "N/A")
-    with col3: st.metric("TPSA (sq A)",     f"{psa:.1f}" if psa else "N/A")
-    with col4: st.metric("QED",             f"{qed:.3f}" if qed is not None else "N/A")
-    with col5: st.metric("HBA / HBD",       f"{hba} / {hbd}" if hba is not None else "N/A")
+    c1,c2,c3,c4,c5,c6 = st.columns(6)
+    def _m(col, lbl, val): col.metric(lbl, val)
+    _m(c1,"MW (Da)",      f"{mw:.1f}" if mw else "N/A")
+    _m(c2,"LogP",         f"{logp:.2f}" if logp is not None else "N/A")
+    _m(c3,"TPSA (sq A)",  f"{psa:.1f}" if psa else "N/A")
+    _m(c4,"QED",          f"{qed:.3f}" if qed is not None else "N/A")
+    _m(c5,"HBA / HBD",    f"{hba} / {hbd}" if hba is not None else "N/A")
+    _m(c6,"Rotatable Bonds", str(rtb) if rtb is not None else "N/A")
+
+    st.markdown("<div style='height:.5rem;'></div>", unsafe_allow_html=True)
 
     viols = sum([bool(mw and mw>500), bool(logp is not None and logp>5),
                  bool(hbd is not None and hbd>5), bool(hba is not None and hba>10)])
-    col = "#10b981" if viols == 0 else "#f59e0b" if viols == 1 else "#f43f5e"
-    txt = "Passes Lipinski Rule of 5" if viols == 0 else f"Lipinski: {viols} violation(s)"
-    st.markdown(f"<div style='font-size:.85rem;color:{col};margin:.75rem 0;'>{txt}</div>",
+    col = "var(--emerald)" if viols==0 else "var(--amber)" if viols==1 else "var(--rose)"
+    txt  = "Passes Lipinski Rule of 5 — good oral bioavailability potential" \
+           if viols==0 else f"Lipinski: {viols} violation(s)"
+    st.markdown(f"<div style='font-size:.84rem;color:{col};margin-bottom:.85rem;'>{txt}</div>",
                 unsafe_allow_html=True)
 
-    ro5 = [("Molecular weight", f"{mw:.1f} Da" if mw else "N/A", bool(mw and mw>500)),
-           ("LogP",             f"{logp:.2f}" if logp is not None else "N/A", bool(logp is not None and logp>5)),
-           ("H-bond donors",    str(hbd) if hbd is not None else "N/A", bool(hbd is not None and hbd>5)),
-           ("H-bond acceptors", str(hba) if hba is not None else "N/A", bool(hba is not None and hba>10))]
-    for prop, val, fail in ro5:
-        col2 = "#f43f5e" if fail else "#10b981"
-        mk   = "FAIL" if fail else "PASS"
-        st.markdown(
-            f"<div style='display:flex;justify-content:space-between;background:#0f1e38;"
-            f"border-radius:7px;padding:5px 14px;margin-bottom:3px;font-size:.82rem;'>"
-            f"<span style='color:#6b7d9f;'>{prop}</span>"
-            f"<span style='color:#eef2ff;'>{val}</span>"
-            f"<span style='color:{col2};font-weight:700;font-size:.7rem;'>{mk}</span>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
+    col_l, col_r = st.columns(2)
+    with col_l:
+        _sec("Lipinski Rule of 5")
+        _kv("Molecular weight", f"{mw:.1f} Da" if mw else "N/A", bool(mw and mw>500))
+        _kv("LogP (lipophilicity)", f"{logp:.2f}" if logp is not None else "N/A",
+            bool(logp is not None and logp>5))
+        _kv("H-bond donors", str(hbd) if hbd is not None else "N/A",
+            bool(hbd is not None and hbd>5))
+        _kv("H-bond acceptors", str(hba) if hba is not None else "N/A",
+            bool(hba is not None and hba>10))
+    with col_r:
+        _sec("Drug-likeness")
+        _kv("QED score",           f"{qed:.3f}" if qed else "N/A")
+        _kv("TPSA",                f"{psa:.1f} sq A" if psa else "N/A")
+        _kv("Rotatable bonds",     str(rtb) if rtb is not None else "N/A")
+        _kv("Ro5 violations (DB)", str(int(ro5)) if ro5 is not None else "N/A")
 
     if smiles:
         st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        _sec("SMILES")
         st.code(smiles, language=None)
 
 
-def _tab_clinical_evidence(drug_name: str):
-    disease_query = st.session_state.get("disease_query", "")
-    if not disease_query:
+# ── Tab: Bioactivity ─────────────────────────────────────────────────────────
+
+def _bioactivity_tab(cid, light: bool):
+    tgts = get_compound_targets(int(cid)) if (DB_AVAILABLE and cid) else []
+    acts = get_compound_activities(int(cid)) if (DB_AVAILABLE and cid) else []
+
+    col_t, col_a = st.columns(2)
+
+    with col_t:
+        _sec(f"Protein Targets ({len(tgts)})")
+        if tgts:
+            df_t = pd.DataFrame(tgts)
+            keep = [col for col in ["gene_symbol","name","target_type","mechanism",
+                                     "action_type","confidence"] if col in df_t.columns]
+            st.dataframe(df_t[keep], use_container_width=True, height=260)
+
+            if "confidence" in df_t.columns and len(df_t) >= 2:
+                top = df_t.dropna(subset=["confidence"]).sort_values("confidence").tail(10)
+                nc  = "gene_symbol" if "gene_symbol" in top.columns else "name"
+                fig = px.bar(top, x="confidence", y=nc, orientation="h",
+                             color="confidence",
+                             color_continuous_scale=[[0,"#fb7185"],[.5,"#fbbf24"],[1,"#34d399"]])
+                fig.update_layout(title="Target confidence", margin=dict(t=30,b=0))
+                fig = _plot_style(fig, light)
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No targets found in database for this compound.")
+
+    with col_a:
+        _sec(f"pChEMBL Activities ({len(acts)})")
+        if acts:
+            df_a = pd.DataFrame(acts)
+            keep = [col for col in ["gene_symbol","target_name","activity_type",
+                                     "pchembl_value","standard_value","standard_units"]
+                    if col in df_a.columns]
+            st.dataframe(df_a[keep], use_container_width=True, height=260)
+
+            if "pchembl_value" in df_a.columns:
+                dp = df_a.dropna(subset=["pchembl_value"]) \
+                         .sort_values("pchembl_value", ascending=False).head(12)
+                if not dp.empty:
+                    nc = "gene_symbol" if "gene_symbol" in dp.columns else "target_name"
+                    fig = px.bar(dp.sort_values("pchembl_value"), x="pchembl_value", y=nc,
+                                 orientation="h",
+                                 color="pchembl_value",
+                                 color_continuous_scale=[[0,"#a78bfa"],[.5,"#fbbf24"],[1,"#34d399"]])
+                    fig.add_vline(x=6, line_dash="dash", line_color="#fbbf24",
+                                  annotation=dict(text="1 µM",font_color="#fbbf24"))
+                    fig.add_vline(x=8, line_dash="dash", line_color="#34d399",
+                                  annotation=dict(text="10 nM",font_color="#34d399"))
+                    fig.update_layout(title="pChEMBL (higher = more potent)",
+                                      margin=dict(t=30,b=0))
+                    fig = _plot_style(fig, light)
+                    st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No quantitative activity data available.")
+
+
+# ── Tab: Clinical Evidence ────────────────────────────────────────────────────
+
+def _clinical_tab(drug_name: str):
+    dq = st.session_state.get("disease_query", "")
+    if not dq:
         st.info("Run a disease search first to load clinical evidence.")
         return
 
@@ -1109,61 +1244,60 @@ def _tab_clinical_evidence(drug_name: str):
 
     with col_t:
         _sec("Clinical Trials  (ClinicalTrials.gov)")
-        with st.spinner("Fetching trials..."):
-            trials = fetch_clinical_trials(drug_name, disease_query, n=8)
-
+        with st.spinner("Fetching..."):
+            trials = fetch_trials(drug_name, dq, n=8)
         if trials:
             for t in trials:
-                status_col = {"RECRUITING":"#10b981","COMPLETED":"#0ea5e9",
-                              "ACTIVE, NOT RECRUITING":"#f59e0b"}.get(t.get("status",""), "#6b7d9f")
+                sc = {"RECRUITING":"var(--emerald)","COMPLETED":"var(--cyan)",
+                      "ACTIVE, NOT RECRUITING":"var(--amber)"}.get(t.get("status",""), "var(--muted)")
+                nct = t.get("nct_id","")
+                url = t.get("url","#")
                 st.markdown(
-                    f"<div class='ev-card'>"
+                    f"<div class='ev'>"
                     f"<div class='ev-title'>{t.get('title','—')}</div>"
                     f"<div class='ev-meta'>"
-                    f"<span style='color:{status_col};font-weight:600;'>{t.get('status','—')}</span>"
+                    f"<span style='color:{sc};font-weight:600;'>{t.get('status','—')}</span>"
                     f" &nbsp;·&nbsp; {t.get('phase','N/A')}"
-                    f" &nbsp;·&nbsp; <a class='ev-link' href='{t.get('url','#')}' target='_blank'>"
-                    f"{t.get('nct_id','')}</a>"
+                    f" &nbsp;·&nbsp; <a class='ev-link' href='{url}' target='_blank'>{nct}</a>"
                     f"</div></div>",
                     unsafe_allow_html=True,
                 )
         else:
-            st.info(f"No trials found for {drug_name} in {disease_query}.")
+            st.info(f"No trials found for {drug_name} in {dq}.")
 
     with col_p:
-        _sec("Publications  (PubMed)")
-        with st.spinner("Fetching papers..."):
-            papers = fetch_pubmed(drug_name, disease_query, n=8)
-
+        _sec("Publications  (PubMed / NCBI)")
+        with st.spinner("Fetching..."):
+            papers = fetch_papers(drug_name, dq, n=8)
         if papers:
             for p in papers:
                 st.markdown(
-                    f"<div class='ev-card'>"
+                    f"<div class='ev'>"
                     f"<div class='ev-title'>{p.get('title','—')}</div>"
                     f"<div class='ev-meta'>"
                     f"{p.get('journal','—')} &nbsp;·&nbsp; {p.get('year','')}"
-                    f" &nbsp;·&nbsp; <a class='ev-link' href='{p.get('url','#')}' target='_blank'>"
-                    f"PMID {p.get('pmid','')}</a>"
+                    f" &nbsp;·&nbsp; <a class='ev-link' href='{p.get('url','#')}' "
+                    f"target='_blank'>PMID {p.get('pmid','')}</a>"
                     f"</div></div>",
                     unsafe_allow_html=True,
                 )
         else:
-            st.info(f"No PubMed papers found for {drug_name} + {disease_query}.")
+            st.info(f"No PubMed papers found for {drug_name} + {dq}.")
 
 
-def _tab_pbpk(c: Dict, smiles: str):
+# ── Tab: PBPK ─────────────────────────────────────────────────────────────────
+
+def _pbpk_tab(c: Dict, smiles: str, light: bool, state_key: str):
     _sec("PBPK Pharmacokinetic Simulation")
-
     if not PBPK_AVAILABLE:
-        st.info("PBPK module unavailable. Check services/pbpk_simulation.py.")
+        st.info("PBPK unavailable — check `services/pbpk_simulation.py`.")
         return
 
+    name = c.get("name") or "Unknown"
     mw   = float(c.get("mw") or 0)
     logp = float(c.get("alogp") or 0)
-    name = c.get("name") or "Unknown"
 
-    # Compute from RDKit if needed
-    if (not mw or not logp) and smiles:
+    if smiles and not (mw and logp):
         try:
             from rdkit import Chem
             from rdkit.Chem import Descriptors
@@ -1174,282 +1308,279 @@ def _tab_pbpk(c: Dict, smiles: str):
         except Exception: pass
 
     if not mw:
-        st.info("Molecular weight not available. Cannot run PBPK simulation.")
+        st.info("Molecular weight unavailable — cannot run PBPK simulation.")
         return
 
-    # Controls
-    disease_query = st.session_state.get("disease_query", "Unknown")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1: dose    = st.number_input("Dose (mg)", 1.0, 2000.0, 100.0, step=10.0)
-    with col2: route   = st.selectbox("Route", ["oral","IV"])
-    with col3: dur     = st.number_input("Duration (h)", 4.0, 168.0, 24.0, step=4.0)
-    with col4: binding = st.number_input("Binding affinity (kcal/mol)", -20.0, 0.0, -8.0, step=0.5)
+    st.markdown(
+        f"<div style='font-size:.82rem;color:var(--muted);margin-bottom:.75rem;'>"
+        f"Using MW = {mw:.1f} Da, LogP = {logp:.2f}. "
+        f"Adjust dose and route below then click Run.</div>",
+        unsafe_allow_html=True,
+    )
 
-    if st.button("Run Simulation", key="run_pbpk"):
+    col1,col2,col3,col4 = st.columns(4)
+    with col1: dose    = st.number_input("Dose (mg)",       1.0, 2000.0, 100.0, 10.0, key=f"pbpk_dose_{state_key}")
+    with col2: route   = st.selectbox("Route",              ["oral","IV"],               key=f"pbpk_route_{state_key}")
+    with col3: dur     = st.number_input("Duration (h)",    4.0,  168.0,  24.0,  4.0,  key=f"pbpk_dur_{state_key}")
+    with col4: binding = st.number_input("Binding (kcal/mol)", -20.0, 0.0, -8.0, 0.5,  key=f"pbpk_ba_{state_key}")
+
+    dq = st.session_state.get("disease_query", "Unknown")
+
+    if st.button("Run Simulation", key=f"run_pbpk_{state_key}"):
         with st.spinner("Running compartmental PK model..."):
             try:
-                sim = PBPKSimulator(disease_name=disease_query)
+                sim = PBPKSimulator(disease_name=dq)
                 result = sim.simulate_drug_exposure(
                     drug_name=name, molecular_weight=mw, logp=logp,
                     dose_mg=dose, route=route, duration_hours=dur,
                     binding_affinity=binding,
                 )
-                st.session_state["pbpk_result"] = result
+                st.session_state[state_key] = result
             except Exception as e:
                 st.error(f"Simulation failed: {e}")
 
-    result = st.session_state.get("pbpk_result")
-    if result and result.get("success"):
-        pk = result.get("pk_metrics", {})
-        adme = result.get("adme_parameters", {})
-
-        # PK metrics row
-        pkc = st.columns(4)
-        metrics = [
-            ("Cmax", f"{pk.get('cmax_ng_ml',0):.1f}", "ng/mL"),
-            ("Tmax", f"{pk.get('tmax_hours',0):.2f}", "hours"),
-            ("AUC",  f"{pk.get('auc_ng_h_ml',0):.0f}", "ng·h/mL"),
-            ("t½",   f"{pk.get('t_half_hours',0):.2f}", "hours"),
-        ]
-        for col, (lbl, val, unit) in zip(pkc, metrics):
-            with col:
-                st.markdown(
-                    f"<div class='pk-pill'><div class='pk-val'>{val}</div>"
-                    f"<div class='pk-lbl'>{lbl} ({unit})</div></div>",
-                    unsafe_allow_html=True,
-                )
-
-        st.markdown("<div style='height:.5rem;'></div>", unsafe_allow_html=True)
-
-        # Concentration-time chart
-        times = result.get("time_hours", [])
-        fig = go.Figure()
-        compartments = [
-            ("plasma_concentration_ng_ml", "Plasma", "#0ea5e9"),
-            ("liver_concentration_ng_ml",  "Liver",  "#f59e0b"),
-            ("brain_concentration_ng_ml",  "Brain",  "#8b5cf6"),
-        ]
-        for key, label, color in compartments:
-            vals = result.get(key, [])
-            if vals:
-                fig.add_trace(go.Scatter(x=times, y=vals, name=label,
-                                         line=dict(color=color, width=2)))
-        fig.update_layout(
-            title=f"Concentration-Time Profile — {name} ({route}, {dose:.0f} mg)",
-            xaxis_title="Time (hours)", yaxis_title="Concentration (ng/mL)",
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0b1527",
-            font_color="#f0f4ff",
-            legend=dict(bgcolor="rgba(0,0,0,0)", font_color="#6b7d9f"),
-            xaxis=dict(gridcolor="#1c304f"), yaxis=dict(gridcolor="#1c304f"),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # ADME + Safety
-        col_a, col_s = st.columns(2)
-        with col_a:
-            _sec("ADME Parameters")
-            adme_items = [("Bioavailability (F)",f"{adme.get('f',0):.0%}"),
-                          ("Vol. Distribution (Vd)",f"{adme.get('vd',0):.2f} L/kg"),
-                          ("Clearance (CL)",f"{adme.get('cl',0):.3f} L/h/kg"),
-                          ("Fraction Unbound",f"{adme.get('fu',0):.0%}"),
-                          ("Brain Kp",f"{adme.get('kp_brain',0):.2f}"),
-                          ("Liver Kp",f"{adme.get('kp_liver',0):.2f}")]
-            for lbl, val in adme_items:
-                st.markdown(
-                    f"<div style='display:flex;justify-content:space-between;"
-                    f"background:#0f1e38;border-radius:7px;padding:5px 14px;"
-                    f"margin-bottom:3px;font-size:.82rem;'>"
-                    f"<span style='color:#6b7d9f;'>{lbl}</span>"
-                    f"<span style='color:#eef2ff;font-weight:600;'>{val}</span></div>",
-                    unsafe_allow_html=True,
-                )
-        with col_s:
-            safety = result.get("safety_assessment", {})
-            _sec("Safety Assessment")
-            margin = safety.get("safety_margin","Unknown")
-            margin_col = "#10b981" if margin == "Good" else "#f59e0b"
-            st.markdown(
-                f"<div style='font-size:.9rem;font-weight:700;color:{margin_col};margin-bottom:.5rem;'>"
-                f"Safety Margin: {margin}</div>",
-                unsafe_allow_html=True,
-            )
-            for w in safety.get("warnings", []):
-                st.markdown(f"<div style='font-size:.82rem;color:#6b7d9f;margin-bottom:3px;'>- {w}</div>",
-                            unsafe_allow_html=True)
-            tw = safety.get("therapeutic_window","")
-            if tw:
-                st.markdown(f"<div style='font-size:.82rem;color:#6b7d9f;margin-top:.5rem;'>"
-                            f"Therapeutic window: {tw}</div>", unsafe_allow_html=True)
-
-
-def _tab_docking(name: str, smiles: str, cid):
-    _sec("Molecular Docking")
-
-    if not DOCKING_AVAILABLE:
-        st.info(
-            "Molecular docking requires an NVIDIA BioNeMo API key or AutoDock Vina installation. "
-            "Set the `NVIDIA_API_KEY` environment variable to enable DiffDock."
-        )
+    result = st.session_state.get(state_key)
+    if not result or not result.get("success"):
         return
 
+    pk   = result.get("pk_metrics", {})
+    adme = result.get("adme_parameters", {})
+
+    # PK metrics row
+    pkc = st.columns(4)
+    for col, (lbl, val, unit) in zip(pkc, [
+        ("Cmax",  f"{pk.get('cmax_ng_ml',0):.1f}",   "ng/mL"),
+        ("Tmax",  f"{pk.get('tmax_hours',0):.2f}",    "h"),
+        ("AUC",   f"{pk.get('auc_ng_h_ml',0):.0f}",  "ng·h/mL"),
+        ("t½",    f"{pk.get('t_half_hours',0):.2f}",  "h"),
+    ]):
+        with col:
+            st.markdown(f"<div class='pk-pill'><div class='pk-val'>{val}</div>"
+                        f"<div class='pk-lbl'>{lbl} ({unit})</div></div>",
+                        unsafe_allow_html=True)
+
+    st.markdown("<div style='height:.6rem;'></div>", unsafe_allow_html=True)
+
+    # Concentration-time chart
+    times = result.get("time_hours", [])
+    fig = go.Figure()
+    for key, label, color in [
+        ("plasma_concentration_ng_ml","Plasma","#38bdf8"),
+        ("liver_concentration_ng_ml", "Liver", "#fbbf24"),
+        ("brain_concentration_ng_ml", "Brain", "#a78bfa"),
+    ]:
+        vals = result.get(key, [])
+        if vals:
+            fig.add_trace(go.Scatter(x=times, y=vals, name=label,
+                                     line=dict(color=color, width=2.2)))
+    fig.update_layout(
+        title=f"Concentration-time — {name}  ({route}, {dose:.0f} mg)",
+        xaxis_title="Time (h)", yaxis_title="Concentration (ng/mL)",
+    )
+    fig = _plot_style(fig, light)
+    st.plotly_chart(fig, use_container_width=True)
+
+    col_a, col_s = st.columns(2)
+    with col_a:
+        _sec("ADME Parameters")
+        for lbl, val in [
+            ("Bioavailability (F)",    f"{adme.get('f',0):.0%}"),
+            ("Vol. distribution (Vd)", f"{adme.get('vd',0):.2f} L/kg"),
+            ("Clearance (CL)",         f"{adme.get('cl',0):.3f} L/h/kg"),
+            ("Fraction unbound (fu)",  f"{adme.get('fu',0):.0%}"),
+            ("Brain partition (Kp)",   f"{adme.get('kp_brain',0):.2f}"),
+            ("Liver partition (Kp)",   f"{adme.get('kp_liver',0):.2f}"),
+        ]:
+            _kv(lbl, val)
+
+    with col_s:
+        safety = result.get("safety_assessment", {})
+        _sec("Safety Assessment")
+        margin = safety.get("safety_margin","Unknown")
+        mc = "var(--emerald)" if margin=="Good" else "var(--amber)"
+        st.markdown(f"<div style='font-size:.88rem;font-weight:700;color:{mc};"
+                    f"margin-bottom:.45rem;'>Safety Margin: {margin}</div>",
+                    unsafe_allow_html=True)
+        for w in safety.get("warnings", []):
+            st.markdown(f"<div style='font-size:.8rem;color:var(--muted);margin-bottom:3px;'>"
+                        f"- {w}</div>", unsafe_allow_html=True)
+        tw = safety.get("therapeutic_window","")
+        if tw:
+            st.markdown(f"<div style='font-size:.8rem;color:var(--muted);margin-top:.5rem;'>"
+                        f"Therapeutic window: {tw}</div>", unsafe_allow_html=True)
+
+
+# ── Tab: Docking ──────────────────────────────────────────────────────────────
+
+def _docking_tab(name: str, smiles: str, cid, light: bool, state_key: str):
+    _sec("Molecular Docking")
+    if not DOCKING_AVAILABLE:
+        st.info(
+            "Molecular docking requires an NVIDIA BioNeMo API key (DiffDock) "
+            "or AutoDock Vina installation. "
+            "Set `NVIDIA_API_KEY` environment variable to enable."
+        )
+        return
     if not smiles:
-        st.warning(f"No SMILES structure for {name}. Cannot run docking.")
+        st.warning(f"No SMILES structure available for {name}.")
         return
 
     tgts = get_compound_targets(int(cid)) if (DB_AVAILABLE and cid) else []
-    target_names = [t["name"] for t in tgts if t.get("name")] or []
+    tgt_names = [t["name"] for t in tgts if t.get("name")]
 
     col1, col2 = st.columns(2)
     with col1:
-        if target_names:
-            selected_target = st.selectbox("Select target", target_names)
+        if tgt_names:
+            sel_tgt = st.selectbox("Target protein", tgt_names, key=f"dock_tgt_{state_key}")
         else:
-            selected_target = st.text_input("Target protein name", placeholder="e.g. AChE, BACE1, GSK3B")
+            sel_tgt = st.text_input("Target protein name",
+                placeholder="e.g. BACE1, AChE, GSK3B", key=f"dock_tgt_{state_key}")
     with col2:
-        n_poses = st.slider("Number of poses", 1, 20, 10)
+        n_poses = st.slider("Poses to generate", 1, 20, 10, key=f"dock_poses_{state_key}")
 
-    if st.button("Run Docking", key="run_dock") and selected_target:
-        with st.spinner(f"Running docking: {name} -> {selected_target}..."):
+    if st.button("Run Docking", key=f"run_dock_{state_key}") and sel_tgt:
+        with st.spinner(f"Running docking: {name} → {sel_tgt}..."):
             try:
                 result = _docking_svc.perform_docking(
-                    drug_name=name, target_name=selected_target,
-                    ligand_smiles=smiles,
-                )
-                st.session_state["dock_result"] = result
+                    drug_name=name, target_name=sel_tgt, ligand_smiles=smiles)
+                st.session_state[state_key] = result
             except Exception as e:
                 st.error(f"Docking failed: {e}")
 
-    dr = st.session_state.get("dock_result")
-    if dr:
-        if not dr.get("success"):
-            st.warning(f"Docking returned no result: {dr.get('error','Unknown error')}")
-            return
-
-        affs = dr.get("binding_affinities", [])
-        poses = dr.get("poses", [])
-
-        if affs:
-            c1, c2, c3 = st.columns(3)
-            with c1: st.metric("Best Affinity",   f"{min(affs):.2f} kcal/mol")
-            with c2: st.metric("Mean Affinity",   f"{sum(affs)/len(affs):.2f} kcal/mol")
-            with c3: st.metric("Poses Generated", len(poses))
-
-            fig = go.Figure(go.Bar(
-                x=list(range(1, len(affs)+1)), y=affs,
-                marker_color=["#0ea5e9" if a == min(affs) else "#8b5cf6" for a in affs],
-            ))
-            fig.update_layout(
-                title="Docking Pose Binding Affinities",
-                xaxis_title="Pose", yaxis_title="Affinity (kcal/mol)",
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0b1527",
-                font_color="#f0f4ff",
-                xaxis=dict(gridcolor="#1c304f"), yaxis=dict(gridcolor="#1c304f"),
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            conf = dr.get("confidence_scores", [])
-            if conf:
-                df_dock = pd.DataFrame({
-                    "Pose": list(range(1, len(conf)+1)),
-                    "Binding Affinity (kcal/mol)": affs[:len(conf)],
-                    "Confidence": conf,
-                })
-                st.dataframe(df_dock, use_container_width=True)
-
-
-def _tab_network(compound_name: str):
-    query = st.session_state.get("disease_query", "")
-    mesh_ids = []
-    if query:
-        try:
-            _, mesh_ids, _ = resolve_and_fetch(query)
-        except Exception:
-            pass
-
-    paths = []
-    if DB_AVAILABLE and mesh_ids:
-        with st.spinner("Loading HetioNet paths..."):
-            try: paths = get_hetionet_paths(compound_name, mesh_ids)
-            except Exception as e: st.warning(f"Network query failed: {e}")
-
-    if not paths:
-        st.info("No HetioNet paths found for this compound. "
-                "The compound may not be in the HetioNet node set.")
+    dr = st.session_state.get(state_key)
+    if not dr: return
+    if not dr.get("success"):
+        st.warning(f"Docking result: {dr.get('error','No result returned')}")
         return
 
-    G = nx.DiGraph()
-    for p in paths[:60]:
-        s, t = p.get("source_name",""), p.get("target_name","")
-        if s and t:
-            G.add_node(s, kind=p.get("source_kind",""))
-            G.add_node(t, kind=p.get("target_kind",""))
-            G.add_edge(s, t, me=p.get("metaedge",""))
+    affs  = dr.get("binding_affinities", [])
+    poses = dr.get("poses", [])
+    confs = dr.get("confidence_scores", [])
 
-    if not G.nodes: st.info("No network paths."); return
+    if affs:
+        c1,c2,c3 = st.columns(3)
+        with c1: st.metric("Best Affinity",  f"{min(affs):.2f} kcal/mol")
+        with c2: st.metric("Mean Affinity",  f"{sum(affs)/len(affs):.2f} kcal/mol")
+        with c3: st.metric("Poses",          len(poses))
 
-    pos = nx.spring_layout(G, seed=42, k=1.2)
-    kc  = {"Compound":"#0ea5e9","Gene":"#10b981","Disease":"#f43f5e",
-           "Anatomy":"#f59e0b","Pathway":"#8b5cf6","Biological Process":"#a78bfa"}
+        fig = go.Figure(go.Bar(
+            x=list(range(1, len(affs)+1)), y=affs,
+            marker_color=["#38bdf8" if a==min(affs) else "#a78bfa" for a in affs],
+            name="Affinity",
+        ))
+        fig.update_layout(title="Pose binding affinities (kcal/mol)",
+                          xaxis_title="Pose", yaxis_title="Affinity (kcal/mol)")
+        fig = _plot_style(fig, light)
+        st.plotly_chart(fig, use_container_width=True)
 
-    nx_, ny_, nt_, nc_ = [], [], [], []
-    for node, attr in G.nodes(data=True):
-        x, y = pos[node]
-        nx_.append(x); ny_.append(y)
-        nt_.append(node[:30])
-        nc_.append(kc.get(attr.get("kind",""), "#6b7d9f"))
-
-    ex_, ey_ = [], []
-    for u, v in G.edges():
-        x0, y0 = pos[u]; x1, y1 = pos[v]
-        ex_ += [x0,x1,None]; ey_ += [y0,y1,None]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=ex_, y=ey_, mode="lines",
-                              line=dict(color="#1c304f", width=1), hoverinfo="none"))
-    fig.add_trace(go.Scatter(x=nx_, y=ny_, mode="markers+text",
-                              marker=dict(size=13, color=nc_,
-                                          line=dict(width=1, color="#060b18")),
-                              text=nt_, textposition="top center",
-                              textfont=dict(size=8, color="#6b7d9f"),
-                              hoverinfo="text"))
-    fig.update_layout(showlegend=False, hovermode="closest", height=500,
-                      paper_bgcolor="#060b18", plot_bgcolor="#060b18",
-                      font_color="#f0f4ff",
-                      xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      margin=dict(l=10,r=10,t=10,b=10))
-    st.plotly_chart(fig, use_container_width=True)
-
-    leg_cols = st.columns(len(kc))
-    for col, (kind, color) in zip(leg_cols, kc.items()):
-        col.markdown(f"<span style='color:{color};font-size:.75rem;'>&#9679; {kind}</span>",
-                     unsafe_allow_html=True)
-    st.caption(f"{G.number_of_nodes()} nodes · {G.number_of_edges()} edges")
+        if confs:
+            df_d = pd.DataFrame({
+                "Pose":             list(range(1, len(confs)+1)),
+                "Affinity (kcal/mol)": affs[:len(confs)],
+                "Confidence":       confs,
+            })
+            st.dataframe(df_d, use_container_width=True)
 
 
-# ─── Knowledge Network page ───────────────────────────────────────────────────
+# ── Tab: Quantum Optimization ─────────────────────────────────────────────────
 
-def page_network():
-    st.markdown("## Knowledge Network")
-    st.caption("Drug-gene-disease connections from HetioNet knowledge graph.")
+def _quantum_tab(name: str, smiles: str, light: bool):
+    _sec("Molecular Optimization")
+    if not smiles:
+        st.info("No SMILES structure available.")
+        return
+
+    with st.spinner("Running RDKit force-field optimization and electronic property calculation..."):
+        try:
+            results = run_quantum_optimization(name, smiles)
+        except Exception as e:
+            st.error(f"Optimization failed: {e}")
+            return
+
+    opt   = results.get("optimization", {})
+    props = results.get("quantum_properties", {})
+
+    col_o, col_e = st.columns(2)
+    with col_o:
+        _sec("3D Conformer Optimization")
+        if opt.get("optimized"):
+            ff = opt.get("ff_type","UFF")
+            st.markdown(f"<div style='font-size:.84rem;color:var(--emerald);"
+                        f"margin-bottom:.5rem;'>Optimized with {ff} force field</div>",
+                        unsafe_allow_html=True)
+            _kv("Energy before optimization", f"{opt.get('energy_before_kcal','—')} kcal/mol")
+            _kv("Energy after optimization",  f"{opt.get('energy_after_kcal','—')} kcal/mol")
+            _kv("Energy reduction (delta)",   f"{opt.get('energy_delta_kcal','—')} kcal/mol")
+            _kv("Conformers generated",       str(opt.get("conformers","—")))
+            _kv("Total atoms (with H)",       str(opt.get("num_atoms","—")))
+        else:
+            st.warning(f"Optimization limited: {opt.get('reason','unknown')}")
+
+    with col_e:
+        _sec("Electronic Properties (RDKit Estimates)")
+        if props:
+            _kv("HOMO-LUMO gap (proxy)",  f"{props.get('homo_lumo_gap_eV',0):.2f} eV")
+            _kv("Dipole moment (proxy)",  f"{props.get('dipole_moment_proxy_D',0):.2f} D")
+            _kv("Polarisability",         f"{props.get('polarisability_A3',0):.1f} Å³")
+            _kv("Max partial charge",     f"{props.get('max_partial_charge',0):.4f}")
+            _kv("Min partial charge",     f"{props.get('min_partial_charge',0):.4f}")
+            _kv("QED (drug-likeness)",    f"{props.get('qed',0):.4f}")
+        else:
+            st.info("Electronic properties unavailable.")
+
+    if props:
+        with st.expander("Full property data"):
+            st.json(props)
+
+
+# ── Tab: 3D Structure ─────────────────────────────────────────────────────────
+
+def _3d_tab(name: str, smiles: str, cid):
+    _sec("3D Molecular Structure")
+    if not smiles:
+        st.warning(f"No SMILES available for {name}.")
+        return
+    if not (_viz and VIZ_3D_AVAILABLE):
+        st.info("3D viewer requires py3Dmol and stmol.")
+        st.code(smiles, language=None)
+        return
+
+    tgts     = get_compound_targets(int(cid)) if (DB_AVAILABLE and cid) else []
+    tgt_name = tgts[0]["name"] if tgts else ""
+    pdb      = None
+    if tgt_name:
+        try:
+            from real_pdb_fetcher import RealPDBFetcher
+            pdb = RealPDBFetcher().fetch_pdb(tgt_name)
+        except Exception: pass
+
+    _viz.render_visualization(name, tgt_name or "", smiles, pdb)
+
+
+# ─── Knowledge Graph page ─────────────────────────────────────────────────────
+
+def page_graph():
+    light = st.session_state.get("light_mode", False)
+    st.markdown("## Knowledge Graph")
+    st.caption("Explore drug-gene-disease connections from the biomedical knowledge graph.")
 
     col1, col2 = st.columns([5, 1])
     with col1:
-        center = st.text_input("net_q", value=st.session_state.disease_query or "",
-                               placeholder="Enter disease or drug name...",
-                               label_visibility="collapsed")
+        center = st.text_input("graph_q",
+            value=st.session_state.disease_query or "",
+            placeholder="Enter disease or drug name...",
+            label_visibility="collapsed")
     with col2:
         build = st.button("Build", use_container_width=True)
 
     if not center:
-        st.info("Enter a disease or drug name to build the network.")
+        st.info("Enter a disease or drug name to build the graph.")
         return
-
     if not DB_AVAILABLE:
         st.warning("Database unavailable.")
         return
 
-    with st.spinner("Building network..."):
+    with st.spinner("Building knowledge graph..."):
         resolved = resolve_disease(center) if center else []
         mesh_ids = [r["mesh_id"] for r in resolved if r.get("mesh_id")]
         expanded = expand_mesh_ids(mesh_ids) if mesh_ids else []
@@ -1458,14 +1589,15 @@ def page_network():
         compounds = validate_and_deduplicate(compounds, require_smiles=False)[:20]
 
     if not compounds:
-        st.warning("No compounds found."); return
+        st.warning("No compounds found.")
+        return
 
     G = nx.Graph()
     cl = resolved[0]["heading"] if resolved else center
     G.add_node(cl, kind="Disease" if resolved else "Query")
 
     for c in compounds:
-        n = c.get("name") or "";
+        n = c.get("name") or ""
         if not n: continue
         G.add_node(n, kind="Compound")
         G.add_edge(cl, n)
@@ -1476,14 +1608,15 @@ def page_network():
                 G.add_edge(n, tgt)
 
     pos = nx.spring_layout(G, seed=42, k=1.4)
-    kc  = {"Disease":"#f43f5e","Query":"#0ea5e9","Compound":"#8b5cf6","Gene":"#10b981"}
+    kc  = {"Disease":"#fb7185","Query":"#38bdf8","Compound":"#a78bfa","Gene":"#34d399"}
+    ns_map = {"Disease":24,"Query":22,"Compound":13,"Gene":9}
 
     nx_, ny_, nt_, nc_, ns_ = [], [], [], [], []
     for node, attr in G.nodes(data=True):
         x, y = pos[node]
         nx_.append(x); ny_.append(y); nt_.append(node[:28])
-        nc_.append(kc.get(attr.get("kind",""), "#6b7d9f"))
-        ns_.append(22 if attr.get("kind") in ("Disease","Query") else 14 if attr.get("kind")=="Compound" else 9)
+        nc_.append(kc.get(attr.get("kind",""), "#7c8daa"))
+        ns_.append(ns_map.get(attr.get("kind",""), 11))
 
     ex_, ey_ = [], []
     for u, v in G.edges():
@@ -1492,23 +1625,24 @@ def page_network():
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=ex_, y=ey_, mode="lines",
-                              line=dict(color="#1c304f", width=1), hoverinfo="none"))
+        line=dict(color="#1a2e4a" if not light else "#d0daea", width=1),
+        hoverinfo="none"))
     fig.add_trace(go.Scatter(x=nx_, y=ny_, mode="markers+text",
-                              marker=dict(size=ns_, color=nc_,
-                                          line=dict(width=1, color="#060b18")),
-                              text=nt_, textposition="top center",
-                              textfont=dict(size=8, color="#6b7d9f"),
-                              hoverinfo="text"))
-    fig.update_layout(showlegend=False, hovermode="closest", height=580,
-                      paper_bgcolor="#060b18", plot_bgcolor="#060b18",
-                      font_color="#f0f4ff",
-                      xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      margin=dict(l=10,r=10,t=10,b=10))
+        marker=dict(size=ns_, color=nc_, line=dict(width=1, color="#04080f" if not light else "#f4f7fb")),
+        text=nt_, textposition="top center",
+        textfont=dict(size=8, color="#7c8daa"),
+        hoverinfo="text"))
+    fig.update_layout(
+        showlegend=False, hovermode="closest", height=600,
+        margin=dict(l=10,r=10,t=10,b=10),
+    )
+    fig = _plot_style(fig, light)
+    fig.update_layout(xaxis=dict(showgrid=False,zeroline=False,showticklabels=False),
+                      yaxis=dict(showgrid=False,zeroline=False,showticklabels=False))
     st.plotly_chart(fig, use_container_width=True)
 
-    leg_cols = st.columns(4)
-    for col, (kind, color) in zip(leg_cols, kc.items()):
+    leg = st.columns(4)
+    for col, (kind, color) in zip(leg, kc.items()):
         col.markdown(f"<span style='color:{color};font-size:.78rem;'>&#9679; {kind}</span>",
                      unsafe_allow_html=True)
     st.caption(f"{G.number_of_nodes()} nodes · {G.number_of_edges()} edges")
@@ -1517,42 +1651,36 @@ def page_network():
 # ─── Data Explorer ────────────────────────────────────────────────────────────
 
 def page_database():
+    light = st.session_state.get("light_mode", False)
     st.markdown("## Data Explorer")
-
     if not DB_AVAILABLE:
-        st.warning("Database unavailable. Run: `python database/importer.py`")
-        return
+        st.warning("Database unavailable."); return
 
     tabs = st.tabs(["Compounds","Targets","Diseases","Statistics"])
 
     with tabs[0]:
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            q = st.text_input("cmp_q", placeholder="Name, mechanism, target...",
-                              label_visibility="collapsed")
-        with col2:
-            lim = st.number_input("Rows", 10, 500, 50, key="cmp_lim")
-        compounds = db_search(q or "", limit=int(lim)) if q else []
+        col1, col2 = st.columns([4,1])
+        with col1: q = st.text_input("cq", placeholder="Name, mechanism, target...", label_visibility="collapsed")
+        with col2: lim = st.number_input("Rows", 10, 500, 50, key="clim")
+        compounds = db_search(q, limit=int(lim)) if q else []
         if not compounds and not q:
             try:
                 from database.schema import get_connection
                 with get_connection() as conn:
                     cur = conn.cursor()
                     cur.execute("SELECT c.chembl_id,c.name,c.smiles,c.max_phase,cp.mw,cp.alogp "
-                                "FROM compounds c LEFT JOIN compound_properties cp ON cp.compound_id=c.id "
-                                "ORDER BY c.max_phase DESC NULLS LAST LIMIT %s", (lim,))
+                                "FROM compounds c LEFT JOIN compound_properties cp "
+                                "ON cp.compound_id=c.id ORDER BY c.max_phase DESC NULLS LAST LIMIT %s",(lim,))
                     compounds = [{"chembl_id":r[0],"name":r[1],"smiles":r[2],
                                   "max_phase":r[3],"mw":r[4],"alogp":r[5]} for r in cur.fetchall()]
-            except Exception as e:
-                st.error(f"Query error: {e}")
+            except Exception as e: st.error(f"Error: {e}")
         if compounds:
             df = pd.DataFrame(compounds)
             keep = [c for c in ["chembl_id","name","max_phase","mw","alogp","psa","mechanisms"] if c in df.columns]
             st.dataframe(df[keep], use_container_width=True, height=430)
             st.download_button("Download CSV", data=df.to_csv(index=False),
                                file_name="compounds.csv", mime="text/csv")
-        else:
-            st.info("No results.")
+        else: st.info("No results.")
 
     with tabs[1]:
         try:
@@ -1565,10 +1693,8 @@ def page_database():
             if rows:
                 df_t = pd.DataFrame(rows, columns=["ChEMBL TID","Name","Type","Gene","Organism"])
                 st.dataframe(df_t, use_container_width=True, height=430)
-            else:
-                st.info("No targets in database.")
-        except Exception as e:
-            st.error(f"Query error: {e}")
+            else: st.info("No targets.")
+        except Exception as e: st.error(f"Error: {e}")
 
     with tabs[2]:
         try:
@@ -1582,36 +1708,29 @@ def page_database():
             if rows:
                 df_d = pd.DataFrame(rows, columns=["MeSH ID","Heading","Tree Entries","Synonyms"])
                 st.dataframe(df_d, use_container_width=True, height=430)
-            else:
-                st.info("MeSH table empty. Run: `python database/mesh_importer.py`")
-        except Exception as e:
-            st.error(f"Query error: {e}")
+            else: st.info("MeSH table empty — run: `python database/mesh_importer.py`")
+        except Exception as e: st.error(f"Error: {e}")
 
     with tabs[3]:
         try:
             stats = get_stats()
             c1,c2,c3 = st.columns(3)
             for i,(k,v) in enumerate(stats.items()):
-                with [c1,c2,c3][i%3]:
-                    st.metric(k.replace("_"," ").title(), f"{v:,}")
+                with [c1,c2,c3][i%3]: st.metric(k.replace("_"," ").title(), f"{v:,}")
             from database.schema import get_connection
             with get_connection() as conn:
                 cur = conn.cursor()
-                cur.execute("SELECT kind,COUNT(*) AS n FROM hetionet_nodes GROUP BY kind ORDER BY n DESC")
+                cur.execute("SELECT kind,COUNT(*) n FROM hetionet_nodes GROUP BY kind ORDER BY n DESC")
                 kr = cur.fetchall()
             if kr:
                 st.markdown("---")
-                st.markdown("### HetioNet Node Types")
-                df_k = pd.DataFrame(kr, columns=["Kind","Count"])
-                fig = px.bar(df_k, x="Kind", y="Count",
-                             color="Count",
-                             color_continuous_scale=[[0,"#8b5cf6"],[1,"#0ea5e9"]])
-                fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0b1527",
-                                  font_color="#f0f4ff",
-                                  xaxis=dict(gridcolor="#1c304f"), yaxis=dict(gridcolor="#1c304f"))
+                _sec("Graph Node Types")
+                df_k = pd.DataFrame(kr, columns=["Type","Count"])
+                fig = px.bar(df_k, x="Type", y="Count", color="Count",
+                             color_continuous_scale=[[0,"#a78bfa"],[1,"#38bdf8"]])
+                fig = _plot_style(fig, light)
                 st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.error(f"Stats error: {e}")
+        except Exception as e: st.error(f"Stats error: {e}")
 
 
 # ─── Router ───────────────────────────────────────────────────────────────────
@@ -1624,7 +1743,7 @@ def main():
     if   page == "dashboard": page_dashboard()
     elif page == "discover":  page_discover()
     elif page == "analysis":  page_analysis()
-    elif page == "network":   page_network()
+    elif page == "graph":     page_graph()
     elif page == "database":  page_database()
     else:                     page_dashboard()
 
