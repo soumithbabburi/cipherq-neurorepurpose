@@ -7,6 +7,9 @@ Replaces Streamlit; no framework branding, full design control.
 import json
 import logging
 import os
+import warnings
+warnings.filterwarnings("ignore", message=".*use_container_width.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="streamlit")
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -1567,4 +1570,4 @@ def show_node_info(data):
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=8501)
+    app.run(debug=False, host="127.0.0.1", port=8050)
