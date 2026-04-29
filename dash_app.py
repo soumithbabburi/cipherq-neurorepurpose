@@ -393,16 +393,15 @@ def _icon(name: str) -> html.Span:
         "external":  "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6m4-3h6v6m-11 5L21 3",
     }
     d = paths.get(name, "")
+    svg_html = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        f'fill="none" stroke="currentColor" stroke-width="2" '
+        f'stroke-linecap="round" stroke-linejoin="round" '
+        f'style="width:16px;height:16px;display:inline-block;vertical-align:middle">'
+        f'<path d="{d}"/></svg>'
+    )
     return html.Span(
-        html.Svg(
-            html.Path(d=d, strokeLinecap="round", strokeLinejoin="round"),
-            xmlns="http://www.w3.org/2000/svg",
-            viewBox="0 0 24 24",
-            fill="none",
-            stroke="currentColor",
-            strokeWidth="2",
-            style={"width": "16px", "height": "16px"},
-        ),
+        dangerouslySetInnerHTML={"__html": svg_html},
         style={"display": "inline-flex", "alignItems": "center"},
     )
 
