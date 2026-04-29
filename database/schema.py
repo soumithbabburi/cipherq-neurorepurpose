@@ -126,12 +126,40 @@ CREATE TABLE IF NOT EXISTS indications (
     id              SERIAL PRIMARY KEY,
     compound_id     INTEGER REFERENCES compounds(id) ON DELETE CASCADE,
     disease         TEXT NOT NULL,
+    mesh_id         VARCHAR(20),
     efo_id          VARCHAR(50),
     max_phase       REAL,
     source          VARCHAR(50) DEFAULT 'chembl'
 );
 CREATE INDEX IF NOT EXISTS idx_ind_compound ON indications (compound_id);
 CREATE INDEX IF NOT EXISTS idx_ind_disease  ON indications (LOWER(disease));
+CREATE INDEX IF NOT EXISTS idx_ind_mesh     ON indications (mesh_id);
+
+-- ─── MeSH Disease Ontology ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS mesh_diseases (
+    mesh_id         VARCHAR(20) PRIMARY KEY,
+    heading         TEXT NOT NULL,
+    tree_numbers    TEXT[],
+    entry_terms     TEXT[],
+    scope_note      TEXT,
+    parent_ids      TEXT[]
+);
+CREATE INDEX IF NOT EXISTS idx_mesh_heading ON mesh_diseases (LOWER(heading));
+CREATE INDEX IF NOT EXISTS idx_mesh_trees   ON mesh_diseases USING GIN (tree_numbers);
+CREATE INDEX IF NOT EXISTS idx_mesh_terms   ON mesh_diseases USING GIN (entry_terms);
+
+-- ─── Compound Activity Data (pChEMBL scores at key targets) ──────────────────
+CREATE TABLE IF NOT EXISTS compound_activities (
+    id              SERIAL PRIMARY KEY,
+    compound_id     INTEGER REFERENCES compounds(id) ON DELETE CASCADE,
+    target_id       INTEGER REFERENCES targets(id) ON DELETE CASCADE,
+    activity_type   VARCHAR(20),
+    pchembl_value   REAL,
+    standard_value  REAL,
+    standard_units  VARCHAR(20)
+);
+CREATE INDEX IF NOT EXISTS idx_act_compound ON compound_activities (compound_id);
+CREATE INDEX IF NOT EXISTS idx_act_target   ON compound_activities (target_id);
 
 -- ─── HetioNet Nodes ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS hetionet_nodes (
