@@ -1,0 +1,5 @@
+biocypher:
+  dbms: in-memory
+  schema_config_path: biocypher_schema_config.yaml
+  offline: true
+  strict_mode: false

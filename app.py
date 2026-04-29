@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""NeuroRepurpose — entry point. Run with: streamlit run app.py"""
-from main_app import main
+"""
+NeuroRepurpose Intelligence Platform — Entry Point
+Run with: python app.py
+"""
+from dash_app import app, server
+
 if __name__ == "__main__":
-    main()
+    app.run(debug=False, host="0.0.0.0", port=8501)

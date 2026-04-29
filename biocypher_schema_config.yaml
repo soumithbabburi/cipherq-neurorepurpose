@@ -1,0 +1,47 @@
+# BioCypher Schema — NeuroRepurpose Knowledge Graph
+
+compound:
+  represented_as: node
+  preferred_id: chembl_id
+  label_in_input: compound
+  properties:
+    name: str
+    max_phase: int
+    score: float
+    smiles: str
+
+protein target:
+  represented_as: node
+  preferred_id: gene_symbol
+  label_in_input: target
+  properties:
+    name: str
+    organism: str
+    target_type: str
+
+disease:
+  represented_as: node
+  preferred_id: mesh_id
+  label_in_input: disease
+  properties:
+    heading: str
+    tree_numbers: str
+
+compound to disease:
+  represented_as: edge
+  label_in_input: treats
+  source: compound
+  target: disease
+  properties:
+    max_phase: int
+    source: str
+
+compound to protein target:
+  represented_as: edge
+  label_in_input: inhibits
+  source: compound
+  target: protein target
+  properties:
+    mechanism: str
+    action_type: str
+    confidence: float

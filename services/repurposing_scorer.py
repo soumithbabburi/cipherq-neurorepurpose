@@ -76,14 +76,9 @@ def _score_indication(compound_id: int, mesh_ids: List[str]) -> float:
         f"WHERE compound_id = %s AND mesh_id = ANY(ARRAY[{placeholders}]::varchar[])",
         [compound_id] + mesh_ids,
     )
-    if not rows or rows[0]["best_phase"] is None:
-        # Fall back to string match when mesh_id not yet backfilled
-        rows = _q(
-            "SELECT MAX(max_phase) AS best_phase FROM indications "
-            "WHERE compound_id = %s",
-            (compound_id,),
-        )
-    best = float(rows[0]["best_phase"] or 0) if rows else 0.0
+    # Only return a score if the compound actually has a matching indication.
+    # The old "fallback" (any indication) inflated scores for unrelated drugs.
+    best = float(rows[0]["best_phase"] or 0) if rows and rows[0]["best_phase"] is not None else 0.0
     return min(1.0, best / 4.0)
 
 

@@ -235,7 +235,8 @@ class DockingService:
             # Use environment variables directly to avoid config import issues
             db_params = {
                 "host": os.getenv("DB_HOST", "localhost"),
-                "database": os.getenv("DB_NAME", "cipherq_repurpose"),
+                "port": int(os.getenv("DB_PORT", "5434")),
+                "database": os.getenv("DB_NAME", "neurorepurpose"),
                 "user": os.getenv("DB_USER", "babburisoumith"),
                 "password": os.getenv("DB_PASSWORD", "")
             }
@@ -261,21 +262,17 @@ class DockingService:
             return None
     
     def _get_protein_structure(self, target_name: str) -> Optional[str]:
-        """
-        Get protein PDB structure.
-        For now, returns a generic structure. In production, use AlphaFold or PDB.
-        """
+        """Fetch real PDB from RCSB/AlphaFold, fall back to generic."""
         try:
-            # Try to get from real PDB fetcher if available
             from real_pdb_fetcher import RealPDBFetcher
             fetcher = RealPDBFetcher()
             pdb_content = fetcher.fetch_protein_structure(target_name)
-            if pdb_content:
+            if pdb_content and len(pdb_content) > 200:
+                logger.info(f"Real PDB fetched for {target_name} ({len(pdb_content)} chars)")
                 return pdb_content
         except Exception as e:
-            logger.warning(f"Could not fetch real PDB for {target_name}: {e}")
-        
-        # Return generic protein structure as fallback
+            logger.warning(f"PDB fetch failed for {target_name}: {e}")
+
         logger.warning(f"Using generic protein structure for {target_name}")
         return self._get_generic_protein_structure()
     
