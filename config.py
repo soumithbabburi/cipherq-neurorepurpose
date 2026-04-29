@@ -13,9 +13,9 @@ class Config:
     
     # Database Configuration
     DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "cipherq_repurpose")
-    DB_USER = os.getenv("DB_USER", "babburisoumith")
+    DB_PORT = os.getenv("DB_PORT", "5434")
+    DB_NAME = os.getenv("DB_NAME", "neurorepurpose")
+    DB_USER = os.getenv("DB_USER", "")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
     
     # NVIDIA API Configuration

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtualenv
+env/
+venv/
+.env
+.venv
+
+# Streamlit cache
+.streamlit/
+
+# Data / large binaries
+data/hetionet/*.gz
+data/hetionet/edges.tsv
+
+# ML model (binary - committed separately if needed)
+# ml_scoring_model.pkl
+
+# Logs and temp
+logs/
+*.log
+cache/
+outputs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
