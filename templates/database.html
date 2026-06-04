@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active_page = "database" %}
+{% block title %}Data Explorer · RepurposeIQ{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head" style="margin-bottom:2px"><span class="s-kicker">Library</span></div>
+  <h1 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">Data Explorer</h1>
+  <p class="text-sm text-text-muted" style="margin-top:2px">Browse compounds, targets, and diseases in the database</p>
+</div>
+
+<!-- Search -->
+<div class="card mb-2">
+  <div class="card-title mb-1">Compound Search</div>
+  <div class="flex gap-3 items-center" style="margin-top:0.5rem">
+    <input class="input" id="db-q" type="text" placeholder="Name, mechanism, or target…" style="flex:1" onkeydown="if(event.key==='Enter')doSearch()"/>
+    <button class="btn btn-primary" onclick="doSearch()" id="db-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Search
+    </button>
+  </div>
+  <div id="db-out" class="mt-1"></div>
+</div>
+
+<!-- Stats -->
+<div class="card">
+  <div class="card-title mb-1">Database Statistics</div>
+  {% if stats %}
+  <div class="overflow-x">
+    <table class="data-table">
+      <thead><tr><th>Table</th><th>Records</th></tr></thead>
+      <tbody>
+        {% set display_names = {
+          "compounds": "Compounds",
+          "targets": "Protein Targets",
+          "mechanisms": "Mechanism Records",
+          "indications": "Clinical Indications",
+          "hetionet_nodes": "Knowledge Graph Nodes",
+          "mesh_diseases": "Disease Classifications"
+        } %}
+        {% for key, val in stats.items() %}
+        <tr>
+          <td>{{ display_names.get(key, key.replace("_"," ").title()) }}</td>
+          <td class="mono" style="color:var(--purple)">{{ "{:,}".format(val) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Database offline or no statistics available.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+async function doSearch() {
+  const q = document.getElementById('db-q').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('db-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  const out = document.getElementById('db-out');
+  out.innerHTML = '';
+  try {
+    const rows = await apiFetch(`/api/database/search?q=${encodeURIComponent(q)}`);
+    if (!rows.length) { out.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">No results.</div>'; return; }
+    const cols = ['chembl_id','name','max_phase','mw','alogp','mechanisms','targets'].filter(c => rows.some(r => r[c] != null));
+    const phLabels = {4:'FDA Approved',3:'Phase 3',2:'Phase 2',1:'Phase 1'};
+    const trows = rows.slice(0,30).map(r => `<tr>
+      ${cols.map(c => {
+        if (c==='chembl_id') return `<td><a href="/analysis?id=${r.chembl_id||''}" class="text-cyan mono" style="font-size:0.75rem">${r[c]||''}</a></td>`;
+        if (c==='max_phase') {
+          const ph = Math.min(+(r[c]||0),4);
+          return `<td><span class="phase-pill phase-${ph}">${phLabels[ph]||'Preclinical'}</span></td>`;
+        }
+        return `<td style="font-size:0.78rem">${String(r[c]||'').slice(0,55)}</td>`;
+      }).join('')}
+    </tr>`).join('');
+    out.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;margin-bottom:0.5rem">${rows.length} results</div>
+      <div class="overflow-x"><table class="data-table">
+        <thead><tr>${cols.map(c=>`<th>${c.replace('_',' ')}</th>`).join('')}</tr></thead>
+        <tbody>${trows}</tbody>
+      </table></div>`;
+  } catch(e) { out.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+  finally { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Search'; btn.disabled = false; }
+}
+</script>
+{% endblock %}

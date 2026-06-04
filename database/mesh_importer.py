@@ -12,6 +12,7 @@ Also:
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -27,8 +28,24 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
 
-CHEMBL_CONN = dict(host="localhost", port=5434, user="babburisoumith", password="", dbname="chembl_33")
-NEURO_CONN  = dict(host="localhost", port=5434, user="babburisoumith", password="", dbname="neurorepurpose")
+def _conn_config(prefix: str, default_name: str) -> dict:
+    return {
+        "host": os.getenv(f"{prefix}_HOST", "localhost"),
+        "port": int(os.getenv(f"{prefix}_PORT", "5433")),
+        "user": os.getenv(f"{prefix}_USER", "babburisoumith"),
+        "password": os.getenv(f"{prefix}_PASSWORD", ""),
+        "dbname": os.getenv(f"{prefix}_NAME", default_name),
+    }
+
+
+CHEMBL_CONN = _conn_config("CHEMBL_DB", "chembl_33")
+NEURO_CONN  = {
+    "host": os.getenv("DB_HOST", CHEMBL_CONN["host"]),
+    "port": int(os.getenv("DB_PORT", str(CHEMBL_CONN["port"]))),
+    "user": os.getenv("DB_USER", CHEMBL_CONN["user"]),
+    "password": os.getenv("DB_PASSWORD", CHEMBL_CONN["password"]),
+    "dbname": os.getenv("DB_NAME", "neurorepurpose"),
+}
 
 SPARQL_ENDPOINT = "https://id.nlm.nih.gov/mesh/sparql"
 MESH_BASE       = "http://id.nlm.nih.gov/mesh/"

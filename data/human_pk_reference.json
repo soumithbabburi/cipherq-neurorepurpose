@@ -1,0 +1,25 @@
+{
+  "_description": "Measured human pharmacokinetics used to ANCHOR the PBPK model when a drug is present (otherwise the model falls back to first-principles estimates). Absolute CL and Vss are derived from labelled apparent values (CL/F, Vz/F) multiplied by bioavailability F. This is the slot for a company's own internal/clinical PK data — add or correct entries freely. Fields: cl_l_h (total plasma clearance), vss_l (volume of distribution), t_half_h, f_oral (absolute bioavailability), fu (plasma free fraction), fe_renal (fraction of clearance that is renal), tmax_h, source.",
+  "drugs": {
+    "erlotinib": {
+      "cl_l_h": 2.33, "vss_l": 137.0, "t_half_h": 36.2, "f_oral": 0.59,
+      "fu": 0.05, "fe_renal": 0.05, "tmax_h": 3.0,
+      "source": "FDA label (Tarceva) / Lu et al., Clin Pharmacol Ther 2006 — CL/F 3.95 L/h, Vz/F 233 L, ~95% protein bound"
+    },
+    "palbociclib": {
+      "cl_l_h": 29.0, "vss_l": 1188.0, "t_half_h": 29.0, "f_oral": 0.46,
+      "fu": 0.15, "fe_renal": 0.17, "tmax_h": 8.0,
+      "source": "FDA label (Ibrance) — CL/F 63.1 L/h, Vz/F 2583 L, ~85% protein bound, F 46%"
+    },
+    "methotrexate": {
+      "cl_l_h": 9.0, "vss_l": 45.0, "t_half_h": 6.0, "f_oral": 0.70,
+      "fu": 0.50, "fe_renal": 0.85, "tmax_h": 1.5,
+      "source": "FDA label / literature — predominantly renal elimination, ~50% protein bound, dose-dependent F"
+    },
+    "metformin": {
+      "cl_l_h": 30.0, "vss_l": 90.0, "t_half_h": 6.2, "f_oral": 0.55,
+      "fu": 0.95, "fe_renal": 0.90, "tmax_h": 2.5,
+      "source": "FDA label (Glucophage) — renal elimination (tubular secretion), negligible protein binding"
+    }
+  }
+}

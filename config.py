@@ -13,7 +13,7 @@ class Config:
     
     # Database Configuration
     DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5434")
+    DB_PORT = os.getenv("DB_PORT", os.getenv("CHEMBL_DB_PORT", "5433"))
     DB_NAME = os.getenv("DB_NAME", "neurorepurpose")
     DB_USER = os.getenv("DB_USER", "")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")

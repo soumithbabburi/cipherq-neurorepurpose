@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", "5434")),
-    "user": os.getenv("DB_USER", "babburisoumith"),
-    "password": os.getenv("DB_PASSWORD", ""),
+    "port": int(os.getenv("DB_PORT", os.getenv("CHEMBL_DB_PORT", "5433"))),
+    "user": os.getenv("DB_USER", os.getenv("CHEMBL_DB_USER", "babburisoumith")),
+    "password": os.getenv("DB_PASSWORD", os.getenv("CHEMBL_DB_PASSWORD", "")),
     "dbname": "neurorepurpose",
 }
 

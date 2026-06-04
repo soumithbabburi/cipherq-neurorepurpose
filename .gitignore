@@ -40,3 +40,8 @@ outputs/
 # OS
 .DS_Store
 Thumbs.db
+.venv312/
+.flasklog.txt
+.flaskout.txt
+biocypher-log/
+.claude/

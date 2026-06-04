@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% set active_page = "discover" %}
+{% block title %}Compound Discovery · CipherQ{% endblock %}
+
+{% block content %}
+<!-- Header / search -->
+<div class="flex flex-wrap items-center justify-between gap-md mb-2">
+  <div>
+    <div class="section-head" style="margin-bottom:2px">
+      <span class="s-kicker">Discovery</span>
+    </div>
+    <h2 class="font-display" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em;color:var(--text-primary);line-height:1.1">Compound Discovery</h2>
+    <p class="text-sm" style="color:var(--text-muted);margin-top:4px" id="subtitle-text">
+      {%- if results -%}Reviewing <strong>{{ results|length }}</strong> candidates for <strong>{{ disease_name }}</strong>{%- else -%}Search any disease or condition to open a repurposing case file{%- endif -%}
+    </p>
+  </div>
+  <div class="flex items-center gap-xs p-xs rounded-xl flex-wrap" style="background:var(--bg-card);border:1px solid var(--border-default);box-shadow:var(--shadow-sm)">
+    <div class="relative flex items-center">
+      <span class="material-symbols-outlined absolute left-sm text-text-dim pointer-events-none" style="font-size:18px;top:50%;transform:translateY(-50%)">search</span>
+      <input class="bg-transparent border-none pl-8 pr-sm py-xs text-sm focus:ring-0 w-52 outline-none"
+             id="disc-q" type="text" value="{{ query }}" placeholder="Disease name…" autocomplete="off"
+             onkeydown="if(event.key==='Enter')doSearch()" oninput="showSuggestions(this.value)"/>
+      <div id="disc-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-raised);border:1px solid var(--border-default);border-radius:8px;box-shadow:var(--shadow-md);z-index:100;max-height:220px;overflow-y:auto;margin-top:4px"></div>
+    </div>
+    <div class="w-px h-5 mx-xs self-stretch" style="background:var(--border-default)"></div>
+    <div class="flex items-center gap-xs px-sm py-xs">
+      <span class="text-caption text-text-dim uppercase">Phase</span>
+      <select id="filter-phase" class="bg-transparent border-none text-sm focus:ring-0 cursor-pointer outline-none" onchange="filterCards()">
+        <option value="">All Stages</option>
+        <option value="4">FDA Approved</option>
+        <option value="3">Phase 3</option>
+        <option value="2">Phase 2</option>
+        <option value="1">Phase 1</option>
+        <option value="0">Preclinical</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" style="padding:0.45rem 0.95rem" onclick="doSearch()" id="search-btn">
+      <span class="material-symbols-outlined" style="font-size:16px">search</span>
+      Search
+    </button>
+  </div>
+</div>
+
+<div id="status-bar" class="mb-md"></div>
+
+<!-- Top 3 Candidates -->
+<div id="top3-section" style="display:none;margin-bottom:1.75rem">
+  <div class="section-head">
+    <span class="s-kicker">Lead Candidates</span>
+    <span class="section-title">Top of the case file</span>
+    <div class="rule"></div>
+    <button id="graph-link-btn" class="btn btn-secondary" style="padding:0.4rem 0.8rem;font-size:0.72rem">
+      <span class="material-symbols-outlined" style="font-size:14px">hub</span>
+      Knowledge Graph
+    </button>
+  </div>
+  <div id="top3-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem"></div>
+</div>
+
+<!-- Compound Grid -->
+<div class="compound-grid" id="compound-grid">
+  <div style="grid-column:1/-1" class="empty-state" id="empty-default">
+    <div style="width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft)">
+      <span class="material-symbols-outlined" style="font-size:28px;color:var(--accent)">biotech</span>
+    </div>
+    <p class="font-display" style="font-size:1.05rem;font-weight:600;color:var(--text-primary)">No case file open yet</p>
+    <p style="font-size:0.85rem;color:var(--text-muted)">Enter any disease or condition above to surface repurposing candidates.</p>
+  </div>
+</div>
+
+<script>
+const meshIds = {{ mesh_ids|safe }};
+window._compounds = {};
+window._initialResults = [];
+{% for c in results %}
+try { var _c = {{ c|tojson }}; window._compounds[_c.chembl_id] = _c; window._initialResults.push(_c); } catch(_e) {}
+{% endfor %}
+
+// ── Phase pill (warm class-based) ─────────────────────────────────────────────
+function phasePill(ph) {
+  return `<span class="phase-pill phase-${ph}">${window.phaseLabel(ph)}</span>`;
+}
+
+// ── One-line "why this is a candidate" ────────────────────────────────────────
+function buildWhy(c) {
+  const ph = Math.min(+(c.max_phase || 0), 4);
+  const parts = [];
+  const tgt = (c.targets || '').split(',').map(s => s.trim()).filter(Boolean)[0];
+  const mech = (c.mechanisms || '').split(',').map(s => s.trim()).filter(Boolean)[0];
+  if (tgt) parts.push('Shares target ' + tgt.slice(0, 26));
+  else if (mech) parts.push(mech.slice(0, 44));
+  if (ph >= 3) parts.push(window.phaseLabel(ph) + ' evidence');
+  else if (ph >= 1) parts.push('Phase ' + ph + ' data');
+  if (c.in_portfolio || c.portfolio) parts.push('In portfolio · 505(b)(2)-ready');
+  return parts.slice(0, 2).join(' · ') || 'Computational repurposing candidate';
+}
+
+// ── Score factor bars — uniform accent→gold gradient (one accent discipline) ──
+function scoreBars(c) {
+  const sc = c.score || 0, bd = c.score_breakdown || {}, sc5 = c.scores || {};
+  const has5 = sc5 && Object.keys(sc5).length > 0;
+  let items = has5
+    ? [['Target', sc5.target ?? 0], ['Pathway', sc5.pathway ?? 0], ['Clinical', sc5.clinical ?? 0], ['505(b)(2)', sc5.regulatory ?? 0]]
+    : [['Potency', bd.indication_score ?? sc], ['Activity', bd.activity_score ?? sc * 0.8], ['Network', bd.network_score ?? sc * 0.6], ['Evidence', bd.target_score ?? sc * 0.9]];
+  if (c.developability_score != null) items.push(['Develop.', c.developability_score]);
+  return items.map(([l, v]) => {
+    const pct = Math.min(Math.max(Math.round(v * 100), 0), 100);
+    return `<div class="cc-bar-item" style="flex-direction:row;align-items:center;gap:8px">
+      <span class="cc-bar-lbl" style="width:62px;flex-shrink:0">${l}</span>
+      <div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:${pct}%"></div></div>
+      <span class="mono" style="font-size:9px;color:var(--text-muted);width:24px;text-align:right">${(v * 10).toFixed(1)}</span>
+    </div>`;
+  }).join('');
+}
+
+function graphHref(chembl, disease) {
+  return "/graph?disease=" + encodeURIComponent(disease) + (chembl ? "&compound=" + encodeURIComponent(chembl) : "");
+}
+
+// ── Standard dossier card ─────────────────────────────────────────────────────
+function buildCard(c, disease) {
+  const sc = c.score || 0;
+  const ph = Math.min(+(c.max_phase || 0), 4);
+  const dEsc = (disease || '').replace(/'/g, "\\'");
+  return `<div class="dossier" style="padding:18px 20px 18px 22px;display:flex;flex-direction:column;gap:13px;cursor:pointer"
+      onclick="openCompound('${c.chembl_id || ''}','${dEsc}')" data-chembl="${c.chembl_id || ''}" data-phase="${ph}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div style="min-width:0;flex:1">
+        <div class="cc-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name || 'Unknown'}</div>
+        <div class="cc-id">${c.chembl_id || ''}</div>
+        <div style="margin-top:7px">${phasePill(ph)}</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0">
+        ${window.scoreSeal(sc, 52)}
+        <div class="seal-lbl" style="margin-top:3px">Confidence</div>
+      </div>
+    </div>
+    <div class="why-line"><span class="mk">▸</span><span>${buildWhy(c)}</span></div>
+    <div class="cc-bars">${scoreBars(c)}</div>
+    <div style="display:flex;gap:6px;margin-top:2px">
+      <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
+      <button onclick="event.stopPropagation();window.location.href=graphHref('${c.chembl_id || ''}','${dEsc}')" title="Knowledge Graph" class="btn btn-secondary" style="padding:0.45rem 0.6rem">
+        <span class="material-symbols-outlined" style="font-size:15px">hub</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── Lead (top-3) card — same dossier, rank seal banner ────────────────────────
+function buildTop3Card(c, disease, rank) {
+  const sc = c.score || 0;
+  const ph = Math.min(+(c.max_phase || 0), 4);
+  const dEsc = (disease || '').replace(/'/g, "\\'");
+  const rankWord = {1:'Lead', 2:'Second', 3:'Third'}[rank] || ('#' + rank);
+  return `<div class="dossier" style="padding:18px 20px 18px 22px;display:flex;flex-direction:column;gap:13px;cursor:pointer"
+      onclick="openCompound('${c.chembl_id || ''}','${dEsc}')" data-chembl="${c.chembl_id || ''}" data-phase="${ph}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent)">${rankWord} candidate</span>
+      ${phasePill(ph)}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div style="min-width:0;flex:1">
+        <div class="cc-name" style="font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name || 'Unknown'}</div>
+        <div class="cc-id">${c.chembl_id || ''}</div>
+      </div>
+      ${window.scoreSeal(sc, 60)}
+    </div>
+    <div class="why-line"><span class="mk">▸</span><span>${buildWhy(c)}</span></div>
+    <div class="cc-bars">${scoreBars(c)}</div>
+    <div style="display:flex;gap:6px;margin-top:2px">
+      <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
+      <button onclick="event.stopPropagation();window.location.href=graphHref('${c.chembl_id || ''}','${dEsc}')" title="Knowledge Graph" class="btn btn-secondary" style="padding:0.45rem 0.6rem">
+        <span class="material-symbols-outlined" style="font-size:15px">hub</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderTop3(compounds, disease) {
+  const sec = document.getElementById('top3-section');
+  const grid = document.getElementById('top3-grid');
+  const graphBtn = document.getElementById('graph-link-btn');
+  if (!compounds.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  grid.innerHTML = compounds.slice(0, 3).map((c, i) => buildTop3Card(c, disease, i + 1)).join('');
+  if (graphBtn) {
+    const topId = (compounds[0] || {}).chembl_id || '';
+    graphBtn.onclick = () => window.location.href = graphHref(topId, disease);
+  }
+}
+
+function renderGrid(compounds, disease) {
+  const grid = document.getElementById('compound-grid');
+  if (!compounds.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1" class="empty-state">
+      <div style="width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft)">
+        <span class="material-symbols-outlined" style="font-size:28px;color:var(--accent)">search_off</span></div>
+      <p class="font-display" style="font-size:1.05rem;font-weight:600;color:var(--text-primary)">No candidates found</p>
+      <p style="font-size:0.85rem;color:var(--text-muted)">No repurposing data found for "${disease}". Try a different disease name.</p></div>`;
+    return;
+  }
+  grid.innerHTML = compounds.map(c => buildCard(c, disease)).join('');
+}
+
+function doSearch() {
+  const q = document.getElementById('disc-q').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('search-btn');
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,0.35);border-top-color:#fff"></span> Searching…';
+  btn.disabled = true;
+  document.getElementById('status-bar').innerHTML = `<div class="alert alert-info flex items-center gap-sm"><span class="material-symbols-outlined" style="font-size:16px">hourglass_top</span>Searching for <strong style="margin-left:4px">${q}</strong>…</div>`;
+  fetch('/api/search', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({query: q})})
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { toast(data.error, 'error'); return; }
+    const disease = data.disease;
+    document.getElementById('subtitle-text').innerHTML = `Reviewing <strong>${data.compounds.length}</strong> candidates for <strong>${disease}</strong>`;
+    document.getElementById('status-bar').innerHTML = '';
+    renderGrid(data.compounds, disease);
+    data.compounds.forEach(c => { if (c.chembl_id) window._compounds[c.chembl_id] = c; });
+    window._currentDisease = disease;
+    window._meshIds = data.mesh_ids;
+    _saveSession(data.compounds, disease);
+    renderTop3(data.compounds, disease);
+    history.pushState({}, '', '/discover?q=' + encodeURIComponent(q));
+  })
+  .catch(e => { toast('Search failed: ' + e.message, 'error'); document.getElementById('status-bar').innerHTML = ''; })
+  .finally(() => { btn.innerHTML = origHTML; btn.disabled = false; });
+}
+
+function filterCards() {
+  const ph = document.getElementById('filter-phase').value;
+  document.querySelectorAll('#compound-grid [data-chembl]').forEach(el => {
+    el.style.display = (!ph || el.dataset.phase === ph) ? '' : 'none';
+  });
+}
+
+function openCompound(chemblId, disease) {
+  if (!chemblId) return;
+  const cdata = window._compounds && window._compounds[chemblId];
+  if (cdata) { try { sessionStorage.setItem('compound_' + chemblId, JSON.stringify(cdata)); } catch(_e) {} }
+  window.location.href = `/analysis?id=${chemblId}&disease=${encodeURIComponent(disease || '')}`;
+}
+
+window._currentDisease = {{ ('"' ~ disease_name ~ '"')|safe }};
+window._meshIds = meshIds;
+
+// ── Session helpers ───────────────────────────────────────────────────────────
+function _saveSession(compounds, disease) {
+  try {
+    sessionStorage.setItem('cq_discover_results', JSON.stringify(compounds));
+    sessionStorage.setItem('cq_discover_disease', disease);
+    sessionStorage.setItem('cq_last_disease', disease);
+    const navLink = document.getElementById('nav-graph-link');
+    if (navLink) navLink.href = '/graph?disease=' + encodeURIComponent(disease);
+  } catch(_) {}
+}
+
+function _loadSession() {
+  try {
+    const disease = sessionStorage.getItem('cq_discover_disease') || '';
+    const jsonStr = sessionStorage.getItem('cq_discover_results') || '';
+    if (!disease || !jsonStr) return false;
+    const compounds = JSON.parse(jsonStr);
+    if (!compounds.length) return false;
+    document.getElementById('disc-q').value = disease;
+    document.getElementById('subtitle-text').innerHTML = `Reviewing <strong>${compounds.length}</strong> candidates for <strong>${disease}</strong>`;
+    renderGrid(compounds, disease);
+    compounds.forEach(c => { if (c.chembl_id) window._compounds[c.chembl_id] = c; });
+    window._currentDisease = disease;
+    history.replaceState({}, '', '/discover?q=' + encodeURIComponent(disease));
+    renderTop3(compounds, disease);
+    return true;
+  } catch(_) { return false; }
+}
+
+// Initial render — single JS path for both server results and session restore
+if (window._initialResults.length) {
+  renderGrid(window._initialResults, window._currentDisease);
+  _saveSession(window._initialResults, window._currentDisease);
+  renderTop3(window._initialResults, window._currentDisease);
+} else {
+  _loadSession();
+}
+
+let _suggestTimer = null;
+function showSuggestions(val) {
+  clearTimeout(_suggestTimer);
+  const box = document.getElementById('disc-suggestions');
+  if (!val || val.length < 2) { box.style.display = 'none'; return; }
+  _suggestTimer = setTimeout(async () => {
+    try {
+      const list = await apiFetch('/api/suggest-diseases?q=' + encodeURIComponent(val));
+      if (!list || !list.length) { box.style.display = 'none'; return; }
+      box.innerHTML = list.map(d =>
+        `<div onclick="document.getElementById('disc-q').value='${d.replace(/'/g,"\\'")}';document.getElementById('disc-suggestions').style.display='none';doSearch()"
+             style="padding:8px 14px;font-size:12px;color:var(--text-primary);cursor:pointer;border-bottom:1px solid var(--border-subtle)"
+             onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background=''">${d}</div>`
+      ).join('');
+      box.style.display = 'block';
+    } catch(_e) { box.style.display = 'none'; }
+  }, 250);
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#disc-q') && !e.target.closest('#disc-suggestions'))
+    document.getElementById('disc-suggestions').style.display = 'none';
+});
+</script>
+{% endblock %}

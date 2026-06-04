@@ -25,7 +25,7 @@ _KNOWN_PDB = {
     "SNCA":  "1XQ8", "ALPHA-SYNUCLEIN": "1XQ8",
     "MAO-B": "2V5Z", "MAOB": "2V5Z",
     "GSK3B": "1Q5K", "GSK3": "1Q5K",
-    "EGFR":  "1IVO",
+    "EGFR":  "1M17",   # kinase domain with erlotinib bound (correct ATP pocket)
     "ACE":   "1O86",
     "HMGCR": "1HWK",
     "DPP4":  "1NNY",
@@ -88,7 +88,7 @@ class RealPDBFetcher:
 
     def _download_pdb(self, pdb_id: str) -> str:
         try:
-            r = requests.get(_RCSB_DOWNLOAD.format(pdb_id=pdb_id), timeout=20)
+            r = requests.get(_RCSB_DOWNLOAD.format(pdb_id=pdb_id), timeout=8)
             if r.status_code == 200:
                 logger.info(f"PDB downloaded: {pdb_id}")
                 return r.text
@@ -112,7 +112,7 @@ class RealPDBFetcher:
                     "scoring_strategy": "combined",
                 },
             }
-            r = requests.post(_RCSB_SEARCH, json=payload, timeout=15)
+            r = requests.post(_RCSB_SEARCH, json=payload, timeout=6)
             if r.status_code == 200:
                 hits = r.json().get("result_set", [])
                 if hits:
@@ -125,7 +125,7 @@ class RealPDBFetcher:
         try:
             r = requests.get(
                 _UNIPROT_SEARCH.format(gene=gene),
-                timeout=10,
+                timeout=5,
                 headers={"Accept": "application/json"},
             )
             if r.status_code == 200:
@@ -138,7 +138,7 @@ class RealPDBFetcher:
 
     def _alphafold_fetch(self, uniprot_id: str) -> str:
         try:
-            r = requests.get(_ALPHAFOLD_URL.format(uniprot_id=uniprot_id), timeout=20)
+            r = requests.get(_ALPHAFOLD_URL.format(uniprot_id=uniprot_id), timeout=8)
             if r.status_code == 200:
                 logger.info(f"AlphaFold structure fetched for {uniprot_id}")
                 return r.text

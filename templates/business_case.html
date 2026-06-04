@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% set active_page = "business" %}
+{% block title %}Business Case · CipherQ AI Drug Discovery{% endblock %}
+
+{% block head %}
+<style>
+  .bc-hero { background: linear-gradient(135deg,#1f3a30 0%,#26342b 45%,#2a2018 100%); border-radius:16px; padding:48px 40px 40px; margin-bottom:28px; position:relative; overflow:hidden; }
+  .bc-hero::after { content:''; position:absolute; top:-60px; right:-60px; width:280px; height:280px; background:radial-gradient(circle,rgba(63,143,111,0.38) 0%,transparent 70%); }
+  .bc-hero::before { content:''; position:absolute; bottom:-40px; left:20%; width:200px; height:200px; background:radial-gradient(circle,rgba(184,134,11,0.22) 0%,transparent 70%); }
+  .bc-hero h1 { font-family:var(--font-serif); font-weight:600 !important; letter-spacing:-0.02em !important; }
+  .stat-card { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:20px 24px; text-align:center; backdrop-filter:blur(4px); }
+  .stat-num { font-size:2rem; font-weight:900; font-family:monospace; letter-spacing:-0.04em; }
+  .tab-nav { display:flex; gap:0; border-bottom:2px solid #e6e2d7; margin-bottom:28px; overflow-x:auto; }
+  .tab-btn { padding:10px 22px 12px; font-size:13px; font-weight:500; color:#6b776e; border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:all 0.15s; }
+  .tab-btn.active { color:#2f6f5b; border-bottom-color:#2f6f5b; font-weight:700; }
+  .tab-btn:hover:not(.active) { color:#1f2a24; }
+  .tab-panel { display:none; } .tab-panel.active { display:block; }
+  .pillar { background:#fffdf9; border:1px solid #e6e2d7; border-radius:14px; padding:28px; position:relative; overflow:hidden; }
+  .pillar::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; }
+  .pillar-1::before { background:linear-gradient(90deg,#2f6f5b,#245546); }
+  .pillar-2::before { background:linear-gradient(90deg,#8a6309,#b8860b); }
+  .pillar-3::before { background:linear-gradient(90deg,#2f6f5b,#3f8f6f); }
+  .pillar-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; font-size:22px; }
+  .pill-tag { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; letter-spacing:0.05em; }
+  .insilico-box { background:linear-gradient(135deg,#eef4ef,#ecfdf5); border:1.5px solid #9fd0b6; border-radius:14px; padding:24px 28px; }
+  .phase-box { border-radius:12px; padding:20px 24px; }
+  .flowchart-wrap { overflow-x:auto; padding:8px 0; }
+  .flowchart-box { display:inline-flex; align-items:center; justify-content:center; border-radius:10px; padding:10px 18px; font-size:12px; font-weight:700; text-align:center; min-width:130px; line-height:1.35; }
+  .flowchart-arrow { font-size:22px; color:#9aa39c; padding:0 6px; flex-shrink:0; }
+  .flowchart-row { display:flex; align-items:center; flex-wrap:nowrap; margin-bottom:12px; }
+  .rev-card { background:#fffdf9; border:1px solid #e6e2d7; border-radius:12px; padding:20px; }
+  .metric-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #ecebe3; font-size:0.83rem; }
+  .metric-row:last-child { border-bottom:none; }
+  .reg-sub-btn { padding:7px 18px; font-size:12px; font-weight:600; border-radius:8px; border:1.5px solid #e6e2d7; cursor:pointer; transition:all 0.15s; background:#fffdf9; color:#45524a; }
+  .reg-sub-btn.active { background:#2f6f5b; color:#fffdf9; border-color:#2f6f5b; }
+  @keyframes countUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .count-anim { animation: countUp 0.6s ease forwards; }
+  .arch-box { border-radius:10px; padding:12px 16px; font-size:11.5px; font-weight:600; text-align:center; line-height:1.4; }
+  .arch-arrow { color:#9aa39c; font-size:20px; margin:0 6px; flex-shrink:0; }
+  .arch-layer { background:#f6f5f0; border:1px solid #e6e2d7; border-radius:12px; padding:16px 20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="bc-hero">
+  <div style="position:relative;z-index:1">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:8px;height:8px;border-radius:50%;background:#3f8f6f;animation:pulse 2s infinite"></div>
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3f8f6f">CipherQ AI Platform</span>
+    </div>
+    <h1 style="font-size:2.4rem;font-weight:900;letter-spacing:-0.04em;color:#fffdf9;line-height:1.15;margin-bottom:10px">AI-Powered Drug Discovery<br/><span style="background:linear-gradient(90deg,#3f8f6f,#d8b25a);-webkit-background-clip:text;-webkit-text-fill-color:transparent">& Repurposing Platform</span></h1>
+    <p style="color:#a9c6ba;font-size:0.92rem;max-width:620px;line-height:1.65;margin-bottom:28px">From approved drug flashcards to breakthrough molecules — end-to-end AI that predicts new candidates, repurposes FDA-approved drugs via 505(b)(2), and designs de novo molecules with optimised ADMET profiles.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:700px">
+      <div class="stat-card"><div class="stat-num" style="color:#3f8f6f" id="stat1">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px">% Cost Saving</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#d8b25a" id="stat2">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px">Mo. to Phase II</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#9fd0b6" id="stat3">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px">AI Pillars</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#fcd34d" id="stat4">$0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px">M Target ARR Y5</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab-btn" onclick="switchTab('architecture')">Platform Architecture</button>
+  <button class="tab-btn" onclick="switchTab('roadmap')">36-Month Roadmap</button>
+  <button class="tab-btn" onclick="switchTab('regulatory')">Regulatory Pathways</button>
+  <button class="tab-btn" onclick="switchTab('financials')">Business Case</button>
+</div>
+
+<!-- ── TAB 1: Overview ──────────────────────────────────────────────────────── -->
+<div id="panel-overview" class="tab-panel active">
+
+  <!-- Insilico validation box -->
+  <div class="insilico-box mb-4" style="margin-bottom:24px">
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <div style="width:44px;height:44px;background:#2f6f5b;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">✓</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2f6f5b;margin-bottom:4px">Proof of Concept — Insilico Medicine</div>
+        <div style="font-size:0.95rem;font-weight:800;color:#1f2a24;margin-bottom:6px">ISM001-055: AI-Designed de Novo Molecule → Phase II in &lt;30 Months</div>
+        <p style="font-size:0.8rem;color:#45524a;line-height:1.65">Insilico Medicine used their end-to-end AI platform to identify a novel target (TNIK) for idiopathic pulmonary fibrosis, design a de novo molecule (ISM001-055), run ADMET optimisation — and advance to Phase II clinical trials in under 30 months. Traditional drug discovery averages 12+ years. This is the blueprint CipherQ is building.</p>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+          <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b;border:1px solid #bfe0cd">Target: TNIK (novel)</span>
+          <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b;border:1px solid #bfe0cd">Disease: IPF</span>
+          <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b;border:1px solid #bfe0cd">Timeline: &lt;30 months</span>
+          <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b;border:1px solid #bfe0cd">Route: 505(b)(1)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 Pillars -->
+  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:14px">Three Pillars of the AI Platform</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px">
+    <div class="pillar pillar-1">
+      <div class="pillar-icon" style="background:#eef3f0;color:#2f6f5b">🔄</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2f6f5b;margin-bottom:6px">Pillar 1</div>
+      <div style="font-size:1rem;font-weight:800;color:#1f2a24;margin-bottom:8px">Drug Repurposing Engine</div>
+      <p style="font-size:0.78rem;color:#45524a;line-height:1.65">Scans FDA-approved drugs against new disease targets. Supports the 505(b)(2) fast-track pathway, leveraging existing safety data to cut clinical trial phases and cost.</p>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="pill-tag" style="background:#eef3f0;color:#2f6f5b">505(b)(2) optimised</span>
+        <span class="pill-tag" style="background:#eef3f0;color:#2f6f5b">GNN scoring</span>
+        <span class="pill-tag" style="background:#eef3f0;color:#2f6f5b">5-screen engine</span>
+      </div>
+    </div>
+    <div class="pillar pillar-2">
+      <div class="pillar-icon" style="background:#fbf6ea;color:#8a6309">🧬</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#8a6309;margin-bottom:6px">Pillar 2</div>
+      <div style="font-size:1rem;font-weight:800;color:#1f2a24;margin-bottom:8px">De Novo Molecule Designer</div>
+      <p style="font-size:0.78rem;color:#45524a;line-height:1.65">Generative AI (VAE + diffusion models) designs novel chemical scaffolds with optimised ADMET profiles — going beyond repurposing to true molecular invention.</p>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="pill-tag" style="background:#fbf6ea;color:#8a6309">VAE / Diffusion</span>
+        <span class="pill-tag" style="background:#fbf6ea;color:#8a6309">ADMET predictor</span>
+        <span class="pill-tag" style="background:#fbf6ea;color:#8a6309">Scaffold hopping</span>
+      </div>
+    </div>
+    <div class="pillar pillar-3">
+      <div class="pillar-icon" style="background:#eef4ef;color:#2f6f5b">⚖️</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2f6f5b;margin-bottom:6px">Pillar 3</div>
+      <div style="font-size:1rem;font-weight:800;color:#1f2a24;margin-bottom:8px">Regulatory Intelligence</div>
+      <p style="font-size:0.78rem;color:#45524a;line-height:1.65">Auto-selects optimal FDA pathway based on molecule novelty and prior data. Drafts IND/NDA briefing documents. Identifies orphan drug eligibility and exclusivity windows.</p>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b">Pathway selector</span>
+        <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b">IND auto-draft</span>
+        <span class="pill-tag" style="background:#eef4ef;color:#2f6f5b">Orphan detector</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supporting AI modules -->
+  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:14px">Supporting AI Modules</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    <div style="background:#fffdf9;border:1px solid #e6e2d7;border-radius:12px;padding:18px">
+      <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-bottom:6px">🎯 Target Identification AI</div>
+      <p style="font-size:0.75rem;color:#6b776e;line-height:1.6">Multi-omics fusion: genomics, proteomics, transcriptomics + biomedical literature (PubMed, Open Targets) to surface novel disease targets.</p>
+    </div>
+    <div style="background:#fffdf9;border:1px solid #e6e2d7;border-radius:12px;padding:18px">
+      <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-bottom:6px">⚗️ ADMET Predictor</div>
+      <p style="font-size:0.75rem;color:#6b776e;line-height:1.6">Predicts absorption, distribution, metabolism, excretion and toxicity before synthesis — eliminating costly late-stage failures before animal models.</p>
+    </div>
+    <div style="background:#fffdf9;border:1px solid #e6e2d7;border-radius:12px;padding:18px">
+      <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-bottom:6px">🏥 Clinical Trial Optimizer</div>
+      <p style="font-size:0.75rem;color:#6b776e;line-height:1.6">AI-matched patient cohorts, adaptive trial designs, and real-world evidence integration to cut Phase II/III time and cost by up to 40%.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 2: Architecture ─────────────────────────────────────────────────── -->
+<div id="panel-architecture" class="tab-panel">
+  <div style="font-size:0.92rem;color:#6b776e;margin-bottom:24px">The full AI pipeline from raw data ingestion to regulatory-ready outputs — with dual pathways for repurposing and de novo design.</div>
+
+  <!-- Layer 1: Data Ingestion -->
+  <div style="margin-bottom:16px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:8px">Layer 1 — Data Ingestion</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      {%- for src, col in [("ChEMBL","#2f6f5b"),("Open Targets","#8a6309"),("PubMed / Literature","#2f6f5b"),("RCSB PDB","#97751a"),("ClinicalTrials.gov","#b3261e"),("NCBI / MeSH","#245546"),("STRING DB PPI","#b8860b")] -%}
+      <div style="padding:8px 14px;background:{{ col }}15;border:1px solid {{ col }}40;border-radius:8px;font-size:11.5px;font-weight:700;color:{{ col }}">{{ src }}</div>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;font-size:22px;color:#9aa39c;margin:4px 0">↓</div>
+
+  <!-- Layer 2: Knowledge Graph Engine -->
+  <div style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border:1.5px solid #cfe0d8;border-radius:14px;padding:20px 24px;margin-bottom:16px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2f6f5b;margin-bottom:12px">Layer 2 — Knowledge Graph Engine (GNN)</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      {%- for box, col in [("Drug–Disease Associations","#2f6f5b"),("Gene–Pathway Mapping","#8a6309"),("Protein–Protein Interaction Network","#2f6f5b"),("Clinical Evidence Scoring","#97751a")] -%}
+      <div class="arch-box" style="background:white;border:1px solid {{ col }}40;color:{{ col }}">{{ box }}</div>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;font-size:22px;color:#9aa39c;margin:4px 0">↓</div>
+
+  <!-- Layer 3: AI Core -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+    <div style="background:linear-gradient(135deg,#fbf6ea,#f3e8cf);border:1.5px solid #e6cf95;border-radius:14px;padding:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8a6309;margin-bottom:10px">Repurposing Pathway</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="arch-box" style="background:white;border:1px solid #e6cf95;color:#8a6309;text-align:left">5-Screen Scoring Engine (Target · Pathway · PPI · Clinical · Indication)</div>
+        <div style="text-align:center;color:#9aa39c">↓</div>
+        <div class="arch-box" style="background:white;border:1px solid #e6cf95;color:#8a6309;text-align:left">DiffDock 3D Binding Pose Prediction</div>
+        <div style="text-align:center;color:#9aa39c">↓</div>
+        <div class="arch-box" style="background:#8a6309;color:white;font-size:13px;font-weight:800">→ 505(b)(2) Fast Track</div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border:1.5px solid #cfe0d8;border-radius:14px;padding:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2f6f5b;margin-bottom:10px">De Novo Pathway</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="arch-box" style="background:white;border:1px solid #cfe0d8;color:#2f6f5b;text-align:left">Generative Chemistry (VAE + Graph Diffusion)</div>
+        <div style="text-align:center;color:#9aa39c">↓</div>
+        <div class="arch-box" style="background:white;border:1px solid #cfe0d8;color:#2f6f5b;text-align:left">ADMET Predictor (tox · bioavailability · solubility)</div>
+        <div style="text-align:center;color:#9aa39c">↓</div>
+        <div class="arch-box" style="background:#2f6f5b;color:white;font-size:13px;font-weight:800">→ 505(b)(1) Full NDA</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;font-size:22px;color:#9aa39c;margin:4px 0">↓</div>
+
+  <!-- Layer 4: Regulatory Intelligence -->
+  <div style="background:linear-gradient(135deg,#eef4ef,#d9e9df);border:1.5px solid #bfe0cd;border-radius:14px;padding:20px 24px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2f6f5b;margin-bottom:12px">Layer 4 — Regulatory Intelligence</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      {%- for box in ["Auto-select FDA Pathway (505b1 / 505b2 / ANDA)","Auto-draft IND / NDA Briefing Documents","Orphan Drug & Exclusivity Analysis"] -%}
+      <div class="arch-box" style="background:white;border:1px solid #bfe0cd;color:#2f6f5b">{{ box }}</div>
+      {%- endfor -%}
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 3: Roadmap ─────────────────────────────────────────────────────── -->
+<div id="panel-roadmap" class="tab-panel">
+  <div style="font-size:0.88rem;color:#6b776e;margin-bottom:20px">36-month phased build · Total investment <strong style="color:#1f2a24">~$15M</strong></div>
+  <div id="gantt-chart" style="height:320px"></div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px">
+    <div class="phase-box" style="background:#eef3f0;border:1.5px solid #cfe0d8">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2f6f5b;margin-bottom:6px">Phase 1 · 0–12 Months · $3M</div>
+      <div style="font-size:0.9rem;font-weight:800;color:#1f2a24;margin-bottom:10px">Repurposing MVP</div>
+      <ul style="font-size:0.76rem;color:#6b776e;line-height:1.8;padding-left:14px;margin:0">
+        <li>ChEMBL + Open Targets integration</li>
+        <li>5-screen GNN scoring engine</li>
+        <li>505(b)(2) dossier automation</li>
+        <li>DiffDock 3D docking pipeline</li>
+        <li>PBPK simulation module</li>
+      </ul>
+      <div style="margin-top:12px;padding:8px 12px;background:white;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2f6f5b">
+        🎯 Milestone: First IND-ready repurposing package
+      </div>
+    </div>
+    <div class="phase-box" style="background:#fbf6ea;border:1.5px solid #e6cf95">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8a6309;margin-bottom:6px">Phase 2 · 12–24 Months · $5M</div>
+      <div style="font-size:0.9rem;font-weight:800;color:#1f2a24;margin-bottom:10px">De Novo + ADMET</div>
+      <ul style="font-size:0.76rem;color:#6b776e;line-height:1.8;padding-left:14px;margin:0">
+        <li>Generative chemistry (VAE/Diffusion)</li>
+        <li>ADMET predictor (ML-based)</li>
+        <li>Multi-omics target identification</li>
+        <li>Clinical trial optimizer</li>
+        <li>First pharma pilot engagement</li>
+      </ul>
+      <div style="margin-top:12px;padding:8px 12px;background:white;border-radius:8px;font-size:0.74rem;font-weight:700;color:#8a6309">
+        🎯 Milestone: Novel scaffold with drug-like profile
+      </div>
+    </div>
+    <div class="phase-box" style="background:#eef4ef;border:1.5px solid #bfe0cd">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2f6f5b;margin-bottom:6px">Phase 3 · 24–36 Months · $7M</div>
+      <div style="font-size:0.9rem;font-weight:800;color:#1f2a24;margin-bottom:10px">SaaS + Partnerships</div>
+      <ul style="font-size:0.76rem;color:#6b776e;line-height:1.8;padding-left:14px;margin:0">
+        <li>Multi-tenant SaaS platform</li>
+        <li>Pharma co-development agreements</li>
+        <li>Proprietary pipeline assets (3+)</li>
+        <li>Regulatory AI submission module</li>
+        <li>Series B fundraise</li>
+      </ul>
+      <div style="margin-top:12px;padding:8px 12px;background:white;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2f6f5b">
+        🎯 Milestone: First pharma co-development deal signed
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 4: Regulatory ─────────────────────────────────────────────────── -->
+<div id="panel-regulatory" class="tab-panel">
+  <div style="display:flex;gap:8px;margin-bottom:24px">
+    <button class="reg-sub-btn active" onclick="switchReg('reg505b2',this)">505(b)(2) — Repurposing</button>
+    <button class="reg-sub-btn" onclick="switchReg('reg505b1',this)">505(b)(1) — Full NDA (NCE)</button>
+    <button class="reg-sub-btn" onclick="switchReg('reganda',this)">ANDA — Generic</button>
+  </div>
+
+  <!-- 505(b)(2) -->
+  <div id="reg505b2">
+    <div style="background:#f8f2df;border:1.5px solid #e6cf95;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.82rem;color:#7a5c43">
+      <strong>Primary AI Repurposing Route</strong> — Relies on prior Reference Listed Drug (RLD) data. Requires only bridging studies for the new indication. <strong>3–5 year timeline, 40–60% cost saving vs full NDA.</strong>
+    </div>
+    <div class="flowchart-wrap">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:700px">
+        <div class="flowchart-row">
+          <div class="flowchart-box" style="background:#eef3f0;border:2px solid #cfe0d8;color:#2f6f5b">AI Drug Repurposing Engine<br/><span style="font-size:10px;font-weight:400">New indication identified</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#eef3f0;border:2px solid #cfe0d8;color:#2f6f5b">5-Screen Scoring<br/><span style="font-size:10px;font-weight:400">Target · Pathway · Clinical</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#eef3f0;border:2px solid #cfe0d8;color:#2f6f5b">Evidence Dossier<br/><span style="font-size:10px;font-weight:400">Mechanistic rationale</span></div>
+        </div>
+        <div class="flowchart-row" style="padding-left:60px">
+          <div class="flowchart-arrow" style="transform:rotate(90deg)">↓</div>
+        </div>
+        <div class="flowchart-row">
+          <div class="flowchart-box" style="background:#f8f2df;border:2px solid #e6cf95;color:#7a5c43">IND Application<br/><span style="font-size:10px;font-weight:400">Cites RLD safety data</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#f8f2df;border:2px solid #e6cf95;color:#7a5c43">Bridging Studies<br/><span style="font-size:10px;font-weight:400">PK/PD for new indication</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#f8f2df;border:2px solid #e6cf95;color:#7a5c43">Phase II/III<br/><span style="font-size:10px;font-weight:400">Efficacy for new indication</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#2f6f5b;border:none;color:white">NDA Approval<br/><span style="font-size:10px;font-weight:400">3–5 years total</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px">
+          <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:12px;font-size:0.74rem"><strong style="color:#2f6f5b">Cost Advantage</strong><br/>40–60% savings vs 505(b)(1). Cites existing Phase I/II data from RLD sponsor.</div>
+          <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:12px;font-size:0.74rem"><strong style="color:#2f6f5b">AI Advantage</strong><br/>Automated indication matching + evidence dossier generation cuts pre-IND prep from 18 months to weeks.</div>
+          <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:12px;font-size:0.74rem"><strong style="color:#2f6f5b">Exclusivity</strong><br/>3-year NCE exclusivity for new clinical evidence. 7-year orphan exclusivity if &lt;200K patients.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 505(b)(1) -->
+  <div id="reg505b1" style="display:none">
+    <div style="background:#fbf6ea;border:1.5px solid #e6cf95;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.82rem;color:#6d4e08">
+      <strong>Full NDA for AI-Designed NCEs</strong> — All development phases required. However, AI compresses discovery from 5+ years to &lt;30 months (the Insilico Medicine route). Highest value for novel scaffold IP.
+    </div>
+    <div class="flowchart-wrap">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:800px">
+        <div class="flowchart-row">
+          <div class="flowchart-box" style="background:#fbf6ea;border:2px solid #e6cf95;color:#8a6309">Target ID AI<br/><span style="font-size:10px;font-weight:400">Multi-omics + literature</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#fbf6ea;border:2px solid #e6cf95;color:#8a6309">Generative AI<br/><span style="font-size:10px;font-weight:400">Novel scaffold design</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#fbf6ea;border:2px solid #e6cf95;color:#8a6309">ADMET Predictor<br/><span style="font-size:10px;font-weight:400">In silico optimisation</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#fbf6ea;border:2px solid #e6cf95;color:#8a6309">Lead Optimisation<br/><span style="font-size:10px;font-weight:400">Synthesis + assays</span></div>
+        </div>
+        <div class="flowchart-row" style="padding-left:60px">
+          <div class="flowchart-arrow" style="transform:rotate(90deg)">↓</div>
+        </div>
+        <div class="flowchart-row">
+          <div class="flowchart-box" style="background:#fff7ed;border:2px solid #fed7aa;color:#c2410c">IND + Phase I<br/><span style="font-size:10px;font-weight:400">Safety, FIH</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#fff7ed;border:2px solid #fed7aa;color:#c2410c">Phase II<br/><span style="font-size:10px;font-weight:400">Efficacy signal</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#fff7ed;border:2px solid #fed7aa;color:#c2410c">Phase III<br/><span style="font-size:10px;font-weight:400">Pivotal trials</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#8a6309;border:none;color:white">Full NDA<br/><span style="font-size:10px;font-weight:400">5–10 yr (AI cuts 3–4 yr)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANDA -->
+  <div id="reganda" style="display:none">
+    <div style="background:#eef4ef;border:1.5px solid #bfe0cd;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:0.82rem;color:#166534">
+      <strong>ANDA — For AI-Identified Off-Patent Opportunities</strong> — Bioequivalence studies only. No clinical efficacy trials required. 2–4 year timeline. Fastest FDA pathway when the original drug is off-patent.
+    </div>
+    <div class="flowchart-wrap">
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:700px">
+        <div class="flowchart-row">
+          <div class="flowchart-box" style="background:#eef4ef;border:2px solid #bfe0cd;color:#2f6f5b">AI Patent Analysis<br/><span style="font-size:10px;font-weight:400">Identify expiring patents</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#eef4ef;border:2px solid #bfe0cd;color:#2f6f5b">Bioequivalence Design<br/><span style="font-size:10px;font-weight:400">AI-optimised formulation</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#eef4ef;border:2px solid #bfe0cd;color:#2f6f5b">BE Studies<br/><span style="font-size:10px;font-weight:400">PK equivalence vs RLD</span></div>
+          <div class="flowchart-arrow">→</div>
+          <div class="flowchart-box" style="background:#2f6f5b;border:none;color:white">ANDA Approval<br/><span style="font-size:10px;font-weight:400">2–4 years</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+          <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:12px;font-size:0.74rem"><strong style="color:#2f6f5b">No Efficacy Trials</strong><br/>Pure bioequivalence — regulatory burden is minimal. AI handles patent landscape analysis and formulation optimisation automatically.</div>
+          <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:12px;font-size:0.74rem"><strong style="color:#2f6f5b">Market Entry Speed</strong><br/>180-day exclusivity for first-to-file ANDA. AI can systematically scan patent cliffs across the full drug landscape to identify opportunities ahead of competition.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 5: Financials ───────────────────────────────────────────────────── -->
+<div id="panel-financials" class="tab-panel">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;margin-bottom:24px">
+    <!-- Revenue Streams -->
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:14px">Revenue Streams</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="rev-card">
+          <div style="font-size:0.82rem;font-weight:800;color:#2f6f5b;margin-bottom:4px">💻 SaaS Subscriptions</div>
+          <div style="font-size:0.74rem;color:#6b776e">Pharma R&D teams, biotech startups, academic spinouts. $50K–$500K/yr per seat. Recurring, predictable.</div>
+        </div>
+        <div class="rev-card">
+          <div style="font-size:0.82rem;font-weight:800;color:#8a6309;margin-bottom:4px">🤝 Co-Dev Milestones</div>
+          <div style="font-size:0.74rem;color:#6b776e">CipherQ co-develops candidates with pharma. $2–10M milestone payments at IND, Phase II start, NDA filing.</div>
+        </div>
+        <div class="rev-card">
+          <div style="font-size:0.82rem;font-weight:800;color:#2f6f5b;margin-bottom:4px">📈 Royalties</div>
+          <div style="font-size:0.74rem;color:#6b776e">2–5% sales royalties on approved drugs where CipherQ AI originated the candidate or indication.</div>
+        </div>
+        <div class="rev-card">
+          <div style="font-size:0.82rem;font-weight:800;color:#97751a;margin-bottom:4px">📄 ANDA Services</div>
+          <div style="font-size:0.74rem;color:#6b776e">Patent cliff scanning + ANDA package preparation as a service for generic manufacturers.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projection Chart -->
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:14px">5-Year Revenue Projection</div>
+      <div id="revenue-chart" style="height:280px"></div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+    <div style="background:#fffdf9;border:1px solid #e6e2d7;border-radius:12px;padding:20px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:12px">Key Financial Metrics</div>
+      <div class="metric-row"><span style="color:#6b776e">Year 1 ARR</span><span style="font-weight:800;color:#1f2a24">$0.5M</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Year 3 ARR</span><span style="font-weight:800;color:#1f2a24">$8M</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Year 5 ARR</span><span style="font-weight:800;color:#2f6f5b">$50M</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Gross Margin</span><span style="font-weight:800;color:#2f6f5b">75–85%</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Total Investment (36M)</span><span style="font-weight:800;color:#1f2a24">~$15M</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Platform Valuation (Y5)</span><span style="font-weight:800;color:#2f6f5b">$400M+</span></div>
+    </div>
+    <div style="background:#fffdf9;border:1px solid #e6e2d7;border-radius:12px;padding:20px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9aa39c;margin-bottom:12px">Valuation Drivers</div>
+      <div class="metric-row"><span style="color:#6b776e">Recurring SaaS Revenue</span><span style="font-weight:700;color:#2f6f5b">8–12× ARR</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Pipeline Asset Optionality</span><span style="font-weight:700;color:#8a6309">$50–150M/asset</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Co-dev Deal Announced</span><span style="font-weight:700;color:#2f6f5b">+$30–80M value</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Comparable: Insilico Med.</span><span style="font-weight:700;color:#1f2a24">$1.2B (2023)</span></div>
+      <div class="metric-row"><span style="color:#6b776e">Comparable: BenevolentAI</span><span style="font-weight:700;color:#1f2a24">$2B peak</span></div>
+      <div style="margin-top:14px;padding:10px;background:#eef3f0;border-radius:8px;font-size:0.75rem;color:#2f6f5b;font-weight:700;line-height:1.5">
+        505(b)(2) is the highest near-term ROI lever — AI repurposing creates the most defensible value the fastest, with proven FDA pathway and existing safety data.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const ids = ['overview','architecture','roadmap','regulatory','financials'];
+    b.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  if (id === 'roadmap' && !window._ganttDone)   { renderGantt(); window._ganttDone=true; }
+  if (id === 'financials' && !window._revDone)   { renderRevenue(); window._revDone=true; }
+}
+
+// ── Regulatory sub-tabs ────────────────────────────────────────────────────────
+function switchReg(id, btn) {
+  ['reg505b2','reg505b1','reganda'].forEach(rid => {
+    document.getElementById(rid).style.display = rid===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.reg-sub-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Animated counters ─────────────────────────────────────────────────────────
+function animateCounter(el, target, prefix='', suffix='', dur=1200) {
+  const start = Date.now();
+  const tick = () => {
+    const p = Math.min((Date.now()-start)/dur, 1);
+    const ease = 1-Math.pow(1-p,3);
+    el.textContent = prefix + Math.round(ease*target) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    animateCounter(document.getElementById('stat1'), 50, '', '%');
+    animateCounter(document.getElementById('stat2'), 30);
+    animateCounter(document.getElementById('stat3'), 3);
+    animateCounter(document.getElementById('stat4'), 50, '$');
+  }, 300);
+});
+
+// ── Gantt Chart ───────────────────────────────────────────────────────────────
+function renderGantt() {
+  const tasks = [
+    { task:'ChEMBL + Open Targets Integration',  start:0,  dur:3,  phase:1 },
+    { task:'5-Screen GNN Scoring Engine',         start:2,  dur:4,  phase:1 },
+    { task:'505(b)(2) Dossier Automation',        start:4,  dur:3,  phase:1 },
+    { task:'DiffDock 3D Docking Pipeline',        start:6,  dur:3,  phase:1 },
+    { task:'PBPK Simulation Module',              start:8,  dur:4,  phase:1 },
+    { task:'Generative Chemistry (VAE/Diffusion)',start:12, dur:6,  phase:2 },
+    { task:'ADMET Predictor (ML)',                start:14, dur:5,  phase:2 },
+    { task:'Multi-Omics Target Identification',   start:16, dur:4,  phase:2 },
+    { task:'Clinical Trial Optimizer',            start:18, dur:4,  phase:2 },
+    { task:'First Pharma Pilot Engagement',       start:21, dur:3,  phase:2 },
+    { task:'Multi-Tenant SaaS Platform',          start:24, dur:6,  phase:3 },
+    { task:'Pharma Co-Development Agreements',    start:26, dur:6,  phase:3 },
+    { task:'Proprietary Pipeline (3+ assets)',    start:28, dur:6,  phase:3 },
+    { task:'Regulatory AI Submission Module',     start:30, dur:5,  phase:3 },
+  ];
+  const colors = { 1:'#2f6f5b', 2:'#8a6309', 3:'#2f6f5b' };
+  const traces = [1,2,3].map(ph => {
+    const rows = tasks.filter(t => t.phase===ph);
+    return {
+      type:'bar', orientation:'h', name:`Phase ${ph}`,
+      x: rows.map(t=>t.dur),
+      y: rows.map(t=>t.task),
+      base: rows.map(t=>t.start),
+      marker:{ color:colors[ph], opacity:0.85 },
+      text: rows.map(t=>`M${t.start}–M${t.start+t.dur}`),
+      textposition:'inside', insidetextanchor:'middle',
+      hovertemplate:'%{y}<br>Month %{base} – %{x:+} months<extra></extra>'
+    };
+  });
+  Plotly.newPlot('gantt-chart', traces, {
+    barmode:'overlay',
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{family:'Inter,sans-serif',color:'#45524a',size:10},
+    xaxis:{title:'Month', range:[0,36], gridcolor:'#e6e2d7', linecolor:'#e6e2d7', dtick:3,
+           tickvals:[0,3,6,9,12,15,18,21,24,27,30,33,36],
+           ticktext:['M0','M3','M6','M9','M12','M15','M18','M21','M24','M27','M30','M33','M36']},
+    yaxis:{autorange:'reversed',gridcolor:'transparent',linecolor:'#e6e2d7',tickfont:{size:9.5}},
+    legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'left',x:0},
+    margin:{l:220,r:20,t:40,b:45}, height:320,
+    shapes:[
+      {type:'line',x0:12,x1:12,y0:0,y1:1,yref:'paper',line:{color:'#e6e2d7',width:1.5,dash:'dot'}},
+      {type:'line',x0:24,x1:24,y0:0,y1:1,yref:'paper',line:{color:'#e6e2d7',width:1.5,dash:'dot'}},
+    ]
+  }, {displayModeBar:false, responsive:true});
+}
+
+// ── Revenue Chart ─────────────────────────────────────────────────────────────
+function renderRevenue() {
+  const years = ['Y1','Y2','Y3','Y4','Y5'];
+  const saas      = [0.3, 1.2, 4.0, 10.0, 24.0];
+  const codev     = [0.0, 0.5, 2.0,  5.0, 12.0];
+  const royalties = [0.0, 0.0, 0.5,  2.0,  8.0];
+  const anda      = [0.2, 0.3, 1.5,  3.0,  6.0];
+
+  Plotly.newPlot('revenue-chart', [
+    {type:'bar',name:'SaaS',         x:years, y:saas,      marker:{color:'#2f6f5b'}},
+    {type:'bar',name:'Co-Dev',       x:years, y:codev,     marker:{color:'#8a6309'}},
+    {type:'bar',name:'Royalties',    x:years, y:royalties, marker:{color:'#2f6f5b'}},
+    {type:'bar',name:'ANDA Svcs',    x:years, y:anda,      marker:{color:'#97751a'}},
+  ], {
+    barmode:'stack',
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font:{family:'Inter,sans-serif',color:'#45524a',size:10.5},
+    xaxis:{gridcolor:'#e6e2d7',linecolor:'#e6e2d7'},
+    yaxis:{title:'Revenue ($M)',gridcolor:'#e6e2d7',linecolor:'#e6e2d7'},
+    legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'left',x:0},
+    margin:{l:48,r:16,t:40,b:36}, height:280,
+    annotations:[{x:'Y5',y:50,text:'$50M ARR',showarrow:false,font:{size:11,color:'#2f6f5b',weight:700},xanchor:'center',yanchor:'bottom'}]
+  }, {displayModeBar:false, responsive:true});
+}
+</script>
+
+{% endblock %}

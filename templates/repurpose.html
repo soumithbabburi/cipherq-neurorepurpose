@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% set active_page = 'repurpose' %}
+{% block title %}Repurpose Molecule · RepurposeIQ{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head" style="margin-bottom:4px"><span class="s-kicker">Reverse Repurposing · 505(b)(2)</span></div>
+  <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Repurpose a Molecule</h1>
+  <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px">
+    Enter a molecule you already hold approval for. We derive its protein targets, then surface
+    <strong>new candidate indications</strong> ranked by mechanistic and clinical evidence — the 505(b)(2) reverse search.
+  </p>
+</div>
+
+<!-- Search controls -->
+<div class="card mb-2">
+  <div class="grid-form">
+    <div class="field" style="grid-column:span 2">
+      <label for="drug-input">Molecule (name or ChEMBL ID)</label>
+      <input id="drug-input" class="input" placeholder="e.g. Palbociclib, Erlotinib, CHEMBL553"
+             value="{{ drug|e }}" onkeydown="if(event.key==='Enter')runScreen()"/>
+    </div>
+    <div class="field">
+      <label for="area-input">Therapeutic area (optional)</label>
+      <select id="area-input" class="input">
+        <option value="">All areas</option>
+        <option value="dermatology" {% if area=='dermatology' %}selected{% endif %}>Dermatology</option>
+        <option value="ophthalmology" {% if area=='ophthalmology' %}selected{% endif %}>Ophthalmology</option>
+        <option value="oncology">Oncology</option>
+        <option value="immune system disease">Immunology</option>
+        <option value="nervous system disease">Neurology</option>
+        <option value="cardiovascular disease">Cardiovascular</option>
+        <option value="respiratory system disease">Respiratory</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="onc-input">Oncology</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#45524a;padding:0.45rem 0">
+        <input type="checkbox" id="onc-input"/> Include cancer indications
+      </label>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" onclick="runScreen()" id="run-btn">
+        <span class="material-symbols-outlined" style="font-size:16px">science</span>
+        Find Indications
+      </button>
+    </div>
+  </div>
+  <p style="font-size:0.7rem;color:#9aa39c;margin-top:8px">
+    Candidates are drawn from three sources — <strong>genetic associations</strong> (Open Targets), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co-mention</strong> (PubMed) — and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
+  </p>
+</div>
+
+<!-- Drug summary -->
+<div id="drug-summary" class="card mb-2" style="display:none"></div>
+
+<!-- Results -->
+<div id="status-line" style="font-size:0.8rem;color:#6b776e;margin-bottom:0.75rem;display:none"></div>
+<div id="results"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function phaseClass(p){ p=+p; return p>=4?'phase-4':p>=3?'phase-3':p>=2?'phase-2':'phase-1'; }
+
+function drugSummaryHtml(d){
+  var port = d.portfolio || {};
+  var badge = '';
+  if (port.in_portfolio) {
+    var label = port.status === 'pipeline' ? 'Pipeline molecule' : '505(b)(2)-ready · in portfolio';
+    var cls = port.status === 'pipeline' ? 'amber' : 'green';
+    badge = '<span class="chip '+cls+'" style="font-size:11px">'+label+(port.form?(' · '+port.form):'')+'</span>';
+  }
+  var targets = (d.drug_targets||[]).map(function(g){return '<span class="chip purple">'+g+'</span>';}).join(' ');
+  var known = (d.known_indications||[]).slice(0,8).map(function(i){return '<span class="chip cyan">'+i+'</span>';}).join(' ');
+  return ''
+    + '<div class="flex justify-between items-center" style="flex-wrap:wrap;gap:8px">'
+    +   '<div><span class="drug-name" style="font-size:1.3rem">'+d.drug+'</span> '
+    +     '<span class="drug-chembl">'+(d.chembl_id||'')+'</span></div>'
+    +   '<div>'+badge+'</div>'
+    + '</div>'
+    + '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">Protein targets</div>'+ (targets||'<span class="text-dim">none found</span>') +'</div>'
+    + '<div style="margin-top:10px"><div class="kv-k" style="margin-bottom:4px">Existing indications (excluded from results)</div>'+ (known||'<span class="text-dim">none on record</span>') +'</div>';
+}
+
+function barRow(label, val){
+  var pct = Math.round((val||0)*100);
+  return '<div class="cc-bar-item"><div class="flex justify-between"><span class="cc-bar-lbl">'+label+'</span>'
+    + '<span class="cc-bar-lbl" style="color:#45524a">'+pct+'</span></div>'
+    + '<div class="cc-bar-track"><div class="cc-bar-fill" style="width:'+pct+'%"></div></div></div>';
+}
+
+function statusColor(s){ return s==='ideal'?'#2f6f5b':s==='acceptable'?'#97751a':'#b3261e'; }
+
+function devBlock(dv){
+  if (!dv || !dv.available) return '';
+  var col = window.scoreColor(dv.score||0);
+  var rows = (dv.properties||[]).map(function(p){
+    var c = statusColor(p.status);
+    return '<div class="flex justify-between" style="font-size:0.7rem;padding:2px 0">'
+      + '<span style="color:#45524a">'+p.label+'</span>'
+      + '<span><span class="mono" style="color:#1f2a24">'+p.value+(p.unit||'')+'</span>'
+      + ' <span style="color:#9aa39c">/ '+p.target+'</span> '
+      + '<span style="color:'+c+'">●</span></span></div>';
+  }).join('');
+  return '<div style="border-top:1px solid #ecebe3;padding-top:8px">'
+    + '<div class="flex justify-between items-center" style="margin-bottom:4px">'
+    +   '<span class="cc-bar-lbl">Developability · '+(dv.profile_label||'')+'</span>'
+    +   '<span style="font-weight:800;font-size:0.8rem;color:'+col+'">'+Math.round((dv.score||0)*100)+' '+(dv.level||'')+'</span>'
+    + '</div>'
+    + rows
+    + (dv.rationale?'<div style="font-size:0.66rem;color:#9aa39c;margin-top:4px;line-height:1.4">'+dv.rationale+'</div>':'')
+    + '</div>';
+}
+
+function candidateCard(c, chembl){
+  var ev = (c.score != null ? c.score : c.composite_score) || 0;   // canonical score (same on every screen)
+  var evCol = window.scoreColor(ev);
+  var dv = c.developability || {};
+  var dvScore = dv.available ? dv.score : null;
+  var dvCol = dvScore!=null ? window.scoreColor(dvScore) : '#d8d4c8';
+  var areas = (c.therapeutic_areas||[]).slice(0,3).map(function(a){return '<span class="chip cyan">'+a+'</span>';}).join(' ');
+  var overlap = (c.overlapping_targets||[]).slice(0,6).map(function(g){return '<span class="chip green">'+g+'</span>';}).join(' ');
+  var sc = c.scores || {};
+  var weak = !(c.overlapping_targets||[]).length;
+  var kd = c.known_drugs;
+  var kdBadge = (kd===0 || c.exploratory)
+    ? '<span class="chip amber">no approved drugs · exploratory</span>'
+    : (kd!=null ? '<span class="chip green">'+kd+' known drugs / candidates</span>' : '');
+  var srcMap = {genetic:['genetic assoc','cyan'], clinical_trial:['trial-backed','green'], literature:['literature','purple']};
+  var srcBadges = (c.sources||[]).map(function(s){var m=srcMap[s]||[s,'cyan']; return '<span class="chip '+m[1]+'">'+m[0]+'</span>';}).join(' ');
+  var clinLine = '';
+  if (c.trial_count) clinLine = c.trial_count+' trial'+(c.trial_count>1?'s':'')+(c.max_trial_phase?' · up to Phase '+c.max_trial_phase:'');
+  else if (c.lit_count) clinLine = c.lit_count+' PubMed co-mentions';
+  var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease);
+  return ''
+  + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
+  +   '<div class="flex justify-between items-center" style="gap:12px">'
+  +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
+  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div></div>'
+  +   '</div>'
+  +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
+  +     '<span class="cc-bar-lbl">Developability</span>'
+  +     '<div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:'+(dvScore!=null?Math.round(dvScore*100):0)+'%"></div></div>'
+  +     '<span class="mono" style="font-size:11px;font-weight:600;color:'+dvCol+'">'+(dvScore!=null?(dvScore*100).toFixed(0):'—')+'</span>'
+  +   '</div>'
+  +   '<div class="cc-tags">'+srcBadges+' '+kdBadge+'</div>'
+  +   (areas?'<div class="cc-tags">'+areas+'</div>':'')
+  +   (clinLine?'<div style="font-size:0.7rem;color:#2f6f5b;font-weight:600">▸ '+clinLine+'</div>':'')
+  +   (weak && !clinLine?'<div class="chip amber" style="align-self:flex-start">association-only · weak mechanistic overlap</div>':'')
+  +   (overlap?'<div><div class="cc-bar-lbl" style="margin-bottom:4px">Shared targets (drug ∩ disease)</div><div class="cc-tags">'+overlap+'</div></div>':'')
+  +   '<div style="font-size:0.72rem;color:#45524a;line-height:1.5;border-left:2px solid #cfe0d8;padding-left:8px">'+(c.rationale||'')+'</div>'
+  +   '<div class="cc-bars">'
+  +     barRow('Target overlap', sc.target) + barRow('OT association', c.association_score)
+  +     barRow('Clinical/trials', c.clinical_signal) + barRow('Pathway', sc.pathway) + barRow('PPI network', sc.ppi)
+  +   '</div>'
+  +   devBlock(dv)
+  +   '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
+  +     '<span class="material-symbols-outlined" style="font-size:15px">description</span>505(b)(2) Dossier</a>'
+  + '</div>';
+}
+
+async function runScreen(){
+  var drug = document.getElementById('drug-input').value.trim();
+  var area = document.getElementById('area-input').value;
+  var inclOnc = document.getElementById('onc-input').checked;
+  if (!drug){ window.toast('Enter a molecule name', 'warning'); return; }
+
+  var btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  var status = document.getElementById('status-line');
+  status.style.display = 'block';
+  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Resolving targets and scanning Open Targets…';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('drug-summary').style.display = 'none';
+
+  try {
+    var qs = [];
+    if (area) qs.push('area='+encodeURIComponent(area));
+    if (inclOnc) qs.push('oncology=1');
+    var url = '/api/drug/'+encodeURIComponent(drug)+'/new-indications'+(qs.length?('?'+qs.join('&')):'');
+    var d = await window.apiFetch(url);
+    if (d.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+d.error+'</span>'; btn.disabled=false; return; }
+
+    var sum = document.getElementById('drug-summary');
+    sum.innerHTML = drugSummaryHtml(d);
+    sum.style.display = 'block';
+
+    var cands = d.candidates || [];
+    if (!cands.length){
+      status.innerHTML = 'No new indications passed the evidence threshold' + (area?(' in '+area):'') + '.';
+      btn.disabled = false; return;
+    }
+    status.innerHTML = 'Ranked <strong>'+cands.length+'</strong> candidate indication'+(cands.length>1?'s':'')+' for '+d.drug+(area?(' · '+area):'')+'.';
+    document.getElementById('results').innerHTML =
+      '<div class="compound-grid">' + cands.map(function(c){return candidateCard(c, d.chembl_id);}).join('') + '</div>';
+  } catch(e){
+    status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';
+  }
+  btn.disabled = false;
+}
+
+// Auto-run if a drug was passed in the URL
+if ("{{ drug|e }}".trim()) runScreen();
+</script>
+{% endblock %}

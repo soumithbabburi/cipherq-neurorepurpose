@@ -1,0 +1,77 @@
+{
+  "_description": "Therapeutic-area-aware developability profiles. For a candidate indication we pick a profile from the disease's therapeutic area (or the user's area filter), then judge the molecule's RDKit-computed physicochemical properties against the ranges that matter for THAT route of delivery. Edit ranges/weights freely; add new profiles and map areas to them under 'area_to_profile'. Property rule: value within [ideal_min, ideal_max] => ideal (1.0); within [acceptable_min, acceptable_max] => acceptable (0.6); otherwise out (0.0). Missing bound = unbounded on that side. Score = weighted mean of property statuses.",
+  "area_to_profile": {
+    "integumentary system disease": "topical_dermal",
+    "skin": "topical_dermal",
+    "dermatology": "topical_dermal",
+    "disorder of visual system": "topical_ocular",
+    "eye": "topical_ocular",
+    "ophthalmology": "topical_ocular",
+    "nervous system disease": "cns_oral",
+    "psychiatric disorder": "cns_oral",
+    "neurology": "cns_oral",
+    "respiratory or thoracic disease": "inhaled_respiratory",
+    "respiratory system disease": "inhaled_respiratory",
+    "respiratory": "inhaled_respiratory",
+    "_default": "oral_systemic"
+  },
+  "profiles": {
+    "topical_dermal": {
+      "label": "Dermatology — topical (skin permeation)",
+      "route": "topical (skin)",
+      "rationale": "Stratum-corneum penetration favours low molecular weight and moderate lipophilicity (the 'rule of 500'); excessive logP or H-bonding strands the molecule in the skin.",
+      "properties": {
+        "mw":   {"label": "Mol. weight", "unit": "Da", "ideal_max": 400, "acceptable_max": 500, "weight": 2},
+        "logp": {"label": "cLogP", "ideal_min": 1.0, "ideal_max": 3.5, "acceptable_min": 0.0, "acceptable_max": 5.0, "weight": 2},
+        "hbd":  {"label": "H-bond donors", "ideal_max": 2, "acceptable_max": 3, "weight": 1},
+        "tpsa": {"label": "TPSA", "unit": "Å²", "ideal_max": 90, "acceptable_max": 120, "weight": 1}
+      }
+    },
+    "topical_ocular": {
+      "label": "Ophthalmology — topical (corneal permeation)",
+      "route": "topical (ocular)",
+      "rationale": "The cornea is a lipophilic–hydrophilic–lipophilic sandwich, so balanced logP and adequate aqueous solubility (for the tear film) matter more than raw lipophilicity.",
+      "properties": {
+        "mw":   {"label": "Mol. weight", "unit": "Da", "ideal_max": 450, "acceptable_max": 500, "weight": 2},
+        "logp": {"label": "cLogP", "ideal_min": 1.0, "ideal_max": 3.0, "acceptable_min": 0.0, "acceptable_max": 4.0, "weight": 2},
+        "tpsa": {"label": "TPSA", "unit": "Å²", "ideal_min": 40, "ideal_max": 100, "acceptable_max": 130, "weight": 1},
+        "hbd":  {"label": "H-bond donors", "ideal_max": 3, "acceptable_max": 5, "weight": 1}
+      }
+    },
+    "cns_oral": {
+      "label": "CNS / Neurology — oral (BBB penetration)",
+      "route": "oral (CNS)",
+      "rationale": "Blood–brain-barrier penetration requires low polar surface area, modest size and lipophilicity, and few H-bond donors.",
+      "properties": {
+        "mw":   {"label": "Mol. weight", "unit": "Da", "ideal_max": 450, "acceptable_max": 500, "weight": 1},
+        "tpsa": {"label": "TPSA", "unit": "Å²", "ideal_max": 90, "acceptable_max": 120, "weight": 2},
+        "logp": {"label": "cLogP", "ideal_min": 2.0, "ideal_max": 4.0, "acceptable_min": 1.0, "acceptable_max": 5.0, "weight": 2},
+        "hbd":  {"label": "H-bond donors", "ideal_max": 3, "acceptable_max": 4, "weight": 1}
+      }
+    },
+    "inhaled_respiratory": {
+      "label": "Respiratory — inhaled (lung deposition)",
+      "route": "inhaled",
+      "rationale": "Inhaled drugs favour moderate size and lipophilicity for dissolution and retention in the airway lining fluid without rapid systemic absorption.",
+      "properties": {
+        "mw":   {"label": "Mol. weight", "unit": "Da", "ideal_min": 250, "ideal_max": 600, "acceptable_max": 700, "weight": 1},
+        "logp": {"label": "cLogP", "ideal_min": 1.5, "ideal_max": 4.5, "acceptable_min": 0.0, "acceptable_max": 6.0, "weight": 2},
+        "tpsa": {"label": "TPSA", "unit": "Å²", "ideal_max": 120, "acceptable_max": 160, "weight": 1},
+        "hbd":  {"label": "H-bond donors", "ideal_max": 4, "acceptable_max": 6, "weight": 1}
+      }
+    },
+    "oral_systemic": {
+      "label": "Oral / systemic — Lipinski Rule-of-Five",
+      "route": "oral (systemic)",
+      "rationale": "Oral bioavailability is well predicted by Lipinski's Rule-of-Five plus polar surface area and rotatable-bond count (Veber).",
+      "properties": {
+        "mw":   {"label": "Mol. weight", "unit": "Da", "ideal_max": 500, "acceptable_max": 600, "weight": 1},
+        "logp": {"label": "cLogP", "ideal_max": 5.0, "acceptable_min": -1.0, "acceptable_max": 6.0, "weight": 1},
+        "hbd":  {"label": "H-bond donors", "ideal_max": 5, "acceptable_max": 6, "weight": 1},
+        "hba":  {"label": "H-bond acceptors", "ideal_max": 10, "acceptable_max": 12, "weight": 1},
+        "tpsa": {"label": "TPSA", "unit": "Å²", "ideal_max": 140, "acceptable_max": 160, "weight": 1},
+        "rtb":  {"label": "Rotatable bonds", "ideal_max": 10, "acceptable_max": 12, "weight": 1}
+      }
+    }
+  }
+}

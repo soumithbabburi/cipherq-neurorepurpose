@@ -1,0 +1,2417 @@
+{% extends "base.html" %}
+{% set active_page = "discover" %}
+{% block title %}Analysis · RepurposeIQ{% endblock %}
+
+{% block content %}
+<a href="/discover" class="back-link">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+  Back to Results
+</a>
+
+<div id="loading-header" class="card mb-15" style="padding:2rem">
+  <div style="display:flex;gap:1rem;align-items:center">
+    <div class="spinner"></div>
+    <span style="color:var(--muted)">Loading compound data…</span>
+  </div>
+</div>
+
+<!-- Workflow pipeline bar -->
+<div id="workflow-bar" style="display:none;margin-bottom:1.25rem;background:#f6f5f0;border:1px solid #e0ddd1;border-radius:12px;padding:10px 16px;overflow-x:auto">
+  <div style="display:flex;align-items:center;gap:0;min-width:max-content">
+    {% set wf_steps = [("properties","Properties","description"),("optimization","Optimization","tune"),("docking","Docking","view_in_ar"),("pbpk","PBPK","science"),("dossier","Evidence","assignment"),("patents","Patents","gavel")] %}
+    {% for step_id, step_label, step_icon in wf_steps %}
+    <button onclick="switchTab('{{ step_id }}')" id="wf-{{ step_id }}"
+      style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px;background:transparent;border:none;cursor:pointer;position:relative;transition:all 0.15s">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#9aa39c" id="wf-icon-{{ step_id }}">{{ step_icon }}</span>
+      <span style="font-size:10px;font-weight:600;color:#9aa39c;letter-spacing:0.04em;white-space:nowrap" id="wf-lbl-{{ step_id }}">{{ step_label }}</span>
+    </button>
+    {% if not loop.last %}<div style="width:28px;height:1px;background:#e0ddd1;flex-shrink:0;margin-bottom:10px"></div>{% endif %}
+    {% endfor %}
+    <div style="width:1px;height:28px;background:#e0ddd1;margin:0 8px"></div>
+    <a id="graph-link-wf" href="/graph" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px;text-decoration:none;border-radius:8px;background:#eef3f0;border:1px solid #cfe0d8">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#2f6f5b">hub</span>
+      <span style="font-size:10px;font-weight:600;color:#2f6f5b;white-space:nowrap">Knowledge Graph</span>
+    </a>
+  </div>
+</div>
+
+<div id="drug-header" class="flex items-end justify-between gap-lg mb-xl" style="display:none;flex-wrap:wrap">
+  <div class="space-y-2">
+    <div id="d-tags" class="flex items-center gap-3 flex-wrap"></div>
+    <h2 id="d-name" style="font-size:32px;font-weight:600;letter-spacing:-0.015em;color:#1f2a24;line-height:1.1;font-family:var(--font-serif)"></h2>
+    <p id="d-chembl" class="font-body-lg text-text-muted"></p>
+  </div>
+  <div class="flex items-center gap-8 drug-header-panel rounded-xl border border-border-default shadow-sm relative overflow-hidden flex-shrink-0" style="padding:20px 24px;background:var(--bg-card)">
+    <div style="position:relative;display:flex;align-items:center;gap:16px">
+      <span id="d-seal"></span>
+      <div>
+        <p style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9aa39c;margin-bottom:4px">Repurposing Score</p>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span id="d-score" style="font-family:var(--font-serif);font-size:32px;font-weight:600;letter-spacing:-0.02em;color:#2f6f5b;line-height:1"></span>
+          <span id="d-phase-bonus" style="font-size:12px;font-weight:600;color:#2f6f5b"></span>
+        </div>
+      </div>
+    </div>
+    <div style="width:1px;height:48px;background:#e0ddd1;flex-shrink:0"></div>
+    <div>
+      <p style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9aa39c;margin-bottom:4px">DISEASE TARGET</p>
+      <span id="d-disease-label" style="font-size:15px;font-weight:800;letter-spacing:-0.03em;color:#1f2a24;font-family:Inter,sans-serif"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Score breakdown chart -->
+<div class="card mb-15" id="breakdown-card" style="display:none">
+  <div class="card-title mb-1">Evidence Breakdown</div>
+  <div id="breakdown-chart"></div>
+</div>
+
+<!-- Tabs -->
+<div id="tabs-section" style="display:none">
+  <div id="tab-bar" style="display:flex;border-bottom:2px solid #e0ddd1;margin-bottom:24px;gap:0;overflow-x:auto">
+    {% for tab_id, tab_label in [("properties","Properties"),("repurposing","Repurposing Screen"),("bioactivity","Bioactivity"),("indications","Indications"),("optimization","Optimization"),("docking","Docking"),("pbpk","PBPK Simulation"),("dossier","Evidence Dossier"),("patents","Patents")] %}
+    <button class="tab-btn {% if tab_id == 'properties' %}active{% endif %}" onclick="switchTab('{{ tab_id }}')" id="tab-{{ tab_id }}"
+            style="padding:0 20px 12px;font-size:13px;font-weight:500;color:#45524a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:color 0.15s,border-color 0.15s">
+      {{ tab_label }}
+    </button>
+    {% endfor %}
+  </div>
+  <div id="tab-content"></div>
+</div>
+
+<script>
+const CHEMBL_ID = {{ ('"' ~ chembl_id ~ '"')|safe }};
+const DISEASE   = {{ ('"' ~ disease ~ '"')|safe }};
+const DOCK_OK          = {{ 'true' if dock_ok else 'false' }};
+const LOCAL_DIFFDOCK   = {{ 'true' if local_diffdock_ok else 'false' }};
+const DOCK_METHOD      = {{ ('"' ~ dock_method ~ '"')|safe }};
+const DIFFDOCK_INSTALL = {{ ('"' ~ diffdock_instructions|replace('\n','\\n') ~ '"')|safe }};
+const PBPK_OK   = {{ 'true' if pbpk_ok else 'false' }};
+const QUANTUM_OK = {{ 'true' if quantum_ok else 'false' }};
+const RDKIT_OK  = {{ 'true' if rdkit_ok else 'false' }};
+const PY3DMOL_OK = {{ 'true' if py3dmol_ok else 'false' }};
+
+let compoundData = null;
+let activeTab = 'properties';
+
+async function init() {
+  if (!CHEMBL_ID) { showError('No compound ID specified.'); return; }
+
+  let c = null;
+
+  // 1. Try sessionStorage first (populated when clicking a card in discover.html)
+  try {
+    const raw = sessionStorage.getItem('compound_' + CHEMBL_ID);
+    if (raw) c = JSON.parse(raw);
+  } catch(_e) {}
+
+  // 2. Try API to enrich or load fresh data
+  try {
+    const apiData = await apiFetch(`/api/compound/${CHEMBL_ID}?disease=${encodeURIComponent(DISEASE)}`);
+    c = c ? Object.assign({}, c, apiData) : apiData;
+  } catch(_e) {
+    if (!c) {
+      // Neither sessionStorage nor API has data — create a minimal stub so the page
+      // still renders. Individual tab fetches may still succeed (e.g., properties uses
+      // its own endpoint, dossier accepts name/smiles from URL params).
+      c = {
+        chembl_id:      CHEMBL_ID,
+        name:           CHEMBL_ID,
+        max_phase:      0,
+        score:          0,
+        smiles:         '',
+        indications:    DISEASE || '',
+        score_breakdown: {},
+      };
+    }
+    // Continue — API may be temporarily down; tabs fetch their own data independently
+  }
+
+  compoundData = c;
+  try { renderHeader(c); } catch(_e) {}
+  document.getElementById('loading-header').style.display = 'none';
+  document.getElementById('drug-header').style.display = 'flex';
+  document.getElementById('breakdown-card').style.display = 'block';
+  document.getElementById('tabs-section').style.display = 'block';
+  document.getElementById('workflow-bar').style.display = 'block';
+  const gwf = document.getElementById('graph-link-wf');
+  if (gwf && DISEASE) gwf.href = '/graph?disease=' + encodeURIComponent(DISEASE) + (CHEMBL_ID ? '&compound=' + encodeURIComponent(CHEMBL_ID) : '');
+  try { renderBreakdownChart(c); } catch(_e) {}
+  switchTab('properties');
+}
+
+function showError(msg) {
+  document.getElementById('loading-header').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+}
+
+function renderHeader(c) {
+  const sc = c.score || 0;
+  const ph = Math.min(+(c.max_phase||0),4);
+  const phMap = {
+    4:['#eef4ef','#2f6f5b','#bfe0cd','FDA Approved'],
+    3:['#fbf6ea','#8a6309','#e6cf95','Phase 3'],
+    2:['#eef3f0','#2f6f5b','#cfe0d8','Phase 2'],
+    1:['#f8f2df','#97751a','#e6cf95','Phase 1']
+  };
+  const [pbg,pcolor,pborder,plabel] = phMap[ph]||['#f6f5f0','#45524a','#e0ddd1','Preclinical'];
+  document.getElementById('d-name').textContent = c.name || 'Unknown';
+  document.getElementById('d-chembl').textContent = c.chembl_id ? `${c.chembl_id}  ·  Small Molecule` : '';
+  document.getElementById('d-score').textContent = (sc * 100).toFixed(1);
+  const _seal = document.getElementById('d-seal'); if (_seal) _seal.innerHTML = window.scoreSeal(sc, 56);
+  document.getElementById('d-phase-bonus').textContent = sc>=0.65?'↑ High confidence':sc>=0.4?'↑ Moderate':'';
+  document.getElementById('d-disease-label').textContent = DISEASE || c.indications || '—';
+  const tags = document.getElementById('d-tags');
+  tags.innerHTML = `<span style="padding:2px 8px;background:#ecebe3;color:#45524a;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px">Small Molecule</span>
+    <span style="padding:2px 8px;background:${pbg};color:${pcolor};border:1px solid ${pborder};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px">${plabel}</span>`;
+}
+
+function renderBreakdownChart(c) {
+  const bd = c.score_breakdown || {};
+  const sc5 = c.scores || {};  // 5-screen scores from repurposing engine
+
+  let labels, vals, colors;
+  if (sc5 && Object.keys(sc5).length > 0) {
+    // Use 5-screen scores if available
+    labels = ['Target','Pathway','PPI Net','Clinical','Indication','505(b)(2)'];
+    vals   = [sc5.target||0, sc5.pathway||0, sc5.ppi||0, sc5.clinical||0, sc5.indication||0, sc5.regulatory||0].map(v=>+(v*100).toFixed(1));
+    colors = ['#2f6f5b','#8a6309','#2f6f5b','#97751a','#b3261e','#2f6f5b'];
+  } else {
+    labels = ['Indication','Target','Activity','Network'];
+    vals   = [bd.indication_score||0, bd.target_score||0, bd.activity_score||0, bd.network_score||0].map(v=>+(v*100).toFixed(1));
+    colors = ['#2f6f5b','#245546','#2f6f5b','#97751a'];
+  }
+  Plotly.newPlot('breakdown-chart', [{
+    type: 'bar', x: labels, y: vals, marker: { color: colors, line: { width: 0 } }, text: vals.map(v=>v+'%'), textposition:'outside'
+  }], {
+    paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+    font: { family:'Inter,sans-serif', color:'#45524a', size: 11 },
+    xaxis: { gridcolor:'#e0ddd1', linecolor:'#e0ddd1', zerolinecolor:'#e0ddd1' },
+    yaxis: { gridcolor:'#e0ddd1', linecolor:'#e0ddd1', zerolinecolor:'#e0ddd1', title:'Score %', range:[0,110] },
+    margin: { l:45, r:10, t:20, b:35 }, height: 170, showlegend: false
+  }, { displayModeBar: false, responsive: true });
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const isActive = b.id === 'tab-' + tab;
+    b.classList.toggle('active', isActive);
+    b.style.color = isActive ? '#2f6f5b' : '#45524a';
+    b.style.borderBottomColor = isActive ? '#2f6f5b' : 'transparent';
+    b.style.fontWeight = isActive ? '600' : '500';
+  });
+  // Highlight active step in workflow bar
+  ['properties','optimization','docking','pbpk','dossier','patents'].forEach(sid => {
+    const icon = document.getElementById('wf-icon-' + sid);
+    const lbl  = document.getElementById('wf-lbl-'  + sid);
+    const btn  = document.getElementById('wf-' + sid);
+    if (!icon) return;
+    if (sid === tab) {
+      icon.style.color = '#2f6f5b'; lbl.style.color = '#2f6f5b';
+      if (btn) { btn.style.background = '#eef3f0'; btn.style.borderRadius = '8px'; }
+    } else {
+      icon.style.color = '#9aa39c'; lbl.style.color = '#9aa39c';
+      if (btn) { btn.style.background = 'transparent'; btn.style.borderRadius = ''; }
+    }
+  });
+  const content = document.getElementById('tab-content');
+  content.innerHTML = '<div style="padding:1.5rem 0;color:var(--muted);display:flex;gap:0.75rem;align-items:center"><span class="spinner"></span> Loading…</div>';
+
+  if (tab === 'properties')    renderProperties(content);
+  else if (tab === 'repurposing')   loadRepurposing(content);
+  else if (tab === 'bioactivity')   loadBioactivity(content);
+  else if (tab === 'indications')   loadIndications(content);
+  else if (tab === 'optimization')  loadOptimization(content);
+  else if (tab === 'docking')       renderDocking(content);
+  else if (tab === 'pbpk')          renderPBPK(content);
+  else if (tab === 'dossier')       loadDossier(content);
+  else if (tab === 'patents')       loadPatents(content);
+}
+
+async function renderProperties(el) {
+  const c = compoundData || {};
+  let p = c;
+  try { p = await apiFetch(`/api/compound/${CHEMBL_ID}/properties`); p = Object.assign({}, c, p); } catch(_e) { p = c; }
+
+  // Area-aware developability for the disease in context (skin / ocular / CNS / oral)
+  let dev = null;
+  if (DISEASE) { try { dev = await apiFetch(`/api/compound/${CHEMBL_ID}/developability?disease=${encodeURIComponent(DISEASE)}`); } catch(_e) {} }
+
+  const ro5   = +(p.ro5_violations || 0);
+  const phase = {4:'FDA Approved',3:'Phase 3',2:'Phase 2',1:'Phase 1'}[+(p.max_phase||0)] || 'Preclinical';
+  const bbbColor = p.bbb_level==='High' ? '#2f6f5b' : p.bbb_level==='Moderate' ? '#97751a' : '#b3261e';
+  const bbbBg    = p.bbb_level==='High' ? '#eef4ef' : p.bbb_level==='Moderate' ? '#f8f2df' : '#faece9';
+  const cns      = p.cns_mpo || 0;
+  const cnsColor = cns >= 4 ? '#2f6f5b' : cns >= 2 ? '#97751a' : '#b3261e';
+  const solColor = {High:'#2f6f5b',Good:'#2f6f5b',Moderate:'#97751a',Low:'#b3261e',Poor:'#b3261e'}[p.sol_class] || '#6b776e';
+
+  const physRows = [
+    ['Molecular Weight',  p.mw  ? p.mw  + ' g/mol' : '—', +(p.mw||999)  <= 500],
+    ['LogP (ALogP)',       p.alogp != null ? p.alogp  : '—', +(p.alogp||99) <= 5 && +(p.alogp||-99) >= -0.5],
+    ['Polar Surface Area', p.psa  ? p.psa + ' Å²'    : '—', +(p.psa||999) < 90],
+    ['H-Bond Acceptors',   p.hba  != null ? p.hba    : '—', +(p.hba||99)  <= 10],
+    ['H-Bond Donors',      p.hbd  != null ? p.hbd    : '—', +(p.hbd||99)  <= 5],
+    ['Rotatable Bonds',    p.rtb  != null ? p.rtb    : '—', +(p.rtb||99)  <= 10],
+    ['Aromatic Rings',     p.arom_rings != null ? p.arom_rings : '—', false],
+    ['Ro5 Violations',     ro5 + (ro5===0?' ✓':''),            ro5===0],
+    ['QED Score',          p.qed  != null ? (+p.qed).toFixed(3) : '—', +(p.qed||0)>0.5],
+    ['Max Phase',          phase,                              +(p.max_phase||0)>=2],
+  ];
+
+  const cnsRules = [
+    ['PSA < 60 Å²', (p.psa||999) < 60],
+    ['MW < 400 Da',  (p.mw||999)  < 400],
+    ['LogP 1 – 3',  (p.alogp||0) >= 1 && (p.alogp||0) <= 3],
+    ['HBD ≤ 2',     (p.hbd||0)  <= 2],
+  ];
+
+  // Area-aware developability card (replaces the CNS/BBB card when a disease is in context)
+  let devCard = null;
+  if (dev && dev.available) {
+    const dcol = dev.score>=0.75?'#2f6f5b':dev.score>=0.5?'#97751a':'#b3261e';
+    const sCol = s => s==='ideal'?'#2f6f5b':s==='acceptable'?'#97751a':'#b3261e';
+    const devRows = (dev.properties||[]).map(pr=>`<div class="kv"><span class="kv-k">${pr.label}</span><span class="kv-v"><span class="mono">${pr.value}${pr.unit||''}</span> <span style="color:#9aa39c;font-weight:400">/ ${pr.target}</span> <span style="color:${sCol(pr.status)};font-size:0.9rem">●</span></span></div>`).join('');
+    devCard = `<div class="card">
+        <div class="card-title mb-1">Developability — ${dev.profile_label||''}</div>
+        <div style="background:#f6f5f0;border-radius:8px;padding:12px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:0.72rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">Route fit · ${dev.route||''}</span>
+            <span style="font-size:0.85rem;font-weight:800;color:${dcol}">${Math.round((dev.score||0)*100)} ${dev.level||''}</span>
+          </div>
+          <div style="background:#e0ddd1;border-radius:9999px;height:6px;overflow:hidden">
+            <div style="width:${Math.round((dev.score||0)*100)}%;height:100%;background:${dcol};transition:width 0.5s;border-radius:9999px"></div>
+          </div>
+          ${dev.rationale?`<div style="font-size:0.68rem;color:#9aa39c;margin-top:6px;line-height:1.5">${dev.rationale}</div>`:''}
+        </div>
+        ${devRows}
+        <div style="font-size:0.66rem;color:#9aa39c;margin-top:10px">Profile selected from the disease's therapeutic area${DISEASE?` — ${DISEASE}`:''}, not a fixed CNS assumption.</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="grid-2" style="gap:1rem;margin-bottom:1rem">
+      <div class="card">
+        <div class="card-title mb-1">Physicochemical Properties</div>
+        ${physRows.map(([k,v,ok])=>`<div class="kv"><span class="kv-k">${k}</span><span class="kv-v${ok?' pass':''}">${v}</span></div>`).join('')}
+        ${p.smiles?`<div class="kv"><span class="kv-k">SMILES</span><span class="kv-v mono" style="font-size:0.68rem;word-break:break-all;max-width:300px">${p.smiles.length>80?p.smiles.slice(0,80)+'…':p.smiles}</span></div>`:''}
+        <div class="kv"><span class="kv-k">ChEMBL ID</span><span class="kv-v mono" style="font-size:0.78rem">${p.chembl_id||'—'}</span></div>
+      </div>
+      ${devCard !== null ? devCard : `<div class="card">
+        <div class="card-title mb-1">CNS Drug-likeness</div>
+        <div style="background:${bbbBg};border-radius:8px;padding:12px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:0.72rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">BBB Penetration</span>
+            <span style="font-size:0.8rem;font-weight:800;color:${bbbColor}">${p.bbb_level||'—'}</span>
+          </div>
+          <div style="background:#e0ddd1;border-radius:9999px;height:6px;overflow:hidden">
+            <div style="width:${p.bbb_score||0}%;height:100%;background:${bbbColor};transition:width 0.5s;border-radius:9999px"></div>
+          </div>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-top:4px">Score ${p.bbb_score!=null?p.bbb_score:'—'}/100 · PSA, MW, LogP, HBD composite</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:0.72rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">CNS-MPO Score</span>
+            <span style="font-size:0.8rem;font-weight:800;color:${cnsColor}">${cns.toFixed(2)} / 6.0</span>
+          </div>
+          <div style="background:#e0ddd1;border-radius:9999px;height:6px;overflow:hidden">
+            <div style="width:${(cns/6*100).toFixed(0)}%;height:100%;background:${cnsColor};border-radius:9999px"></div>
+          </div>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-top:4px">≥ 4 = strong CNS candidate · LogP, LogD, MW, PSA, HBD, pKa</div>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Aqueous Solubility</span>
+          <span style="font-size:0.78rem;font-weight:700;color:${solColor}">${p.sol_class||'—'} (LogS ${p.logs!=null?p.logs:'—'})</span>
+        </div>
+        <div style="background:#f6f5f0;border-radius:8px;padding:10px;margin-top:12px">
+          <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px">CNS Drug Rules</div>
+          ${cnsRules.map(([rule,pass])=>`<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.72rem">
+            <span style="color:#6b776e">${rule}</span>
+            <span style="font-weight:800;color:${pass?'#2f6f5b':'#b3261e'}">${pass?'✓':'✗'}</span>
+          </div>`).join('')}
+        </div>
+      </div>`}
+    </div>`;
+}
+
+async function loadRepurposing(el) {
+  const c = compoundData || {};
+  const meshParam = (window._meshIds || []).join(',');
+  const diseaseParam = DISEASE || c.indications || '';
+
+  el.innerHTML = `
+    <div class="card mb-15" style="border-left:3px solid var(--purple);padding:1.1rem 1.4rem">
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span style="font-size:0.78rem;font-weight:700;color:var(--text)">Repurposing Screen</span>
+      </div>
+      <p style="font-size:0.79rem;color:var(--muted);line-height:1.65">
+        Screening the ChEMBL database for compounds sharing mechanistic targets with
+        <strong style="color:var(--text)">${c.name||CHEMBL_ID}</strong>.
+        Candidates ranked by target overlap, clinical phase, and activity strength —
+        highest-scoring drugs are most likely to be effective for the same indication.
+      </p>
+    </div>
+    <div id="rp-loading" style="display:flex;align-items:center;gap:0.65rem;padding:1.2rem 0;color:var(--muted)">
+      <span class="spinner"></span> Screening database…
+    </div>
+    <div id="rp-grid" class="compound-grid" style="display:none"></div>`;
+
+  try {
+    let url = `/api/compound/${CHEMBL_ID}/repurposing-candidates`;
+    const qs = [];
+    if (diseaseParam) qs.push('disease=' + encodeURIComponent(diseaseParam));
+    if (meshParam)    qs.push('mesh_ids=' + encodeURIComponent(meshParam));
+    if (qs.length)    url += '?' + qs.join('&');
+
+    const candidates = await apiFetch(url);
+
+    document.getElementById('rp-loading').style.display = 'none';
+    const grid = document.getElementById('rp-grid');
+    grid.style.display = 'grid';
+
+    if (!candidates || !candidates.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:40px;height:40px"><path d="M12 2L2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <p>No mechanistically similar compounds found in the current database.<br/>
+        <span style="font-size:0.78rem;color:var(--dim)">Ensure the ChEMBL database is connected on port 5433.</span></p>
+      </div>`;
+      return;
+    }
+
+    // Cache candidates in sessionStorage so analysis page has score data when navigating to them
+    candidates.forEach(cand => {
+      if (cand.chembl_id) {
+        try { sessionStorage.setItem('compound_' + cand.chembl_id, JSON.stringify(cand)); } catch(_e) {}
+      }
+    });
+    grid.innerHTML = candidates.map(cand => buildRepurposingCard(cand)).join('');
+
+  } catch(e) {
+    document.getElementById('rp-loading').style.display = 'none';
+    document.getElementById('rp-grid').style.display = 'block';
+    document.getElementById('rp-grid').innerHTML =
+      `<div class="alert alert-error" style="grid-column:1/-1">${e.message}</div>`;
+  }
+}
+
+function buildRepurposingCard(cand) {
+  const sc    = cand.score || 0;
+  const ph    = Math.min(+(cand.max_phase||0), 4);
+  const bd    = cand.score_breakdown || {};
+  const phLabels = {4:'FDA Approved',3:'Phase 3',2:'Phase 2',1:'Phase 1'};
+  const phLabel  = phLabels[ph] || 'Phase 1';
+  const scoreCol = sc>=0.65?'var(--emerald)':sc>=0.4?'var(--purple)':sc>=0.2?'var(--cyan)':'var(--muted)';
+  const shared   = cand.shared_target_count || 0;
+  const pct      = cand.target_overlap_pct != null ? cand.target_overlap_pct.toFixed(0)+'%' : '—';
+  const genes    = (cand.shared_genes || '').split(';').map(g=>g.trim()).filter(Boolean).slice(0,4);
+  const geneChips = genes.map(g=>`<span class="chip purple">${g}</span>`).join('');
+  const indications = (cand.indications || '').split(';').map(s=>s.trim()).filter(Boolean).slice(0,2);
+  const indChips = indications.map(d=>`<span class="chip cyan" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.length>32?d.slice(0,32)+'…':d}</span>`).join('');
+  const bars = [
+    ['Target Overlap','var(--purple)',Math.round((bd.indication_score||0)*100)],
+    ['Clinical Phase','var(--cyan)',Math.round((bd.target_score||0)*100)],
+    ['Activity','var(--emerald)',Math.round((bd.activity_score||0)*100)],
+    ['Network','var(--amber)',Math.round((bd.network_score||0)*100)],
+  ].map(([lbl,col,pctVal])=>`
+    <div class="cc-bar-item">
+      <div class="cc-bar-lbl">${lbl}</div>
+      <div class="cc-bar-track"><div class="cc-bar-fill" style="width:${pctVal}%;background:${col}"></div></div>
+    </div>`).join('');
+  return `<div class="compound-card" onclick="openCompound('${cand.chembl_id||''}','${DISEASE||''}')">
+    <div class="cc-header">
+      <div>
+        <div class="cc-name">${cand.name||'Unknown'}</div>
+        <div class="cc-id">${cand.chembl_id||''}</div>
+      </div>
+      <div class="cc-score">
+        <div class="cc-score-val" style="color:${scoreCol}">${sc.toFixed(2)}</div>
+        <div class="cc-score-lbl">Repurposing</div>
+      </div>
+    </div>
+    <div class="cc-tags">
+      <span class="phase-pill phase-${ph}">${phLabel}</span>
+      <span class="chip amber">${shared} shared target${shared!==1?'s':''} · ${pct}</span>
+    </div>
+    ${geneChips ? `<div class="cc-tags" style="gap:0.3rem">${geneChips}</div>` : ''}
+    ${indChips  ? `<div class="cc-tags" style="gap:0.3rem">${indChips}</div>`  : ''}
+    <div class="cc-bars">${bars}</div>
+  </div>`;
+}
+
+function openCompound(chemblId, disease) {
+  if (!chemblId) return;
+  window.location.href = `/analysis?id=${chemblId}&disease=${encodeURIComponent(disease||'')}`;
+}
+
+async function loadBioactivity(el) {
+  try {
+    const [targets, activities] = await Promise.all([
+      apiFetch(`/api/compound/${CHEMBL_ID}/targets`),
+      apiFetch(`/api/compound/${CHEMBL_ID}/activities`),
+    ]);
+    let html = '';
+
+    if (targets.length) {
+      const actionColor = a => ({INHIBITOR:'#2f6f5b',ANTAGONIST:'#b3261e',AGONIST:'#2f6f5b',ACTIVATOR:'#2f6f5b',BLOCKER:'#97751a',MODULATOR:'#8a6309'})[a] || '#6b776e';
+      const rows = targets.slice(0, 25).map(t => {
+        const ac = actionColor(t.action_type);
+        const gene = t.gene_symbol ? `<span style="font-weight:700;color:#2f6f5b;font-family:monospace;font-size:0.78rem">${t.gene_symbol}</span>` : '—';
+        const action = t.action_type ? `<span style="padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;background:${ac}18;color:${ac}">${t.action_type}</span>` : '—';
+        const conf = t.confidence === 'High'
+          ? `<span style="color:#2f6f5b;font-size:0.72rem;font-weight:600">● High</span>`
+          : `<span style="color:#97751a;font-size:0.72rem;font-weight:600">● Med</span>`;
+        return `<tr>
+          <td>${gene}</td>
+          <td style="font-size:0.78rem;color:#1f2a24">${(t.name||'—').slice(0,45)}</td>
+          <td style="font-size:0.75rem;color:#45524a">${(t.mechanism||'—').slice(0,50)}</td>
+          <td>${action}</td>
+          <td>${conf}</td>
+        </tr>`;
+      }).join('');
+      html += `<div class="card mb-1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <span style="font-weight:700;font-size:0.85rem">Targets & Mechanisms</span>
+          <span class="chip purple">${targets.length} target${targets.length!==1?'s':''}</span>
+        </div>
+        <div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Gene</th><th>Target Protein</th><th>Mechanism of Action</th><th>Action Type</th><th>Confidence</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+    }
+
+    const chartData = activities.filter(a => a.pchembl_value != null)
+                                .sort((a,b) => b.pchembl_value - a.pchembl_value)
+                                .slice(0, 20);
+    if (chartData.length) {
+      const actRows = activities.slice(0, 15).map(a => {
+        const pv = a.pchembl_value ? a.pchembl_value.toFixed(2) : '—';
+        const val = a.standard_value ? `${Number(a.standard_value).toFixed(1)} ${a.standard_units||''}` : '—';
+        return `<tr>
+          <td style="font-size:0.76rem;font-weight:600;color:#2f6f5b;font-family:monospace">${a.gene_symbol||'—'}</td>
+          <td style="font-size:0.75rem;color:#45524a">${(a.target_name||'—').slice(0,40)}</td>
+          <td style="font-size:0.73rem">${a.activity_type||'—'}</td>
+          <td style="font-size:0.73rem;font-family:monospace;color:#1f2a24">${val}</td>
+          <td style="font-size:0.73rem;font-weight:700;color:${a.pchembl_value>=7?'#2f6f5b':a.pchembl_value>=5?'#97751a':'#b3261e'}">${pv}</td>
+        </tr>`;
+      }).join('');
+      html += `<div class="card mb-1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <span style="font-weight:700;font-size:0.85rem">Binding Activity (pChEMBL)</span>
+          <span class="chip cyan">${activities.length} assay${activities.length!==1?'s':''}</span>
+        </div>
+        <div id="act-chart" style="margin-bottom:1rem"></div>
+        <div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Gene</th><th>Target</th><th>Activity Type</th><th>Value</th><th>pChEMBL</th></tr></thead>
+          <tbody>${actRows}</tbody>
+        </table></div>
+      </div>`;
+      el.innerHTML = html || '<div class="card"><div class="empty-state"><p>No bioactivity data.</p></div></div>';
+      Plotly.newPlot('act-chart', [{
+        type: 'bar', orientation: 'h',
+        x: chartData.map(a => a.pchembl_value),
+        y: chartData.map(a => (a.gene_symbol || a.target_name || '—').slice(0, 22)),
+        text: chartData.map(a => a.pchembl_value.toFixed(2)),
+        textposition: 'outside',
+        marker: {
+          color: chartData.map(a => a.pchembl_value),
+          colorscale: [[0,'#cfe0d8'],[0.5,'#2f6f5b'],[1,'#245546']],
+          showscale: false, line: {width: 0}
+        }
+      }], {
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        font: {family: 'Inter,sans-serif', color: '#45524a', size: 11},
+        xaxis: {title: 'pChEMBL  (≥7 = potent, ≥5 = active)', gridcolor: '#e0ddd1', linecolor: '#e0ddd1', zerolinecolor: '#e0ddd1'},
+        yaxis: {gridcolor: '#e0ddd1', linecolor: '#e0ddd1', tickfont: {size: 10}},
+        shapes: [
+          {type:'line', x0:7, x1:7, y0:-0.5, y1:chartData.length-0.5, line:{color:'#2f6f5b',dash:'dot',width:1.5}},
+          {type:'line', x0:5, x1:5, y0:-0.5, y1:chartData.length-0.5, line:{color:'#97751a',dash:'dot',width:1.5}},
+        ],
+        annotations: [
+          {x:7.05, y:chartData.length-0.5, text:'Potent', showarrow:false, font:{color:'#2f6f5b',size:9}, xanchor:'left'},
+          {x:5.05, y:chartData.length-0.5, text:'Active', showarrow:false, font:{color:'#97751a',size:9}, xanchor:'left'},
+        ],
+        margin: {l: 150, r: 80, t: 10, b: 45},
+        height: Math.max(220, chartData.length * 28)
+      }, {displayModeBar: false, responsive: true});
+    } else {
+      el.innerHTML = html || '<div class="card"><div class="empty-state"><p>No bioactivity data found.</p></div></div>';
+    }
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+function _getTherapeuticArea(name) {
+  const n = (name || '').toLowerCase();
+  if (/cancer|carcinoma|tumor|lymphoma|leukemia|myeloma|melanoma|sarcoma|glioma|neoplasm/.test(n)) return 'Oncology';
+  if (/alzheimer|parkinson|dementia|epilep|schizo|depress|bipolar|adhd|autism|huntington|als|seizure|migraine|anxiety|ptsd|narcolep|multiple sclerosis|neuropath|neuro|psychiatric|rett|tourette/.test(n)) return 'CNS / Psychiatry';
+  if (/cardiac|heart|coronary|arrhythmia|atrial|hypertension|vascular|stroke|arterial/.test(n)) return 'Cardiovascular';
+  if (/diabet|obesity|metabolic|nafld|nash|insulin|thyroid|lipid|kidney|renal|nephro/.test(n)) return 'Metabolic / Renal';
+  if (/arthritis|lupus|crohn|colitis|psoriasis|scleroderma|autoimmune|atopic|dermatit|eczema/.test(n)) return 'Autoimmune';
+  if (/asthma|copd|pulmonary|respiratory|fibrosis|lung/.test(n)) return 'Respiratory';
+  if (/hepat|liver|cirrhosis|nafld|nash/.test(n)) return 'Hepatology';
+  if (/infection|virus|bacterial|fungal|hiv|covid|malaria|tuberculosis/.test(n)) return 'Infectious Disease';
+  if (/rare|genetic|hereditary|lysosomal|muscu|dystrophy|hemophilia/.test(n)) return 'Rare Disease';
+  return 'Other';
+}
+
+async function loadIndications(el) {
+  try {
+    const inds = await apiFetch(`/api/compound/${CHEMBL_ID}/indications`);
+    if (!inds.length) {
+      el.innerHTML = '<div class="card"><div class="empty-state"><p>No indication data found.</p></div></div>';
+      return;
+    }
+    const phaseStyle = {
+      4: {label:'FDA Approved', bg:'#eef4ef', color:'#166534'},
+      3: {label:'Phase III',    bg:'#eff6ff', color:'#1e40af'},
+      2: {label:'Phase II',     bg:'#fdf4ff', color:'#6b21a8'},
+      1: {label:'Phase I',      bg:'#f8f2df', color:'#7a5c43'},
+      0: {label:'Preclinical',  bg:'#f6f5f0', color:'#45524a'},
+    };
+    const areaColors = {
+      'Oncology':{'bg':'#faece9','color':'#922019'},
+      'CNS / Psychiatry':{'bg':'#eef3f0','color':'#5b21b6'},
+      'Cardiovascular':{'bg':'#eff6ff','color':'#1e40af'},
+      'Metabolic / Renal':{'bg':'#efe3c2','color':'#7a5c43'},
+      'Autoimmune':{'bg':'#eef4ef','color':'#065f46'},
+      'Respiratory':{'bg':'#f3e8cf','color':'#6d4e08'},
+      'Hepatology':{'bg':'#fdf4ff','color':'#7e22ce'},
+      'Infectious Disease':{'bg':'#fff7ed','color':'#5c3a1f'},
+      'Rare Disease':{'bg':'#fdf2f8','color':'#831843'},
+      'Other':{'bg':'#f6f5f0','color':'#45524a'},
+    };
+    const srcBadge = s => s === 'Open Targets'
+      ? `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#efe3c2;color:#7a5c43">OT</span>`
+      : `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#e3ede8;color:#5b21b6">ChEMBL</span>`;
+    const approvedCount = inds.filter(i => +(i.max_phase||0) === 4).length;
+    const clinicalCount = inds.filter(i => +(i.max_phase||0) >= 1).length;
+    // Count distinct therapeutic areas
+    const areaCounts = {};
+    inds.forEach(i => { const a = _getTherapeuticArea(i.disease||''); areaCounts[a] = (areaCounts[a]||0)+1; });
+    const rows = inds.map(i => {
+      const ph  = +(i.max_phase || 0);
+      const pst = phaseStyle[Math.min(ph, 4)] || phaseStyle[0];
+      const pill = `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${pst.bg};color:${pst.color}">${pst.label}</span>`;
+      const efoLink = i.efo_id && i.efo_id.startsWith('EFO')
+        ? `<a href="https://www.ebi.ac.uk/ols/ontologies/efo/terms?short_form=${i.efo_id}" target="_blank" style="font-size:0.65rem;color:#8a6309;font-family:monospace">${i.efo_id}</a>`
+        : `<span style="font-size:0.65rem;color:#9aa39c;font-family:monospace">${i.mesh_id||'—'}</span>`;
+      const area = _getTherapeuticArea(i.disease||'');
+      const ac = areaColors[area] || areaColors['Other'];
+      const areaBadge = `<span style="font-size:0.62rem;font-weight:700;padding:1px 7px;border-radius:4px;background:${ac.bg};color:${ac.color};white-space:nowrap">${area}</span>`;
+      return `<tr>
+        <td>${areaBadge}</td>
+        <td style="font-size:0.8rem;font-weight:500;color:#1f2a24">${i.disease||'—'}</td>
+        <td>${efoLink}</td>
+        <td>${pill}</td>
+        <td>${srcBadge(i.source)}</td>
+      </tr>`;
+    }).join('');
+    const areaChips = Object.entries(areaCounts).sort((a,b)=>b[1]-a[1]).map(([a,c])=>{
+      const ac = areaColors[a]||areaColors['Other'];
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${ac.bg};color:${ac.color};border:1px solid ${ac.color}30">${a} <span style="opacity:0.65">${c}</span></span>`;
+    }).join('');
+    el.innerHTML = `
+      <!-- Concept explainer -->
+      <div class="card mb-1" style="border-left:3px solid #2f6f5b;padding:1rem 1.4rem">
+        <div style="display:flex;align-items:flex-start;gap:1.2rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:0.72rem;font-weight:700;color:#5b21b6;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Therapeutic Area</div>
+            <div style="font-size:0.76rem;color:#45524a;line-height:1.55">Broad clinical domain (e.g. <em>Oncology</em>, <em>CNS/Psychiatry</em>, <em>Cardiovascular</em>). Defines which medical specialty this compound is relevant to.</div>
+          </div>
+          <div style="width:1px;background:#e6e2d7;align-self:stretch"></div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:0.72rem;font-weight:700;color:#6d4e08;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Disease Indication</div>
+            <div style="font-size:0.76rem;color:#45524a;line-height:1.55">Specific condition this compound is approved or clinically tested for (e.g. <em>Alzheimer Disease</em>, <em>Breast Cancer</em>). Mapped to EFO/MeSH ontology IDs.</div>
+          </div>
+        </div>
+      </div>
+      <!-- Stats summary -->
+      <div class="card mb-1" style="padding:0.9rem 1.4rem">
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.65rem">
+          <span style="font-size:0.78rem"><strong style="color:#1f2a24">${approvedCount}</strong> <span style="color:#45524a">FDA-approved</span></span>
+          <span style="font-size:0.78rem"><strong style="color:#1f2a24">${clinicalCount}</strong> <span style="color:#45524a">in clinical trials</span></span>
+          <span style="font-size:0.78rem"><strong style="color:#1f2a24">${inds.length}</strong> <span style="color:#45524a">total mapped</span></span>
+          <span style="font-size:0.78rem"><strong style="color:#1f2a24">${Object.keys(areaCounts).length}</strong> <span style="color:#45524a">therapeutic areas</span></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${areaChips}</div>
+      </div>
+      <!-- Scrollable indications table -->
+      <div class="card">
+        <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+          <table class="data-table">
+            <thead><tr><th style="position:sticky;top:0;z-index:1;background:#f6f5f0">Therapeutic Area</th><th style="position:sticky;top:0;z-index:1;background:#f6f5f0">Disease Indication</th><th style="position:sticky;top:0;z-index:1;background:#f6f5f0">ID</th><th style="position:sticky;top:0;z-index:1;background:#f6f5f0">Clinical Phase</th><th style="position:sticky;top:0;z-index:1;background:#f6f5f0">Source</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:0.66rem;color:#9aa39c;text-align:right">Scroll to see all ${inds.length} indications</div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+async function loadClinical(el) {
+  const drug = compoundData?.name || '';
+  try {
+    const [trials, papers] = await Promise.all([
+      apiFetch(`/api/clinical?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(DISEASE)}`),
+      apiFetch(`/api/literature?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(DISEASE)}`),
+    ]);
+    const statusColor = s => ({COMPLETED:'#3f8f6f',RECRUITING:'#c79a2e',TERMINATED:'#c2402f'}[s]||'#6b776e');
+    const trialRows = trials.length ? trials.map(t=>`<tr>
+      <td><a href="${t.url}" target="_blank" class="mono text-cyan" style="font-size:0.74rem">${t.nct}</a></td>
+      <td style="font-size:0.78rem">${t.title}</td><td style="font-size:0.75rem">${t.phase||'N/A'}</td>
+      <td style="color:${statusColor(t.status)};font-weight:600;font-size:0.75rem">${t.status}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--muted)">No trials found.</td></tr>';
+    const paperRows = papers.length ? papers.map(p=>`<tr>
+      <td><a href="${p.url}" target="_blank" class="mono text-cyan" style="font-size:0.74rem">${p.pmid}</a></td>
+      <td style="font-size:0.78rem">${p.title}</td>
+      <td style="font-size:0.75rem;color:var(--muted)">${p.journal}</td>
+      <td style="font-size:0.75rem;color:var(--muted)">${p.year}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--muted)">No papers found.</td></tr>';
+    el.innerHTML = `
+      <div class="card mb-1">
+        <div class="flex justify-between items-center mb-1">
+          <span style="font-weight:700;font-size:0.85rem">Clinical Trials</span>
+          <span class="chip cyan">${trials.length} found</span>
+        </div>
+        <div class="overflow-x"><table class="data-table"><thead><tr><th>NCT ID</th><th>Title</th><th>Phase</th><th>Status</th></tr></thead><tbody>${trialRows}</tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="flex justify-between items-center mb-1">
+          <span style="font-weight:700;font-size:0.85rem">PubMed Literature</span>
+          <span class="chip green">${papers.length} found</span>
+        </div>
+        <div class="overflow-x"><table class="data-table"><thead><tr><th>PMID</th><th>Title</th><th>Journal</th><th>Year</th></tr></thead><tbody>${paperRows}</tbody></table></div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+function renderPBPK(el) {
+  if (!PBPK_OK) { el.innerHTML = '<div class="card"><div class="empty-state"><p>PBPK simulation module not available.</p></div></div>'; return; }
+  const c = compoundData || {};
+  el.innerHTML = `
+    <div class="card mb-1">
+      <div class="card-title mb-1">Simulation Parameters</div>
+      <div class="grid-form">
+        <div class="field"><label>Dose (mg)</label><input class="input" id="pbpk-dose" type="number" value="100" min="1" max="2000"/></div>
+        <div class="field"><label>Route</label><select class="input" id="pbpk-route"><option value="oral">Oral</option><option value="iv">IV</option></select></div>
+        <div class="field"><label>Duration (h)</label><input class="input" id="pbpk-hours" type="number" value="24" min="1" max="168"/></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-primary" onclick="runPBPK()" id="pbpk-btn">Run Simulation</button></div>
+      </div>
+    </div>
+    <div id="pbpk-out"></div>`;
+}
+
+let _pbpkOrgTs = null;  // store organ timeseries for slider
+
+function _orgColor(conc, maxConc) {
+  if (!maxConc) return '#9aa39c';
+  const r = Math.min(1, conc / maxConc);
+  // blue (low) → orange → red (high) via HSL interpolation
+  const h = Math.round(220 - r * 220);
+  const s = 75, l = 55;
+  return `hsl(${h},${s}%,${l}%)`;
+}
+
+function _updateBodySvg(timeIdx) {
+  if (!_pbpkOrgTs) return;
+  const ts = _pbpkOrgTs;
+  const organs = ['plasma','liver','brain','kidney','muscle'];
+  const maxes  = {};
+  organs.forEach(o => { maxes[o] = Math.max(...(ts[o] || [1])); });
+  organs.forEach(o => {
+    const el = document.getElementById(`pbpk-organ-${o}`);
+    if (!el) return;
+    const conc = (ts[o] || [])[timeIdx] || 0;
+    el.style.fill = _orgColor(conc, maxes[o]);
+    el.title = `${o}: ${conc.toFixed(1)} ng/mL`;
+  });
+  const t = (ts.time || [])[timeIdx] || 0;
+  const lbl = document.getElementById('pbpk-time-lbl');
+  if (lbl) lbl.textContent = `T = ${t.toFixed(1)} h`;
+}
+
+async function runPBPK() {
+  const c = compoundData || {};
+  const btn = document.getElementById('pbpk-btn');
+  btn.innerHTML = '<span class="spinner"></span> Simulating…'; btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/pbpk', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: c.name||'Drug',
+        chembl_id: CHEMBL_ID,
+        disease: DISEASE,
+        mw:   c.mw  || 350,
+        logp: c.alogp|| 2.5,
+        psa:  c.psa  || 80,
+        hba:  c.hba  || 4,
+        hbd:  c.hbd  || 2,
+        dose: document.getElementById('pbpk-dose').value,
+        route: document.getElementById('pbpk-route').value,
+        hours: document.getElementById('pbpk-hours').value,
+      })
+    });
+    if (!res.success) { document.getElementById('pbpk-out').innerHTML = '<div class="alert alert-error">Simulation failed.</div>'; return; }
+
+    // Key names now come directly off res (fixed in backend)
+    const cmax  = res.cmax_plasma   != null ? res.cmax_plasma.toFixed(1)   + ' ng/mL' : '—';
+    const tmax  = res.tmax          != null ? res.tmax.toFixed(1)          + ' h'     : '—';
+    const auc   = res.auc           != null ? res.auc.toFixed(0)           + ' ng·h/mL':'—';
+    const thalf = res.half_life     != null ? res.half_life.toFixed(1)     + ' h'     : '—';
+    const bpr   = res.brain_plasma_ratio != null ? res.brain_plasma_ratio.toFixed(3)  : '—';
+    const adme  = res.adme_ui || {};
+
+    // Target engagement (free-drug occupancy vs Ki) — the meaningful efficacy readout
+    const eng = res.target_engagement;
+    const tgt = res.target_tissue || '—';
+    const _occCol = v => v>=50?'#2f6f5b':v>=20?'#97751a':'#b3261e';
+    const engHtml = eng ? `
+      <div class="card mb-1" style="border-left:3px solid #2f6f5b">
+        <div class="card-title mb-1">Target Engagement — ${tgt} tissue · free drug vs Ki</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px">
+          <div><div style="font-size:1.5rem;font-weight:800;color:${_occCol(eng.peak_occupancy_pct)}">${eng.peak_occupancy_pct}%</div><div style="font-size:0.62rem;color:#6b776e;text-transform:uppercase;letter-spacing:0.06em">Peak occupancy</div></div>
+          <div><div style="font-size:1.5rem;font-weight:800;color:#1f2a24">${eng.time_above_ki_hours} h</div><div style="font-size:0.62rem;color:#6b776e;text-transform:uppercase;letter-spacing:0.06em">Time above Ki</div></div>
+          <div><div style="font-size:1.5rem;font-weight:800;color:#1f2a24">${eng.ki_nM} nM</div><div style="font-size:0.62rem;color:#6b776e;text-transform:uppercase;letter-spacing:0.06em">Ki${res.ki_source?(' · '+res.ki_source):''}</div></div>
+        </div>
+        <div style="font-size:0.72rem;color:#45524a;line-height:1.55">${eng.interpretation||''}</div>
+      </div>` : `
+      <div class="card mb-1" style="border-left:3px solid #e0ddd1">
+        <div style="font-size:0.72rem;color:#6b776e">Target occupancy not computed — no measured potency or docking affinity available. Free fraction f<sub>u</sub> = ${adme.fu!=null?adme.fu:'—'}, target tissue: ${tgt}.</div>
+      </div>`;
+    const provHtml = `<div style="font-size:0.63rem;color:#9aa39c;margin-top:8px;line-height:1.45"><strong>${res.model_type||''}</strong> · ${res.provenance||''}</div>`;
+
+    // Store timeseries for slider
+    _pbpkOrgTs = res.organ_timeseries || null;
+    const tsLen = _pbpkOrgTs ? (_pbpkOrgTs.time || []).length : 0;
+
+    // ADME cards
+    const admeCards = [
+      { icon:'bolt', title:'Absorption',   val:`Tmax ${tmax} · F ~${adme.F_pct||'?'}% oral bioavailability` },
+      { icon:'share', title:'Distribution', val:`Vd ${adme.vd_l||'?'} L · ${(adme.logp||0)>3?'High':'Moderate'} tissue penetration` },
+      { icon:'recycling', title:'Metabolism', val:`t½ ${thalf} · ${(adme.hepatic_frac||70)>60?'High':'Moderate'} hepatic clearance` },
+      { icon:'output',    title:'Excretion',  val:`~${adme.hepatic_frac||70}% hepatic · ~${adme.renal_frac||30}% renal` },
+    ].map(a=>`<div class="card" style="padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="material-symbols-outlined" style="font-size:16px;color:#2f6f5b">${a.icon}</span>
+        <span style="font-weight:600;font-size:0.78rem">${a.title}</span>
+      </div>
+      <div style="font-size:0.72rem;color:#6b776e">${a.val}</div>
+    </div>`).join('');
+
+    document.getElementById('pbpk-out').innerHTML = `
+      <div class="grid-2 mb-1">
+        <div class="card">
+          <div class="card-title mb-1">Body Distribution</div>
+          <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface);border-radius:var(--radius);padding:0.5rem">
+            <iframe id="pbpk-body-frame" srcdoc='<html><body style="margin:0;background:#f6f5f0">${res.body_svg||''}</body></html>' style="width:100%;height:300px;border:none"></iframe>
+            ${tsLen>1?`<div style="width:100%;padding:0 12px 8px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:0.7rem;color:#6b776e;white-space:nowrap">T=0h</span>
+              <input type="range" id="pbpk-slider" min="0" max="${tsLen-1}" value="0" style="flex:1" oninput="_updateBodySvg(+this.value)"/>
+              <span style="font-size:0.7rem;color:#6b776e;white-space:nowrap" id="pbpk-time-lbl">T = 0.0 h</span>
+            </div>`:''}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title mb-1">PK Metrics
+            ${adme.anchored
+              ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#065f46;font-size:9px;font-weight:700;letter-spacing:0.04em">✓ MEASURED PK</span>'
+              : '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#ecebe3;color:#6b776e;font-size:9px;font-weight:700;letter-spacing:0.04em">ESTIMATED</span>'}
+          </div>
+          ${[['Cmax (plasma)',cmax],['Tmax',tmax],['AUC (0–t)',auc],['Half-life (t½)',thalf],['Brain/Plasma Ratio',bpr]]
+            .map(([k,v])=>`<div class="kv"><span class="kv-k">${k}</span><span class="kv-v">${v}</span></div>`).join('')}
+        </div>
+      </div>
+      ${engHtml}
+      <div class="card mb-1"><div class="card-title mb-1">Concentration–Time Profile</div><div id="pbpk-chart"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" class="mb-1">${admeCards}</div>
+      ${provHtml}`;
+
+    const t = res.time_hours;
+    const traces = [
+      {name:'Plasma', data:res.plasma_concentration_ng_ml, color:'#8a6309'},
+      {name:'Liver',  data:res.liver_concentration_ng_ml,  color:'#2f6f5b'},
+      {name:'Brain',  data:res.brain_concentration_ng_ml,  color:'#2f6f5b'},
+      {name:'Kidney', data:(res.organ_timeseries||{}).kidney, color:'#97751a'},
+      {name:'Muscle', data:(res.organ_timeseries||{}).muscle, color:'#9aa39c'},
+    ].filter(tr=>tr.data&&tr.data.length).map(tr=>({
+      type:'scatter',mode:'lines',name:tr.name,x:t,y:tr.data,
+      line:{color:tr.color,width:tr.name==='Plasma'?3:1.8}
+    }));
+    Plotly.newPlot('pbpk-chart', traces, {
+      paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+      font:{family:'Inter,sans-serif',color:'#45524a',size:11},
+      xaxis:{title:'Time (h)', gridcolor:'#e0ddd1', linecolor:'#e0ddd1', zerolinecolor:'#e0ddd1'},
+      yaxis:{title:'Concentration (ng/mL)', gridcolor:'#e0ddd1', linecolor:'#e0ddd1', zerolinecolor:'#e0ddd1'},
+      legend:{orientation:'h',yanchor:'bottom',y:1.02,xanchor:'left',x:0},
+      margin:{l:55,r:20,t:40,b:45}, height:300
+    }, {displayModeBar:true, responsive:true});
+  } catch(e) { document.getElementById('pbpk-out').innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+  finally { btn.innerHTML = 'Run Simulation'; btn.disabled = false; }
+}
+
+let _dockPoses      = [];
+let _dockProtein    = '';  // protein PDB for current docking target
+let _currentPoseIdx = 0;
+let _dockPockets    = [];  // named binding pockets for current target
+let _dockPosePockets = []; // pocket id per pose (parallel to _dockPoses)
+let _proteinFetching = false;
+// Warm palette for pocket ranks (matches the knowledge-graph node hues)
+const POCKET_COLORS = ['#2f6f5b','#b8860b','#b5552f','#7a5c43','#9aa39c'];
+let _diseaseTargets = [];  // OT targets loaded for current disease
+let _geneInfoCache  = {};  // gene → gene-info API result
+
+// Pre-fetch protein PDB for a given target name (RCSB/AlphaFold — all free)
+async function _prefetchProtein(targetName) {
+  if (!targetName || _proteinFetching) return;
+  _proteinFetching = true;
+  _dockProtein = '';
+  const badge = document.getElementById('prot-status-badge');
+  if (badge) { badge.textContent = 'Loading protein…'; badge.style.color = '#9aa39c'; }
+  try {
+    const r = await fetch(`/api/protein-pdb?target=${encodeURIComponent(targetName)}`);
+    const d = await r.json();
+    if (d.real && d.pdb) {
+      _dockProtein = d.pdb;
+      if (badge) { badge.textContent = '✓ Protein loaded'; badge.style.color = '#2f6f5b'; }
+    } else {
+      if (badge) { badge.textContent = '⚠ No PDB — ligand-only view'; badge.style.color = '#97751a'; }
+    }
+  } catch(_e) {
+    if (badge) { badge.textContent = 'PDB fetch failed'; badge.style.color = '#b3261e'; }
+  } finally { _proteinFetching = false; }
+}
+
+// Load and display gene→disease evidence for the selected docking target
+async function _loadTargetEvidence(gene) {
+  const card = document.getElementById('target-evidence-card');
+  if (!card) return;
+  card.style.display = 'block';
+  card.innerHTML = '<span style="color:#2f6f5b;font-size:0.7rem">Loading gene evidence…</span>';
+
+  const c = compoundData || {};
+  const cacheKey = gene + '|' + DISEASE;
+  let info = _geneInfoCache[cacheKey];
+  if (!info) {
+    try {
+      const qs = new URLSearchParams({gene, disease: DISEASE || '', chembl_id: c.chembl_id || ''});
+      info = await apiFetch(`/api/gene-info?${qs}`);
+      _geneInfoCache[cacheKey] = info;
+    } catch(_e) { card.innerHTML = ''; card.style.display = 'none'; return; }
+  }
+
+  const otPct   = Math.round((info.ot_score || 0) * 100);
+  const otColor = otPct >= 60 ? '#2f6f5b' : otPct >= 30 ? '#97751a' : '#9aa39c';
+  const otBar   = `<div style="display:inline-block;width:48px;height:5px;background:#e6e2d7;border-radius:3px;vertical-align:middle;margin:0 4px 1px">
+    <div style="height:100%;width:${otPct}%;background:${otColor};border-radius:3px"></div></div>`;
+
+  const knownHtml = info.is_known_target
+    ? `<div style="margin-top:6px;padding:4px 7px;background:#eef4ef;border-radius:5px;color:#065f46;font-size:0.68rem">
+        <strong>✓ Known ChEMBL target</strong> — ${info.known_action}${info.known_mech ? ': '+info.known_mech.slice(0,80)+'…' : ''}
+       </div>`
+    : `<div style="margin-top:6px;font-size:0.68rem;color:#9aa39c;font-style:italic">Not a documented ChEMBL target for this drug — docking will test the hypothesis.</div>`;
+
+  const pathwayHtml = info.pathway_name
+    ? `<div style="margin-top:5px;font-size:0.68rem;color:#2f6f5b">
+        <strong>Pathway:</strong>
+        ${info.reactome_url
+          ? `<a href="${info.reactome_url}" target="_blank" style="color:#2f6f5b">${info.pathway_name}</a>`
+          : info.pathway_name}
+       </div>`
+    : '';
+
+  const funcHtml = info.gene_function
+    ? `<div style="margin-top:5px;font-size:0.67rem;color:#45524a;line-height:1.5">${info.gene_function.slice(0,180)}${info.gene_function.length>180?'…':''}</div>`
+    : '';
+
+  card.innerHTML = `
+    <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#2f6f5b;margin-bottom:5px">Gene → Disease Evidence</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+      <span style="font-weight:700;color:#1f2a24">${gene}${info.gene_name?' <span style="font-weight:400;color:#45524a">'+info.gene_name+'</span>':''}</span>
+      ${otPct > 0
+        ? `<span style="font-size:0.68rem">${otBar}<strong style="color:${otColor}">${otPct}%</strong> <span style="color:#9aa39c">OT assoc.</span></span>`
+        : `<span style="font-size:0.68rem;color:#9aa39c">No OT score</span>`}
+    </div>
+    ${DISEASE ? `<div style="margin-top:3px;font-size:0.67rem;color:#45524a">Disease: <strong>${info.ot_disease||DISEASE}</strong></div>` : ''}
+    ${pathwayHtml}${funcHtml}${knownHtml}`;
+}
+
+// Fetch SMILES from PubChem by compound name (free API, no key)
+async function _fetchSmilesPubchem(name) {
+  if (!name) return '';
+  try {
+    const r = await fetch(
+      `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/property/CanonicalSMILES/JSON`
+    );
+    if (!r.ok) return '';
+    const d = await r.json();
+    return d?.PropertyTable?.Properties?.[0]?.CanonicalSMILES || '';
+  } catch(_e) { return ''; }
+}
+
+async function renderDocking(el) {
+  const c = compoundData || {};
+  let apiMsg = '', apiCls = '';
+  // No status banners — docking method shown in result chips
+
+  const fallbackTargets = [
+    {gene_symbol:'BACE1', gene_name:'Beta-secretase 1'},
+    {gene_symbol:'ACHE',  gene_name:'Acetylcholinesterase'},
+    {gene_symbol:'LRRK2', gene_name:'Leucine-rich repeat kinase 2'},
+    {gene_symbol:'MAOB',  gene_name:'Monoamine oxidase B'},
+    {gene_symbol:'GSK3B', gene_name:'Glycogen synthase kinase 3 beta'},
+    {gene_symbol:'CDK5',  gene_name:'Cyclin-dependent kinase 5'},
+    {gene_symbol:'PPARG', gene_name:'Peroxisome proliferator-activated receptor gamma'},
+    {gene_symbol:'HDAC1', gene_name:'Histone deacetylase 1'},
+  ];
+
+  // Auto-fetch SMILES from PubChem if missing
+  let liganSmiles = c.smiles || '';
+  if (!liganSmiles && c.name) {
+    liganSmiles = await _fetchSmilesPubchem(c.name);
+  }
+
+  el.innerHTML = `
+    <!-- Two-panel DiffDock layout: left=controls, right=3D viewer + pose list -->
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:1rem;align-items:start">
+
+      <!-- LEFT: inputs -->
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        <div class="card" style="padding:1rem">
+          <div class="card-title mb-1" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Docking Setup</span>
+            <span id="prot-status-badge" style="font-size:0.62rem;font-weight:500;color:#9aa39c"></span>
+          </div>
+          <div class="field" style="margin-bottom:0.6rem">
+            <label>Target Protein ${DISEASE ? `<span id="targets-loading" style="font-size:9px;color:#9aa39c;font-weight:400;margin-left:4px">loading…</span>` : ''}</label>
+            <select class="input" id="dock-target" onchange="_prefetchProtein(this.value);_loadTargetEvidence(this.value)">
+              ${fallbackTargets.map(t => `<option value="${t.gene_symbol}">${t.gene_symbol} — ${t.gene_name}</option>`).join('')}
+            </select>
+          </div>
+          <!-- Gene→Disease evidence panel -->
+          <div id="target-evidence-card" style="display:none;margin-bottom:0.6rem;padding:10px 12px;border-radius:8px;background:#eef3f0;border:1px solid #cfe0d8;font-size:0.72rem">
+          </div>
+          <div class="field" style="margin-bottom:0.6rem">
+            <label>Ligand SMILES
+              <span id="smiles-src" style="font-size:9px;color:#9aa39c;font-weight:400;margin-left:4px">${liganSmiles && !c.smiles ? '(PubChem)' : ''}</span>
+            </label>
+            <textarea class="input" id="dock-smiles" rows="3" placeholder="SMILES string… (auto-filled from PubChem if blank)" style="font-size:0.7rem;line-height:1.5;font-family:monospace;resize:vertical">${liganSmiles}</textarea>
+          </div>
+          ${LOCAL_DIFFDOCK || DOCK_OK ? `
+          <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#45524a;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
+            <input type="checkbox" id="dock-diffdock" style="margin-top:1px"/>
+            <span>Refine with <strong>DiffDock</strong> <span style="color:#9aa39c">(deep-learning, higher accuracy — ~3–5&nbsp;min on CPU)</span></span>
+          </label>` : ''}
+          <button class="btn btn-primary" onclick="runDocking()" id="dock-btn" style="width:100%;justify-content:center">
+            <span class="material-symbols-outlined" style="font-size:15px">play_arrow</span>
+            Run Docking
+          </button>
+          <p style="font-size:0.62rem;color:#9aa39c;margin-top:5px;line-height:1.4">Fast physics engine by default (~2–4&nbsp;s) — detects &amp; names binding pockets.</p>
+          ${DISEASE ? `<p id="targets-note" style="font-size:0.65rem;color:#9aa39c;margin-top:6px"></p>` : ''}
+        </div>
+
+        <!-- Binding pockets (named + ranked, filled after docking) -->
+        <div class="card" style="padding:0.85rem;display:none" id="pockets-card">
+          <div class="card-title mb-1" style="font-size:0.72rem;display:flex;align-items:center;justify-content:space-between">
+            <span>Binding Pockets</span>
+            <span id="pockets-count" style="font-size:0.6rem;font-weight:500;color:#9aa39c"></span>
+          </div>
+          <div id="pockets-inner"></div>
+        </div>
+
+        <!-- Pose list (filled after docking) -->
+        <div class="card" style="padding:0.85rem" id="pose-list-card">
+          <div class="card-title mb-1" style="font-size:0.72rem">Ranked Poses</div>
+          <div id="pose-list-inner" style="font-size:0.72rem;color:#9aa39c;font-style:italic">Run docking to see poses.</div>
+        </div>
+
+        <!-- Best pose metrics -->
+        <div class="card" style="padding:0.85rem;display:none" id="pose-metrics-card">
+          <div class="card-title mb-1" style="font-size:0.72rem">Best Pose</div>
+          <div id="pose-metrics-inner"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 3D viewer -->
+      <div class="card" style="padding:0;overflow:hidden;background:#1f2a24;min-height:540px;position:relative;border-color:#2a352e">
+        <!-- viewer placeholder -->
+        <div id="dock-viewer-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:540px;color:rgba(255,255,255,0.35);gap:0.75rem">
+          <span class="material-symbols-outlined" style="font-size:52px;opacity:0.4">view_in_ar</span>
+          <div style="font-size:0.8rem;font-weight:600">3D Protein · Drug Complex</div>
+          <div style="font-size:0.68rem;opacity:0.7;text-align:center;max-width:220px;line-height:1.5">Configure targets &amp; ligand, then click Run Docking to see the protein with drug docked in the binding pocket.</div>
+        </div>
+        <!-- Actual iframe (hidden until docking done) -->
+        <iframe id="pose-3d-frame" style="display:none;width:100%;height:540px;border:none;background:#1f2a24"></iframe>
+        <!-- Protein loading overlay (shown while PDB fetches) -->
+        <div id="prot-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(31,42,36,0.88);align-items:center;justify-content:center;flex-direction:column;gap:0.5rem;z-index:20;color:rgba(255,255,255,0.7);font-size:0.75rem">
+          <div class="spinner" style="border-color:rgba(255,255,255,0.2);border-top-color:#2f6f5b"></div>
+          <span>Fetching protein structure…</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="dock-out"></div>`;
+
+  // Pre-fetch protein + evidence for the default (first) target immediately
+  const sel = document.getElementById('dock-target');
+  if (sel && sel.value) {
+    _prefetchProtein(sel.value);
+    if (DISEASE) _loadTargetEvidence(sel.value);
+  }
+
+  // Asynchronously load disease-specific targets
+  if (DISEASE) {
+    try {
+      const targets = await apiFetch(`/api/disease-targets?disease=${encodeURIComponent(DISEASE)}`);
+      const loading = document.getElementById('targets-loading');
+      const note    = document.getElementById('targets-note');
+      if (loading) loading.remove();
+      if (targets && targets.length > 0) {
+        _diseaseTargets = targets;  // store for evidence lookup
+        const prev = sel ? sel.value : '';
+        sel.innerHTML = targets.map((t, i) => {
+          const scorePct = Math.round((t.score || 0) * 100);
+          const label = t.gene_name
+            ? `${t.gene_symbol} — ${t.gene_name} (OT: ${scorePct}%)`
+            : t.gene_symbol;
+          return `<option value="${t.gene_symbol}" ${i===0?'selected':''}>${label}</option>`;
+        }).join('');
+        if (prev) { for (let o of sel.options) { if (o.value===prev) { sel.value=prev; break; } } }
+        if (note) note.textContent = `${targets.length} disease targets from Open Targets`;
+        // Pre-fetch protein + show gene evidence for top target
+        _prefetchProtein(sel.value);
+        _loadTargetEvidence(sel.value);
+      } else {
+        if (note) note.textContent = 'Using default CNS targets.';
+      }
+    } catch (_e) {
+      const loading = document.getElementById('targets-loading');
+      if (loading) loading.textContent = '(defaults)';
+    }
+  }
+}
+
+function _mol3dHtml(sdf, opts) {
+  opts = opts || {};
+  const bg   = opts.bg   || '#1f2a24';
+  const h    = opts.h    || 400;
+  const spin = opts.spin || false;
+  const sdfJs = sdf.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$\{/g,'\\${');
+  return `<!DOCTYPE html><html><head>
+<script src="https://3dmol.org/build/3Dmol-min.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:${bg};font-family:system-ui,sans-serif;overflow:hidden}
+#v{width:100%;height:${h}px;position:relative}
+#ctrl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10}
+.cb{padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);
+    color:rgba(255,255,255,0.75);font-size:11px;cursor:pointer;transition:all 0.15s}
+.cb:hover{background:rgba(255,255,255,0.18);color:#fffdf9}
+.cb.on{background:#2f6f5b;border-color:#2f6f5b;color:#fffdf9}
+</style>
+</head><body>
+<div id="v"></div>
+<div id="ctrl">
+  <button class="cb on"  onclick="setStyle('stick')"   id="b-stick">Stick</button>
+  <button class="cb"     onclick="setStyle('ball')"    id="b-ball">Ball+Stick</button>
+  <button class="cb"     onclick="setStyle('surface')" id="b-surf">Surface</button>
+  <button class="cb${spin?' on':''}" onclick="toggleSpin(this)" id="b-spin">Spin</button>
+</div>
+<script>
+var viewer=$3Dmol.createViewer('v',{backgroundColor:'${bg}'});
+viewer.addModel(\`${sdfJs}\`,'sdf');
+var _surf=null,_spinning=${spin};
+function clearSurf(){if(_surf!=null){viewer.removeSurface(_surf);_surf=null;}}
+function setStyle(s){
+  clearSurf();
+  document.querySelectorAll('.cb').forEach(function(b){if(b.id.startsWith('b-')&&!b.id.includes('spin'))b.classList.remove('on');});
+  if(s==='stick'){
+    viewer.setStyle({},{stick:{colorscheme:'Jmol',radius:0.14}});
+    document.getElementById('b-stick').classList.add('on');
+  } else if(s==='ball'){
+    viewer.setStyle({},{stick:{colorscheme:'Jmol',radius:0.12},sphere:{colorscheme:'Jmol',scale:0.26}});
+    document.getElementById('b-ball').classList.add('on');
+  } else {
+    viewer.setStyle({},{stick:{colorscheme:'Jmol',radius:0.1}});
+    _surf=viewer.addSurface($3Dmol.VDW,{opacity:0.72,colorscheme:'Jmol'});
+    document.getElementById('b-surf').classList.add('on');
+  }
+  viewer.render();
+}
+function toggleSpin(btn){
+  _spinning=!_spinning;
+  btn.classList.toggle('on',_spinning);
+  if(_spinning) viewer.spin('y',0.5); else viewer.spin(false);
+}
+setStyle('stick');
+viewer.zoomTo();
+if(${spin}) viewer.spin('y',0.5);
+viewer.render();
+<\/script></body></html>`;
+}
+
+function _poseViewerHtml(sdf) { return _mol3dHtml(sdf, {h: 540, bg: '#1f2a24'}); }
+
+function _dockingViewerHtml(proteinPdb, ligandSdf, opts) {
+  opts = opts || {};
+  const bg = opts.bg || '#1f2a24';
+  const h  = opts.h  || 420;
+  const proteinJs = proteinPdb.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$\{/g,'\\${');
+  const ligandJs  = ligandSdf.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$\{/g,'\\${');
+  const POCKET_COLS = ['#2f6f5b','#b8860b','#b5552f','#7a5c43','#9aa39c'];
+  const pocketsJson = JSON.stringify((opts.pockets || []).map((p,i) => ({
+    id: p.id, label: p.label, name: p.name,
+    center: p.center, volume: p.volume, color: POCKET_COLS[i % POCKET_COLS.length],
+  })));
+  return `<!DOCTYPE html><html><head>
+<script src="https://3dmol.org/build/3Dmol-min.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:${bg};overflow:hidden;font-family:system-ui,sans-serif}
+#v{width:100%;height:${h}px;position:relative}
+#ctrl{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:10;flex-wrap:wrap;justify-content:center}
+.cb{padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);
+    color:rgba(255,255,255,0.72);font-size:10px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.cb:hover{background:rgba(255,255,255,0.18);color:#fffdf9}
+.cb.on{background:#2f6f5b;border-color:#2f6f5b;color:#fffdf9}
+#legend{position:absolute;top:8px;right:10px;font-size:9px;color:rgba(255,255,255,0.55);line-height:1.8;z-index:10}
+</style>
+</head><body>
+<div id="v"></div>
+<div id="legend">
+  <div><span style="color:#2f6f5b">■</span> Ligand (${opts.drug||'Drug'}) — bound inside</div>
+  <div><span style="color:#93c5fd">▨</span> Protein surface (${opts.target||'Target'})</div>
+  <div><span style="color:#d8b25a">┃</span> Pocket residues (≤5&Aring;)</div>
+  <div id="pocket-legend"></div>
+</div>
+<div id="ctrl">
+  <button class="cb on" onclick="toggleProtSurf(this)" id="b-sf">Protein Surface</button>
+  <button class="cb on" onclick="toggleSticks(this)"   id="b-st">Pocket Residues</button>
+  <button class="cb on" onclick="toggleLig(this)"      id="b-lg">Ligand</button>
+  <button class="cb on" onclick="togglePockets(this)"  id="b-pk">Pockets</button>
+  <button class="cb"    onclick="toggleSpin(this)"     id="b-sp">Spin</button>
+  <button class="cb"    onclick="zoomLig()"            id="b-zm">Zoom Pocket</button>
+</div>
+<script>
+var viewer = $3Dmol.createViewer('v', {backgroundColor: '${bg}'});
+// Model 0 = protein, Model 1 = ligand (same coordinate frame)
+viewer.addModel(\`${proteinJs}\`, 'pdb');
+viewer.addModel(\`${ligandJs}\`, 'sdf');
+
+// Pocket residues lining the docked ligand
+var POCKET = {model: 0, within: {distance: 5, sel: {model: 1}}};
+
+var _protSurf = null, _spin = false, _ligVis = true, _sticksVis = true;
+
+// ── Named binding pockets — translucent labelled spheres ─────────────────────
+var POCKETS = ${pocketsJson};
+var _pocketShapes = [], _pocketLabels = [], _pocketsVis = true;
+function drawPockets() {
+  POCKETS.forEach(function(p) {
+    if (!p.center) return;
+    var rad = Math.max(3.2, Math.min(8.5, Math.cbrt(p.volume || 200) * 1.1));
+    _pocketShapes.push(viewer.addSphere({
+      center: {x: p.center[0], y: p.center[1], z: p.center[2]},
+      radius: rad, color: p.color, opacity: 0.22, wireframe: false
+    }));
+    _pocketLabels.push(viewer.addLabel(p.label + ' · ' + p.name, {
+      position: {x: p.center[0], y: p.center[1], z: p.center[2]},
+      backgroundColor: p.color, backgroundOpacity: 0.85, fontColor: '#fffdf9',
+      fontSize: 11, borderThickness: 0, inFront: true
+    }));
+  });
+}
+function clearPockets() {
+  _pocketShapes.forEach(function(s){ viewer.removeShape(s); });
+  _pocketLabels.forEach(function(l){ viewer.removeLabel(l); });
+  _pocketShapes = []; _pocketLabels = [];
+}
+function togglePockets(btn) {
+  _pocketsVis = !_pocketsVis;
+  btn.classList.toggle('on', _pocketsVis);
+  if (_pocketsVis) drawPockets(); else clearPockets();
+  viewer.render();
+}
+// Build the pocket legend chips
+(function(){
+  var el = document.getElementById('pocket-legend');
+  if (el && POCKETS.length) {
+    el.innerHTML = POCKETS.map(function(p){
+      return '<div><span style="color:'+p.color+'">●</span> '+p.label+' — '+p.name+'</div>';
+    }).join('');
+  }
+})();
+
+function drawProtein() {
+  viewer.setStyle({model: 0}, {cartoon: {color: 'spectrum', opacity: 0.28}});
+  if (_sticksVis) viewer.addStyle(POCKET, {stick: {colorscheme: 'cyanCarbon', radius: 0.17}});
+}
+function drawLig() {
+  viewer.setStyle({model: 1}, _ligVis
+    ? {stick: {colorscheme: 'greenCarbon', radius: 0.38}, sphere: {colorscheme: 'greenCarbon', scale: 0.34}}
+    : {});
+}
+function addProtSurf() {
+  // Translucent surface over the WHOLE protein. The bright green ligand sits inside
+  // it at the binding pocket and shows through the translucency, so its physical
+  // association with the protein is immediately obvious (no reliance on selections).
+  _protSurf = viewer.addSurface($3Dmol.SAS, {opacity: 0.45, color: '#b8860b'}, {model: 0});
+}
+
+drawProtein();
+drawLig();
+addProtSurf();
+drawPockets();
+viewer.zoomTo();            // frame the WHOLE complex — protein body + embedded ligand together
+viewer.render();
+
+function toggleProtSurf(btn) {
+  if (_protSurf !== null) { viewer.removeSurface(_protSurf); _protSurf = null; btn.classList.remove('on'); }
+  else { addProtSurf(); btn.classList.add('on'); }
+  viewer.render();
+}
+function toggleSticks(btn) {
+  _sticksVis = !_sticksVis;
+  btn.classList.toggle('on', _sticksVis);
+  drawProtein();
+  viewer.render();
+}
+function toggleLig(btn) {
+  _ligVis = !_ligVis;
+  btn.classList.toggle('on', _ligVis);
+  drawLig();
+  viewer.render();
+}
+function zoomLig() { viewer.zoomTo({model: 1}); viewer.zoom(0.5); viewer.render(); }
+function toggleSpin(btn) {
+  _spin = !_spin;
+  btn.classList.toggle('on', _spin);
+  _spin ? viewer.spin('y', 0.4) : viewer.spin(false);
+}
+<\/script></body></html>`;
+}
+
+function selectPose(idx) {
+  if (!_dockPoses[idx]) return;
+  _currentPoseIdx = idx;
+  document.querySelectorAll('.pose-sel-btn').forEach((b,i) => {
+    const active = i === idx;
+    b.style.background  = active ? '#2f6f5b' : '#f6f5f0';
+    b.style.color       = active ? '#fffdf9'    : '#45524a';
+    b.style.borderColor = active ? '#2f6f5b' : '#e0ddd1';
+    b.style.fontWeight  = active ? '700'     : '500';
+  });
+
+  const frame       = document.getElementById('pose-3d-frame');
+  const placeholder = document.getElementById('dock-viewer-placeholder');
+  const overlay     = document.getElementById('prot-loading-overlay');
+  const c           = compoundData || {};
+  const targetVal   = document.getElementById('dock-target')?.value || '';
+
+  if (placeholder) placeholder.style.display = 'none';
+  if (frame) { frame.style.display = 'block'; }
+
+  if (_dockProtein) {
+    if (overlay) overlay.style.display = 'none';
+    frame.srcdoc = _dockingViewerHtml(_dockProtein, _dockPoses[idx],
+      {h: 540, bg: '#1f2a24', drug: c.name || '', target: targetVal, pockets: _dockPockets});
+  } else {
+    // No protein yet — show ligand only with an overlay hint
+    if (overlay) { overlay.style.display = 'flex'; }
+    frame.srcdoc = _mol3dHtml(_dockPoses[idx], {h: 540, bg: '#1f2a24'});
+    // Poll until protein arrives (max 60s)
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts++;
+      if (_dockProtein) {
+        clearInterval(poll);
+        if (overlay) overlay.style.display = 'none';
+        frame.srcdoc = _dockingViewerHtml(_dockProtein, _dockPoses[_currentPoseIdx],
+          {h: 540, bg: '#1f2a24', drug: c.name || '', target: targetVal, pockets: _dockPockets});
+      }
+      if (attempts > 60) clearInterval(poll);
+    }, 1000);
+  }
+}
+
+function renderPocketsCard() {
+  const card  = document.getElementById('pockets-card');
+  const inner = document.getElementById('pockets-inner');
+  const count = document.getElementById('pockets-count');
+  if (!card || !inner) return;
+  if (!_dockPockets.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  if (count) count.textContent = `${_dockPockets.length} detected`;
+  inner.innerHTML = _dockPockets.map((p, i) => {
+    const col = POCKET_COLORS[i % POCKET_COLORS.length];
+    const pct = Math.round((p.druggability || 0) * 100);
+    const boundChip = p.bound
+      ? `<span style="font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${col};background:${col}1a;border:1px solid ${col}40;padding:1px 6px;border-radius:99px">Bound${p.copies>1?' ×'+p.copies:''}</span>`
+      : `<span style="font-size:0.55rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9aa39c;background:#ecebe3;padding:1px 6px;border-radius:99px">Predicted</span>`;
+    const res = (p.residues || []).slice(0, 6).map(r =>
+      `<span style="font-family:monospace;font-size:0.58rem;color:#45524a;background:#ecebe3;border-radius:4px;padding:1px 5px">${r}</span>`).join(' ');
+    return `<div style="padding:9px 0;border-bottom:${i<_dockPockets.length-1?'1px solid #ecebe3':'none'}">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+        <span style="width:11px;height:11px;border-radius:3px;background:${col};flex-shrink:0"></span>
+        <span style="font-weight:700;font-size:0.72rem;color:#1f2a24">${p.label}</span>
+        <span style="font-size:0.66rem;color:#45524a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.name}">${p.name}</span>
+        ${boundChip}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <div style="flex:1;height:5px;background:#ecebe3;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:3px"></div></div>
+        <span style="font-size:0.6rem;font-weight:700;color:${col};white-space:nowrap">${pct} ${p.band||''}</span>
+        <span style="font-size:0.58rem;color:#9aa39c;white-space:nowrap">${p.volume} Å³</span>
+      </div>
+      ${res ? `<div style="display:flex;flex-wrap:wrap;gap:3px">${res}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _dockBadge(aff) {
+  if (aff <= -8.0) return { label: 'Strong Binder',   bg: '#d9e9df', color: '#166534' };
+  if (aff <= -6.0) return { label: 'Moderate Binder', bg: '#fef9c3', color: '#854d0e' };
+  return                  { label: 'Weak Binder',     bg: '#f0d9d2', color: '#991b1b' };
+}
+function _dockKi(aff_kcal) {
+  // Ki (nM) from ΔG: Ki = exp(ΔG × 1000 / (R × T)) × 1e9, R=1.987 cal/mol/K, T=298K
+  const val = Math.exp(aff_kcal * 1000 / (1.987 * 298)) * 1e9;
+  return val < 1 ? val.toFixed(2) + ' pM' : val < 1000 ? Math.round(val) + ' nM' : (val/1000).toFixed(1) + ' µM';
+}
+
+async function runDocking() {
+  const c = compoundData || {};
+  const btn = document.getElementById('dock-btn');
+  btn.innerHTML = '<span class="spinner"></span> Docking…'; btn.disabled = true;
+  _dockPoses = []; _dockProtein = '';
+  const targetName = document.getElementById('dock-target').value;
+  // Pre-fetch protein in background (sets _dockProtein when ready)
+  _proteinFetching = false;
+  _prefetchProtein(targetName);
+  // Engine choice: fast physics by default; DiffDock only if the user opts in
+  const useDiffDock = !!document.getElementById('dock-diffdock')?.checked;
+  const _dockMethod  = useDiffDock ? 'diffdock' : 'fast';
+  const _dockTimeout = useDiffDock ? 600000 : 60000;
+  if (useDiffDock) {
+    btn.innerHTML = '<span class="spinner"></span> Running DiffDock (~3–5 min)…';
+  }
+  try {
+    const _dockCtrl = new AbortController();
+    const _dockTimer = setTimeout(() => _dockCtrl.abort(), _dockTimeout);
+    let res;
+    try {
+      res = await apiFetch(`/api/compound/${CHEMBL_ID}/docking-poses`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        signal: _dockCtrl.signal,
+        body: JSON.stringify({
+          name:   c.name || 'Drug',
+          target: targetName,
+          smiles: document.getElementById('dock-smiles').value || c.smiles || '',
+          method: _dockMethod,
+        })
+      });
+    } finally { clearTimeout(_dockTimer); }
+    const out = document.getElementById('dock-out');
+    if (!res.success) {
+      out.innerHTML = `<div class="alert alert-error">Docking failed: ${res.error||'Unknown error'}<br/><small>Method: ${res.method||'—'}</small></div>`;
+      return;
+    }
+    _dockPoses = res.poses || [];
+    _dockPockets = res.pockets || [];
+    _dockPosePockets = res.pose_pockets || [];
+    renderPocketsCard();
+    const confs = res.confidence_scores || [];
+    const affs  = res.binding_affinities || [];
+    const validPoses = _dockPoses.filter(p => p && p.length > 20);
+    const has3D = validPoses.length > 0;
+
+    // ALWAYS use the protein returned WITH the poses — it is the exact structure
+    // DiffDock docked into, so it shares the poses' coordinate frame. The pre-fetched
+    // protein is a different processing of the file and must NOT be paired with poses
+    // (that mismatch is what makes the ligand look like it floats away from the protein).
+    if (res.protein_pdb && res.protein_pdb.length > 200) {
+      _dockProtein = res.protein_pdb;
+    }
+
+    // Auto-select first pose immediately
+    if (has3D) setTimeout(() => selectPose(0), 80);
+
+    // Build Evidence Chain card using gene info (may already be cached)
+    const c2 = compoundData || {};
+    const gInfo = _geneInfoCache[targetName + '|' + DISEASE] || {};
+    const bestAff  = affs[0] != null ? affs[0].toFixed(2) : null;
+    const bestConf = confs[0] != null ? confs[0].toFixed(3) : null;
+    const otPct2   = Math.round((gInfo.ot_score || 0) * 100);
+    const otCol2   = otPct2 >= 60 ? '#2f6f5b' : otPct2 >= 30 ? '#97751a' : '#9aa39c';
+
+    const chainHtml = `
+      <div style="margin-top:1rem;padding:14px 16px;border-radius:10px;background:#f6f5f0;border:1px solid #e0ddd1">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#45524a;margin-bottom:10px">Evidence Chain · Drug → Gene → Disease</div>
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">
+
+          <!-- Drug node -->
+          <div style="text-align:center;padding:8px 12px;background:#eef3f0;border:2px solid #2f6f5b;border-radius:8px;min-width:90px">
+            <div style="font-size:0.62rem;font-weight:700;color:#2f6f5b;text-transform:uppercase;letter-spacing:0.06em">Drug</div>
+            <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px">${c2.name||CHEMBL_ID}</div>
+          </div>
+
+          <!-- Arrow: docking -->
+          <div style="flex:1;min-width:80px;text-align:center;padding:0 6px">
+            <div style="height:2px;background:${has3D?'#2f6f5b':'#e0ddd1'};margin:0 4px;position:relative">
+              <span style="position:absolute;right:-4px;top:-5px;color:${has3D?'#2f6f5b':'#e0ddd1'};font-size:10px">▶</span>
+            </div>
+            <div style="font-size:0.6rem;color:#45524a;margin-top:4px;text-align:center">
+              ${has3D
+                ? `<strong style="color:#2f6f5b">Docks</strong>${bestAff ? '<br/>ΔG = '+bestAff+' kcal/mol' : ''}${bestConf ? '<br/>conf: '+bestConf : ''}`
+                : '<span style="color:#9aa39c">binds (estimated)</span>'}
+            </div>
+          </div>
+
+          <!-- Gene node -->
+          <div style="text-align:center;padding:8px 12px;background:${gInfo.is_known_target?'#eef4ef':'#f6f5f0'};border:2px solid ${gInfo.is_known_target?'#2f6f5b':'#e0ddd1'};border-radius:8px;min-width:90px">
+            <div style="font-size:0.62rem;font-weight:700;color:${gInfo.is_known_target?'#2f6f5b':'#45524a'};text-transform:uppercase;letter-spacing:0.06em">
+              Gene${gInfo.is_known_target?' ✓ Known':''}
+            </div>
+            <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px">${targetName}</div>
+            ${gInfo.gene_name?`<div style="font-size:0.6rem;color:#6b776e">${gInfo.gene_name}</div>`:''}
+            ${gInfo.pathway_name?`<div style="font-size:0.6rem;color:#2f6f5b;margin-top:2px">${gInfo.pathway_name}</div>`:''}
+          </div>
+
+          <!-- Arrow: OT association -->
+          <div style="flex:1;min-width:80px;text-align:center;padding:0 6px">
+            <div style="height:2px;background:${otPct2>0?otCol2:'#e0ddd1'};margin:0 4px;position:relative">
+              <span style="position:absolute;right:-4px;top:-5px;color:${otPct2>0?otCol2:'#e0ddd1'};font-size:10px">▶</span>
+            </div>
+            <div style="font-size:0.6rem;color:#45524a;margin-top:4px;text-align:center">
+              ${otPct2 > 0
+                ? `<strong style="color:${otCol2}">Drives</strong><br/>OT score: ${otPct2}%`
+                : '<span style="color:#9aa39c">associated with</span>'}
+            </div>
+          </div>
+
+          <!-- Disease node -->
+          <div style="text-align:center;padding:8px 12px;background:#faece9;border:2px solid #b3261e;border-radius:8px;min-width:90px">
+            <div style="font-size:0.62rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.06em">Disease</div>
+            <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${gInfo.ot_disease||DISEASE||'—'}</div>
+          </div>
+        </div>
+
+        ${gInfo.is_known_target
+          ? `<div style="margin-top:8px;padding:6px 10px;background:#eef4ef;border-radius:6px;font-size:0.7rem;color:#065f46">
+              <strong>Mechanistic rationale:</strong> ${c2.name||'This drug'} is a known <strong>${gInfo.known_action}</strong> of ${targetName}${gInfo.known_mech?'. '+gInfo.known_mech.slice(0,120)+'…':'.'}</div>`
+          : `<div style="margin-top:8px;font-size:0.7rem;color:#9aa39c;font-style:italic">
+              This compound is not a documented ChEMBL target of ${targetName}. Docking tests whether structural binding is possible — positive results would support a new repurposing hypothesis.</div>`}
+      </div>`;
+
+    // Update status chips + evidence chain in dock-out
+    out.innerHTML = `
+      <div class="flex gap-05 mt-1" style="flex-wrap:wrap">
+        <span class="chip green">Method: ${res.method||'Docking'}</span>
+        <span class="chip cyan">${_dockPoses.length} poses</span>
+        <span class="chip purple">Target: ${res.target||targetName}</span>
+        ${res.note && !LOCAL_DIFFDOCK ? `<span class="chip amber" style="font-size:0.65rem">${res.note}</span>` : ''}
+      </div>
+      ${chainHtml}`;
+
+    // Fill the pose list panel on the left
+    const poseListInner = document.getElementById('pose-list-inner');
+    if (poseListInner) {
+      if (!has3D) {
+        poseListInner.innerHTML = '<span style="color:#b3261e">No valid poses returned.</span>';
+      } else {
+        poseListInner.innerHTML = confs.slice(0,10).map((cf,i) => {
+          const aff = affs[i] != null ? affs[i] : null;
+          const b   = aff != null ? _dockBadge(aff) : null;
+          const pkId = _dockPosePockets[i];
+          const pk   = pkId ? _dockPockets.find(p => p.id === pkId) : null;
+          const pkTag = pk ? `<span style="font-size:0.6rem;font-weight:600;opacity:0.85"> · ${pk.label}</span>` : '';
+          return `<button class="pose-sel-btn" onclick="selectPose(${i})"
+            style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:6px 10px;margin-bottom:4px;border-radius:7px;border:1px solid ${i===0?'#2f6f5b':'#e0ddd1'};font-size:0.72rem;cursor:pointer;transition:all 0.15s;background:${i===0?'#2f6f5b':'#f6f5f0'};color:${i===0?'#fffdf9':'#45524a'};text-align:left">
+            <span style="font-weight:700">Rank ${i+1}${pkTag}</span>
+            <span style="font-family:monospace;font-size:0.67rem;opacity:0.9">${aff!=null?aff.toFixed(1)+' kcal/mol':'—'}${b&&i>0?' · <span style=\'color:'+b.color+'\'>'+b.label+'</span>':''}</span>
+          </button>`;}).join('');
+      }
+    }
+
+    // Fill best pose metrics
+    const metricsCard = document.getElementById('pose-metrics-card');
+    const metricsInner = document.getElementById('pose-metrics-inner');
+    if (metricsCard && metricsInner && has3D) {
+      metricsCard.style.display = 'block';
+      const aff0 = affs[0] != null ? affs[0] : null;
+      const badge = aff0 != null ? _dockBadge(aff0) : null;
+      const badgeHtml = badge ? `<span style="padding:2px 8px;border-radius:10px;background:${badge.bg};color:${badge.color};font-weight:600;font-size:0.68rem">${badge.label}</span>` : '';
+      const kiHtml = aff0 != null ? `<div class="kv"><span class="kv-k">Est. Ki</span><span class="kv-v mono">~${_dockKi(aff0)}</span></div>` : '';
+      metricsInner.innerHTML = `
+        <div class="kv"><span class="kv-k">Confidence</span><span class="kv-v mono">${confs[0]!=null?confs[0].toFixed(3):'—'}</span></div>
+        <div class="kv" title="Typical drug-like binders: −5 to −10 kcal/mol. Below −8 = high affinity."><span class="kv-k">Binding ΔG</span><span class="kv-v mono">${aff0!=null?aff0.toFixed(2)+' kcal/mol':'—'} ${badgeHtml}</span></div>
+        ${kiHtml}
+        <div class="kv"><span class="kv-k">Target</span><span class="kv-v">${res.target||'—'}</span></div>
+        <div class="kv"><span class="kv-k">Method</span><span class="kv-v" style="font-size:0.65rem">${res.method||'—'}</span></div>
+        ${aff0!=null?`<div style="margin-top:8px;padding:7px 10px;background:#f8f5ff;border-radius:6px;font-size:0.71rem;color:#4c1d95"><strong>${badge.label}</strong> — estimated Ki ~${_dockKi(aff0)} against ${res.target||'target'}</div>`:''}`;
+
+    }
+
+    if (has3D) {
+      setTimeout(() => selectPose(0), 80);
+    }
+  } catch(e) {
+    const msg = e.name === 'AbortError'
+      ? `Docking timed out (>${Math.round(_dockTimeout/1000)}s). ${useDiffDock ? 'DiffDock on CPU is slow — try the fast engine (uncheck DiffDock)' : 'Try again or pick a different target'}.`
+      : e.message;
+    document.getElementById('dock-out').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+  } finally {
+    btn.innerHTML = 'Run Docking'; btn.disabled = false;
+  }
+}
+
+async function loadOptimization(el) {
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:0.65rem;padding:1.2rem 0;color:var(--muted)"><span class="spinner"></span> Analysing compound properties…</div>`;
+  try {
+    const c = compoundData || {};
+    const [res, sdfRes] = await Promise.all([
+      apiFetch(`/api/compound/${CHEMBL_ID}/optimize?disease=${encodeURIComponent(DISEASE)}`),
+      fetch(`/api/compound/${CHEMBL_ID}/sdf3d${c.smiles?'?smiles='+encodeURIComponent(c.smiles):''}`).then(r=>r.json()).catch(()=>({})),
+    ]);
+    if (res.error) { el.innerHTML = `<div class="alert alert-error">${res.error}</div>`; return; }
+
+    const tgt = res.targets || {};
+    const prf = res.profile || {};
+    const propDefs = [
+      { key:'mw',        label:'Mol. Weight',      unit:'Da', ideal:tgt.mw||400,    lo:150, hi:prf.mw_max||600,   dir:'low'  },
+      { key:'logp',      label:'LogP',              unit:'',  ideal:tgt.logp||2.5,  lo:-2,  hi:prf.logp_hi||8,    dir:'mid'  },
+      { key:'psa',       label:'PSA',               unit:'Å²',ideal:tgt.psa||80,    lo:0,   hi:prf.psa_max||160,  dir:'low'  },
+      { key:'hbd',       label:'H-Bond Donors',     unit:'',  ideal:tgt.hbd||3,     lo:0,   hi:prf.hbd_max||6,    dir:'low'  },
+      { key:'hba',       label:'H-Bond Acceptors',  unit:'',  ideal:tgt.hba||8,     lo:0,   hi:prf.hba_max||12,   dir:'low'  },
+      { key:'rot_bonds', label:'Rotatable Bonds',   unit:'',  ideal:tgt.rot_bonds||6,lo:0,  hi:prf.rb_max||15,    dir:'low'  },
+      { key:'qed',       label:'QED Drug-likeness', unit:'',  ideal:tgt.qed||0.6,   lo:0,   hi:1,                 dir:'high' },
+    ];
+
+    function propBar(pd) {
+      const val  = res[pd.key] ?? 0;
+      const range = pd.hi - pd.lo;
+      const pct  = Math.min(100, Math.max(0, ((val - pd.lo) / range) * 100));
+      const tPct = Math.min(100, Math.max(0, ((pd.ideal - pd.lo) / range) * 100));
+      let good;
+      if (pd.dir === 'low')       good = val <= pd.ideal;
+      else if (pd.dir === 'high') good = val >= pd.ideal;
+      else                        good = Math.abs(val - pd.ideal) < (pd.hi - pd.lo) * 0.2;
+      const barColor = good ? '#2f6f5b' : '#b8860b';
+      const disp = typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(2)) : val;
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:0.73rem;margin-bottom:4px">
+          <span style="font-weight:600;color:#1f2a24">${pd.label}</span>
+          <span style="font-family:monospace;font-weight:700;color:${good?'#2f6f5b':'#97751a'}">${disp}${pd.unit} <span style="font-size:0.65rem;opacity:0.7">→ ideal ${pd.ideal}${pd.unit}</span></span>
+        </div>
+        <div style="position:relative;height:7px;background:#ecebe3;border-radius:4px;overflow:visible">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width 0.5s"></div>
+          <div style="position:absolute;top:-3px;left:${tPct}%;width:2px;height:13px;background:#2f6f5b;border-radius:1px" title="Ideal: ${pd.ideal}${pd.unit}"></div>
+        </div>
+      </div>`;
+    }
+
+    const _profileName = prf.name || 'Lipinski Ro5';
+    const lipinskiBadge = res.lipinski_pass_all
+      ? `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#eef4ef;color:#166534">✓ Passes ${_profileName}</span>`
+      : `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#faece9;color:#922019">⚠ ${_profileName} Violation</span>`;
+
+    const roRows = res.lipinski.map(r=>`
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ecebe3">
+        <span style="font-size:0.75rem;color:#45524a">${r.rule}</span>
+        <span style="font-weight:700;font-size:0.75rem;color:${r.pass?'#2f6f5b':'#b3261e'}">${r.pass?'✓':'✗'}</span>
+      </div>`).join('');
+
+    // Multi-select suggestion cards
+    // Store suggestions on window so the apply-selected handler can read them
+    window._optSuggestions = res.suggestions || [];
+    const sugHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.73rem;color:#45524a;cursor:pointer;user-select:none">
+          <input type="checkbox" id="opt-select-all" onchange="_optToggleAll(this.checked)"
+            style="width:14px;height:14px;accent-color:#2f6f5b;cursor:pointer"/>
+          <span>Select all</span>
+        </label>
+        <button id="opt-apply-selected-btn" onclick="_optApplySelected()" disabled
+          style="padding:5px 14px;border-radius:7px;border:none;background:#2f6f5b;color:#fffdf9;font-size:0.72rem;font-weight:700;cursor:pointer;opacity:0.35;transition:opacity 0.15s"
+          title="Apply all checked optimizations in sequence">
+          Apply Selected (<span id="opt-sel-count">0</span>) →
+        </button>
+      </div>
+      ${res.suggestions.map((s,i)=>{
+        const accent = ['#2f6f5b','#8a6309','#2f6f5b','#97751a','#b3261e'][i%5];
+        const safeAction = (s.action||'').replace(/'/g,"&apos;");
+        return `<div class="opt-sug-card" data-idx="${i}" style="padding:12px 14px;border-radius:10px;background:#f6f5f0;border-left:3px solid ${accent};margin-bottom:8px;transition:box-shadow 0.15s">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <input type="checkbox" class="opt-sug-cb" data-idx="${i}"
+              onchange="_optUpdateCount()"
+              style="margin-top:3px;width:14px;height:14px;accent-color:${accent};cursor:pointer;flex-shrink:0"/>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;flex-wrap:wrap;gap:4px">
+                <span style="font-size:0.8rem;font-weight:700;color:#1f2a24">${s.property}</span>
+                <span style="font-size:0.7rem;font-family:monospace;color:#6b776e">${s.current} → <strong style="color:${accent}">${s.target}</strong></span>
+              </div>
+              <div style="font-size:0.72rem;font-weight:600;color:${accent};margin-bottom:3px">Impact: ${s.impact}</div>
+              <div style="font-size:0.73rem;color:#45524a;line-height:1.6;margin-bottom:8px">${s.action}</div>
+              <button onclick="openWorkshop('${s.property}','${safeAction}')"
+                style="padding:4px 12px;border-radius:6px;border:1.5px solid ${accent};background:transparent;color:${accent};font-size:0.72rem;cursor:pointer;font-weight:600;transition:all 0.15s"
+                onmouseover="this.style.background='${accent}';this.style.color='#fffdf9'"
+                onmouseout="this.style.background='transparent';this.style.color='${accent}'">
+                Apply Solo →
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}`;
+
+    window._optUpdateCount = function _optUpdateCount() {
+      const checked = document.querySelectorAll('.opt-sug-cb:checked').length;
+      const btn = document.getElementById('opt-apply-selected-btn');
+      const cntEl = document.getElementById('opt-sel-count');
+      if (cntEl) cntEl.textContent = checked;
+      if (btn) { btn.disabled = checked === 0; btn.style.opacity = checked > 0 ? '1' : '0.35'; }
+      // Highlight selected cards
+      document.querySelectorAll('.opt-sug-cb').forEach(cb => {
+        const card = cb.closest('.opt-sug-card');
+        if (card) card.style.boxShadow = cb.checked ? '0 0 0 2px #2f6f5b40' : '';
+      });
+      // Sync select-all checkbox
+      const all = document.querySelectorAll('.opt-sug-cb');
+      const saEl = document.getElementById('opt-select-all');
+      if (saEl) saEl.checked = checked === all.length && all.length > 0;
+    }
+
+    window._optToggleAll = function _optToggleAll(val) {
+      document.querySelectorAll('.opt-sug-cb').forEach(cb => { cb.checked = val; });
+      window._optUpdateCount();
+    };
+
+    window._optApplySelected = async function _optApplySelected() {
+      const checked = [...document.querySelectorAll('.opt-sug-cb:checked')];
+      if (!checked.length) return;
+      const sugs = checked.map(cb => window._optSuggestions[+cb.dataset.idx]).filter(Boolean);
+
+      const workshop = document.getElementById('mol-workshop');
+      if (workshop) workshop.scrollIntoView({behavior:'smooth', block:'start'});
+
+      const origSmilesEl = document.getElementById('ws-orig-smiles');
+      const newSmilesEl  = document.getElementById('ws-new-smiles');
+      const descEl       = document.getElementById('ws-change-desc');
+      const wsResult     = document.getElementById('ws-result');
+      const origSmiles   = origSmilesEl?.value || '';
+      if (!origSmiles) {
+        if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES — open this compound from a disease search first.</div>';
+        return;
+      }
+
+      if (wsResult) wsResult.innerHTML = `<div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:#45524a"><span class="spinner"></span> Applying ${sugs.length} transform${sugs.length>1?'s':''} in sequence…</div>`;
+
+      // Chain transforms: apply each selected modification one after another
+      let currentSmiles = origSmiles;
+      const appliedDesc = [];
+      for (const s of sugs) {
+        try {
+          const r = await fetch('/api/transform-smiles', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({smiles: currentSmiles, action: s.action})
+          }).then(r => r.json());
+          if (r.applied && r.smiles && r.smiles !== currentSmiles) {
+            currentSmiles = r.smiles;
+            appliedDesc.push(r.description || s.action);
+          } else {
+            appliedDesc.push(s.action + ' (manual edit needed)');
+          }
+        } catch(_) { appliedDesc.push(s.action + ' (failed)'); }
+      }
+
+      if (newSmilesEl) {
+        newSmilesEl.value = currentSmiles;
+        newSmilesEl.style.background = '#eef4ef'; newSmilesEl.style.borderColor = '#2f6f5b';
+        setTimeout(() => { newSmilesEl.style.background = ''; newSmilesEl.style.borderColor = ''; }, 2500);
+      }
+      if (descEl) descEl.value = appliedDesc.join(' + ').slice(0, 200);
+
+      const changed = currentSmiles !== origSmiles;
+      if (wsResult) wsResult.innerHTML = changed
+        ? `<div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
+            <strong>✓ ${sugs.length} transform${sugs.length>1?'s':''} applied.</strong> ${appliedDesc.filter(d=>!d.includes('manual')).join(' · ')}
+            <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
+           </div>`
+        : `<div class="alert alert-warning" style="font-size:0.77rem">
+            None of the ${sugs.length} transforms could be auto-applied. Edit the Modified SMILES manually to reflect these changes, then click Analyze.
+           </div>`;
+    };
+
+    const viewer3d = sdfRes.sdf
+      ? `<div style="border-radius:10px;overflow:hidden;border:1px solid #e0ddd1">
+           <iframe id="opt-3d-frame" style="width:100%;height:360px;border:none" srcdoc=""></iframe>
+         </div>
+         <div style="margin-top:6px;font-size:0.68rem;color:#9aa39c">3D source: ${sdfRes.source||'computed'}</div>`
+      : `<div style="height:220px;display:flex;align-items:center;justify-content:center;background:#f6f5f0;border-radius:10px;border:1px dashed #e0ddd1;color:#9aa39c">
+           <p style="font-size:0.78rem">3D structure not available</p></div>`;
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <span style="font-weight:700;font-size:0.85rem">3D Structure · ${c.name||CHEMBL_ID}</span>
+            ${lipinskiBadge}
+          </div>
+          ${viewer3d}
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.3rem">
+            <span style="font-weight:700;font-size:0.85rem">Property Profile vs Drug-like Target</span>
+            <span style="padding:2px 8px;border-radius:999px;font-size:0.65rem;font-weight:700;background:#e3ede8;color:#5b21b6"
+              title="Property ideals are set for this therapeutic area">${prf.area||'General'}</span>
+          </div>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-bottom:0.85rem">
+            Bar = current value · <span style="color:#2f6f5b;font-weight:700">│</span> = ideal target · ruleset: ${_profileName}
+          </div>
+          ${propDefs.map(pd=>propBar(pd)).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:200px 1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="card">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:2px">${_profileName}</div>
+          <div style="font-size:0.67rem;color:#9aa39c;margin-bottom:0.75rem">${prf.area||'General'}</div>
+          ${roRows}
+        </div>
+        <div class="card">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:0.5rem">Drug Property Radar</div>
+          <div id="opt-radar" style="height:240px"></div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:0.75rem">Optimization Recommendations</div>
+          ${sugHTML}
+          <p style="font-size:0.67rem;color:var(--dim);margin-top:6px">Evaluated against <strong>${_profileName}</strong> for <strong>${prf.area||'General'}</strong></p>
+        </div>
+      </div>
+
+      <!-- ── Molecular Workshop ────────────────────────────────── -->
+      <div class="card" id="mol-workshop">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f6f5b" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          <span style="font-weight:700;font-size:0.9rem;color:#1f2a24">Molecular Workshop — Test a Modification</span>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.65">
+          Edit the SMILES below to apply a structural change (e.g., remove a polar group, add a methyl),
+          describe what you changed, and click <strong>Analyze</strong> to see the safety profile,
+          property impact, and whether it strengthens the repurposing case for
+          <strong>${DISEASE||'the target indication'}</strong>.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+          <div class="field">
+            <label style="font-size:0.73rem;font-weight:600;color:#45524a;margin-bottom:4px;display:block">Original SMILES</label>
+            <input class="input" id="ws-orig-smiles" type="text" value="${res.smiles||''}" readonly
+              style="background:#f6f5f0;font-size:0.7rem;font-family:monospace;color:#6b776e"/>
+          </div>
+          <div class="field">
+            <label style="font-size:0.73rem;font-weight:600;color:#45524a;margin-bottom:4px;display:block">Modified SMILES <span style="font-weight:400;color:#9aa39c">(edit here)</span></label>
+            <input class="input" id="ws-new-smiles" type="text" value="${res.smiles||''}"
+              placeholder="Paste or edit modified SMILES…" style="font-size:0.7rem;font-family:monospace"/>
+          </div>
+          <div class="field">
+            <label style="font-size:0.73rem;font-weight:600;color:#45524a;margin-bottom:4px;display:block">What did you change? <span style="font-weight:400;color:#9aa39c">(used for narrative)</span></label>
+            <input class="input" id="ws-change-desc" type="text"
+              placeholder="e.g., N-methylating the amide group, removing the hydroxyl…"/>
+          </div>
+          <div class="field" style="align-self:end">
+            <button class="btn btn-primary" onclick="runMolWorkshop()" id="ws-btn" style="width:100%;padding:0.6rem">
+              Analyze Modification
+            </button>
+          </div>
+        </div>
+        <div id="ws-result"></div>
+      </div>`;
+
+    if (sdfRes.sdf) {
+      setTimeout(() => {
+        const frame = document.getElementById('opt-3d-frame');
+        if (frame) frame.srcdoc = _mol3dHtml(sdfRes.sdf, {h: 360, bg: '#1f2a24', spin: false});
+      }, 50);
+    }
+
+    Plotly.newPlot('opt-radar', [{
+      type: 'scatterpolar',
+      r:    [...res.radar.values, res.radar.values[0]],
+      theta:[...res.radar.labels, res.radar.labels[0]],
+      fill: 'toself', line: {color:'#2f6f5b',width:2}, fillcolor:'rgba(47,111,91,0.12)',
+      name: c.name || 'Compound',
+    }], {
+      polar: { radialaxis:{visible:true,range:[0,100],gridcolor:'#e0ddd1',tickfont:{size:8}}, angularaxis:{gridcolor:'#e0ddd1'} },
+      paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+      font:{family:'Inter,sans-serif',color:'#45524a',size:10},
+      margin:{l:35,r:35,t:20,b:20}, showlegend:false,
+    }, {displayModeBar:false, responsive:true});
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+async function openWorkshop(property, action) {
+  const workshop = document.getElementById('mol-workshop');
+  if (workshop) workshop.scrollIntoView({behavior:'smooth', block:'start'});
+
+  const origSmiles  = document.getElementById('ws-orig-smiles')?.value || '';
+  const descEl      = document.getElementById('ws-change-desc');
+  const newSmilesEl = document.getElementById('ws-new-smiles');
+  const wsResult    = document.getElementById('ws-result');
+  if (descEl) descEl.value = action.slice(0, 120);
+
+  if (!origSmiles) {
+    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES loaded — open the compound from a disease search first.</div>';
+    return;
+  }
+
+  if (wsResult) wsResult.innerHTML = '<div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:#45524a"><span class="spinner"></span> Applying structural transform…</div>';
+
+  try {
+    const res = await fetch('/api/transform-smiles', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({smiles: origSmiles, action: action})
+    }).then(r => r.json());
+
+    if (res.applied && res.smiles && res.smiles !== origSmiles) {
+      if (newSmilesEl) {
+        newSmilesEl.value = res.smiles;
+        // Flash green to show the field was updated
+        newSmilesEl.style.background = '#eef4ef';
+        newSmilesEl.style.borderColor = '#2f6f5b';
+        setTimeout(() => { newSmilesEl.style.background = ''; newSmilesEl.style.borderColor = ''; }, 2500);
+      }
+      if (wsResult) wsResult.innerHTML = `
+        <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
+          <strong>✓ Transform applied:</strong> ${res.description||action}
+          <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
+        </div>`;
+    } else {
+      // Transform not auto-applicable — guide user to edit manually
+      if (newSmilesEl) { newSmilesEl.select(); newSmilesEl.focus(); }
+      if (wsResult) wsResult.innerHTML = `
+        <div class="alert alert-warning" style="font-size:0.77rem">
+          Auto-transform unavailable for this action${res.note ? ': ' + res.note : '.'}<br/>
+          <span style="font-size:0.72rem">Edit the <strong>Modified SMILES</strong> field manually to reflect "${action}", then click Analyze.</span>
+        </div>`;
+    }
+  } catch(_e) {
+    if (newSmilesEl) { newSmilesEl.select(); newSmilesEl.focus(); }
+    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Edit the Modified SMILES field above, then click Analyze.</div>';
+  }
+}
+
+async function runMolWorkshop() {
+  const c = compoundData || {};
+  const origSmiles = document.getElementById('ws-orig-smiles')?.value || '';
+  const newSmiles  = document.getElementById('ws-new-smiles')?.value  || '';
+  const changeDesc = document.getElementById('ws-change-desc')?.value || '';
+  if (!newSmiles.trim()) {
+    document.getElementById('ws-result').innerHTML = '<div class="alert alert-warning">Please enter a modified SMILES.</div>';
+    return;
+  }
+  if (newSmiles.trim() === origSmiles.trim()) {
+    document.getElementById('ws-result').innerHTML = `
+      <div class="alert alert-warning" style="font-size:0.78rem">
+        <strong>No change detected</strong> — the Modified SMILES is identical to the original.
+        <br/>Click <strong>Apply &amp; Analyze →</strong> on a recommendation above to auto-generate a structurally modified molecule, or edit the SMILES manually.
+      </div>`;
+    return;
+  }
+  const btn = document.getElementById('ws-btn');
+  btn.innerHTML = '<span class="spinner"></span> Analyzing…'; btn.disabled = true;
+  document.getElementById('ws-result').innerHTML = '';
+  try {
+    const res = await apiFetch('/api/optimize-smiles', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        original_smiles:    origSmiles,
+        smiles:             newSmiles,
+        drug_name:          c.name || CHEMBL_ID,
+        disease:            DISEASE || '',
+        change_description: changeDesc,
+      })
+    });
+    if (res.error) { document.getElementById('ws-result').innerHTML = `<div class="alert alert-error">${res.error}</div>`; return; }
+
+    const origP  = res.original_props || {};
+    const newP   = res.new_props || {};
+    const deltas = res.deltas || {};
+    const propLabels = {mw:'Mol. Weight',logp:'LogP',psa:'PSA',hbd:'HBD',hba:'HBA',rb:'Rot. Bonds',qed:'QED',bbb_score:'BBB Score'};
+    const propUnits  = {mw:' Da',logp:'',psa:' Å²',hbd:'',hba:'',rb:'',qed:'',bbb_score:''};
+
+    const tableRows = Object.entries(propLabels).map(([k,lbl]) => {
+      const ov = origP[k]; const nv = newP[k]; const d = deltas[k];
+      if (ov === undefined && nv === undefined) return '';
+      const fmt = v => v !== undefined ? (typeof v==='number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v) : '—';
+      const dColor = d > 0 ? '#b3261e' : d < 0 ? '#2f6f5b' : '#9aa39c';
+      const dStr   = d !== undefined ? `<span style="font-weight:800;color:${dColor}">${d>0?'+':''}${typeof d==='number'?d.toFixed(2):d}${propUnits[k]||''}</span>` : '—';
+      return `<tr>
+        <td style="font-size:0.77rem;font-weight:600;color:#45524a">${lbl}</td>
+        <td style="font-size:0.77rem;font-family:monospace;color:#6b776e">${fmt(ov)}${propUnits[k]||''}</td>
+        <td style="font-size:0.77rem;font-family:monospace;font-weight:700;color:#1f2a24">${fmt(nv)}${propUnits[k]||''}</td>
+        <td>${dStr}</td>
+      </tr>`;
+    }).join('');
+
+    const verdColors = {Improved:['#2f6f5b','#eef4ef'],Mixed:['#97751a','#f8f2df'],Declined:['#b3261e','#faece9']};
+    const [vColor, vBg] = verdColors[res.verdict] || ['#45524a','#f6f5f0'];
+
+    const safetyHTML = (res.safety || []).map(s => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.74rem">
+        <span style="font-weight:800;color:${s.pass?'#2f6f5b':'#b3261e'};font-size:1rem;line-height:1">${s.pass?'✓':'✗'}</span>
+        <span style="color:#45524a;flex:1">${s.check}</span>
+        <span style="color:#6b776e;font-size:0.68rem;font-family:monospace">${s.detail||''}</span>
+      </div>`).join('');
+
+    document.getElementById('ws-result').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 260px;gap:0.75rem;margin-bottom:0.75rem">
+        <div class="card" style="padding:1rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <span style="font-weight:700;font-size:0.82rem">Property Comparison</span>
+            <span style="padding:3px 12px;border-radius:999px;background:${vBg};color:${vColor};font-size:0.72rem;font-weight:700">${res.verdict}</span>
+          </div>
+          <div class="overflow-x">
+            <table class="data-table">
+              <thead><tr><th>Property</th><th>Original</th><th>Modified</th><th>Δ Change</th></tr></thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="padding:1rem">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:0.75rem">Safety Checklist</div>
+          ${safetyHTML}
+          <div style="margin-top:12px;padding:8px;background:#f6f5f0;border-radius:6px;font-size:0.69rem;color:#6b776e;line-height:1.5">
+            BBB = Blood-Brain Barrier · HBD = H-Bond Donors · Ro5 = Lipinski Rule-of-Five
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+        <div class="card" style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border-color:#cfe0d8;padding:1rem">
+          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#2f6f5b;margin-bottom:6px">
+            Repurposing Case${DISEASE?' — '+DISEASE:''}
+          </div>
+          <p style="font-size:0.83rem;color:#3730a3;line-height:1.72;margin:0">${res.narrative||'—'}</p>
+        </div>
+        <div class="card" style="padding:1rem">
+          <div style="font-weight:700;font-size:0.82rem;margin-bottom:4px">Drug-Likeness Comparison</div>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-bottom:6px">
+            <span style="color:#2f6f5b;font-weight:700">●</span> Original &nbsp;
+            <span style="color:#2f6f5b;font-weight:700">●</span> Modified &nbsp;
+            <span style="color:#b8860b;font-weight:700">─ ─</span> Ideal
+          </div>
+          <div id="ws-compare-radar" style="height:220px"></div>
+        </div>
+      </div>
+      ${res.sdf ? `
+      <div class="card" style="padding:1rem">
+        <div style="font-weight:700;font-size:0.82rem;margin-bottom:0.75rem">Modified Structure (3D)</div>
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #e0ddd1">
+          <iframe id="ws-3d-frame" style="width:100%;height:300px;border:none" srcdoc=""></iframe>
+        </div>
+      </div>` : ''}`;
+
+    if (res.sdf) {
+      setTimeout(() => {
+        const frame = document.getElementById('ws-3d-frame');
+        if (frame) frame.srcdoc = _mol3dHtml(res.sdf, {h:300, bg:'#1f2a24'});
+      }, 50);
+    }
+
+    // Dual-trace drug-likeness radar
+    setTimeout(() => {
+      const radarEl = document.getElementById('ws-compare-radar');
+      if (!radarEl || typeof Plotly === 'undefined') return;
+      const _norm = (p) => {
+        const clamp = (v, lo, hi) => Math.min(Math.max((v - lo) / (hi - lo) * 100, 0), 100);
+        return [
+          100 - clamp(p.mw  || 500, 150, 600),         // MW: lower better
+          Math.max(0, 100 - Math.abs((p.logp || 2.5) - 2.5) * 16), // LogP: 2.5 ideal
+          100 - clamp(p.psa || 80,  0,   140),          // PSA: lower better
+          100 - clamp(p.hbd || 2,   0,   5)   * 20,    // HBD: lower better
+          100 - clamp(p.hba || 6,   0,   10)  * 10,    // HBA: lower better
+          (p.qed || 0) * 100,                           // QED: higher better
+        ].map(v => Math.max(0, Math.min(100, v)));
+      };
+      const labels  = ['MW', 'LogP', 'PSA', 'HBD', 'HBA', 'QED'];
+      const origVals = _norm(origP);
+      const newVals  = _norm(newP);
+      const idealVals = [72, 88, 82, 80, 75, 78]; // drug-like ideal zone
+      const traces = [
+        { type:'scatterpolar', r:[...idealVals, idealVals[0]], theta:[...labels, labels[0]],
+          fill:'toself', fillcolor:'rgba(184,134,11,0.08)', line:{color:'#b8860b',width:1.5,dash:'dot'},
+          name:'Ideal', opacity:0.8 },
+        { type:'scatterpolar', r:[...origVals, origVals[0]],   theta:[...labels, labels[0]],
+          fill:'toself', fillcolor:'rgba(47,111,91,0.1)',   line:{color:'#2f6f5b',width:2},
+          name:'Original' },
+        { type:'scatterpolar', r:[...newVals,  newVals[0]],    theta:[...labels, labels[0]],
+          fill:'toself', fillcolor:'rgba(34,197,94,0.12)', line:{color:'#2f6f5b',width:2.5},
+          name:'Modified' },
+      ];
+      Plotly.newPlot(radarEl, traces, {
+        polar: { radialaxis:{visible:true,range:[0,100],gridcolor:'#e0ddd1',tickfont:{size:7}},
+                 angularaxis:{gridcolor:'#e0ddd1'} },
+        paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+        font:{family:'Inter,sans-serif',color:'#45524a',size:9},
+        margin:{l:28,r:28,t:12,b:12},
+        showlegend:false,
+      }, {displayModeBar:false, responsive:true});
+    }, 60);
+  } catch(e) {
+    document.getElementById('ws-result').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  } finally {
+    btn.innerHTML = 'Analyze Modification'; btn.disabled = false;
+  }
+}
+
+async function loadPatents(el) {
+  const c = compoundData || {};
+  const drug = c.name || '';
+  const cid  = CHEMBL_ID || '';
+  try {
+    const patents = await apiFetch(`/api/patents?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(DISEASE)}&chembl_id=${encodeURIComponent(cid)}`);
+    if (!patents.length) {
+      const gName = drug || cid;
+      el.innerHTML = `<div class="card"><div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:36px;height:36px;opacity:0.35"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.5"/></svg>
+        <p>No patent documents found via ChEMBL or USPTO for <strong>${gName}</strong>.</p>
+        <p style="font-size:0.75rem;color:var(--dim);line-height:1.6">
+          This may be a generic / off-patent compound, or the drug name may not match patent records directly.
+          Expired patents still prove safety history — search below to find them.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;margin-top:0.5rem">
+          ${drug ? `<a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Google Patents: ${drug}</a>` : ''}
+          ${cid  ? `<a href="https://patents.google.com/?q=${encodeURIComponent(cid)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Google Patents: ${cid}</a>` : ''}
+          ${drug ? `<a href="https://www.surechembl.org/search/#q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">SureChEMBL search</a>` : ''}
+        </div>
+      </div></div>`;
+      return;
+    }
+    const statusStyle = {
+      active:         'background:#d9e9df;color:#166534;',
+      likely_expired: 'background:#fef9c3;color:#854d0e;',
+      expired:        'background:#f0d9d2;color:#991b1b;',
+    };
+    const statusLabel = {active:'Active', likely_expired:'Likely Expired', expired:'Expired', unknown:'Unknown'};
+    const rows = patents.map(p => {
+      const st = p.status || 'unknown';
+      const stStyle = statusStyle[st] || 'background:#ecebe3;color:#45524a;';
+      const stBadge = `<span style="font-size:0.65rem;font-weight:600;padding:1px 7px;border-radius:999px;${stStyle}">${statusLabel[st]||st}</span>`;
+      const expiry  = p.expiry ? `<div style="font-size:0.65rem;color:var(--dim)">Est. expiry: ${p.expiry}</div>` : '';
+      const abstract= p.abstract ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.55">${p.abstract}</div>` : '';
+      return `<tr>
+        <td>${p.url?`<a href="${p.url}" target="_blank" class="mono" style="font-size:0.73rem;color:#8a6309;text-decoration:underline">${p.id||'—'}</a>`:(p.id||'—')}</td>
+        <td style="font-size:0.77rem">${p.title||'—'}${abstract}</td>
+        <td style="font-size:0.73rem;color:var(--muted)">${p.assignee||'—'}</td>
+        <td style="font-size:0.73rem;color:var(--muted)">${p.year||'—'}${expiry}</td>
+        <td>${stBadge}</td>
+        <td><span class="chip ${p.source==='ChEMBL'?'purple':'cyan'}" style="font-size:0.65rem">${p.source||'—'}</span></td>
+      </tr>`;
+    }).join('');
+    const activeCount   = patents.filter(p=>p.status==='active').length;
+    const expiredCount  = patents.filter(p=>['expired','likely_expired'].includes(p.status)).length;
+    el.innerHTML = `
+      <div class="card mb-1" style="border-left:3px solid var(--purple);padding:1.1rem 1.4rem">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span style="font-size:0.78rem;font-weight:700;color:var(--text)">Patent Intelligence</span>
+        </div>
+        <p style="font-size:0.79rem;color:var(--muted);line-height:1.65">
+          Patent landscape for <strong style="color:var(--text)">${drug}</strong>.
+          Sources: ChEMBL mechanism/indication refs, SureChEMBL, and USPTO PatentsView.
+          <a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" style="color:var(--cyan)">Search Google Patents →</a>
+        </p>
+        <div style="background:#f8f2df;border:1px solid #e6cf95;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:0.73rem;color:#7a5c43;line-height:1.55">
+          <strong>Why expired patents matter:</strong> An expired patent documents regulatory precedent, prior clinical or pre-clinical safety data, and manufacturing know-how — all of which support a 505(b)(2) repurposing pathway and de-risk development for a new indication.
+        </div>
+        <div style="display:flex;gap:1rem;margin-top:0.5rem;flex-wrap:wrap">
+          <span style="font-size:0.77rem"><span style="background:#d9e9df;color:#166534;padding:1px 8px;border-radius:999px;font-weight:600">${activeCount} Active</span></span>
+          <span style="font-size:0.77rem"><span style="background:#f0d9d2;color:#991b1b;padding:1px 8px;border-radius:999px;font-weight:600">${expiredCount} Expired / Likely Expired</span></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex justify-between items-center mb-1">
+          <span style="font-weight:700;font-size:0.85rem">Patent Documents</span>
+          <span class="chip purple">${patents.length} found</span>
+        </div>
+        <div class="overflow-x">
+          <table class="data-table">
+            <thead><tr><th>Patent / Doc ID</th><th>Title / Abstract</th><th>Assignee</th><th>Year</th><th>Status</th><th>Source</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+async function loadDossier(el) {
+  if (!DISEASE) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><p>No disease context — open this compound from a disease search to generate a dossier.</p></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:0.65rem;padding:1.2rem 0;color:var(--muted)"><span class="spinner"></span> Generating evidence dossier…</div>`;
+  try {
+    const _c = compoundData || {};
+    const _dq = new URLSearchParams({
+      disease: DISEASE,
+      name:    _c.name   || '',
+      smiles:  _c.smiles || '',
+      max_phase: String(_c.max_phase || 0),
+    });
+    const d = await apiFetch(`/api/compound/${CHEMBL_ID}/dossier?${_dq}`);
+    if (d.error) { el.innerHTML = `<div class="alert alert-error">${d.error}</div>`; return; }
+
+    const sc = d.composite_score || 0;
+    const scores = d.scores || {};
+    const reg = d.regulatory || {};
+    const mech = d.mechanistic || {};
+    const dc = d.disease_context || {};
+    const physchem = d.physchem || {};
+    const dev = d.developability || {};
+    const literature = d.literature || [];
+    const trials = d.clinical_trials || [];
+    const _devStatusCol = s => s==='ideal'?'#2f6f5b':s==='acceptable'?'#97751a':'#b3261e';
+    const devRows = (dev.properties||[]).map(p =>
+      `<div class="kv"><span class="kv-k">${p.label}</span><span class="kv-v"><span class="mono">${p.value}${p.unit||''}</span> <span style="color:#9aa39c;font-weight:400">/ ${p.target}</span> <span style="color:${_devStatusCol(p.status)}">●</span></span></div>`
+    ).join('');
+    const devCol = dev.score>=0.75?'#2f6f5b':dev.score>=0.5?'#97751a':'#b3261e';
+
+    const regColor = {strong:'#2f6f5b',moderate:'#8a6309',possible:'#97751a',weak:'#9aa39c'}[reg.level]||'#9aa39c';
+    const regBg    = {strong:'#eef4ef',moderate:'#fbf6ea',possible:'#f8f2df',weak:'#f6f5f0'}[reg.level]||'#f6f5f0';
+
+    // 5-screen score bars with plain-language interpretation
+    function screenInterpret(key, val) {
+      const pct = Math.round(val * 100);
+      const interp = {
+        target:     pct >= 30 ? `${pct}% overlap — drug directly modulates disease-relevant genes` : pct > 0 ? `${pct}% overlap — indirect mechanism likely` : 'No direct gene overlap — indirect pathway evidence needed',
+        pathway:    pct >= 25 ? `${pct}% shared pathways — strong mechanistic rationale` : pct > 0 ? `${pct}% — some pathway convergence` : 'No shared Reactome pathways identified',
+        ppi:        pct >= 30 ? `${pct}% — drug targets are proximal to disease proteins in PPI network` : pct > 0 ? `${pct}% — some network proximity` : 'No PPI network proximity detected',
+        clinical:   pct >= 70 ? `${pct}% — approved drug, low development risk` : pct >= 40 ? `${pct}% — Phase 2/3 clinical data available` : `${pct}% — limited clinical history`,
+        indication: pct >= 70 ? `${pct}% — closely related indication, 505(b)(2) path supported` : pct >= 30 ? `${pct}% — partial indication overlap` : `${pct}% — indication is distinct, bridging evidence required`,
+        regulatory: pct >= 60 ? `${pct}% — strong regulatory feasibility for 505(b)(2)` : `${pct}% — regulatory path requires additional data`,
+      };
+      return interp[key] || `${pct}%`;
+    }
+
+    const screenDefs = [
+      ['target',     'Target Overlap',    '#2f6f5b', 'Drug targets ∩ disease gene set (Open Targets)'],
+      ['pathway',    'Pathway Overlap',   '#8a6309', 'Shared Reactome pathways'],
+      ['ppi',        'PPI Network',       '#2f6f5b', 'STRING protein–protein interaction proximity'],
+      ['clinical',   'Clinical Signal',   '#97751a', 'Phase/approval evidence'],
+      ['indication', 'Indication Match',  '#b3261e', 'Existing indication semantic similarity'],
+      ['regulatory', '505(b)(2)',         '#2f6f5b', 'Regulatory feasibility score'],
+    ];
+    const screenBars = screenDefs.map(([key, label, color, desc]) => {
+      const val = scores[key] || 0;
+      const pct = Math.round(val * 100);
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+          <span style="font-size:0.76rem;font-weight:700;color:#1f2a24">${label}</span>
+          <span style="font-size:0.78rem;font-weight:800;color:${color}">${pct}%</span>
+        </div>
+        <div style="background:#e0ddd1;border-radius:9999px;height:7px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:9999px;transition:width 0.6s"></div>
+        </div>
+        <div style="font-size:0.66rem;color:#6b776e;margin-top:3px;font-style:italic">${screenInterpret(key, val)}</div>
+      </div>`;
+    }).join('');
+
+    // Plain-language score summary + decision framework
+    const compositeLevel = sc >= 0.65 ? ['Strong','#2f6f5b','#eef4ef'] : sc >= 0.40 ? ['Moderate','#97751a','#f8f2df'] : sc >= 0.20 ? ['Limited','#b3261e','#faece9'] : ['Insufficient','#9aa39c','#f6f5f0'];
+    const [cLevel, cColor, cBg] = compositeLevel;
+    const strengths = []; const gaps = [];
+    if ((scores.clinical || 0) >= 0.5) strengths.push('Established clinical history reduces development risk');
+    if ((scores.target || 0) >= 0.2)   strengths.push('Direct target gene overlap supports mechanistic rationale');
+    if ((scores.indication || 0) >= 0.5) strengths.push('Related existing indication enables 505(b)(2) regulatory path');
+    if ((scores.pathway || 0) >= 0.2)  strengths.push('Shared disease pathways provide biological plausibility');
+    if (reg.orphan_drug)                strengths.push('Orphan drug eligibility — 7-year exclusivity available');
+    if ((scores.target || 0) < 0.1)    gaps.push('No direct target overlap — need transcriptomic or pathway bridging evidence');
+    if ((scores.ppi || 0) < 0.1)       gaps.push('Limited PPI network proximity — consider network medicine analysis');
+    if ((scores.clinical || 0) < 0.3)  gaps.push('Early-stage clinical history — full development program may be needed');
+    if ((scores.indication || 0) < 0.3) gaps.push('Indication distance — will require bridging studies for new indication');
+    if (!strengths.length) strengths.push('Exploratory candidate — further investigation warranted');
+    if (!gaps.length) gaps.push('No major gaps identified at screening stage');
+
+    const nextStep = reg.level === 'strong' ? '505(b)(2) NDA filing — cite existing approval data' :
+                     reg.level === 'moderate' ? 'IND filing with Phase 2 bridging study for new indication' :
+                     reg.level === 'possible' ? 'Preclinical validation of target overlap, then Phase 1/2 IND' :
+                     'Exploratory biomarker & mechanism studies before IND';
+
+    const interpretHTML = `
+      <div style="padding:12px 14px;background:${cBg};border-radius:8px;border-left:4px solid ${cColor};margin-bottom:12px">
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${cColor};margin-bottom:4px">
+          Score Interpretation · ${cLevel} Evidence
+        </div>
+        <p style="font-size:0.78rem;color:#374151;line-height:1.65;margin:0">
+          ${d.drug_name||'This drug'} scores <strong>${(sc*100).toFixed(1)}/100</strong> for repurposing toward
+          <strong>${d.disease_name||DISEASE}</strong>.
+          ${(scores.clinical||0) >= 0.7 ? 'The strong clinical signal (approved or Phase 3) substantially reduces development risk. ' : ''}
+          ${(scores.target||0) >= 0.25 ? 'Direct target gene overlap provides mechanistic justification. ' : 'No direct gene target overlap was detected — the case relies on pathway and clinical evidence. '}
+          ${(scores.indication||0) >= 0.6 ? 'The related existing indication supports a streamlined 505(b)(2) regulatory path.' : ''}
+        </p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <div>
+          <div style="font-size:0.68rem;font-weight:700;color:#2f6f5b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">✓ Strengths</div>
+          ${strengths.map(s=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #bfe0cd">• ${s}</div>`).join('')}
+        </div>
+        <div>
+          <div style="font-size:0.68rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">⚠ Gaps to Bridge</div>
+          ${gaps.map(g=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #e8c3bb">• ${g}</div>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:#fbf6ea;border-radius:6px;font-size:0.73rem">
+        <span style="font-weight:700;color:#8a6309">Recommended Next Step:</span>
+        <span style="color:#1e40af;margin-left:4px">${nextStep}</span>
+      </div>`;
+
+    // Overlapping targets chips
+    const overlapGenes = mech.overlapping_targets || [];
+    const geneChips = overlapGenes.slice(0,10).map(g=>
+      `<span style="display:inline-block;padding:2px 7px;background:#f3e8ff;color:#2f6f5b;font-size:0.7rem;font-weight:700;border-radius:9999px;margin:2px">${g}</span>`
+    ).join('');
+
+    // Shared pathways
+    const sharedPws = mech.shared_pathways || [];
+    const pwHTML = sharedPws.length
+      ? sharedPws.map(pw=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #ecebe3;font-size:0.75rem">
+          <span style="width:6px;height:6px;border-radius:50%;background:#8a6309;flex-shrink:0"></span>
+          <span style="color:#1f2a24">${pw.name||pw.id||'—'}</span>
+          ${pw.id?`<span style="color:#9aa39c;font-size:0.68rem;margin-left:auto">${pw.id}</span>`:''}
+        </div>`).join('')
+      : '<p style="color:#9aa39c;font-size:0.78rem">No shared pathways identified.</p>';
+
+    // Top disease genes
+    const topGenes = (dc.top_genes||[]).slice(0,12).map(g=>
+      `<span style="display:inline-block;padding:2px 7px;background:#fbf6ea;color:#8a6309;font-size:0.7rem;font-weight:600;border-radius:9999px;margin:2px">${g}</span>`
+    ).join('');
+
+    // Literature
+    const litHTML = literature.length
+      ? literature.map(p=>`<div style="padding:7px 0;border-bottom:1px solid #ecebe3">
+          <a href="${p.url}" target="_blank" style="font-size:0.78rem;font-weight:600;color:#8a6309;text-decoration:none;line-height:1.4">${p.title||'View paper'}</a>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-top:2px">${p.journal||''} ${p.year?'· '+p.year:''} · PMID ${p.pmid}</div>
+        </div>`).join('')
+      : '<p style="color:#9aa39c;font-size:0.78rem">No PubMed results for this drug–disease pair.</p>';
+
+    // Clinical trials
+    const trialHTML = trials.length
+      ? trials.map(t=>`<div style="padding:7px 0;border-bottom:1px solid #ecebe3">
+          <a href="${t.url}" target="_blank" style="font-size:0.78rem;font-weight:600;color:#b8860b;text-decoration:none">${t.nct}</a>
+          <span style="font-size:0.72rem;color:#45524a;margin-left:8px">${t.title}</span>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-top:2px">Phase: ${t.phase||'N/A'} · ${t.status}</div>
+        </div>`).join('')
+      : '<p style="color:#9aa39c;font-size:0.78rem">No ClinicalTrials.gov results found.</p>';
+
+    // Exclusivity list
+    const exHTML = (reg.exclusivity||[]).map(e=>
+      `<div style="font-size:0.74rem;color:#2f6f5b;display:flex;gap:6px;align-items:baseline"><span style="font-weight:700">✓</span>${e}</div>`
+    ).join('');
+
+    el.innerHTML = `
+      <!-- Header score card -->
+      <div class="card mb-1" style="background:linear-gradient(135deg,#eef3f0 0%,#e3ede8 100%);border-color:#cfe0d8">
+        <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center">
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2f6f5b;margin-bottom:4px">Composite Repurposing Score</div>
+            <div style="font-family:monospace;font-size:2.5rem;font-weight:900;color:#2f6f5b;line-height:1">${(sc*100).toFixed(1)}<span style="font-size:1rem;font-weight:400;color:#2f6f5b;margin-left:4px">/ 100</span></div>
+          </div>
+          <div style="width:1px;height:56px;background:#cfe0d8"></div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2f6f5b;margin-bottom:4px">Drug → Disease</div>
+            <div style="font-size:1rem;font-weight:800;color:#1f2a24">${d.drug_name||'—'}</div>
+            <div style="font-size:0.8rem;color:#2f6f5b">${d.disease_name||DISEASE}</div>
+          </div>
+          <div style="width:1px;height:56px;background:#cfe0d8"></div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2f6f5b;margin-bottom:4px">Regulatory Path</div>
+            <div style="font-size:0.9rem;font-weight:800;color:${regColor}">${reg.pathway||'—'}</div>
+            <div style="font-size:0.72rem;color:#2f6f5b">${reg.timeline||''}</div>
+          </div>
+          ${reg.orphan_drug ? `<div style="padding:6px 12px;background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2f6f5b">🏥 Orphan Drug<br/><span style="font-weight:400;color:#2f6f5b">< 200k patients</span></div>` : ''}
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:1rem;margin-bottom:1rem">
+        <!-- 5-Screen Scores -->
+        <div class="card">
+          <div class="card-title mb-1">5-Screen Evidence Scores</div>
+          ${interpretHTML}
+          <div style="margin-top:14px;font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Score Breakdown</div>
+          ${screenBars}
+        </div>
+
+        <!-- Disease Context -->
+        <div class="card">
+          <div class="card-title mb-1">Disease Context
+            ${dc.efo_id ? `<span style="font-size:0.67rem;color:#9aa39c;font-weight:400;margin-left:6px">${dc.efo_id}</span>` : ''}
+          </div>
+          <div style="font-size:0.78rem;color:#45524a;line-height:1.65;margin-bottom:10px">${dc.description||'No description available.'}</div>
+          <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">
+            Top Disease Genes (${dc.gene_count||0} total, Open Targets)
+          </div>
+          <div style="margin-bottom:12px">${topGenes||'<span style="color:#9aa39c;font-size:0.74rem">—</span>'}</div>
+          ${dev.available ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">Developability · ${dev.profile_label||''}</span>
+            <span style="font-weight:800;color:${devCol}">${Math.round((dev.score||0)*100)} ${dev.level||''}</span>
+          </div>
+          ${dev.rationale ? `<div style="font-size:0.68rem;color:#9aa39c;line-height:1.5;margin-bottom:6px">${dev.rationale}</div>` : ''}
+          ${devRows}
+          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${(dev.descriptors&&dev.descriptors.qed)||physchem.qed||'—'}</span></div>
+          ` : (physchem.bbb_level ? `
+          <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">CNS Profile</div>
+          <div class="kv"><span class="kv-k">BBB Penetration</span><span class="kv-v" style="font-weight:700;color:${physchem.bbb_level==='High'?'#2f6f5b':physchem.bbb_level==='Moderate'?'#97751a':'#b3261e'}">${physchem.bbb_level} (${physchem.bbb_score}/100)</span></div>
+          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${physchem.qed||'—'}</span></div>
+          ` : '')}
+        </div>
+      </div>
+
+      <!-- Mechanistic Rationale -->
+      <div class="card mb-1">
+        <div class="card-title mb-1">Mechanistic Rationale</div>
+        <p style="font-size:0.82rem;color:#45524a;line-height:1.7;margin-bottom:12px;background:#f6f5f0;border-radius:8px;padding:12px;border-left:3px solid #2f6f5b">${mech.text||'No mechanistic rationale computed.'}</p>
+        ${overlapGenes.length ? `
+          <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Overlapping Targets (${overlapGenes.length})</div>
+          <div style="margin-bottom:12px">${geneChips}</div>
+        ` : ''}
+        <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Shared Disease Pathways (${sharedPws.length})</div>
+        ${pwHTML}
+      </div>
+
+      <!-- 505(b)(2) Regulatory Assessment -->
+      <div class="card mb-1" style="background:${regBg};border-color:${regColor}40">
+        <div class="card-title mb-1" style="color:${regColor}">505(b)(2) Regulatory Assessment</div>
+        <div style="font-size:0.82rem;font-weight:700;color:${regColor};margin-bottom:10px;padding:10px;background:white;border-radius:8px;border-left:3px solid ${regColor}">${reg.label||'—'}</div>
+        <div class="grid-2" style="gap:1rem">
+          <div>
+            <div class="kv"><span class="kv-k">Regulatory Pathway</span><span class="kv-v" style="font-weight:700">${reg.pathway||'—'}</span></div>
+            <div class="kv"><span class="kv-k">Estimated Timeline</span><span class="kv-v">${reg.timeline||'—'}</span></div>
+            <div class="kv"><span class="kv-k">Current Phase</span><span class="kv-v">Phase ${reg.phase||0}${reg.is_approved?' (Approved)':''}</span></div>
+            <div class="kv"><span class="kv-k">Orphan Drug</span><span class="kv-v" style="color:${reg.orphan_drug?'#2f6f5b':'#9aa39c'}">${reg.orphan_drug?'Yes — eligible (< 200k patients)':'No'}</span></div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Exclusivity Benefits</div>
+            ${exHTML || '<p style="color:#9aa39c;font-size:0.74rem">Standard data exclusivity.</p>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:1rem">
+        <!-- Literature -->
+        <div class="card">
+          <div class="card-title mb-1">PubMed Literature <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${literature.length} papers)</span></div>
+          ${litHTML}
+        </div>
+        <!-- Clinical Trials -->
+        <div class="card">
+          <div class="card-title mb-1">Clinical Trials <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${trials.length} found)</span></div>
+          ${trialHTML}
+        </div>
+      </div>`;
+
+  } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+{% endblock %}

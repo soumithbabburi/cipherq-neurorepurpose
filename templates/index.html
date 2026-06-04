@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+{% block title %}CipherQ RepurposeIQ{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Masthead ledger (replaces generic KPI tiles) ─────────────────────── */
+  .masthead {
+    background: var(--bg-card); border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+    overflow: hidden; position: relative;
+  }
+  .masthead::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--grad-bar); opacity:0.8; }
+  .masthead-top { display:flex; justify-content:space-between; align-items:flex-end; gap:2rem; padding:1.6rem 1.8rem 1.3rem; flex-wrap:wrap; }
+  .masthead-kicker { font-size:10px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--accent); }
+  .masthead-title { font-family:var(--font-serif); font-size:1.85rem; font-weight:500; letter-spacing:-0.015em; color:var(--text-primary); line-height:1.1; margin-top:4px; }
+  .masthead-sub { font-size:0.8rem; color:var(--text-muted); margin-top:6px; max-width:32rem; line-height:1.55; }
+
+  .ledger { display:flex; border-top:1px solid var(--border-subtle); background:rgba(236,235,227,0.45); }
+  .ledger-cell { flex:1; padding:0.95rem 1.8rem; border-right:1px solid var(--border-subtle); }
+  .ledger-cell:last-child { border-right:none; }
+  .ledger-fig { font-family:var(--font-serif); font-size:1.6rem; font-weight:600; line-height:1; color:var(--text-primary); letter-spacing:-0.01em; display:flex; align-items:baseline; gap:0.3rem; }
+  .ledger-fig .unit { font-family:var(--font-ui); font-size:0.68rem; font-weight:600; color:var(--text-muted); letter-spacing:0; }
+  .ledger-lbl { font-size:0.6rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted); margin-top:0.45rem; }
+  .ledger-sub { font-size:0.66rem; color:var(--text-dim); margin-top:0.2rem; display:flex; align-items:center; gap:0.25rem; }
+
+  /* ── Run discovery (inline in masthead) ───────────────────────────────── */
+  .disc-box { display:flex; gap:0.5rem; align-items:center; }
+  .disc-box .wrap { position:relative; }
+  .disc-box input { width:240px; padding:9px 12px 9px 34px; border:1px solid var(--border-default); border-radius:9px; font-size:0.82rem; background:var(--bg-sunken); color:var(--text-primary); outline:none; transition:border-color .15s, box-shadow .15s; }
+  .disc-box input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--ring); }
+  .disc-box .ic { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:16px; color:var(--text-dim); pointer-events:none; }
+
+  /* ── Section panels ───────────────────────────────────────────────────── */
+  .section-panel { background:var(--bg-card); border:1px solid var(--border-default); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .section-panel-header { padding:0.9rem 1.3rem 0.75rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; gap:0.7rem; }
+  .section-panel-title { font-family:var(--font-serif); font-size:1rem; font-weight:600; color:var(--text-primary); letter-spacing:-0.01em; }
+
+  .areas-table { width:100%; border-collapse:collapse; }
+  .areas-table thead th { padding:8px 14px; font-size:0.6rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); background:var(--bg-sunken); border-bottom:1px solid var(--border-default); white-space:nowrap; position:sticky; top:0; z-index:2; }
+  /* keep the scroll area tidy + aligned with the right rail */
+  .areas-scroll::-webkit-scrollbar { width:8px; }
+  .areas-table tbody tr { cursor:pointer; transition:background 0.12s; }
+  .areas-table tbody tr:hover { background:var(--accent-soft); }
+  .areas-table tbody td { padding:9px 14px; border-bottom:1px solid var(--border-subtle); font-size:0.78rem; }
+  .areas-table tbody tr:last-child td { border-bottom:none; }
+
+  .filter-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:0.7rem; font-weight:600; border:1px solid var(--border-default); cursor:pointer; background:var(--bg-card); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
+  .filter-pill:hover { border-color:var(--accent-line); color:var(--accent); }
+  .filter-pill.active { background:var(--accent); color:#fffdf9; border-color:transparent; box-shadow:0 4px 14px -6px rgba(47,111,91,0.6); }
+  .filter-pill .ct { font-size:0.62rem; opacity:0.85; }
+
+  .trend-pill { display:inline-flex; align-items:center; gap:3px; padding:3px 9px; border-radius:999px; font-size:0.67rem; font-weight:600; white-space:nowrap; }
+  .trend-pill .mi { font-size:11px; }
+
+  .search-inline { display:flex; align-items:center; gap:8px; background:var(--bg-sunken); border:1px solid var(--border-default); border-radius:8px; padding:5px 12px; width:220px; }
+  .search-inline input { border:none; background:transparent; outline:none; font-size:0.8rem; color:var(--text-primary); width:100%; }
+  .search-inline .material-symbols-outlined { font-size:15px; color:var(--text-dim); flex-shrink:0; }
+
+  .mini-stat { text-align:center; padding:0.7rem 0.5rem; border-radius:10px; }
+  .mini-stat .v { font-family:var(--font-serif); font-size:1.25rem; font-weight:600; }
+  .mini-stat .l { font-size:0.58rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-top:2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Masthead ledger ─────────────────────────────────────────────────────── -->
+<div class="masthead mb-2">
+  <div class="masthead-top">
+    <div>
+      <div class="masthead-kicker">Clinical Repurposing OS</div>
+      <div class="masthead-title">The Repurposing Workbench</div>
+      <div class="masthead-sub">Give an existing molecule a second life. Enter a disease to surface candidates ranked by a five-screen evidence chain — target overlap, clinical phase, potency, network and developability.</div>
+    </div>
+    <div class="disc-box">
+      <div class="wrap">
+        <span class="material-symbols-outlined ic">search</span>
+        <input id="hero-q" type="text" placeholder="e.g. Alzheimer, Migraine…" onkeydown="if(event.key==='Enter')doSearch()"/>
+      </div>
+      <button onclick="doSearch()" class="btn btn-primary" style="padding:0.55rem 1.1rem">
+        Run Discovery
+        <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+      </button>
+    </div>
+  </div>
+  <div class="ledger">
+    <div class="ledger-cell">
+      <div class="ledger-fig mono">{{ "{:,}".format(stats.get("compounds", 0)) }}</div>
+      <div class="ledger-lbl">Drug Candidates</div>
+      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--accent)">science</span> Repurposable small molecules</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="ledger-fig mono">{{ "{:,}".format(stats.get("indications", 0)) }}</div>
+      <div class="ledger-lbl">Clinical Indications</div>
+      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--gold)">verified</span> Mapped to disease areas</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="ledger-fig mono">{{ "{:,}".format(stats.get("targets", 0)) }}</div>
+      <div class="ledger-lbl">Protein Targets</div>
+      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--brown)">hub</span> Mechanistic target space</div>
+    </div>
+    <div class="ledger-cell">
+      <div class="ledger-fig"><span id="stat-areas-count">—</span></div>
+      <div class="ledger-lbl">Research Areas</div>
+      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--terracotta)">neurology</span> Curated therapeutic areas</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main Grid ──────────────────────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 300px;gap:1rem;align-items:start">
+
+  <!-- Research Areas Table -->
+  <div class="section-panel" id="areas-panel" style="display:flex;flex-direction:column">
+    <div class="section-panel-header">
+      <div style="flex:1">
+        <div class="section-panel-title">Research Areas</div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px" id="areas-showing">Loading…</div>
+      </div>
+      <div class="search-inline">
+        <span class="material-symbols-outlined">search</span>
+        <input id="area-search" type="text" placeholder="Filter diseases…" oninput="filterSearch(this.value)"/>
+      </div>
+    </div>
+    <div id="filter-bar" style="display:flex;flex-wrap:wrap;gap:5px;padding:0.7rem 1.3rem;border-bottom:1px solid var(--border-subtle);background:var(--bg-sunken)"></div>
+    <div class="areas-scroll" style="overflow:auto;flex:1;min-height:0">
+      <table class="areas-table">
+        <thead>
+          <tr>
+            <th style="width:30%">Disease / Indication</th>
+            <th>Category</th>
+            <th>Key Mechanism</th>
+            <th>Market Trend</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="areas-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right rail -->
+  <div id="right-rail" style="display:flex;flex-direction:column;gap:0.9rem">
+
+    <!-- Pipeline Landscape -->
+    <div class="section-panel">
+      <div class="section-panel-header">
+        <div class="section-panel-title">Pipeline Landscape</div>
+      </div>
+      <div style="padding:1.1rem 1.3rem">
+        <div id="trend-breakdown" style="display:flex;flex-direction:column;gap:0.9rem"></div>
+        <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid var(--border-subtle);font-size:0.65rem;color:var(--text-muted);line-height:1.6">
+          Ranked by active pipeline volume, patent-cliff opportunity, and unmet medical need.
+        </div>
+      </div>
+    </div>
+
+    <!-- Disease Indications quick-stats -->
+    <div class="section-panel">
+      <div class="section-panel-header">
+        <div class="section-panel-title">Disease Indications</div>
+      </div>
+      <div style="padding:0.95rem 1.3rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+        <div class="mini-stat" style="background:rgba(181,85,47,0.10);border:1px solid rgba(181,85,47,0.24)">
+          <div class="v mono" style="color:var(--terracotta)" id="ind-hot">9</div>
+          <div class="l" style="color:var(--terracotta)">Hot Areas</div>
+        </div>
+        <div class="mini-stat" style="background:rgba(47,111,91,0.10);border:1px solid rgba(47,111,91,0.24)">
+          <div class="v mono" style="color:var(--accent)" id="ind-grow">8</div>
+          <div class="l" style="color:var(--accent)">Growing</div>
+        </div>
+        <div class="mini-stat" style="background:rgba(151,117,26,0.12);border:1px solid rgba(151,117,26,0.26)">
+          <div class="v mono" style="color:var(--gold-deep)" id="ind-est">1</div>
+          <div class="l" style="color:var(--gold-deep)">Established</div>
+        </div>
+        <div class="mini-stat" style="background:rgba(138,106,79,0.12);border:1px solid rgba(138,106,79,0.26)">
+          <div class="v mono" style="color:var(--brown)" id="ind-emrg">7</div>
+          <div class="l" style="color:var(--brown)">Emerging</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Research areas dataset ────────────────────────────────────────────────────
+const RESEARCH_AREAS = [
+  { disease:"Alzheimer Disease",         category:"Dementia",             mechanism:"Amyloid · Tau · ApoE4",            trend:"hot"         },
+  { disease:"Migraine",                  category:"Pain / Vascular",      mechanism:"CGRP · 5-HT1B/1D",                trend:"hot"         },
+  { disease:"Parkinson Disease",         category:"Movement Disorder",    mechanism:"LRRK2 · α-Synuclein · GBA",        trend:"hot"         },
+  { disease:"Major Depression",          category:"Psychiatry",           mechanism:"NMDA · Serotonergic · Ketamine",   trend:"hot"         },
+  { disease:"Epilepsy",                  category:"Neurology",            mechanism:"SV2A · Nav Channel · GABA-A",      trend:"hot"         },
+  { disease:"ALS",                       category:"Neurology",            mechanism:"TDP-43 · SOD1 · C9orf72",          trend:"hot"         },
+  { disease:"Schizophrenia",             category:"Psychiatry",           mechanism:"TAAR1 · Dopamine D2 · GlyT1",      trend:"growing"     },
+  { disease:"ADHD",                      category:"Psychiatry",           mechanism:"Dopamine · Norepinephrine",         trend:"growing"     },
+  { disease:"Anxiety Disorders",         category:"Psychiatry",           mechanism:"GABA-A · 5-HT1A · CRFR1",          trend:"growing"     },
+  { disease:"Huntington Disease",        category:"Neurology",            mechanism:"HTT · CAG Repeat · ASO",           trend:"growing"     },
+  { disease:"Frontotemporal Dementia",   category:"Dementia",             mechanism:"GRN · C9orf72 · TDP-43",           trend:"growing"     },
+  { disease:"PTSD",                      category:"Psychiatry",           mechanism:"NMDA · Endocannabinoid · CRF",     trend:"growing"     },
+  { disease:"Autism Spectrum Disorder",  category:"Psychiatry",           mechanism:"mGluR5 · SHANK3 · GABA-A",         trend:"growing"     },
+  { disease:"Multiple Sclerosis",        category:"Autoimmune",           mechanism:"BTK · S1P · CD20",                 trend:"growing"     },
+  { disease:"Narcolepsy",                category:"Neurology",            mechanism:"Orexin · OX2R",                    trend:"growing"     },
+  { disease:"Bipolar Disorder",          category:"Psychiatry",           mechanism:"Mood Stabilizer · GSK-3β",         trend:"established" },
+  { disease:"Lewy Body Dementia",        category:"Dementia",             mechanism:"α-Synuclein · AChE · DLB",         trend:"emerging"    },
+  { disease:"Traumatic Brain Injury",    category:"Neurology",            mechanism:"Neuroinflammation · NMDA · BDNF",  trend:"emerging"    },
+  { disease:"Spinal Cord Injury",        category:"Neurology",            mechanism:"Neuroprotection · Axon Regen",     trend:"emerging"    },
+  { disease:"Neuropathic Pain",          category:"Pain Medicine",        mechanism:"Nav1.7 · TRPV1 · CGRP",            trend:"hot"         },
+  { disease:"Non-Small Cell Lung Cancer",category:"Oncology",             mechanism:"EGFR · KRAS · PD-L1 · ALK",        trend:"hot"         },
+  { disease:"Breast Cancer",             category:"Oncology",             mechanism:"HER2 · BRCA1/2 · CDK4/6 · PI3K",   trend:"hot"         },
+  { disease:"Colorectal Cancer",         category:"Oncology",             mechanism:"KRAS · BRAF · HER2 · PD-L1",       trend:"hot"         },
+  { disease:"Multiple Myeloma",          category:"Oncology",             mechanism:"BCMA · CD38 · IMiDs · Proteasome",  trend:"hot"         },
+  { disease:"Pancreatic Cancer",         category:"Oncology",             mechanism:"KRAS G12C · Stromal TGFβ · PARP",  trend:"growing"     },
+  { disease:"Acute Myeloid Leukemia",    category:"Oncology",             mechanism:"FLT3 · IDH1/2 · BCL-2 · Menin",    trend:"growing"     },
+  { disease:"Hepatocellular Carcinoma",  category:"Oncology",             mechanism:"VEGFR · mTOR · PD-1 · MET",        trend:"growing"     },
+  { disease:"Glioblastoma",              category:"Oncology",             mechanism:"EGFR · MGMT · IDH · VEGF",         trend:"emerging"    },
+  { disease:"Heart Failure (HFrEF)",     category:"Cardiovascular",       mechanism:"SGLT2 · Sacubitril · RAAS · GLP-1", trend:"hot"         },
+  { disease:"Atrial Fibrillation",       category:"Cardiovascular",       mechanism:"Nav1.5 · Kv11.1 · Factor Xa",      trend:"hot"         },
+  { disease:"Coronary Artery Disease",   category:"Cardiovascular",       mechanism:"PCSK9 · HMG-CoA · P2Y12 · IL-6",   trend:"growing"     },
+  { disease:"Pulmonary Arterial Hypertension", category:"Cardiovascular", mechanism:"PDE5 · Prostacyclin · Endothelin", trend:"growing"     },
+  { disease:"Type 2 Diabetes",           category:"Metabolic",            mechanism:"GLP-1R · SGLT2 · DPP-4 · PPAR-γ",  trend:"hot"         },
+  { disease:"NASH / NAFLD",              category:"Metabolic",            mechanism:"FXR · PPAR-α/δ · GLP-1 · FGF21",   trend:"hot"         },
+  { disease:"Obesity",                   category:"Metabolic",            mechanism:"GLP-1R · MC4R · NPY · Amylin",      trend:"hot"         },
+  { disease:"Chronic Kidney Disease",    category:"Metabolic",            mechanism:"SGLT2 · Endothelin · RAAS · NF-κB", trend:"growing"     },
+  { disease:"Rheumatoid Arthritis",      category:"Autoimmune",           mechanism:"JAK1/2 · TNF-α · IL-6 · BTK",      trend:"hot"         },
+  { disease:"Lupus (SLE)",               category:"Autoimmune",           mechanism:"BAFF · IFN-α · BTK · PCSK9",       trend:"growing"     },
+  { disease:"Crohn's Disease",           category:"Autoimmune",           mechanism:"IL-12/23 · TNF-α · Integrins",      trend:"growing"     },
+  { disease:"Psoriasis",                 category:"Autoimmune",           mechanism:"IL-17A · IL-23 · TYK2 · PDE4",      trend:"growing"     },
+  { disease:"Atopic Dermatitis",         category:"Autoimmune",           mechanism:"JAK1 · IL-4Rα · IL-31 · IgE",       trend:"hot"         },
+  { disease:"Asthma",                    category:"Respiratory",          mechanism:"IgE · IL-5 · TSLP · PDE4",         trend:"hot"         },
+  { disease:"COPD",                      category:"Respiratory",          mechanism:"PDE4 · β2 · M3 · NLRP3",           trend:"growing"     },
+  { disease:"Idiopathic Pulmonary Fibrosis", category:"Respiratory",      mechanism:"TGF-β · PDGFR · FGFR · LPA1",      trend:"growing"     },
+  { disease:"Cystic Fibrosis",           category:"Rare Disease",         mechanism:"CFTR Potentiator · Corrector",      trend:"hot"         },
+  { disease:"Spinal Muscular Atrophy",   category:"Rare Disease",         mechanism:"SMN1/2 · mRNA Splicing · ASO",      trend:"hot"         },
+  { disease:"Duchenne Muscular Dystrophy",category:"Rare Disease",        mechanism:"Dystrophin · Exon Skip · HDAC",     trend:"growing"     },
+  { disease:"Gaucher Disease",           category:"Rare Disease",         mechanism:"GBA · Glucocerebrosidase",          trend:"established" },
+  { disease:"Rett Syndrome",             category:"Rare Disease",         mechanism:"MeCP2 · GABA · Trofinetide",        trend:"emerging"    },
+  { disease:"Neuromyelitis Optica",      category:"Autoimmune",           mechanism:"AQP4 · IL-6 · FcRn",               trend:"growing"     },
+];
+
+// Warm earthy trend palette
+const TREND = {
+  hot:         { label:"Hot",         bg:"rgba(181,85,47,0.13)",  color:"#b5552f", bar:"#b5552f", icon:"local_fire_department" },
+  growing:     { label:"Growing",     bg:"rgba(47,111,91,0.13)",  color:"#2f6f5b", bar:"#2f6f5b", icon:"trending_up"           },
+  established: { label:"Established", bg:"rgba(151,117,26,0.14)", color:"#8a6309", bar:"#8a6309", icon:"verified"              },
+  emerging:    { label:"Emerging",    bg:"rgba(138,106,79,0.14)", color:"#8a6a4f", bar:"#8a6a4f", icon:"spa"                   },
+};
+
+const CATEGORIES = ["All", ...new Set(RESEARCH_AREAS.map(a => a.category))];
+let activeFilter = "All";
+let searchQuery  = "";
+
+function filteredAreas() {
+  return RESEARCH_AREAS.filter(a => {
+    const catOk = activeFilter === "All" || a.category === activeFilter;
+    const q = searchQuery.toLowerCase();
+    const srchOk = !q || a.disease.toLowerCase().includes(q) ||
+                   a.mechanism.toLowerCase().includes(q) || a.category.toLowerCase().includes(q);
+    return catOk && srchOk;
+  });
+}
+
+function renderTable() {
+  const areas = filteredAreas();
+  document.getElementById("areas-showing").textContent =
+    `${areas.length} area${areas.length !== 1 ? "s" : ""} · click any row to start analysis`;
+  document.getElementById("areas-tbody").innerHTML = areas.map(a => {
+    const tc = TREND[a.trend];
+    const q  = encodeURIComponent(a.disease);
+    return `<tr onclick="window.location.href='/discover?q=${q}'">
+      <td><span style="font-family:var(--font-serif);font-size:0.92rem;font-weight:600;color:var(--text-primary)">${a.disease}</span></td>
+      <td><span style="font-size:0.72rem;color:var(--text-muted);background:var(--bg-sunken);padding:2px 8px;border-radius:6px;border:1px solid var(--border-default);white-space:nowrap">${a.category}</span></td>
+      <td><span class="mono" style="font-size:0.71rem;color:var(--accent-deep);background:var(--accent-soft);padding:2px 8px;border-radius:6px;border:1px solid var(--accent-line);white-space:nowrap">${a.mechanism}</span></td>
+      <td><span class="trend-pill" style="background:${tc.bg};color:${tc.color}"><span class="material-symbols-outlined mi">${tc.icon}</span>${tc.label}</span></td>
+      <td style="text-align:right;padding-right:18px">
+        <a href="/discover?q=${q}" style="font-size:0.74rem;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px" onclick="event.stopPropagation()">
+          Discover <span class="material-symbols-outlined" style="font-size:13px">arrow_forward</span>
+        </a>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  document.querySelectorAll(".filter-pill").forEach(b => b.classList.toggle("active", b.dataset.cat === cat));
+  renderTable();
+}
+function filterSearch(q) { searchQuery = q; renderTable(); }
+
+function renderTrendBreakdown() {
+  const counts = {}, total = RESEARCH_AREAS.length;
+  RESEARCH_AREAS.forEach(a => counts[a.trend] = (counts[a.trend] || 0) + 1);
+  document.getElementById("trend-breakdown").innerHTML =
+    ["hot","growing","established","emerging"].filter(t => counts[t]).map(t => {
+      const tc = TREND[t], pct = Math.round(counts[t] / total * 100);
+      return `<div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.74rem;font-weight:600;color:${tc.color}">
+            <span class="material-symbols-outlined" style="font-size:13px">${tc.icon}</span>${tc.label}
+          </span>
+          <span style="font-size:0.74rem;font-weight:600;color:var(--text-primary)">${counts[t]} area${counts[t]>1?"s":""}</span>
+        </div>
+        <div style="height:6px;border-radius:4px;background:var(--bg-sunken);overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${tc.bar};border-radius:4px"></div>
+        </div>
+      </div>`;
+    }).join("");
+}
+
+function buildFilterBar() {
+  const counts = {"All": RESEARCH_AREAS.length};
+  RESEARCH_AREAS.forEach(a => counts[a.category] = (counts[a.category] || 0) + 1);
+  document.getElementById("filter-bar").innerHTML = CATEGORIES.map(c =>
+    `<button class="filter-pill ${c==="All"?"active":""}" data-cat="${c}" onclick="setFilter('${c}')">
+      ${c}<span class="ct">${counts[c]||0}</span>
+    </button>`).join("");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("stat-areas-count").textContent = RESEARCH_AREAS.length;
+  buildFilterBar();
+  renderTable();
+  renderTrendBreakdown();
+  const cnt = {};
+  RESEARCH_AREAS.forEach(a => cnt[a.trend] = (cnt[a.trend]||0)+1);
+  const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set("ind-hot", cnt["hot"]||0); set("ind-grow", cnt["growing"]||0);
+  set("ind-est", cnt["established"]||0); set("ind-emrg", cnt["emerging"]||0);
+  requestAnimationFrame(syncAreasHeight);
+});
+
+// Match the Research Areas panel height to the right rail (Disease Indications bottom)
+function syncAreasHeight() {
+  const rail = document.getElementById("right-rail");
+  const panel = document.getElementById("areas-panel");
+  if (!rail || !panel) return;
+  if (window.innerWidth <= 900) { panel.style.height = ""; return; }  // stacked on mobile
+  panel.style.height = rail.offsetHeight + "px";
+}
+window.addEventListener("resize", () => requestAnimationFrame(syncAreasHeight));
+window.addEventListener("load", () => requestAnimationFrame(syncAreasHeight));
+
+function doSearch() {
+  const q = (document.getElementById("hero-q") || {value:""}).value.trim();
+  if (q) window.location.href = "/discover?q=" + encodeURIComponent(q);
+}
+</script>
+{% endblock %}

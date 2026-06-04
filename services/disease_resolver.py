@@ -6,6 +6,7 @@ Falls back to LIKE-based matching if MeSH lookup fails.
 """
 
 import logging
+import os
 import re
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
@@ -17,19 +18,27 @@ import psycopg2.pool
 logger = logging.getLogger(__name__)
 
 _DB_PARAMS = dict(
-    host="localhost", port=5434, user="babburisoumith",
-    password="", dbname="neurorepurpose", connect_timeout=3,
+    host=os.getenv("DB_HOST", os.getenv("CHEMBL_DB_HOST", "localhost")),
+    port=int(os.getenv("DB_PORT", os.getenv("CHEMBL_DB_PORT", "5433"))),
+    user=os.getenv("DB_USER", os.getenv("CHEMBL_DB_USER", "babburisoumith")),
+    password=os.getenv("DB_PASSWORD", os.getenv("CHEMBL_DB_PASSWORD", "")),
+    dbname=os.getenv("DB_NAME", "neurorepurpose"),
+    connect_timeout=3,
 )
 
 _pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
+_pool_failed = False
 
 
 def _get_pool():
-    global _pool
+    global _pool, _pool_failed
     if _pool is None:
+        if _pool_failed:
+            return None
         try:
             _pool = psycopg2.pool.ThreadedConnectionPool(1, 5, **_DB_PARAMS)
         except Exception as e:
+            _pool_failed = True
             logger.warning(f"DB pool failed: {e}")
     return _pool
 
@@ -143,7 +152,13 @@ def resolve_disease(query: str) -> List[Dict]:
         if rows:
             return rows
 
-    return []
+    return [{
+        "mesh_id": norm,
+        "heading": query.strip() or norm,
+        "tree_numbers": [],
+        "entry_terms": [],
+        "parent_ids": [],
+    }]
 
 
 def expand_mesh_ids(mesh_ids: List[str], include_children: bool = True) -> List[str]:
@@ -155,6 +170,9 @@ def expand_mesh_ids(mesh_ids: List[str], include_children: bool = True) -> List[
     """
     if not mesh_ids:
         return []
+
+    if all(str(mid).startswith("LOCAL:") for mid in mesh_ids):
+        return mesh_ids
 
     all_ids = set(mesh_ids)
 
@@ -198,6 +216,9 @@ def get_tree_siblings(mesh_id: str) -> List[str]:
 
 def get_disease_label(mesh_id: str) -> str:
     """Return the canonical heading for a MeSH ID."""
+    if str(mesh_id).startswith("LOCAL:"):
+        return str(mesh_id).replace("LOCAL:", "").replace("-", " ").title()
+
     rows = _q("SELECT heading FROM mesh_diseases WHERE mesh_id = %s", (mesh_id,))
     return rows[0]["heading"] if rows else mesh_id
 
@@ -212,7 +233,17 @@ def suggest_diseases(partial: str, limit: int = 10) -> List[str]:
         "WHERE LOWER(heading) LIKE %s ORDER BY heading LIMIT %s",
         (f"%{norm}%", limit),
     )
-    return [r["heading"] for r in rows]
+    suggestions = [r["heading"] for r in rows]
+    if suggestions:
+        return suggestions
+    fallback = [
+        "Alzheimer Disease",
+        "Parkinson Disease",
+        "Multiple Sclerosis",
+        "Epilepsy",
+        "Depression",
+    ]
+    return [s for s in fallback if norm in s.lower()][:limit]
 
 
 def mesh_available() -> bool:

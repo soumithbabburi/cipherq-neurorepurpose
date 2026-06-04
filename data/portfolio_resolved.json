@@ -1,0 +1,397 @@
+{
+  "acetazolamide": {
+    "chembl_id": "CHEMBL20",
+    "pref_name": "ACETAZOLAMIDE",
+    "max_phase": "4.0"
+  },
+  "acitretin": {
+    "chembl_id": "CHEMBL1131",
+    "pref_name": "ACITRETIN",
+    "max_phase": "4.0"
+  },
+  "acyclovir": {
+    "chembl_id": "CHEMBL1200380",
+    "pref_name": "ACYCLOVIR SODIUM",
+    "max_phase": "4.0"
+  },
+  "adapalene": {
+    "chembl_id": "CHEMBL1265",
+    "pref_name": "ADAPALENE",
+    "max_phase": "4.0"
+  },
+  "amantadine": {
+    "chembl_id": "CHEMBL660",
+    "pref_name": "AMANTADINE",
+    "max_phase": "4.0"
+  },
+  "aripiprazole": {
+    "chembl_id": "CHEMBL1112",
+    "pref_name": "ARIPIPRAZOLE",
+    "max_phase": "4.0"
+  },
+  "asenapine": {
+    "chembl_id": "CHEMBL3187365",
+    "pref_name": "ASENAPINE",
+    "max_phase": "4.0"
+  },
+  "azelastine": {
+    "chembl_id": "CHEMBL1200809",
+    "pref_name": "AZELASTINE HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "azithromycin": {
+    "chembl_id": "CHEMBL4299381",
+    "pref_name": "Azithromycin",
+    "max_phase": 0
+  },
+  "bepotastine": {
+    "chembl_id": "CHEMBL1201758",
+    "pref_name": "BEPOTASTINE",
+    "max_phase": "4.0"
+  },
+  "betamethasone": {
+    "chembl_id": "CHEMBL10858",
+    "pref_name": "Betamethasone valerate",
+    "max_phase": 0
+  },
+  "bimatoprost": {
+    "chembl_id": "CHEMBL1200963",
+    "pref_name": "BIMATOPROST",
+    "max_phase": "4.0"
+  },
+  "bisoprolol": {
+    "chembl_id": "CHEMBL645",
+    "pref_name": "BISOPROLOL",
+    "max_phase": "4.0"
+  },
+  "brimonidine": {
+    "chembl_id": "CHEMBL2062257",
+    "pref_name": "Brimonidine",
+    "max_phase": 0
+  },
+  "bromfenac": {
+    "chembl_id": "CHEMBL1077",
+    "pref_name": "BROMFENAC",
+    "max_phase": "4.0"
+  },
+  "candesartan": {
+    "chembl_id": "CHEMBL1016",
+    "pref_name": "CANDESARTAN",
+    "max_phase": "3.0"
+  },
+  "carbamazepine": {
+    "chembl_id": "CHEMBL108",
+    "pref_name": "CARBAMAZEPINE",
+    "max_phase": "4.0"
+  },
+  "carmustine": {
+    "chembl_id": "CHEMBL513",
+    "pref_name": "CARMUSTINE",
+    "max_phase": "4.0"
+  },
+  "celecoxib": {
+    "chembl_id": "CHEMBL118",
+    "pref_name": "CELECOXIB",
+    "max_phase": "4.0"
+  },
+  "chlorpromazine": {
+    "chembl_id": "CHEMBL71",
+    "pref_name": "CHLORPROMAZINE",
+    "max_phase": "4.0"
+  },
+  "chlorthalidone": {
+    "chembl_id": "CHEMBL1055",
+    "pref_name": "CHLORTHALIDONE",
+    "max_phase": "4.0"
+  },
+  "clarithromycin": {
+    "chembl_id": "CHEMBL1741",
+    "pref_name": "CLARITHROMYCIN",
+    "max_phase": "4.0"
+  },
+  "clobetasol": {
+    "chembl_id": "CHEMBL1159650",
+    "pref_name": "CLOBETASOL PROPIONATE",
+    "max_phase": "4.0"
+  },
+  "clomipramine": {
+    "chembl_id": "CHEMBL1200710",
+    "pref_name": "CLOMIPRAMINE HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "clonazepam": {
+    "chembl_id": "CHEMBL452",
+    "pref_name": "CLONAZEPAM",
+    "max_phase": "4.0"
+  },
+  "clonidine": {
+    "chembl_id": "CHEMBL1705",
+    "pref_name": "CLONIDINE HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "cyclophosphamide": {
+    "chembl_id": "CHEMBL88",
+    "pref_name": "CYCLOPHOSPHAMIDE ANHYDROUS",
+    "max_phase": "4.0"
+  },
+  "dabigatran": {
+    "chembl_id": "CHEMBL539697",
+    "pref_name": "DABIGATRAN ETEXILATE",
+    "max_phase": "4.0"
+  },
+  "dapagliflozin": {
+    "chembl_id": "CHEMBL429910",
+    "pref_name": "DAPAGLIFLOZIN",
+    "max_phase": "4.0"
+  },
+  "dapsone": {
+    "chembl_id": "CHEMBL1043",
+    "pref_name": "DAPSONE",
+    "max_phase": "4.0"
+  },
+  "deferasirox": {
+    "chembl_id": "CHEMBL550348",
+    "pref_name": "DEFERASIROX",
+    "max_phase": "4.0"
+  },
+  "desipramine": {
+    "chembl_id": "CHEMBL72",
+    "pref_name": "DESIPRAMINE",
+    "max_phase": "4.0"
+  },
+  "desonide": {
+    "chembl_id": "CHEMBL1201109",
+    "pref_name": "DESONIDE",
+    "max_phase": "4.0"
+  },
+  "dexlansoprazole": {
+    "chembl_id": "CHEMBL1201863",
+    "pref_name": "DEXLANSOPRAZOLE",
+    "max_phase": "4.0"
+  },
+  "diazepam": {
+    "chembl_id": "CHEMBL12",
+    "pref_name": "DIAZEPAM",
+    "max_phase": "4.0"
+  },
+  "diclofenac": {
+    "chembl_id": "CHEMBL139",
+    "pref_name": "DICLOFENAC",
+    "max_phase": "4.0"
+  },
+  "diltiazem": {
+    "chembl_id": "CHEMBL1200805",
+    "pref_name": "DILTIAZEM MALATE",
+    "max_phase": "4.0"
+  },
+  "docetaxel": {
+    "chembl_id": "CHEMBL92",
+    "pref_name": "DOCETAXEL ANHYDROUS",
+    "max_phase": "4.0"
+  },
+  "donepezil": {
+    "chembl_id": "CHEMBL502",
+    "pref_name": "DONEPEZIL",
+    "max_phase": "4.0"
+  },
+  "doxepin": {
+    "chembl_id": "CHEMBL860",
+    "pref_name": "E-DOXEPIN",
+    "max_phase": 0
+  },
+  "doxycycline": {
+    "chembl_id": "CHEMBL1256723",
+    "pref_name": "DOXYCYCLINE HYDROCHLORIDE",
+    "max_phase": "3.0"
+  },
+  "entacapone": {
+    "chembl_id": "CHEMBL953",
+    "pref_name": "ENTACAPONE",
+    "max_phase": "4.0"
+  },
+  "erlotinib": {
+    "chembl_id": "CHEMBL1079742",
+    "pref_name": "ERLOTINIB HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "famotidine": {
+    "chembl_id": "CHEMBL902",
+    "pref_name": "FAMOTIDINE",
+    "max_phase": "4.0"
+  },
+  "febuxostat": {
+    "chembl_id": "CHEMBL1164729",
+    "pref_name": "FEBUXOSTAT",
+    "max_phase": "4.0"
+  },
+  "fenofibrate": {
+    "chembl_id": "CHEMBL1201745",
+    "pref_name": "CHOLINE FENOFIBRATE",
+    "max_phase": "4.0"
+  },
+  "fesoterodine": {
+    "chembl_id": "CHEMBL1201764",
+    "pref_name": "FESOTERODINE",
+    "max_phase": "4.0"
+  },
+  "fluorouracil": {
+    "chembl_id": "CHEMBL185",
+    "pref_name": "FLUOROURACIL",
+    "max_phase": "4.0"
+  },
+  "fluoxetine": {
+    "chembl_id": "CHEMBL1201082",
+    "pref_name": "FLUOXETINE HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "fluphenazine": {
+    "chembl_id": "CHEMBL1200854",
+    "pref_name": "FLUPHENAZINE DECANOATE",
+    "max_phase": "4.0"
+  },
+  "formoterol": {
+    "chembl_id": "CHEMBL1256786",
+    "pref_name": "FORMOTEROL",
+    "max_phase": "4.0"
+  },
+  "fulvestrant": {
+    "chembl_id": "CHEMBL4760678",
+    "pref_name": "Fulvestrant",
+    "max_phase": 0
+  },
+  "guanfacine": {
+    "chembl_id": "CHEMBL862",
+    "pref_name": "GUANFACINE",
+    "max_phase": "4.0"
+  },
+  "irbesartan": {
+    "chembl_id": "CHEMBL1513",
+    "pref_name": "IRBESARTAN",
+    "max_phase": "4.0"
+  },
+  "itraconazole": {
+    "chembl_id": "CHEMBL5483033",
+    "pref_name": "Itraconazole",
+    "max_phase": 0
+  },
+  "ivabradine": {
+    "chembl_id": "CHEMBL471737",
+    "pref_name": "IVABRADINE",
+    "max_phase": "4.0"
+  },
+  "ketorolac": {
+    "chembl_id": "CHEMBL1201124",
+    "pref_name": "KETOROLAC TROMETHAMINE",
+    "max_phase": "4.0"
+  },
+  "lacosamide": {
+    "chembl_id": "CHEMBL58323",
+    "pref_name": "LACOSAMIDE",
+    "max_phase": "4.0"
+  },
+  "lamotrigine": {
+    "chembl_id": "CHEMBL741",
+    "pref_name": "LAMOTRIGINE",
+    "max_phase": "4.0"
+  },
+  "leflunomide": {
+    "chembl_id": "CHEMBL960",
+    "pref_name": "LEFLUNOMIDE",
+    "max_phase": "4.0"
+  },
+  "lidocaine": {
+    "chembl_id": "CHEMBL79",
+    "pref_name": "LIDOCAINE",
+    "max_phase": "4.0"
+  },
+  "linezolid": {
+    "chembl_id": "CHEMBL126",
+    "pref_name": "LINEZOLID",
+    "max_phase": "4.0"
+  },
+  "lithium carbonate": {
+    "chembl_id": "CHEMBL1200826",
+    "pref_name": "LITHIUM CARBONATE",
+    "max_phase": "4.0"
+  },
+  "losartan": {
+    "chembl_id": "CHEMBL382821",
+    "pref_name": "LOSARTAN NITROOXY ESTER",
+    "max_phase": 0
+  },
+  "loteprednol": {
+    "chembl_id": "CHEMBL1200865",
+    "pref_name": "LOTEPREDNOL ETABONATE",
+    "max_phase": "4.0"
+  },
+  "lurasidone": {
+    "chembl_id": "CHEMBL1237021",
+    "pref_name": "LURASIDONE",
+    "max_phase": "4.0"
+  },
+  "mesalamine": {
+    "chembl_id": "CHEMBL704",
+    "pref_name": "MESALAMINE",
+    "max_phase": "4.0"
+  },
+  "methotrexate": {
+    "chembl_id": "CHEMBL2074969",
+    "pref_name": "Methotrexate",
+    "max_phase": 0
+  },
+  "metolazone": {
+    "chembl_id": "CHEMBL878",
+    "pref_name": "METOLAZONE",
+    "max_phase": "4.0"
+  },
+  "metoprolol": {
+    "chembl_id": "CHEMBL2356097",
+    "pref_name": "METOPROLOL SUCCINATE",
+    "max_phase": "4.0"
+  },
+  "metronidazole": {
+    "chembl_id": "CHEMBL137",
+    "pref_name": "METRONIDAZOLE",
+    "max_phase": "4.0"
+  },
+  "midodrine": {
+    "chembl_id": "CHEMBL1201212",
+    "pref_name": "MIDODRINE",
+    "max_phase": "4.0"
+  },
+  "modafinil": {
+    "chembl_id": "CHEMBL1672355",
+    "pref_name": "(S)-MODAFINIL",
+    "max_phase": 0
+  },
+  "moxifloxacin": {
+    "chembl_id": "CHEMBL1200735",
+    "pref_name": "MOXIFLOXACIN HYDROCHLORIDE",
+    "max_phase": "4.0"
+  },
+  "mupirocin": {
+    "chembl_id": "CHEMBL3989715",
+    "pref_name": "MUPIROCIN CALCIUM",
+    "max_phase": "4.0"
+  },
+  "nitrofurantoin": {
+    "chembl_id": "CHEMBL572",
+    "pref_name": "NITROFURANTOIN",
+    "max_phase": "4.0"
+  },
+  "nystatin": {
+    "chembl_id": "CHEMBL5465559",
+    "pref_name": "NYSTATIN",
+    "max_phase": "4.0"
+  },
+  "olmesartan": {
+    "chembl_id": "CHEMBL1200692",
+    "pref_name": "OLMESARTAN MEDOXOMIL",
+    "max_phase": "4.0"
+  },
+  "palbociclib": {
+    "chembl_id": "CHEMBL2364621",
+    "pref_name": "PALBOCICLIB ISETHIONATE",
+    "max_phase": "2.0"
+  }
+}

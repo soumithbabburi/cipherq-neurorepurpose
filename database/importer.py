@@ -5,8 +5,10 @@ Run standalone: python3 database/importer.py
 """
 
 import json
+import hashlib
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -18,11 +20,27 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
 
+def _conn_config(prefix: str, default_name: str) -> dict:
+    return {
+        "host": os.getenv(f"{prefix}_HOST", "localhost"),
+        "port": int(os.getenv(f"{prefix}_PORT", "5433")),
+        "user": os.getenv(f"{prefix}_USER", "babburisoumith"),
+        "password": os.getenv(f"{prefix}_PASSWORD", ""),
+        "dbname": os.getenv(f"{prefix}_NAME", default_name),
+    }
+
+
 # ChEMBL connection (read-only source)
-CHEMBL_CONN = dict(host="localhost", port=5434, user="babburisoumith", password="", dbname="chembl_33")
+CHEMBL_CONN = _conn_config("CHEMBL_DB", "chembl_33")
 
 # Destination connection
-NEURO_CONN = dict(host="localhost", port=5434, user="babburisoumith", password="", dbname="neurorepurpose")
+NEURO_CONN = {
+    "host": os.getenv("DB_HOST", CHEMBL_CONN["host"]),
+    "port": int(os.getenv("DB_PORT", str(CHEMBL_CONN["port"]))),
+    "user": os.getenv("DB_USER", CHEMBL_CONN["user"]),
+    "password": os.getenv("DB_PASSWORD", CHEMBL_CONN["password"]),
+    "dbname": os.getenv("DB_NAME", "neurorepurpose"),
+}
 
 NEURO_DISEASES = [
     "%alzheimer%", "%parkinson%", "%multiple sclerosis%", "%epilep%",
@@ -257,6 +275,176 @@ def import_hetionet_data():
     conn.close()
 
 
+def _phase_to_num(phase) -> float:
+    text = str(phase or "").lower()
+    if "launched" in text or "approved" in text or "phase 4" in text:
+        return 4.0
+    if "phase 3" in text:
+        return 3.0
+    if "phase 2" in text:
+        return 2.0
+    if "phase 1" in text:
+        return 1.0
+    return 0.0
+
+
+def _norm_name(name: str) -> str:
+    return re.sub(r"\s+", " ", str(name or "").strip()).lower()
+
+
+def import_chembl_snapshot_files():
+    """Import ChEMBL-derived snapshot JSON files bundled with the repo."""
+    logger.info("Importing bundled ChEMBL snapshot files…")
+    snapshot_dir = REPO_ROOT / "data_small_molecules"
+    files = [
+        snapshot_dir / "chembl_launched.json",
+        snapshot_dir / "chembl_phase3.json",
+        snapshot_dir / "chembl_phase2.json",
+        snapshot_dir / "chembl_phase1.json",
+    ]
+
+    conn = psycopg2.connect(**NEURO_CONN)
+    cur = conn.cursor()
+    imported = 0
+    for path in files:
+        if not path.exists():
+            logger.warning(f"  Missing {path.name}; skipping")
+            continue
+        with open(path, encoding="utf-8") as f:
+            rows = json.load(f)
+
+        for row in rows:
+            name = row.get("name")
+            if not name:
+                continue
+            phase = _phase_to_num(row.get("clinical_phase"))
+            chembl_id = row.get("chembl_id") or f"C15_{hashlib.sha1(_norm_name(name).encode('utf-8')).hexdigest()[:16]}"
+            cur.execute(
+                """
+                INSERT INTO compounds (chembl_id, name, smiles, max_phase, therapeutic_flag, dosed_ingredient, source)
+                VALUES (%s, %s, %s, %s, %s, %s, 'chembl_snapshot')
+                ON CONFLICT (chembl_id) DO UPDATE
+                    SET name=EXCLUDED.name,
+                        smiles=COALESCE(EXCLUDED.smiles, compounds.smiles),
+                        max_phase=GREATEST(EXCLUDED.max_phase, compounds.max_phase),
+                        source='chembl_snapshot'
+                RETURNING id
+                """,
+                (chembl_id, name, row.get("smiles"), phase, phase >= 3, phase >= 4),
+            )
+            cid = cur.fetchone()[0]
+            cur.execute(
+                """
+                INSERT INTO compound_properties (compound_id, mw, alogp, psa, hba, hbd, rtb, ro5_violations)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (compound_id) DO UPDATE
+                    SET mw=EXCLUDED.mw, alogp=EXCLUDED.alogp, psa=EXCLUDED.psa,
+                        hba=EXCLUDED.hba, hbd=EXCLUDED.hbd, rtb=EXCLUDED.rtb,
+                        ro5_violations=EXCLUDED.ro5_violations
+                """,
+                (
+                    cid,
+                    row.get("mw"),
+                    row.get("logp"),
+                    row.get("psa"),
+                    row.get("hba"),
+                    row.get("hbd"),
+                    row.get("rotatable_bonds"),
+                    row.get("lipinski_violations") or 0,
+                ),
+            )
+            if row.get("pchembl_value") is not None:
+                cur.execute(
+                    """
+                    INSERT INTO compound_activities
+                        (compound_id, target_id, activity_type, pchembl_value, standard_value, standard_units)
+                    VALUES (%s, NULL, %s, %s, NULL, NULL)
+                    """,
+                    (cid, row.get("assay_type") or "activity", row.get("pchembl_value")),
+                )
+            imported += 1
+
+    conn.commit()
+    conn.close()
+    logger.info(f"  Imported/updated {imported:,} ChEMBL snapshot compounds")
+
+
+def import_json_associations_and_interactions():
+    """Backfill indications and target mechanisms from repo data files."""
+    logger.info("Importing data-driven indications and target interactions…")
+    assoc_path = REPO_ROOT / "disease_associations.json"
+    interactions_path = REPO_ROOT / "drug_interactions.json"
+    associations = json.load(open(assoc_path, encoding="utf-8")) if assoc_path.exists() else {}
+    interactions = json.load(open(interactions_path, encoding="utf-8")) if interactions_path.exists() else {}
+
+    conn = psycopg2.connect(**NEURO_CONN)
+    cur = conn.cursor()
+    cur.execute("SELECT id, LOWER(name), max_phase FROM compounds")
+    compound_map = {row[1]: (row[0], float(row[2] or 0)) for row in cur.fetchall()}
+    target_cache = {}
+
+    ind_count = 0
+    for drug_name, diseases in associations.items():
+        match = compound_map.get(_norm_name(drug_name))
+        if not match:
+            continue
+        cid, phase = match
+        for disease in diseases:
+            cur.execute(
+                """
+                INSERT INTO indications (compound_id, disease, mesh_id, efo_id, max_phase, source)
+                VALUES (%s, %s, NULL, NULL, %s, 'repo_associations')
+                ON CONFLICT DO NOTHING
+                """,
+                (cid, disease, phase),
+            )
+            ind_count += cur.rowcount
+
+    mech_count = 0
+    for drug_name, rows in interactions.items():
+        match = compound_map.get(_norm_name(drug_name))
+        if not match:
+            continue
+        cid, _phase = match
+        for item in rows:
+            gene = item.get("gene_symbol")
+            target_name = item.get("protein_name") or gene
+            if not target_name:
+                continue
+            key = gene or target_name
+            if key not in target_cache:
+                target_id = f"RT_{hashlib.sha1(str(key).encode('utf-8')).hexdigest()[:17]}"
+                cur.execute(
+                    """
+                    INSERT INTO targets (chembl_tid, name, target_type, gene_symbol, organism)
+                    VALUES (%s, %s, 'Protein', %s, 'Homo sapiens')
+                    ON CONFLICT (chembl_tid) DO UPDATE SET name=EXCLUDED.name, gene_symbol=EXCLUDED.gene_symbol
+                    RETURNING id
+                    """,
+                    (target_id, target_name, gene),
+                )
+                target_cache[key] = cur.fetchone()[0]
+            cur.execute(
+                """
+                INSERT INTO mechanisms (compound_id, target_id, mechanism, action_type, confidence)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT DO NOTHING
+                """,
+                (
+                    cid,
+                    target_cache[key],
+                    item.get("interaction_type") or "target interaction",
+                    item.get("interaction_type") or "target",
+                    item.get("confidence_score") or 0.5,
+                ),
+            )
+            mech_count += cur.rowcount
+
+    conn.commit()
+    conn.close()
+    logger.info(f"  Imported {ind_count:,} indications and {mech_count:,} mechanisms")
+
+
 def import_json_drugs():
     """Import drugs from existing JSON files that aren't already in the database."""
     drugs_path = REPO_ROOT / "drugs.json"
@@ -275,8 +463,8 @@ def import_json_drugs():
     for name, data in drugs.items():
         smiles = data.get("smiles", "")
         mw = data.get("molecular_weight")
-        logp = data.get("logp")
-        max_phase = 4.0 if data.get("fda_approved") else 0.0
+        logp = data.get("logp", data.get("log_p"))
+        max_phase = 4.0 if data.get("fda_approved") or data.get("approved") else 0.0
 
         cur.execute(
             """
@@ -332,7 +520,7 @@ def generate_chembl_edges():
         LEFT JOIN indications i ON i.compound_id = c.id
         LEFT JOIN mechanisms m ON m.compound_id = c.id
         LEFT JOIN targets t ON t.id = m.target_id
-        WHERE c.source = 'chembl'
+        WHERE c.source IN ('chembl', 'chembl_snapshot', 'json')
         GROUP BY c.id, c.name, c.chembl_id
     """)
     rows = cur.fetchall()
@@ -394,9 +582,14 @@ def run_full_import():
     logger.info("=== NeuroRepurpose Full Import ===")
     initialize_schema()
 
-    import_chembl_neuro_compounds()
+    try:
+        import_chembl_neuro_compounds()
+    except psycopg2.errors.UndefinedTable as e:
+        logger.warning(f"ChEMBL relational schema not present in {CHEMBL_CONN['dbname']}: {e.diag.message_primary}")
+        import_chembl_snapshot_files()
     import_hetionet_data()
     import_json_drugs()
+    import_json_associations_and_interactions()
     generate_chembl_edges()
 
     # Summary
