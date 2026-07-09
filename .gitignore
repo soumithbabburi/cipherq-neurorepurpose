@@ -45,3 +45,8 @@ Thumbs.db
 .flaskout.txt
 biocypher-log/
 .claude/
+
+# Docking — provisioned locally, not committed (see vendor/vina_bin/setup.sh)
+.qc/                          # micromamba root: qc + drugdisc-agent envs
+vendor/vina_bin/*.exe         # AutoDock Vina Windows binaries (re-downloadable)
+vendor/AtomisticSkills/**/__pycache__/

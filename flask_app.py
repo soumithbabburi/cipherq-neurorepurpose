@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, request, jsonify, abort, send_from_directory
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ try:
         search_compounds as db_search,
         find_repurposing_candidates,
         get_compound_by_chembl,
+        get_data_footprint,
     )
     DB_OK = _db_available()
 except Exception:
@@ -34,6 +35,7 @@ except Exception:
     def get_stats(): return {}
     def find_repurposing_candidates(*a, **k): return []
     def get_compound_by_chembl(*a, **k): return None
+    def get_data_footprint(): return {}
 
 try:
     from services.disease_resolver import expand_mesh_ids, mesh_available, resolve_disease
@@ -44,7 +46,9 @@ except Exception:
     def expand_mesh_ids(*a, **k): return []
 
 try:
-    from services.repurposing_scorer import score_compound_list, score_compound as _score_compound
+    from services.repurposing_scorer import (
+        score_compound_list, score_compound as _score_compound,
+        approved_chembls_for_disease)
     SCORER_OK = True
 except Exception:
     SCORER_OK = False
@@ -52,6 +56,7 @@ except Exception:
         for x in c: x.setdefault("score", float(x.get("max_phase") or 0)/4); x.setdefault("score_breakdown", {})
         c.sort(key=lambda x: x["score"], reverse=True); return c
     def _score_compound(*a, **k): return {"overall": 0.0, "indication_score": 0.0, "target_score": 0.0, "activity_score": 0.0, "network_score": 0.0, "phase_bonus": 0.0}
+    def approved_chembls_for_disease(*a, **k): return set()
 
 try:
     from services.compound_validator import validate_and_deduplicate
@@ -136,6 +141,16 @@ except Exception:
     PORTFOLIO_OK = False
     _portfolio = None
 
+try:
+    from services.pathway_screen import (
+        screen_pathway, suggest_pathways, resolve_pathway)
+    PATHWAY_OK = True
+except Exception:
+    PATHWAY_OK = False
+    def screen_pathway(*a, **k): return {"error": "Pathway engine unavailable", "candidates": []}
+    def suggest_pathways(*a, **k): return []
+    def resolve_pathway(*a, **k): return {}
+
 # ── Flask app ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "neurorepurpose-cipherq-2026")
@@ -168,13 +183,20 @@ def _resolve_fetch(query: str):
     comps = get_compounds_for_disease(expanded, limit=80)
     comps = validate_and_deduplicate(comps, require_smiles=False)
 
-    # Use repurposing engine to augment + re-score when DB returns < 8 results
-    if ENGINE_OK and len(comps) < 8:
+    # Use repurposing engine to augment + re-score when DB returns < 8 results.
+    # Feed the engine the RESOLVED canonical MeSH heading, not the raw query —
+    # otherwise aliases/abbreviations ("PD", "alzheimers") never match ChEMBL and
+    # silently return zero candidates even though resolution succeeded.
+    canonical_name = resolved[0].get("heading") or query
+    # Always run the engine: it augments the DB pool with NOVEL HetioNet-connected
+    # candidates and applies the network signal, so every disease gets discovery
+    # (not just confirmation) and consistent scoring. Fast + cached.
+    if ENGINE_OK:
         try:
-            screen = run_repurposing_screen(query, max_candidates=40, db_compounds=comps)
+            screen = run_repurposing_screen(canonical_name, max_candidates=50, db_compounds=comps)
             engine_cands = screen.get("candidates", [])
             if engine_cands:
-                # Merge: engine candidates include DB + ChEMBL API results already scored
+                # Merge: engine candidates include DB + ChEMBL + novelty, already scored
                 comps = engine_cands
         except Exception as _e:
             logger.debug(f"Repurposing engine augment failed: {_e}")
@@ -203,7 +225,56 @@ def _resolve_fetch(query: str):
                         c["developability_score"]  = dvr.get("score")
     except Exception as _e:
         logger.debug(f"developability annotate failed: {_e}")
+    # Flag candidates already APPROVED for this indication (the one true novelty
+    # disqualifier). Local indication data is sparse and many DB rows lack a real
+    # ChEMBL id, so this checks ChEMBL drug_indication phase directly — the same
+    # authoritative source the dossier verdict uses. Bounded to the candidates a
+    # user actually sees, run in parallel and cached.
+    try:
+        top = [c for c in comps[:18] if (c.get("chembl_id") or "").startswith("CHEMBL")]
+        if top:
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                flags = list(pool.map(
+                    lambda c: _approved_for_disease(c.get("chembl_id"), canonical_name), top))
+            for c, f in zip(top, flags):
+                c["approved_here"] = f
+        for c in comps:
+            c.setdefault("approved_here", False)
+    except Exception as _e:
+        logger.debug(f"approved-here annotate failed: {_e}")
     return resolved, expanded, comps
+
+
+def _approved_for_disease(chembl_id: str, disease_name: str) -> bool:
+    """True only if the molecule is APPROVED (ChEMBL max_phase_for_ind >= 4) for
+    a disease matching disease_name. The single genuine 505(b)(2) novelty
+    disqualifier; prior lower-phase development is intentionally not counted."""
+    if not chembl_id or not chembl_id.startswith("CHEMBL"):
+        return False
+    key = f"apprvhere:{chembl_id}:{(disease_name or '').lower()}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
+    val = False
+    try:
+        from services.regulatory_verdict import _matches
+        r = _http.get("https://www.ebi.ac.uk/chembl/api/data/drug_indication.json",
+                      params={"molecule_chembl_id": chembl_id, "limit": 100, "format": "json"},
+                      timeout=6)
+        if r.ok:
+            for ind in r.json().get("drug_indications", []):
+                label = ind.get("mesh_heading") or ind.get("efo_term") or ""
+                try:
+                    ph = float(ind.get("max_phase_for_ind") or 0)
+                except (TypeError, ValueError):
+                    ph = 0.0
+                if ph >= 4 and label and _matches(disease_name, label):
+                    val = True
+                    break
+    except Exception:
+        pass
+    _cache_set(key, val)
+    return val
 
 
 def _disease_areas(disease_name: str) -> List[str]:
@@ -390,6 +461,41 @@ def _chembl_gene_for_target(tid: str) -> str:
     return _chembl_target_info(tid)[0]
 
 
+def _fetch_chembl_mechanism_rows(chembl_id: str) -> list:
+    """ChEMBL mechanisms → rows with gene_symbol + action_type (cached). Shared by
+    the targets endpoint and the dossier's signature-connectivity computation."""
+    if not chembl_id or chembl_id.startswith("NR:"):
+        return []
+    cached = _cache_get(f"chembl_mech:{chembl_id}")
+    if cached is not None:
+        return cached
+    rows: list = []
+    try:
+        r = _http.get(
+            "https://www.ebi.ac.uk/chembl/api/data/mechanism.json",
+            params={"molecule_chembl_id": chembl_id, "limit": 50, "format": "json"},
+            timeout=5)
+        if r.ok:
+            mechanisms = r.json().get("mechanisms", [])
+            tids = [m.get("target_chembl_id", "") for m in mechanisms]
+            with ThreadPoolExecutor(max_workers=min(8, max(len(tids), 1))) as pool:
+                infos = list(pool.map(_chembl_target_info, tids))
+            for m, (gene, pref) in zip(mechanisms, infos):
+                rows.append({
+                    "gene_symbol": gene,
+                    "name":        pref or m.get("mechanism_of_action", ""),
+                    "mechanism":   m.get("mechanism_of_action", ""),
+                    "action_type": m.get("action_type", ""),
+                    "confidence":  "High" if m.get("direct_interaction") else "Medium",
+                    "target_id":   m.get("target_chembl_id", ""),
+                    "max_phase":   m.get("max_phase", 0),
+                })
+            _cache_set(f"chembl_mech:{chembl_id}", rows)
+    except Exception:
+        pass
+    return rows
+
+
 def _fetch_smiles_online(chembl_id: str, name: str = "") -> str:
     """Fetch canonical SMILES from ChEMBL, then PubChem if ChEMBL misses."""
     # 1. ChEMBL molecule structures
@@ -508,9 +614,20 @@ viewer.zoomTo();viewer.render();
 
 # ── Page routes ──────────────────────────────────────────────────────────────
 @app.route("/")
+def landing():
+    return render_template("landing.html")
+
+
+@app.route("/home")
 def index():
     stats = get_stats() if DB_OK else {}
     return render_template("index.html", stats=stats, db_ok=DB_OK)
+
+
+@app.route("/assets/<path:filename>")
+def assets(filename):
+    from pathlib import Path
+    return send_from_directory(Path(__file__).parent / "assets", filename)
 
 
 @app.route("/discover")
@@ -544,6 +661,18 @@ def analysis():
                            dock_method=dock_method)
 
 
+@app.after_request
+def _no_html_cache(resp):
+    """Never let the browser serve a stale rendered page — inline page JS changes
+    (e.g. the knowledge-graph logic) must take effect on the next navigation, not
+    after a manual hard-refresh. Static assets are untouched."""
+    if "text/html" in resp.headers.get("Content-Type", ""):
+        resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
+
 @app.route("/graph")
 def graph():
     disease = request.args.get("disease", "")
@@ -553,12 +682,234 @@ def graph():
 @app.route("/database")
 def database():
     stats = get_stats() if DB_OK else {}
-    return render_template("database.html", stats=stats, db_ok=DB_OK)
+    footprint = _scrub_sources(get_data_footprint()) if DB_OK else {}
+    return render_template("database.html", stats=stats, footprint=footprint, db_ok=DB_OK,
+                           standalone=True)
+
+
+# ── Source-name scrubber ──────────────────────────────────────────────────────
+# Per product policy, the underlying *database* sources are not named in the UI.
+# Generic, credibility-preserving substitutions applied to all dynamic text
+# rendered on the trust pages (validation findings, data footprint). Regulatory
+# standards (ALCOA+/GAMP 5) and methodology terms are intentionally kept.
+import re as _re
+
+_SOURCE_SUBS = [
+    (_re.compile(r"IUPHAR\s*/\s*Guide to Pharmacology", _re.I), "an independent pharmacology authority"),
+    (_re.compile(r"IUPHAR\s*/\s*GtoPdb", _re.I), "an independent pharmacology authority"),
+    (_re.compile(r"Guide to Pharmacology", _re.I), "an independent pharmacology authority"),
+    (_re.compile(r"\bIUPHAR\b", _re.I), "an independent authority"),
+    (_re.compile(r"\bGtoPdb\b", _re.I), "the independent authority"),
+    (_re.compile(r"\bChEMBL[ _]?33\b"), "the bioactivity database (v33)"),
+    (_re.compile(r"\bchembl_33\b"), "the bioactivity database"),
+    (_re.compile(r"(?<!p)\bChEMBL\b"), "the bioactivity database"),
+    (_re.compile(r"\bHetionet[ _]?v?1\.0\b", _re.I), "the knowledge graph (v1.0)"),
+    (_re.compile(r"\bhetionet_v1\.0\b", _re.I), "the knowledge graph"),
+    (_re.compile(r"\bHetionet\b", _re.I), "the knowledge graph"),
+    (_re.compile(r"\brepoDB\b", _re.I), "an external repurposing gold standard"),
+    (_re.compile(r"\bOpen Targets\b"), "a target-association resource"),
+    (_re.compile(r"\bMeSH\b"), "the medical disease vocabulary"),
+    (_re.compile(r"\bReactome\b", _re.I), "curated pathway data"),
+    (_re.compile(r"\bPathwayCommons\b", _re.I), "curated pathway data"),
+    (_re.compile(r"\bDrugBank\b", _re.I), "a drug reference"),
+    (_re.compile(r"\bBindingDB\b", _re.I), "an independent binding database"),
+    (_re.compile(r"\bSTRING\b"), "a protein-interaction database"),
+    (_re.compile(r"Brown\s*&(?:amp;)?\s*Patel[^.;)]*", _re.I), "an external gold standard"),
+    (_re.compile(r"Himmelstein[^.;)]*", _re.I), "a published method"),
+    (_re.compile(r"\bRephetio\b", _re.I), "a published metapath method"),
+    (_re.compile(r"\bEMBL-EBI\b"), "the data provider"),
+    # The validation surface speaks only for RepurposeIQ (no sibling-platform refs).
+    (_re.compile(r"shared by\s*RepurposeIQ\s*\+\s*CompoundIQ\s*\(POZ\)", _re.I), "for RepurposeIQ"),
+    (_re.compile(r"RepurposeIQ\s*\+\s*CompoundIQ\s*\(POZ\)", _re.I), "RepurposeIQ"),
+    (_re.compile(r"CompoundIQ\s*\(POZ\)", _re.I), "RepurposeIQ"),
+    (_re.compile(r"CompoundIQ\s*/\s*POZ", _re.I), "RepurposeIQ"),
+    (_re.compile(r"\bCompoundIQ\b", _re.I), "RepurposeIQ"),
+    (_re.compile(r"\s*\(POZ\)", _re.I), ""),
+    (_re.compile(r"\bPOZ\b"), "RepurposeIQ"),
+]
+
+
+def _scrub_sources(obj):
+    """Recursively replace database source names in any string within a dict/list."""
+    if isinstance(obj, str):
+        s = obj
+        for rx, repl in _SOURCE_SUBS:
+            s = rx.sub(repl, s)
+        return s
+    if isinstance(obj, dict):
+        return {k: _scrub_sources(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_sources(v) for v in obj]
+    return obj
+
+
+def _load_json_artifact(filename: str) -> dict:
+    """Load a read-only validation artifact from the validation/ folder."""
+    from pathlib import Path
+    f = Path(__file__).parent / "validation" / filename
+    try:
+        if f.exists():
+            return json.loads(f.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.debug(f"validation artifact {filename} load failed: {e}")
+    return {}
+
+
+def _load_validation() -> dict:
+    return _load_json_artifact("validation_results_bioactivity.json")
+
+
+@app.route("/validation")
+def validation_page():
+    v = _load_validation()
+    conc = _load_json_artifact("concordance_results.json")
+    res = _load_json_artifact("resolution_results.json")
+    mech = _load_json_artifact("mechanisms_results.json")
+    pred = _load_json_artifact("predictions_results.json")
+    cal = _load_json_artifact("calibration_results.json")
+    kg = _load_json_artifact("kg_results.json")
+    kgm = _load_json_artifact("kg_model_results.json")
+    kge = _load_json_artifact("kg_ensemble_results.json")
+    mpv = _load_json_artifact("metapath_results.json")
+    footprint = get_data_footprint() if DB_OK else {}
+    v, conc, res, mech, pred, cal, kg, kgm, kge, mpv, footprint = (
+        _scrub_sources(x) for x in (v, conc, res, mech, pred, cal, kg, kgm, kge, mpv, footprint))
+    return render_template("validation.html", v=v, conc=conc, res=res,
+                           mech=mech, pred=pred, cal=cal, kg=kg, kgm=kgm, kge=kge, mpv=mpv,
+                           footprint=footprint, db_ok=DB_OK, standalone=True)
+
+
+@app.route("/api/validation")
+def api_validation():
+    return jsonify(_scrub_sources({"results": _load_validation(),
+                    "concordance": _load_json_artifact("concordance_results.json"),
+                    "resolution": _load_json_artifact("resolution_results.json"),
+                    "mechanisms": _load_json_artifact("mechanisms_results.json"),
+                    "predictions": _load_json_artifact("predictions_results.json"),
+                    "calibration": _load_json_artifact("calibration_results.json"),
+                    "knowledge_graph": _load_json_artifact("kg_results.json"),
+                    "kg_model": _load_json_artifact("kg_model_results.json"),
+                    "kg_ensemble": _load_json_artifact("kg_ensemble_results.json"),
+                    "metapath": _load_json_artifact("metapath_results.json"),
+                    "footprint": get_data_footprint() if DB_OK else {}}))
 
 
 @app.route("/business-case")
 def business_case():
     return render_template("business_case.html", db_ok=DB_OK)
+
+
+@app.route("/docs")
+def docs():
+    return render_template("docs.html", db_ok=DB_OK)
+
+
+@app.route("/settings")
+def settings():
+    return render_template("settings.html", db_ok=DB_OK)
+
+
+@app.route("/api/system-status")
+def api_system_status():
+    """Live operational status for the Settings page — real flags, data
+    freshness and active configuration (no live external pings; instant)."""
+    import os as _os
+    from datetime import datetime as _dt
+
+    services = [
+        {"name": "PostgreSQL database",        "ok": DB_OK,             "kind": "Data"},
+        {"name": "MeSH disease resolver",      "ok": MESH_OK,           "kind": "Data"},
+        {"name": "Repurposing scorer",         "ok": SCORER_OK,         "kind": "Engine"},
+        {"name": "Discovery engine",           "ok": ENGINE_OK,         "kind": "Engine"},
+        {"name": "Reverse (drug→indication)",  "ok": REVERSE_OK,        "kind": "Engine"},
+        {"name": "Pathway-first screen",       "ok": PATHWAY_OK,        "kind": "Engine"},
+        {"name": "Evidence dossier",           "ok": DOSSIER_OK,        "kind": "Engine"},
+        {"name": "Knowledge graph",            "ok": GRAPH_OK,          "kind": "Engine"},
+        {"name": "Portfolio matching",         "ok": PORTFOLIO_OK,      "kind": "Engine"},
+        {"name": "PBPK simulation",            "ok": PBPK_OK,           "kind": "Compute"},
+        {"name": "Docking (NVIDIA DiffDock)",  "ok": DOCK_OK,           "kind": "Compute"},
+        {"name": "Docking (local DiffDock)",   "ok": LOCAL_DIFFDOCK_OK, "kind": "Compute"},
+        {"name": "Quantum (GFN2-xTB)",         "ok": QUANTUM_OK,        "kind": "Compute"},
+        {"name": "RDKit cheminformatics",      "ok": RDKIT_OK,          "kind": "Compute"},
+        {"name": "3D rendering (py3Dmol)",     "ok": PY3DMOL_OK,        "kind": "Compute"},
+    ]
+
+    data_sources = [
+        {"name": "ChEMBL",            "use": "Compounds, mechanisms, activities, indications"},
+        {"name": "Open Targets",     "use": "Disease genes, target associations, pathways"},
+        {"name": "ClinicalTrials.gov","use": "Trials per indication and per region (live)"},
+        {"name": "PubMed / NCBI",    "use": "Literature evidence"},
+        {"name": "FDA Orange Book",  "use": "US patents, exclusivity, generics"},
+        {"name": "openFDA FAERS",    "use": "Post-market adverse-event signal"},
+        {"name": "RCSB PDB",         "use": "Protein structures for docking"},
+        {"name": "MeSH / NCBI",      "use": "Disease ontology and synonyms"},
+    ]
+
+    # Orange Book freshness
+    ob = {"available": False}
+    try:
+        from services.orange_book import OB_DIR
+        pat = OB_DIR / "patent.txt"
+        if pat.exists():
+            ts = _dt.fromtimestamp(pat.stat().st_mtime)
+            ob = {"available": True, "updated": ts.strftime("%Y-%m-%d"),
+                  "age_days": (_dt.now() - ts).days}
+    except Exception:
+        pass
+
+    # Active scoring configuration
+    weights = {}
+    try:
+        from services.repurposing_scorer import (
+            W_INDICATION, W_TARGET, W_ACTIVITY, W_NETWORK)
+        weights["discovery"] = {"Indication": W_INDICATION, "Target": W_TARGET,
+                                "Activity": W_ACTIVITY, "Network": W_NETWORK}
+    except Exception:
+        pass
+    try:
+        from services.reverse_repurposing import EVIDENCE_WEIGHTS
+        weights["reverse"] = dict(EVIDENCE_WEIGHTS)
+    except Exception:
+        pass
+
+    # PoS calibrator status
+    pos = {"analytic": True, "calibrator": False, "trustworthy": None, "cv_auc": None}
+    try:
+        import joblib
+        from pathlib import Path as _P
+        f = _P(__file__).parent / "data" / "pos_model.pkl"
+        if f.exists():
+            b = joblib.load(f)
+            meta = b.get("meta", {}) if isinstance(b, dict) else {}
+            pos.update({"calibrator": True, "trustworthy": meta.get("trustworthy"),
+                        "cv_auc": meta.get("cv_auc")})
+    except Exception:
+        pass
+
+    stats = {}
+    try:
+        if DB_OK:
+            stats = get_stats() or {}
+    except Exception:
+        pass
+
+    return jsonify(_scrub_sources({
+        "services": services,
+        "data_sources": data_sources,
+        "orange_book": ob,
+        "weights": weights,
+        "pos_model": pos,
+        "jurisdictions": ["US", "EU", "India"],
+        "db_stats": stats,
+        "cache_entries": len(_api_cache),
+    }))
+
+
+@app.route("/api/cache/clear", methods=["POST"])
+def api_cache_clear():
+    n = len(_api_cache)
+    _api_cache.clear()
+    return jsonify({"cleared": n})
 
 
 # ── API routes ───────────────────────────────────────────────────────────────
@@ -621,34 +972,8 @@ def api_compound(chembl_id):
 def api_targets(chembl_id):
     c = _get_compound(chembl_id)
     rows = get_compound_targets(c.get("id")) if c and c.get("id") else []
-    if not rows and chembl_id and not chembl_id.startswith("NR:"):
-        cached = _cache_get(f"chembl_mech:{chembl_id}")
-        if cached is not None:
-            return jsonify(cached)
-        try:
-            r = _http.get(
-                "https://www.ebi.ac.uk/chembl/api/data/mechanism.json",
-                params={"molecule_chembl_id": chembl_id, "limit": 50, "format": "json"},
-                timeout=5)
-            if r.ok:
-                mechanisms = r.json().get("mechanisms", [])
-                tids = [m.get("target_chembl_id", "") for m in mechanisms]
-                # Fetch gene symbol + protein pref_name in parallel
-                with ThreadPoolExecutor(max_workers=min(8, max(len(tids), 1))) as pool:
-                    infos = list(pool.map(_chembl_target_info, tids))
-                for m, (gene, pref) in zip(mechanisms, infos):
-                    rows.append({
-                        "gene_symbol": gene,
-                        "name":        pref or m.get("mechanism_of_action", ""),
-                        "mechanism":   m.get("mechanism_of_action", ""),
-                        "action_type": m.get("action_type", ""),
-                        "confidence":  "High" if m.get("direct_interaction") else "Medium",
-                        "target_id":   m.get("target_chembl_id", ""),
-                        "max_phase":   m.get("max_phase", 0),
-                    })
-                _cache_set(f"chembl_mech:{chembl_id}", rows)
-        except Exception:
-            pass
+    if not rows:
+        rows = _fetch_chembl_mechanism_rows(chembl_id)
     return jsonify(rows)
 
 
@@ -782,7 +1107,7 @@ def api_indications(chembl_id):
                         "mesh_id":   ind.get("mesh_id", ""),
                         "efo_id":    ind.get("efo_id", ""),
                         "max_phase": _safe_float(ind.get("max_phase_for_ind"), 0),
-                        "source":    "ChEMBL",
+                        "source":    "Curated",
                     })
             if ot_data:
                 ind_rows = ((ot_data.get("data") or {}).get("drug", {}) or {})
@@ -797,7 +1122,7 @@ def api_indications(chembl_id):
                         "mesh_id":   (ind.get("disease") or {}).get("id", ""),
                         "efo_id":    (ind.get("disease") or {}).get("id", ""),
                         "max_phase": _safe_float(ind.get("maxPhaseForIndication"), 0),
-                        "source":    "Open Targets",
+                        "source":    "Genetic",
                     })
             if rows:
                 _cache_set(f"chembl_ind:{chembl_id}", rows)
@@ -809,7 +1134,7 @@ def api_indications(chembl_id):
                 if row.get(arr_key) is not None and not isinstance(row[arr_key], list):
                     row[arr_key] = list(row[arr_key])
         rows.sort(key=lambda x: -x.get("max_phase", 0))
-        return jsonify(rows)
+        return jsonify(_scrub_sources(rows))
     except Exception as e:
         logger.error(f"api_indications error: {e}")
         return jsonify([])
@@ -909,7 +1234,7 @@ def api_pbpk():
     data = request.get_json() or {}
     try:
         disease = (data.get("disease") or "").strip()
-        sim = PBPKSimulator(disease or "Lung Cancer")
+        sim = PBPKSimulator(disease)
         # Affinity for target-occupancy: explicit docking ΔG, else measured ChEMBL potency
         ba, ki_source = None, None
         aff = data.get("affinity")
@@ -956,6 +1281,34 @@ def api_pbpk():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/pbpk/routes", methods=["POST"])
+def api_pbpk_routes():
+    """Multi-route administration analysis: PBPK across every route + known/feasible
+    flags + a recommended route for the target organ."""
+    if not PBPK_OK: return jsonify({"error": "PBPK not available"}), 503
+    data = request.get_json() or {}
+    try:
+        from services.pbpk_simulation import analyze_routes
+        ba, _ = _chembl_pchembl_affinity(data.get("chembl_id", ""))
+        res = analyze_routes(
+            drug_name    = data.get("name", "Drug"),
+            chembl_id    = data.get("chembl_id", ""),
+            dose_mg      = _safe_float(data.get("dose"), 100),
+            disease_name = (data.get("disease") or "").strip(),
+            target_organ = data.get("target_organ", ""),
+            binding_affinity = ba,
+            params={
+                "mw":   _safe_float(data.get("mw"),   350),
+                "logp": _safe_float(data.get("logp"),  2.5),
+                "psa":  _safe_float(data.get("psa"),  80.0),
+                "hbd":  int(_safe_float(data.get("hbd"),  2)),
+            },
+        )
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/docking", methods=["POST"])
 def api_docking():
     if not _dock_svc: return jsonify({"error": "Docking service unavailable"}), 503
@@ -996,6 +1349,20 @@ def api_repurpose_graph():
     disease     = request.args.get("disease", "").strip()
     top_n       = min(int(request.args.get("n", 3)), 5)
     compound_id = request.args.get("compound", "").strip()
+    # Molecule-first entry: a compound but no disease -> build a COMPOUND-CENTRIC
+    # repurposing graph (molecule -> protein targets -> candidate diseases). Needs
+    # no known indication — this is the graph a repurposing scientist actually wants.
+    if compound_id and not disease:
+        try:
+            from services.biocypher_graph import build_compound_graph
+            elems, legend = build_compound_graph(compound_id, top_n=14)
+            if elems:
+                return jsonify({"elements": elems, "legend": legend,
+                                "compound": compound_id, "mode": "compound"})
+        except Exception:
+            logger.exception("compound graph error")
+        return jsonify({"elements": [], "legend": {}, "error":
+                        "No protein targets or candidate diseases found for this molecule."})
     if not disease:
         return jsonify({"elements": [], "legend": {}, "error": "disease param required"})
     try:
@@ -1006,6 +1373,61 @@ def api_repurpose_graph():
     except Exception as e:
         logger.exception("repurpose-graph error")
         return jsonify({"elements": [], "legend": {}, "error": str(e)}), 500
+
+
+@app.route("/novel-targets")
+def novel_targets_page():
+    """Novel-target discovery (P2) — inferred targets + drugs reachable via them."""
+    disease = request.args.get("disease", "").strip()
+    return render_template("novel_targets.html", disease=disease)
+
+
+@app.route("/api/novel-targets")
+def api_novel_targets():
+    """Novel-target discovery (P2): infer targets NOT in Open Targets for a disease
+    via PPI guilt-by-association, and the drugs reachable only through them."""
+    disease = request.args.get("disease", "").strip()
+    if not disease:
+        return jsonify({"error": "disease param required", "novel_targets": [], "drugs": []})
+    with_drugs = request.args.get("drugs", "1") not in ("0", "false", "no")
+    try:
+        if with_drugs:
+            from services.novel_targets import drugs_via_novel_targets
+            return jsonify(drugs_via_novel_targets(disease))
+        from services.novel_targets import infer_novel_targets
+        return jsonify(infer_novel_targets(disease))
+    except Exception as e:
+        logger.exception("novel-targets error")
+        return jsonify({"error": str(e), "novel_targets": [], "drugs": []}), 500
+
+
+@app.route("/api/resolve-entity")
+def api_resolve_entity():
+    """Classify a knowledge-graph search query as a MOLECULE or a DISEASE, so the
+    graph search can be molecule-aware: a drug -> molecule graph (drug -> targets ->
+    diseases); a disease -> the existing disease -> drug graph (unchanged)."""
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"type": "none"})
+    ql = q.lower()
+    # Obvious disease phrasing -> disease (avoids fuzzy drug-name false positives)
+    DISEASE_HINTS = ("disease", "syndrome", "cancer", "disorder", "itis", "aemia",
+                     "emia", "pathy", "deficiency", "infection", "tumor", "tumour",
+                     "carcinoma", "failure", "hypertension", "hypotension",
+                     "sclerosis", "fibrosis", "neoplasm", "palsy", "dystrophy")
+    if any(h in ql for h in DISEASE_HINTS):
+        return jsonify({"type": "disease", "query": q})
+    try:
+        from services.reverse_repurposing import resolve_drug
+        info = resolve_drug(q) or {}
+        cid = info.get("chembl_id", "")
+        targets = info.get("targets", []) or []
+        if cid and targets:   # a real druggable molecule with protein targets
+            return jsonify({"type": "drug", "chembl_id": cid,
+                            "name": info.get("name", q), "n_targets": len(targets)})
+    except Exception:
+        logger.exception("resolve-entity error")
+    return jsonify({"type": "disease", "query": q})
 
 
 @app.route("/api/graph-narrative")
@@ -1979,7 +2401,31 @@ def api_patents():
     drug      = request.args.get("drug", "").strip()
     chembl_id = request.args.get("chembl_id", "").strip()
     patents   = []
+    exclusivities = []
     seen_ids  = set()
+
+    # 0. FDA Orange Book — authoritative patents + exclusivity with REAL expiry & status
+    if drug:
+        try:
+            from services.orange_book import orange_book_protection
+            ob = orange_book_protection(drug)
+            for p in ob.get("patents", []):
+                if p["id"] in seen_ids:
+                    continue
+                seen_ids.add(p["id"])
+                ttl = (p.get("type", "") or "Patent").title()
+                patents.append({
+                    "id": p["id"],
+                    "title": ttl + " patent" + (f" — {p['trade']}" if p.get("trade") else ""),
+                    "assignee": p.get("applicant", ""), "year": (p.get("expiry_iso") or "")[:4],
+                    "abstract": "", "url": p.get("url", ""), "source": "FDA Orange Book",
+                    "status": p.get("status", "unknown"), "expiry": p.get("expiry"),
+                    "expiry_iso": p.get("expiry_iso"), "type": p.get("type", ""),
+                    "use_code": p.get("use_code", ""), "authoritative": True,
+                })
+            exclusivities = ob.get("exclusivities", [])
+        except Exception as e:
+            logger.debug(f"orange book error: {e}")
 
     # 1. ChEMBL mechanism → patent refs (most reliable source for drug-specific patents)
     if chembl_id and not chembl_id.startswith("NR:"):
@@ -2129,11 +2575,20 @@ def api_patents():
         except Exception:
             pass
 
-    # Sort: active first, then by year descending
+    # Sort: authoritative (Orange Book) first, then active before expired, then year desc
     _order = {"active": 0, "likely_expired": 1, "expired": 2, "unknown": 3}
-    patents.sort(key=lambda p: (_order.get(p.get("status", "unknown"), 3),
+    patents.sort(key=lambda p: (0 if p.get("authoritative") else 1,
+                                _order.get(p.get("status", "unknown"), 3),
                                 -(int(p["year"]) if str(p.get("year", "")).isdigit() else 0)))
-    return jsonify(patents)
+    return jsonify(_scrub_sources({
+        "patents": patents, "exclusivities": exclusivities,
+        "summary": {
+            "total": len(patents),
+            "active": sum(1 for p in patents if p.get("status") == "active"),
+            "expired": sum(1 for p in patents if p.get("status") in ("expired", "likely_expired")),
+            "orange_book": sum(1 for p in patents if p.get("authoritative")),
+        },
+    }))
 
 
 @app.route("/api/repurposing-screen")
@@ -2151,6 +2606,23 @@ def api_repurposing_screen():
             screen["candidates"] = [c for c in screen["candidates"] if _is_repurposable(c)]
         return jsonify(screen)
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/compound/<chembl_id>/class-comparison")
+def api_class_comparison(chembl_id):
+    """Within-class ('why this drug') + out-of-class ('why this mechanism')
+    differentiation for a (drug, disease) repurposing hypothesis."""
+    disease = (request.args.get("disease") or "").strip()
+    drug = (request.args.get("drug") or request.args.get("name") or "").strip()
+    if not disease:
+        return jsonify({"error": "disease parameter required"}), 400
+    try:
+        from services.class_comparison import compare_classes
+        return jsonify(compare_classes(chembl_id, disease, drug_name=drug,
+                                       smiles=(request.args.get("smiles") or "")))
+    except Exception as e:
+        logger.exception("class-comparison error")
         return jsonify({"error": str(e)}), 500
 
 
@@ -2195,6 +2667,63 @@ def api_dossier(chembl_id):
                 }
         except Exception:
             pass
+
+    drug_name = dossier.get("drug_name") or c.get("name", "")
+    phase = float(c.get("max_phase") or 0)
+
+    # Asset Scoring — phase-progression Probability of Success (analytic survival
+    # model; the composite score is the new-indication efficacy evidence).
+    try:
+        from services.pos_model import predict_progression
+        dossier["pos"] = predict_progression(
+            current_phase=phase,
+            evidence_score=dossier.get("composite_score") or 0.0,
+            is_repurposing=phase >= 4,
+        )
+    except Exception as _e:
+        logger.debug(f"dossier PoS failed: {_e}")
+
+    # Asset Acquisition Signal — FDA Orange Book (patents, exclusivity, generics).
+    try:
+        from services.acquisition_signal import acquisition_signal
+        dossier["acquisition"] = acquisition_signal(drug_name)
+    except Exception as _e:
+        logger.debug(f"dossier acquisition failed: {_e}")
+
+    # Signature-based connectivity — does the drug REVERSE the disease signature?
+    # Disease genes from the dossier; drug target directions from ChEMBL mechanisms.
+    try:
+        from services.signature_engine import score_reversal
+        disease_genes = (dossier.get("disease_context") or {}).get("top_genes") or []
+        drug_targets = _fetch_chembl_mechanism_rows(chembl_id)
+        if not drug_targets and c.get("id"):
+            # Local DB mechanisms carry gene_symbol + action_type — no network needed.
+            drug_targets = get_compound_targets(c.get("id"))
+        if disease_genes and drug_targets:
+            dossier["signature"] = score_reversal(disease_genes, drug_targets)
+    except Exception as _e:
+        logger.debug(f"dossier signature failed: {_e}")
+
+    # Reconciled regulatory + novelty verdict (single source of truth) and the
+    # consolidated US/EU/India landscape. known_indications carry max_phase so
+    # novelty is phase-aware (approved-here vs merely studied/co-mentioned).
+    known_inds = []
+    try:
+        if REVERSE_OK and drug_name:
+            known_inds = (resolve_drug(drug_name) or {}).get("known_indications", []) or []
+    except Exception as _e:
+        logger.debug(f"resolve_drug for verdict failed: {_e}")
+    try:
+        from services.regulatory_verdict import assess as _assess
+        dossier["verdict"] = _assess(drug_name, phase, known_inds, dossier.get("disease_name") or disease)
+    except Exception as _e:
+        logger.debug(f"dossier verdict failed: {_e}")
+    try:
+        from services.global_landscape import landscape as _landscape
+        dossier["global_landscape"] = _landscape(drug_name, phase)
+    except Exception as _e:
+        logger.debug(f"dossier landscape failed: {_e}")
+
     return jsonify(dossier)
 
 
@@ -2237,6 +2766,53 @@ def repurpose():
                            reverse_ok=REVERSE_OK, portfolio_ok=PORTFOLIO_OK, db_ok=DB_OK)
 
 
+@app.route("/pathways")
+def pathways():
+    """Pathway-first repurposing page (pathway → drugs → new indications)."""
+    pathway = request.args.get("pathway", "").strip()
+    direction = request.args.get("direction", "either").strip()
+    disease = request.args.get("disease", "").strip()
+    return render_template("pathways.html", pathway=pathway, direction=direction,
+                           disease=disease, pathway_ok=PATHWAY_OK, db_ok=DB_OK)
+
+
+@app.route("/api/suggest-pathways")
+def api_suggest_pathways():
+    """Autocomplete for pathway names."""
+    q = request.args.get("q", "").strip()
+    if not q or not PATHWAY_OK:
+        return jsonify([])
+    try:
+        return jsonify(suggest_pathways(q, limit=12))
+    except Exception as e:
+        logger.error(f"suggest-pathways: {e}")
+        return jsonify([])
+
+
+@app.route("/api/pathway-screen")
+def api_pathway_screen():
+    """Pathway-first repurposing screen.
+
+    Query params:
+      pathway   (required) — pathway name or id
+      direction — suppress | activate | either   (desired effect on the pathway)
+      disease   — optional; supplying it switches to Mode A (disease-anchored)
+    """
+    if not PATHWAY_OK:
+        return jsonify({"error": "Pathway engine unavailable", "candidates": []}), 503
+    pathway = request.args.get("pathway", "").strip()
+    if not pathway:
+        return jsonify({"error": "No pathway specified", "candidates": []}), 400
+    direction = request.args.get("direction", "either").strip()
+    disease = request.args.get("disease", "").strip() or None
+    try:
+        res = screen_pathway(pathway, direction=direction, disease=disease)
+        return jsonify(res)
+    except Exception as e:
+        logger.error(f"pathway-screen '{pathway}': {e}")
+        return jsonify({"error": str(e), "candidates": []}), 500
+
+
 @app.route("/api/compound/<chembl_id>/developability")
 def api_developability(chembl_id):
     """Area-aware developability for a compound vs the searched disease's route.
@@ -2267,7 +2843,7 @@ def api_docking_poses(chembl_id):
         return jsonify({"error": f"Compound {chembl_id} not found"}), 404
     try:
         target_name = data.get("target", "BACE1")
-        method = "diffdock" if data.get("method") == "diffdock" else "fast"
+        method = data.get("method") if data.get("method") in ("diffdock", "boltz") else "fast"
         ligand_smiles = data.get("smiles") or c.get("smiles", "")
         # Cache identical (compound, target, ligand, method) runs — instant repeat
         cache_key = f"{chembl_id}|{target_name}|{method}|{hash(ligand_smiles)}"
@@ -2304,6 +2880,14 @@ def api_docking_poses(chembl_id):
             "protein_pdb": protein_for_viewer,
             "pockets":      res.get("pockets", []),
             "pose_pockets": res.get("pose_pockets", []),
+            "pose_valid":   res.get("pose_valid", []),
+            "pocket_source": res.get("pocket_source", ""),
+            "structure_quality": res.get("structure_quality", "real"),
+            "structure_warning": res.get("structure_warning", ""),
+            "empirical_affinities": res.get("empirical_affinities", []),
+            "boltz_affinity_pred": res.get("boltz_affinity_pred"),
+            "boltz_binder_probability": res.get("boltz_binder_probability"),
+            "consensus_note": res.get("consensus_note", ""),
             "note":     res.get("note", ""),
             "error":    res.get("error", ""),
         }

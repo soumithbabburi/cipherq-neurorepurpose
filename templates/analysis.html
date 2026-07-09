@@ -111,7 +111,7 @@ async function init() {
     c = c ? Object.assign({}, c, apiData) : apiData;
   } catch(_e) {
     if (!c) {
-      // Neither sessionStorage nor API has data — create a minimal stub so the page
+      // Neither sessionStorage nor API has data - create a minimal stub so the page
       // still renders. Individual tab fetches may still succeed (e.g., properties uses
       // its own endpoint, dossier accepts name/smiles from URL params).
       c = {
@@ -124,7 +124,7 @@ async function init() {
         score_breakdown: {},
       };
     }
-    // Continue — API may be temporarily down; tabs fetch their own data independently
+    // Continue - API may be temporarily down; tabs fetch their own data independently
   }
 
   compoundData = c;
@@ -135,7 +135,21 @@ async function init() {
   document.getElementById('tabs-section').style.display = 'block';
   document.getElementById('workflow-bar').style.display = 'block';
   const gwf = document.getElementById('graph-link-wf');
-  if (gwf && DISEASE) gwf.href = '/graph?disease=' + encodeURIComponent(DISEASE) + (CHEMBL_ID ? '&compound=' + encodeURIComponent(CHEMBL_ID) : '');
+  if (gwf) {
+    // When analyzing a specific drug AND disease, the graph must show THAT pair:
+    // the selected disease node, with this molecule as the focal compound and the
+    // shared-target evidence chain between them. Only fall back to the molecule-
+    // first graph (drug -> targets -> candidate diseases) when no disease context.
+    if (CHEMBL_ID && DISEASE) {
+      gwf.href = '/graph?compound=' + encodeURIComponent(CHEMBL_ID) + '&disease=' + encodeURIComponent(DISEASE);
+    } else if (CHEMBL_ID) {
+      gwf.href = '/graph?compound=' + encodeURIComponent(CHEMBL_ID);
+    } else if (DISEASE) {
+      gwf.href = '/graph?disease=' + encodeURIComponent(DISEASE);
+    } else {
+      gwf.href = '/graph';
+    }
+  }
   try { renderBreakdownChart(c); } catch(_e) {}
   switchTab('properties');
 }
@@ -158,8 +172,8 @@ function renderHeader(c) {
   document.getElementById('d-chembl').textContent = c.chembl_id ? `${c.chembl_id}  ·  Small Molecule` : '';
   document.getElementById('d-score').textContent = (sc * 100).toFixed(1);
   const _seal = document.getElementById('d-seal'); if (_seal) _seal.innerHTML = window.scoreSeal(sc, 56);
-  document.getElementById('d-phase-bonus').textContent = sc>=0.65?'↑ High confidence':sc>=0.4?'↑ Moderate':'';
-  document.getElementById('d-disease-label').textContent = DISEASE || c.indications || '—';
+  document.getElementById('d-phase-bonus').textContent = sc>=0.65?'High confidence':sc>=0.4?'Moderate':'';
+  document.getElementById('d-disease-label').textContent = DISEASE || c.indications || '-';
   const tags = document.getElementById('d-tags');
   tags.innerHTML = `<span style="padding:2px 8px;background:#ecebe3;color:#45524a;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px">Small Molecule</span>
     <span style="padding:2px 8px;background:${pbg};color:${pcolor};border:1px solid ${pborder};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px">${plabel}</span>`;
@@ -246,15 +260,15 @@ async function renderProperties(el) {
   const solColor = {High:'#2f6f5b',Good:'#2f6f5b',Moderate:'#97751a',Low:'#b3261e',Poor:'#b3261e'}[p.sol_class] || '#6b776e';
 
   const physRows = [
-    ['Molecular Weight',  p.mw  ? p.mw  + ' g/mol' : '—', +(p.mw||999)  <= 500],
-    ['LogP (ALogP)',       p.alogp != null ? p.alogp  : '—', +(p.alogp||99) <= 5 && +(p.alogp||-99) >= -0.5],
-    ['Polar Surface Area', p.psa  ? p.psa + ' Å²'    : '—', +(p.psa||999) < 90],
-    ['H-Bond Acceptors',   p.hba  != null ? p.hba    : '—', +(p.hba||99)  <= 10],
-    ['H-Bond Donors',      p.hbd  != null ? p.hbd    : '—', +(p.hbd||99)  <= 5],
-    ['Rotatable Bonds',    p.rtb  != null ? p.rtb    : '—', +(p.rtb||99)  <= 10],
-    ['Aromatic Rings',     p.arom_rings != null ? p.arom_rings : '—', false],
-    ['Ro5 Violations',     ro5 + (ro5===0?' ✓':''),            ro5===0],
-    ['QED Score',          p.qed  != null ? (+p.qed).toFixed(3) : '—', +(p.qed||0)>0.5],
+    ['Molecular Weight',  p.mw  ? p.mw  + ' g/mol' : '-', +(p.mw||999)  <= 500],
+    ['LogP (ALogP)',       p.alogp != null ? p.alogp  : '-', +(p.alogp||99) <= 5 && +(p.alogp||-99) >= -0.5],
+    ['Polar Surface Area', p.psa  ? p.psa + ' Å²'    : '-', +(p.psa||999) < 90],
+    ['H-Bond Acceptors',   p.hba  != null ? p.hba    : '-', +(p.hba||99)  <= 10],
+    ['H-Bond Donors',      p.hbd  != null ? p.hbd    : '-', +(p.hbd||99)  <= 5],
+    ['Rotatable Bonds',    p.rtb  != null ? p.rtb    : '-', +(p.rtb||99)  <= 10],
+    ['Aromatic Rings',     p.arom_rings != null ? p.arom_rings : '-', false],
+    ['Ro5 Violations',     ro5 + (ro5===0?' (pass)':''),            ro5===0],
+    ['QED Score',          p.qed  != null ? (+p.qed).toFixed(3) : '-', +(p.qed||0)>0.5],
     ['Max Phase',          phase,                              +(p.max_phase||0)>=2],
   ];
 
@@ -272,7 +286,7 @@ async function renderProperties(el) {
     const sCol = s => s==='ideal'?'#2f6f5b':s==='acceptable'?'#97751a':'#b3261e';
     const devRows = (dev.properties||[]).map(pr=>`<div class="kv"><span class="kv-k">${pr.label}</span><span class="kv-v"><span class="mono">${pr.value}${pr.unit||''}</span> <span style="color:#9aa39c;font-weight:400">/ ${pr.target}</span> <span style="color:${sCol(pr.status)};font-size:0.9rem">●</span></span></div>`).join('');
     devCard = `<div class="card">
-        <div class="card-title mb-1">Developability — ${dev.profile_label||''}</div>
+        <div class="card-title mb-1">Developability - ${dev.profile_label||''}</div>
         <div style="background:#f6f5f0;border-radius:8px;padding:12px;margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <span style="font-size:0.72rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">Route fit · ${dev.route||''}</span>
@@ -284,7 +298,7 @@ async function renderProperties(el) {
           ${dev.rationale?`<div style="font-size:0.68rem;color:#9aa39c;margin-top:6px;line-height:1.5">${dev.rationale}</div>`:''}
         </div>
         ${devRows}
-        <div style="font-size:0.66rem;color:#9aa39c;margin-top:10px">Profile selected from the disease's therapeutic area${DISEASE?` — ${DISEASE}`:''}, not a fixed CNS assumption.</div>
+        <div style="font-size:0.66rem;color:#9aa39c;margin-top:10px">Profile selected from the disease's therapeutic area${DISEASE?` - ${DISEASE}`:''}, not a fixed CNS assumption.</div>
       </div>`;
   }
 
@@ -294,19 +308,19 @@ async function renderProperties(el) {
         <div class="card-title mb-1">Physicochemical Properties</div>
         ${physRows.map(([k,v,ok])=>`<div class="kv"><span class="kv-k">${k}</span><span class="kv-v${ok?' pass':''}">${v}</span></div>`).join('')}
         ${p.smiles?`<div class="kv"><span class="kv-k">SMILES</span><span class="kv-v mono" style="font-size:0.68rem;word-break:break-all;max-width:300px">${p.smiles.length>80?p.smiles.slice(0,80)+'…':p.smiles}</span></div>`:''}
-        <div class="kv"><span class="kv-k">ChEMBL ID</span><span class="kv-v mono" style="font-size:0.78rem">${p.chembl_id||'—'}</span></div>
+        <div class="kv"><span class="kv-k">Compound ID</span><span class="kv-v mono" style="font-size:0.78rem">${p.chembl_id||'-'}</span></div>
       </div>
       ${devCard !== null ? devCard : `<div class="card">
         <div class="card-title mb-1">CNS Drug-likeness</div>
         <div style="background:${bbbBg};border-radius:8px;padding:12px;margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <span style="font-size:0.72rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">BBB Penetration</span>
-            <span style="font-size:0.8rem;font-weight:800;color:${bbbColor}">${p.bbb_level||'—'}</span>
+            <span style="font-size:0.8rem;font-weight:800;color:${bbbColor}">${p.bbb_level||'-'}</span>
           </div>
           <div style="background:#e0ddd1;border-radius:9999px;height:6px;overflow:hidden">
             <div style="width:${p.bbb_score||0}%;height:100%;background:${bbbColor};transition:width 0.5s;border-radius:9999px"></div>
           </div>
-          <div style="font-size:0.68rem;color:#9aa39c;margin-top:4px">Score ${p.bbb_score!=null?p.bbb_score:'—'}/100 · PSA, MW, LogP, HBD composite</div>
+          <div style="font-size:0.68rem;color:#9aa39c;margin-top:4px">Score ${p.bbb_score!=null?p.bbb_score:'-'}/100 · PSA, MW, LogP, HBD composite</div>
         </div>
         <div style="margin-bottom:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -320,13 +334,13 @@ async function renderProperties(el) {
         </div>
         <div class="kv">
           <span class="kv-k">Aqueous Solubility</span>
-          <span style="font-size:0.78rem;font-weight:700;color:${solColor}">${p.sol_class||'—'} (LogS ${p.logs!=null?p.logs:'—'})</span>
+          <span style="font-size:0.78rem;font-weight:700;color:${solColor}">${p.sol_class||'-'} (LogS ${p.logs!=null?p.logs:'-'})</span>
         </div>
         <div style="background:#f6f5f0;border-radius:8px;padding:10px;margin-top:12px">
           <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px">CNS Drug Rules</div>
           ${cnsRules.map(([rule,pass])=>`<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.72rem">
             <span style="color:#6b776e">${rule}</span>
-            <span style="font-weight:800;color:${pass?'#2f6f5b':'#b3261e'}">${pass?'✓':'✗'}</span>
+            <span class="material-symbols-outlined" style="font-size:1rem;color:${pass?'#2f6f5b':'#b3261e'}">${pass?'check':'close'}</span>
           </div>`).join('')}
         </div>
       </div>`}
@@ -345,9 +359,9 @@ async function loadRepurposing(el) {
         <span style="font-size:0.78rem;font-weight:700;color:var(--text)">Repurposing Screen</span>
       </div>
       <p style="font-size:0.79rem;color:var(--muted);line-height:1.65">
-        Screening the ChEMBL database for compounds sharing mechanistic targets with
+        Screening the bioactivity database for compounds sharing mechanistic targets with
         <strong style="color:var(--text)">${c.name||CHEMBL_ID}</strong>.
-        Candidates ranked by target overlap, clinical phase, and activity strength —
+        Candidates ranked by target overlap, clinical phase, and activity strength -
         highest-scoring drugs are most likely to be effective for the same indication.
       </p>
     </div>
@@ -373,7 +387,7 @@ async function loadRepurposing(el) {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:40px;height:40px"><path d="M12 2L2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         <p>No mechanistically similar compounds found in the current database.<br/>
-        <span style="font-size:0.78rem;color:var(--dim)">Ensure the ChEMBL database is connected on port 5433.</span></p>
+        <span style="font-size:0.78rem;color:var(--dim)">Ensure the bioactivity database is connected on port 5433.</span></p>
       </div>`;
       return;
     }
@@ -402,7 +416,7 @@ function buildRepurposingCard(cand) {
   const phLabel  = phLabels[ph] || 'Phase 1';
   const scoreCol = sc>=0.65?'var(--emerald)':sc>=0.4?'var(--purple)':sc>=0.2?'var(--cyan)':'var(--muted)';
   const shared   = cand.shared_target_count || 0;
-  const pct      = cand.target_overlap_pct != null ? cand.target_overlap_pct.toFixed(0)+'%' : '—';
+  const pct      = cand.target_overlap_pct != null ? cand.target_overlap_pct.toFixed(0)+'%' : '-';
   const genes    = (cand.shared_genes || '').split(';').map(g=>g.trim()).filter(Boolean).slice(0,4);
   const geneChips = genes.map(g=>`<span class="chip purple">${g}</span>`).join('');
   const indications = (cand.indications || '').split(';').map(s=>s.trim()).filter(Boolean).slice(0,2);
@@ -455,15 +469,15 @@ async function loadBioactivity(el) {
       const actionColor = a => ({INHIBITOR:'#2f6f5b',ANTAGONIST:'#b3261e',AGONIST:'#2f6f5b',ACTIVATOR:'#2f6f5b',BLOCKER:'#97751a',MODULATOR:'#8a6309'})[a] || '#6b776e';
       const rows = targets.slice(0, 25).map(t => {
         const ac = actionColor(t.action_type);
-        const gene = t.gene_symbol ? `<span style="font-weight:700;color:#2f6f5b;font-family:monospace;font-size:0.78rem">${t.gene_symbol}</span>` : '—';
-        const action = t.action_type ? `<span style="padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;background:${ac}18;color:${ac}">${t.action_type}</span>` : '—';
+        const gene = t.gene_symbol ? `<span style="font-weight:700;color:#2f6f5b;font-family:monospace;font-size:0.78rem">${t.gene_symbol}</span>` : '-';
+        const action = t.action_type ? `<span style="padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;background:${ac}18;color:${ac}">${t.action_type}</span>` : '-';
         const conf = t.confidence === 'High'
           ? `<span style="color:#2f6f5b;font-size:0.72rem;font-weight:600">● High</span>`
           : `<span style="color:#97751a;font-size:0.72rem;font-weight:600">● Med</span>`;
         return `<tr>
           <td>${gene}</td>
-          <td style="font-size:0.78rem;color:#1f2a24">${(t.name||'—').slice(0,45)}</td>
-          <td style="font-size:0.75rem;color:#45524a">${(t.mechanism||'—').slice(0,50)}</td>
+          <td style="font-size:0.78rem;color:#1f2a24">${(t.name||'-').slice(0,45)}</td>
+          <td style="font-size:0.75rem;color:#45524a">${(t.mechanism||'-').slice(0,50)}</td>
           <td>${action}</td>
           <td>${conf}</td>
         </tr>`;
@@ -485,24 +499,24 @@ async function loadBioactivity(el) {
                                 .slice(0, 20);
     if (chartData.length) {
       const actRows = activities.slice(0, 15).map(a => {
-        const pv = a.pchembl_value ? a.pchembl_value.toFixed(2) : '—';
-        const val = a.standard_value ? `${Number(a.standard_value).toFixed(1)} ${a.standard_units||''}` : '—';
+        const pv = a.pchembl_value ? a.pchembl_value.toFixed(2) : '-';
+        const val = a.standard_value ? `${Number(a.standard_value).toFixed(1)} ${a.standard_units||''}` : '-';
         return `<tr>
-          <td style="font-size:0.76rem;font-weight:600;color:#2f6f5b;font-family:monospace">${a.gene_symbol||'—'}</td>
-          <td style="font-size:0.75rem;color:#45524a">${(a.target_name||'—').slice(0,40)}</td>
-          <td style="font-size:0.73rem">${a.activity_type||'—'}</td>
+          <td style="font-size:0.76rem;font-weight:600;color:#2f6f5b;font-family:monospace">${a.gene_symbol||'-'}</td>
+          <td style="font-size:0.75rem;color:#45524a">${(a.target_name||'-').slice(0,40)}</td>
+          <td style="font-size:0.73rem">${a.activity_type||'-'}</td>
           <td style="font-size:0.73rem;font-family:monospace;color:#1f2a24">${val}</td>
           <td style="font-size:0.73rem;font-weight:700;color:${a.pchembl_value>=7?'#2f6f5b':a.pchembl_value>=5?'#97751a':'#b3261e'}">${pv}</td>
         </tr>`;
       }).join('');
       html += `<div class="card mb-1">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
-          <span style="font-weight:700;font-size:0.85rem">Binding Activity (pChEMBL)</span>
+          <span style="font-weight:700;font-size:0.85rem">Binding Activity (potency)</span>
           <span class="chip cyan">${activities.length} assay${activities.length!==1?'s':''}</span>
         </div>
         <div id="act-chart" style="margin-bottom:1rem"></div>
         <div class="overflow-x"><table class="data-table">
-          <thead><tr><th>Gene</th><th>Target</th><th>Activity Type</th><th>Value</th><th>pChEMBL</th></tr></thead>
+          <thead><tr><th>Gene</th><th>Target</th><th>Activity Type</th><th>Value</th><th>Potency</th></tr></thead>
           <tbody>${actRows}</tbody>
         </table></div>
       </div>`;
@@ -510,7 +524,7 @@ async function loadBioactivity(el) {
       Plotly.newPlot('act-chart', [{
         type: 'bar', orientation: 'h',
         x: chartData.map(a => a.pchembl_value),
-        y: chartData.map(a => (a.gene_symbol || a.target_name || '—').slice(0, 22)),
+        y: chartData.map(a => (a.gene_symbol || a.target_name || '-').slice(0, 22)),
         text: chartData.map(a => a.pchembl_value.toFixed(2)),
         textposition: 'outside',
         marker: {
@@ -521,7 +535,7 @@ async function loadBioactivity(el) {
       }], {
         paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
         font: {family: 'Inter,sans-serif', color: '#45524a', size: 11},
-        xaxis: {title: 'pChEMBL  (≥7 = potent, ≥5 = active)', gridcolor: '#e0ddd1', linecolor: '#e0ddd1', zerolinecolor: '#e0ddd1'},
+        xaxis: {title: 'Potency  (≥7 = potent, ≥5 = active)', gridcolor: '#e0ddd1', linecolor: '#e0ddd1', zerolinecolor: '#e0ddd1'},
         yaxis: {gridcolor: '#e0ddd1', linecolor: '#e0ddd1', tickfont: {size: 10}},
         shapes: [
           {type:'line', x0:7, x1:7, y0:-0.5, y1:chartData.length-0.5, line:{color:'#2f6f5b',dash:'dot',width:1.5}},
@@ -580,9 +594,9 @@ async function loadIndications(el) {
       'Rare Disease':{'bg':'#fdf2f8','color':'#831843'},
       'Other':{'bg':'#f6f5f0','color':'#45524a'},
     };
-    const srcBadge = s => s === 'Open Targets'
-      ? `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#efe3c2;color:#7a5c43">OT</span>`
-      : `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#e3ede8;color:#5b21b6">ChEMBL</span>`;
+    const srcBadge = s => s === 'Genetic'
+      ? `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#efe3c2;color:#7a5c43">Assoc</span>`
+      : `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#e3ede8;color:#5b21b6">Curated</span>`;
     const approvedCount = inds.filter(i => +(i.max_phase||0) === 4).length;
     const clinicalCount = inds.filter(i => +(i.max_phase||0) >= 1).length;
     // Count distinct therapeutic areas
@@ -594,13 +608,13 @@ async function loadIndications(el) {
       const pill = `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.68rem;font-weight:700;background:${pst.bg};color:${pst.color}">${pst.label}</span>`;
       const efoLink = i.efo_id && i.efo_id.startsWith('EFO')
         ? `<a href="https://www.ebi.ac.uk/ols/ontologies/efo/terms?short_form=${i.efo_id}" target="_blank" style="font-size:0.65rem;color:#8a6309;font-family:monospace">${i.efo_id}</a>`
-        : `<span style="font-size:0.65rem;color:#9aa39c;font-family:monospace">${i.mesh_id||'—'}</span>`;
+        : `<span style="font-size:0.65rem;color:#9aa39c;font-family:monospace">${i.mesh_id||'-'}</span>`;
       const area = _getTherapeuticArea(i.disease||'');
       const ac = areaColors[area] || areaColors['Other'];
       const areaBadge = `<span style="font-size:0.62rem;font-weight:700;padding:1px 7px;border-radius:4px;background:${ac.bg};color:${ac.color};white-space:nowrap">${area}</span>`;
       return `<tr>
         <td>${areaBadge}</td>
-        <td style="font-size:0.8rem;font-weight:500;color:#1f2a24">${i.disease||'—'}</td>
+        <td style="font-size:0.8rem;font-weight:500;color:#1f2a24">${i.disease||'-'}</td>
         <td>${efoLink}</td>
         <td>${pill}</td>
         <td>${srcBadge(i.source)}</td>
@@ -621,7 +635,7 @@ async function loadIndications(el) {
           <div style="width:1px;background:#e6e2d7;align-self:stretch"></div>
           <div style="flex:1;min-width:200px">
             <div style="font-size:0.72rem;font-weight:700;color:#6d4e08;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Disease Indication</div>
-            <div style="font-size:0.76rem;color:#45524a;line-height:1.55">Specific condition this compound is approved or clinically tested for (e.g. <em>Alzheimer Disease</em>, <em>Breast Cancer</em>). Mapped to EFO/MeSH ontology IDs.</div>
+            <div style="font-size:0.76rem;color:#45524a;line-height:1.55">Specific condition this compound is approved or clinically tested for (e.g. <em>Alzheimer Disease</em>, <em>Breast Cancer</em>). Mapped to standard ontology IDs.</div>
           </div>
         </div>
       </div>
@@ -693,12 +707,59 @@ function renderPBPK(el) {
       <div class="card-title mb-1">Simulation Parameters</div>
       <div class="grid-form">
         <div class="field"><label>Dose (mg)</label><input class="input" id="pbpk-dose" type="number" value="100" min="1" max="2000"/></div>
-        <div class="field"><label>Route</label><select class="input" id="pbpk-route"><option value="oral">Oral</option><option value="iv">IV</option></select></div>
+        <div class="field"><label>Route</label><select class="input" id="pbpk-route">
+          <option value="oral">Oral</option><option value="iv">IV</option>
+          <option value="sc">Subcutaneous</option><option value="im">Intramuscular</option>
+          <option value="intranasal">Intranasal</option><option value="transdermal">Transdermal</option>
+          <option value="inhalation">Inhalation</option><option value="sublingual">Sublingual</option>
+          <option value="ocular">Ophthalmic</option><option value="topical">Topical</option>
+        </select></div>
         <div class="field"><label>Duration (h)</label><input class="input" id="pbpk-hours" type="number" value="24" min="1" max="168"/></div>
         <div class="field"><label>&nbsp;</label><button class="btn btn-primary" onclick="runPBPK()" id="pbpk-btn">Run Simulation</button></div>
       </div>
     </div>
+    <div id="route-analysis" class="card mb-1"><div style="display:flex;align-items:center;gap:0.6rem;color:var(--muted)"><span class="spinner"></span> Analysing administration routes…</div></div>
     <div id="pbpk-out"></div>`;
+  loadRouteAnalysis();
+}
+
+async function loadRouteAnalysis() {
+  const el = document.getElementById('route-analysis');
+  if (!el) return;
+  const c = compoundData || {};
+  try {
+    const r = await apiFetch('/api/pbpk/routes', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: c.name||'Drug', chembl_id: CHEMBL_ID, disease: DISEASE,
+        dose: (document.getElementById('pbpk-dose')||{}).value || 100,
+        mw: c.mw||350, logp: c.alogp||2.5, psa: c.psa||80, hbd: c.hbd||2,
+      })
+    });
+    if (r.error) { el.innerHTML = '<div class="alert alert-error">'+r.error+'</div>'; return; }
+    const rec = r.recommended || {};
+    const known = r.known_routes || {};
+    const knownChips = Object.entries(known).filter(([k,v])=>v).map(([k])=>'<span class="chip green">'+k+'</span>').join(' ') || '<span class="text-dim">not annotated in the source database</span>';
+    const isBrain = (r.target_tissue||'')==='brain';
+    const rows = (r.routes||[]).map(x=>{
+      const isRec = rec && x.route===rec.route;
+      const feasCol = x.feasible ? '#2f6f5b' : '#b3261e';
+      return '<tr title="'+(x.feasibility_note||'')+'" style="'+(isRec?'background:#2f6f5b12;':'')+'cursor:pointer" onclick="var s=document.getElementById(\'pbpk-route\');s.value=\''+x.route+'\';runPBPK();">'
+        + '<td style="font-weight:'+(isRec?700:500)+'">'+x.label+(isRec?' <span class="chip green" style="font-size:9px">recommended</span>':'')+'</td>'
+        + '<td style="text-align:center;color:'+feasCol+'">'+(x.feasible?'yes':'-')+'</td>'
+        + '<td style="text-align:right">'+x.F_pct+'%</td>'
+        + '<td style="text-align:right">'+x.cmax_plasma+'</td>'
+        + '<td style="text-align:right;font-weight:'+(isBrain?700:400)+';color:'+(isBrain?'#630ed4':'inherit')+'">'+x.brain_cmax+'</td>'
+        + '<td style="text-align:right">'+x.tmax_h+'h</td></tr>';
+    }).join('');
+    el.innerHTML = '<div class="card-title mb-1">Routes of administration <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(PBPK across every route · target tissue: '+r.target_tissue+')</span></div>'
+      + '<div style="margin-bottom:8px;font-size:0.75rem"><strong>Known routes:</strong> '+knownChips+'</div>'
+      + (rec.route ? '<div style="background:#2f6f5b12;border:1px solid #2f6f5b30;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem"><strong>Recommended for this indication: '+rec.label+'</strong><br><span style="color:#45524a">'+rec.rationale+'</span></div>' : '')
+      + '<table class="data-table" style="width:100%;font-size:0.75rem"><thead><tr><th>Route</th><th style="text-align:center">Feasible</th><th style="text-align:right">F</th><th style="text-align:right">Plasma Cmax</th><th style="text-align:right">Brain Cmax</th><th style="text-align:right">Tmax</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      + '<div style="font-size:0.62rem;color:#b3a98f;margin-top:8px;line-height:1.4">'+(r.disclaimer||'')+' Click any route to simulate it below.</div>';
+  } catch(e) {
+    el.innerHTML = '<div class="alert alert-error">'+e.message+'</div>';
+  }
 }
 
 let _pbpkOrgTs = null;  // store organ timeseries for slider
@@ -754,20 +815,20 @@ async function runPBPK() {
     if (!res.success) { document.getElementById('pbpk-out').innerHTML = '<div class="alert alert-error">Simulation failed.</div>'; return; }
 
     // Key names now come directly off res (fixed in backend)
-    const cmax  = res.cmax_plasma   != null ? res.cmax_plasma.toFixed(1)   + ' ng/mL' : '—';
-    const tmax  = res.tmax          != null ? res.tmax.toFixed(1)          + ' h'     : '—';
-    const auc   = res.auc           != null ? res.auc.toFixed(0)           + ' ng·h/mL':'—';
-    const thalf = res.half_life     != null ? res.half_life.toFixed(1)     + ' h'     : '—';
-    const bpr   = res.brain_plasma_ratio != null ? res.brain_plasma_ratio.toFixed(3)  : '—';
+    const cmax  = res.cmax_plasma   != null ? res.cmax_plasma.toFixed(1)   + ' ng/mL' : '-';
+    const tmax  = res.tmax          != null ? res.tmax.toFixed(1)          + ' h'     : '-';
+    const auc   = res.auc           != null ? res.auc.toFixed(0)           + ' ng·h/mL':'-';
+    const thalf = res.half_life     != null ? res.half_life.toFixed(1)     + ' h'     : '-';
+    const bpr   = res.brain_plasma_ratio != null ? res.brain_plasma_ratio.toFixed(3)  : '-';
     const adme  = res.adme_ui || {};
 
-    // Target engagement (free-drug occupancy vs Ki) — the meaningful efficacy readout
+    // Target engagement (free-drug occupancy vs Ki) - the meaningful efficacy readout
     const eng = res.target_engagement;
-    const tgt = res.target_tissue || '—';
+    const tgt = res.target_tissue || '-';
     const _occCol = v => v>=50?'#2f6f5b':v>=20?'#97751a':'#b3261e';
     const engHtml = eng ? `
       <div class="card mb-1" style="border-left:3px solid #2f6f5b">
-        <div class="card-title mb-1">Target Engagement — ${tgt} tissue · free drug vs Ki</div>
+        <div class="card-title mb-1">Target Engagement - ${tgt} tissue · free drug vs Ki</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px">
           <div><div style="font-size:1.5rem;font-weight:800;color:${_occCol(eng.peak_occupancy_pct)}">${eng.peak_occupancy_pct}%</div><div style="font-size:0.62rem;color:#6b776e;text-transform:uppercase;letter-spacing:0.06em">Peak occupancy</div></div>
           <div><div style="font-size:1.5rem;font-weight:800;color:#1f2a24">${eng.time_above_ki_hours} h</div><div style="font-size:0.62rem;color:#6b776e;text-transform:uppercase;letter-spacing:0.06em">Time above Ki</div></div>
@@ -776,7 +837,7 @@ async function runPBPK() {
         <div style="font-size:0.72rem;color:#45524a;line-height:1.55">${eng.interpretation||''}</div>
       </div>` : `
       <div class="card mb-1" style="border-left:3px solid #e0ddd1">
-        <div style="font-size:0.72rem;color:#6b776e">Target occupancy not computed — no measured potency or docking affinity available. Free fraction f<sub>u</sub> = ${adme.fu!=null?adme.fu:'—'}, target tissue: ${tgt}.</div>
+        <div style="font-size:0.72rem;color:#6b776e">Target occupancy not computed - no measured potency or docking affinity available. Free fraction f<sub>u</sub> = ${adme.fu!=null?adme.fu:'-'}, target tissue: ${tgt}.</div>
       </div>`;
     const provHtml = `<div style="font-size:0.63rem;color:#9aa39c;margin-top:8px;line-height:1.45"><strong>${res.model_type||''}</strong> · ${res.provenance||''}</div>`;
 
@@ -814,7 +875,7 @@ async function runPBPK() {
         <div class="card">
           <div class="card-title mb-1">PK Metrics
             ${adme.anchored
-              ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#065f46;font-size:9px;font-weight:700;letter-spacing:0.04em">✓ MEASURED PK</span>'
+              ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#065f46;font-size:9px;font-weight:700;letter-spacing:0.04em">MEASURED PK</span>'
               : '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#ecebe3;color:#6b776e;font-size:9px;font-weight:700;letter-spacing:0.04em">ESTIMATED</span>'}
           </div>
           ${[['Cmax (plasma)',cmax],['Tmax',tmax],['AUC (0–t)',auc],['Half-life (t½)',thalf],['Brain/Plasma Ratio',bpr]]
@@ -860,7 +921,7 @@ const POCKET_COLORS = ['#2f6f5b','#b8860b','#b5552f','#7a5c43','#9aa39c'];
 let _diseaseTargets = [];  // OT targets loaded for current disease
 let _geneInfoCache  = {};  // gene → gene-info API result
 
-// Pre-fetch protein PDB for a given target name (RCSB/AlphaFold — all free)
+// Pre-fetch protein PDB for a given target name (RCSB/AlphaFold - all free)
 async function _prefetchProtein(targetName) {
   if (!targetName || _proteinFetching) return;
   _proteinFetching = true;
@@ -872,9 +933,9 @@ async function _prefetchProtein(targetName) {
     const d = await r.json();
     if (d.real && d.pdb) {
       _dockProtein = d.pdb;
-      if (badge) { badge.textContent = '✓ Protein loaded'; badge.style.color = '#2f6f5b'; }
+      if (badge) { badge.textContent = 'Protein loaded'; badge.style.color = '#2f6f5b'; }
     } else {
-      if (badge) { badge.textContent = '⚠ No PDB — ligand-only view'; badge.style.color = '#97751a'; }
+      if (badge) { badge.textContent = ''; }
     }
   } catch(_e) {
     if (badge) { badge.textContent = 'PDB fetch failed'; badge.style.color = '#b3261e'; }
@@ -904,11 +965,16 @@ async function _loadTargetEvidence(gene) {
   const otBar   = `<div style="display:inline-block;width:48px;height:5px;background:#e6e2d7;border-radius:3px;vertical-align:middle;margin:0 4px 1px">
     <div style="height:100%;width:${otPct}%;background:${otColor};border-radius:3px"></div></div>`;
 
+  const drugNm = (compoundData && compoundData.name) ? compoundData.name : 'this drug';
   const knownHtml = info.is_known_target
     ? `<div style="margin-top:6px;padding:4px 7px;background:#eef4ef;border-radius:5px;color:#065f46;font-size:0.68rem">
-        <strong>✓ Known ChEMBL target</strong> — ${info.known_action}${info.known_mech ? ': '+info.known_mech.slice(0,80)+'…' : ''}
+        <strong>Known target</strong> - ${info.known_action}${info.known_mech ? ': '+info.known_mech.slice(0,80)+'…' : ''}
        </div>`
-    : `<div style="margin-top:6px;font-size:0.68rem;color:#9aa39c;font-style:italic">Not a documented ChEMBL target for this drug — docking will test the hypothesis.</div>`;
+    : `<div style="margin-top:6px;padding:5px 8px;background:#fbf1e3;border:1px solid #ecd9b6;border-radius:5px;color:#8a6309;font-size:0.67rem;line-height:1.45">
+        <strong>Not a known target of ${gene==='' ? drugNm : drugNm}.</strong> Docking ${gene} tests a
+        <strong>repurposing hypothesis</strong> - a weak ΔG / high K<sub>i</sub> here is expected and does not
+        indicate a failed run. For the drug's on-mechanism affinity, pick one of its own targets above.
+       </div>`;
 
   const pathwayHtml = info.pathway_name
     ? `<div style="margin-top:5px;font-size:0.68rem;color:#2f6f5b">
@@ -951,7 +1017,7 @@ async function _fetchSmilesPubchem(name) {
 async function renderDocking(el) {
   const c = compoundData || {};
   let apiMsg = '', apiCls = '';
-  // No status banners — docking method shown in result chips
+  // No status banners - docking method shown in result chips
 
   const fallbackTargets = [
     {gene_symbol:'BACE1', gene_name:'Beta-secretase 1'},
@@ -982,9 +1048,9 @@ async function renderDocking(el) {
             <span id="prot-status-badge" style="font-size:0.62rem;font-weight:500;color:#9aa39c"></span>
           </div>
           <div class="field" style="margin-bottom:0.6rem">
-            <label>Target Protein ${DISEASE ? `<span id="targets-loading" style="font-size:9px;color:#9aa39c;font-weight:400;margin-left:4px">loading…</span>` : ''}</label>
+            <label>Target Protein <span id="targets-loading" style="font-size:9px;color:#9aa39c;font-weight:400;margin-left:4px">loading…</span></label>
             <select class="input" id="dock-target" onchange="_prefetchProtein(this.value);_loadTargetEvidence(this.value)">
-              ${fallbackTargets.map(t => `<option value="${t.gene_symbol}">${t.gene_symbol} — ${t.gene_name}</option>`).join('')}
+              ${fallbackTargets.map(t => `<option value="${t.gene_symbol}">${t.gene_symbol} - ${t.gene_name}</option>`).join('')}
             </select>
           </div>
           <!-- Gene→Disease evidence panel -->
@@ -999,14 +1065,17 @@ async function renderDocking(el) {
           ${LOCAL_DIFFDOCK || DOCK_OK ? `
           <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#45524a;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
             <input type="checkbox" id="dock-diffdock" style="margin-top:1px"/>
-            <span>Refine with <strong>DiffDock</strong> <span style="color:#9aa39c">(deep-learning, higher accuracy — ~3–5&nbsp;min on CPU)</span></span>
+            <span>Refine with <strong>DiffDock</strong> <span style="color:#9aa39c">(deep-learning, higher accuracy - ~3–5&nbsp;min on CPU)</span></span>
           </label>` : ''}
+          <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#45524a;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
+            <input type="checkbox" id="dock-boltz" style="margin-top:1px"/>
+            <span>Predict affinity with <strong>Boltz-2</strong> <span style="color:#9aa39c">(co-folds protein+ligand, predicts binding affinity - requires GPU install; falls back to physics if absent)</span></span>
+          </label>
           <button class="btn btn-primary" onclick="runDocking()" id="dock-btn" style="width:100%;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:15px">play_arrow</span>
             Run Docking
           </button>
-          <p style="font-size:0.62rem;color:#9aa39c;margin-top:5px;line-height:1.4">Fast physics engine by default (~2–4&nbsp;s) — detects &amp; names binding pockets.</p>
-          ${DISEASE ? `<p id="targets-note" style="font-size:0.65rem;color:#9aa39c;margin-top:6px"></p>` : ''}
+          <p id="targets-note" style="font-size:0.65rem;color:#9aa39c;margin-top:6px"></p>
         </div>
 
         <!-- Binding pockets (named + ranked, filled after docking) -->
@@ -1058,35 +1127,64 @@ async function renderDocking(el) {
     if (DISEASE) _loadTargetEvidence(sel.value);
   }
 
-  // Asynchronously load disease-specific targets
-  if (DISEASE) {
-    try {
-      const targets = await apiFetch(`/api/disease-targets?disease=${encodeURIComponent(DISEASE)}`);
-      const loading = document.getElementById('targets-loading');
-      const note    = document.getElementById('targets-note');
-      if (loading) loading.remove();
-      if (targets && targets.length > 0) {
-        _diseaseTargets = targets;  // store for evidence lookup
-        const prev = sel ? sel.value : '';
-        sel.innerHTML = targets.map((t, i) => {
-          const scorePct = Math.round((t.score || 0) * 100);
-          const label = t.gene_name
-            ? `${t.gene_symbol} — ${t.gene_name} (OT: ${scorePct}%)`
-            : t.gene_symbol;
-          return `<option value="${t.gene_symbol}" ${i===0?'selected':''}>${label}</option>`;
-        }).join('');
-        if (prev) { for (let o of sel.options) { if (o.value===prev) { sel.value=prev; break; } } }
-        if (note) note.textContent = `${targets.length} disease targets from Open Targets`;
-        // Pre-fetch protein + show gene evidence for top target
-        _prefetchProtein(sel.value);
-        _loadTargetEvidence(sel.value);
-      } else {
-        if (note) note.textContent = 'Using default CNS targets.';
+  // Build the docking target list. The DRUG's OWN binding targets come first —
+  // docking a ligand into a protein it actually binds is what yields a meaningful
+  // ΔG. Disease-associated proteins are offered below as explicit repurposing
+  // hypotheses: docking e.g. a JAK inhibitor into tyrosinase is expected to score
+  // weakly and is NOT the sensible default.
+  try {
+    const [drugTgts, disTgts] = await Promise.all([
+      apiFetch(`/api/compound/${CHEMBL_ID}/targets`).catch(() => []),
+      DISEASE ? apiFetch(`/api/disease-targets?disease=${encodeURIComponent(DISEASE)}`).catch(() => [])
+              : Promise.resolve([])
+    ]);
+    const loading = document.getElementById('targets-loading');
+    const note    = document.getElementById('targets-note');
+    if (loading) loading.remove();
+
+    _diseaseTargets = disTgts || [];
+    const disScore = {};
+    (disTgts || []).forEach(t => { if (t.gene_symbol) disScore[t.gene_symbol.toUpperCase()] = t.score || 0; });
+
+    // De-duplicate the drug's mechanism targets; flag those also linked to the disease
+    const drugGenes = [], seen = {};
+    (drugTgts || []).forEach(t => {
+      const g = (t.gene_symbol || '').toUpperCase();
+      if (!g || seen[g]) return; seen[g] = 1;
+      drugGenes.push({gene: t.gene_symbol, action: t.action_type || '',
+                      shared: g in disScore, score: disScore[g] || 0});
+    });
+    drugGenes.sort((a, b) => (b.shared - a.shared) || (b.score - a.score));
+    const drugSet = {}; drugGenes.forEach(d => drugSet[d.gene.toUpperCase()] = 1);
+    const diseaseOnly = (disTgts || []).filter(t => !((t.gene_symbol || '').toUpperCase() in drugSet));
+
+    if (drugGenes.length || diseaseOnly.length) {
+      let html = '';
+      if (drugGenes.length) {
+        html += `<optgroup label="Drug's own targets (recommended)">` + drugGenes.map(d => {
+          const tag = d.shared ? ` · disease-linked${d.score ? ' '+Math.round(d.score*100)+'%' : ''}` : '';
+          return `<option value="${d.gene}" data-drugtarget="1">${d.gene}${d.action ? ' ('+d.action.toLowerCase()+')' : ''}${tag}</option>`;
+        }).join('') + `</optgroup>`;
       }
-    } catch (_e) {
-      const loading = document.getElementById('targets-loading');
-      if (loading) loading.textContent = '(defaults)';
+      if (diseaseOnly.length) {
+        html += `<optgroup label="Disease-associated · repurposing hypothesis">` + diseaseOnly.map(t => {
+          const sp = Math.round((t.score || 0) * 100);
+          return `<option value="${t.gene_symbol}" data-drugtarget="0">${t.gene_symbol}${t.gene_name ? ' - '+t.gene_name : ''} (OT: ${sp}%)</option>`;
+        }).join('') + `</optgroup>`;
+      }
+      sel.innerHTML = html;
+      sel.selectedIndex = 0;   // first drug target (disease-linked preferred), else first disease target
+      if (note) note.textContent = drugGenes.length
+        ? "Default = the drug's own binding target. Disease-associated proteins below test repurposing hypotheses."
+        : 'No curated drug target found; showing disease-associated proteins as repurposing hypotheses.';
+      _prefetchProtein(sel.value);
+      _loadTargetEvidence(sel.value);
+    } else if (note) {
+      note.textContent = 'Using default CNS targets.';
     }
+  } catch (_e) {
+    const loading = document.getElementById('targets-loading');
+    if (loading) loading.textContent = '(defaults)';
   }
 }
 
@@ -1178,9 +1276,9 @@ body{background:${bg};overflow:hidden;font-family:system-ui,sans-serif}
 </head><body>
 <div id="v"></div>
 <div id="legend">
-  <div><span style="color:#2f6f5b">■</span> Ligand (${opts.drug||'Drug'}) — bound inside</div>
-  <div><span style="color:#93c5fd">▨</span> Protein surface (${opts.target||'Target'})</div>
-  <div><span style="color:#d8b25a">┃</span> Pocket residues (≤5&Aring;)</div>
+  <div><span style="display:inline-block;width:9px;height:9px;background:#7dd33f;border-radius:2px;vertical-align:middle"></span> Ligand (${opts.drug||'Drug'}) - bound inside</div>
+  <div><span style="display:inline-block;width:9px;height:9px;background:#d7dde3;border-radius:2px;vertical-align:middle"></span> Protein surface (${opts.target||'Target'})</div>
+  <div><span style="display:inline-block;width:3px;height:10px;background:#5fd3e0;border-radius:1px;vertical-align:middle"></span> Pocket residues (≤5&Aring;)</div>
   <div id="pocket-legend"></div>
 </div>
 <div id="ctrl">
@@ -1202,7 +1300,7 @@ var POCKET = {model: 0, within: {distance: 5, sel: {model: 1}}};
 
 var _protSurf = null, _spin = false, _ligVis = true, _sticksVis = true;
 
-// ── Named binding pockets — translucent labelled spheres ─────────────────────
+// ── Named binding pockets - translucent labelled spheres ─────────────────────
 var POCKETS = ${pocketsJson};
 var _pocketShapes = [], _pocketLabels = [], _pocketsVis = true;
 function drawPockets() {
@@ -1236,14 +1334,17 @@ function togglePockets(btn) {
   var el = document.getElementById('pocket-legend');
   if (el && POCKETS.length) {
     el.innerHTML = POCKETS.map(function(p){
-      return '<div><span style="color:'+p.color+'">●</span> '+p.label+' — '+p.name+'</div>';
+      return '<div><span style="color:'+p.color+'">●</span> '+p.label+' - '+p.name+'</div>';
     }).join('');
   }
 })();
 
 function drawProtein() {
-  viewer.setStyle({model: 0}, {cartoon: {color: 'spectrum', opacity: 0.28}});
-  if (_sticksVis) viewer.addStyle(POCKET, {stick: {colorscheme: 'cyanCarbon', radius: 0.17}});
+  // NVIDIA DiffDock look: one uniform muted-steel cartoon body (no rainbow spectrum),
+  // sitting beneath a smooth silver molecular surface.
+  viewer.setStyle({model: 0}, {cartoon: {color: '#8aa0b4', opacity: 0.45}});
+  // Pocket residues lining the docked ligand - element-coloured sticks, kept visible.
+  if (_sticksVis) viewer.addStyle(POCKET, {stick: {colorscheme: 'cyanCarbon', radius: 0.18}});
 }
 function drawLig() {
   viewer.setStyle({model: 1}, _ligVis
@@ -1251,17 +1352,16 @@ function drawLig() {
     : {});
 }
 function addProtSurf() {
-  // Translucent surface over the WHOLE protein. The bright green ligand sits inside
-  // it at the binding pocket and shows through the translucency, so its physical
-  // association with the protein is immediately obvious (no reliance on selections).
-  _protSurf = viewer.addSurface($3Dmol.SAS, {opacity: 0.45, color: '#b8860b'}, {model: 0});
+  // Smooth silver-grey molecular surface - the signature NVIDIA DiffDock protein body.
+  // Kept translucent so the bound green ligand and cyan pocket residues read through it.
+  _protSurf = viewer.addSurface($3Dmol.SAS, {opacity: 0.5, color: '#d7dde3'}, {model: 0});
 }
 
 drawProtein();
 drawLig();
 addProtSurf();
 drawPockets();
-viewer.zoomTo();            // frame the WHOLE complex — protein body + embedded ligand together
+viewer.zoomTo();            // frame the WHOLE complex - protein body + embedded ligand together
 viewer.render();
 
 function toggleProtSurf(btn) {
@@ -1315,7 +1415,7 @@ function selectPose(idx) {
     frame.srcdoc = _dockingViewerHtml(_dockProtein, _dockPoses[idx],
       {h: 540, bg: '#1f2a24', drug: c.name || '', target: targetVal, pockets: _dockPockets});
   } else {
-    // No protein yet — show ligand only with an overlay hint
+    // No protein yet - show ligand only with an overlay hint
     if (overlay) { overlay.style.display = 'flex'; }
     frame.srcdoc = _mol3dHtml(_dockPoses[idx], {h: 540, bg: '#1f2a24'});
     // Poll until protein arrives (max 60s)
@@ -1376,6 +1476,35 @@ function _dockKi(aff_kcal) {
   const val = Math.exp(aff_kcal * 1000 / (1.987 * 298)) * 1e9;
   return val < 1 ? val.toFixed(2) + ' pM' : val < 1000 ? Math.round(val) + ' nM' : (val/1000).toFixed(1) + ' µM';
 }
+function _fmtNm(nM) {
+  if (nM == null) return '-';
+  if (nM < 1)     return (nM*1000).toFixed(0) + ' pM';
+  if (nM < 1000)  return (nM<10 ? nM.toFixed(1) : Math.round(nM)) + ' nM';
+  if (nM < 1e6)   return (nM/1000).toFixed(1) + ' µM';
+  return (nM/1e6).toFixed(1) + ' mM';
+}
+// Best MEASURED potency (ChEMBL activities) of this compound against a target gene.
+// This is the authoritative, experimental affinity — used to distinguish the drug's
+// real on-mechanism targets from repurposing hypotheses, and to keep the honest
+// (conservative) geometric docking ΔG in context.
+let _activitiesData = null;
+async function _measuredPotency(gene) {
+  if (!gene) return null;
+  if (_activitiesData === null) {
+    try { _activitiesData = await apiFetch(`/api/compound/${CHEMBL_ID}/activities`); }
+    catch(_e) { _activitiesData = []; }
+  }
+  const g = gene.toUpperCase();
+  const rows = (_activitiesData || []).filter(a =>
+    (a.gene_symbol||'').toUpperCase() === g &&
+    a.standard_value != null && (a.standard_units||'').toLowerCase() === 'nm');
+  if (!rows.length) return null;
+  rows.sort((a,b) => (b.pchembl_value||0)-(a.pchembl_value||0) ||
+                     (parseFloat(a.standard_value)-parseFloat(b.standard_value)));
+  const r = rows[0];
+  return { type: r.activity_type || 'Ki/IC50', nM: parseFloat(r.standard_value),
+           pchembl: r.pchembl_value, n: rows.length };
+}
 
 async function runDocking() {
   const c = compoundData || {};
@@ -1388,9 +1517,12 @@ async function runDocking() {
   _prefetchProtein(targetName);
   // Engine choice: fast physics by default; DiffDock only if the user opts in
   const useDiffDock = !!document.getElementById('dock-diffdock')?.checked;
-  const _dockMethod  = useDiffDock ? 'diffdock' : 'fast';
-  const _dockTimeout = useDiffDock ? 600000 : 60000;
-  if (useDiffDock) {
+  const useBoltz    = !!document.getElementById('dock-boltz')?.checked;
+  const _dockMethod  = useBoltz ? 'boltz' : useDiffDock ? 'diffdock' : 'fast';
+  const _dockTimeout = (useDiffDock || useBoltz) ? 1200000 : 60000;
+  if (useBoltz) {
+    btn.innerHTML = '<span class="spinner"></span> Running Boltz-2 affinity prediction…';
+  } else if (useDiffDock) {
     btn.innerHTML = '<span class="spinner"></span> Running DiffDock (~3–5 min)…';
   }
   try {
@@ -1411,7 +1543,7 @@ async function runDocking() {
     } finally { clearTimeout(_dockTimer); }
     const out = document.getElementById('dock-out');
     if (!res.success) {
-      out.innerHTML = `<div class="alert alert-error">Docking failed: ${res.error||'Unknown error'}<br/><small>Method: ${res.method||'—'}</small></div>`;
+      out.innerHTML = `<div class="alert alert-error">Docking failed: ${res.error||'Unknown error'}<br/><small>Method: ${res.method||'-'}</small></div>`;
       return;
     }
     _dockPoses = res.poses || [];
@@ -1420,10 +1552,14 @@ async function runDocking() {
     renderPocketsCard();
     const confs = res.confidence_scores || [];
     const affs  = res.binding_affinities || [];
+    // "Confidence" is an independent pose-quality metric ONLY for a deep-learning
+    // engine (DiffDock). For the empirical engine it is just a monotonic remap of
+    // the ΔG, so showing it as a separate number is redundant — hide it there.
+    const isDL = /diffdock/i.test(res.method || '');
     const validPoses = _dockPoses.filter(p => p && p.length > 20);
     const has3D = validPoses.length > 0;
 
-    // ALWAYS use the protein returned WITH the poses — it is the exact structure
+    // ALWAYS use the protein returned WITH the poses - it is the exact structure
     // DiffDock docked into, so it shares the poses' coordinate frame. The pre-fetched
     // protein is a different processing of the file and must NOT be paired with poses
     // (that mismatch is what makes the ligand look like it floats away from the protein).
@@ -1456,11 +1592,11 @@ async function runDocking() {
           <!-- Arrow: docking -->
           <div style="flex:1;min-width:80px;text-align:center;padding:0 6px">
             <div style="height:2px;background:${has3D?'#2f6f5b':'#e0ddd1'};margin:0 4px;position:relative">
-              <span style="position:absolute;right:-4px;top:-5px;color:${has3D?'#2f6f5b':'#e0ddd1'};font-size:10px">▶</span>
+              <span style="position:absolute;right:-4px;top:-5px;color:${has3D?'#2f6f5b':'#e0ddd1'};font-size:10px"></span>
             </div>
             <div style="font-size:0.6rem;color:#45524a;margin-top:4px;text-align:center">
               ${has3D
-                ? `<strong style="color:#2f6f5b">Docks</strong>${bestAff ? '<br/>ΔG = '+bestAff+' kcal/mol' : ''}${bestConf ? '<br/>conf: '+bestConf : ''}`
+                ? `<strong style="color:#2f6f5b">Docks</strong>${bestAff ? '<br/>ΔG = '+bestAff+' kcal/mol' : ''}${isDL && bestConf ? '<br/>conf: '+bestConf : ''}`
                 : '<span style="color:#9aa39c">binds (estimated)</span>'}
             </div>
           </div>
@@ -1468,7 +1604,7 @@ async function runDocking() {
           <!-- Gene node -->
           <div style="text-align:center;padding:8px 12px;background:${gInfo.is_known_target?'#eef4ef':'#f6f5f0'};border:2px solid ${gInfo.is_known_target?'#2f6f5b':'#e0ddd1'};border-radius:8px;min-width:90px">
             <div style="font-size:0.62rem;font-weight:700;color:${gInfo.is_known_target?'#2f6f5b':'#45524a'};text-transform:uppercase;letter-spacing:0.06em">
-              Gene${gInfo.is_known_target?' ✓ Known':''}
+              Gene${gInfo.is_known_target?' Known':''}
             </div>
             <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px">${targetName}</div>
             ${gInfo.gene_name?`<div style="font-size:0.6rem;color:#6b776e">${gInfo.gene_name}</div>`:''}
@@ -1478,7 +1614,7 @@ async function runDocking() {
           <!-- Arrow: OT association -->
           <div style="flex:1;min-width:80px;text-align:center;padding:0 6px">
             <div style="height:2px;background:${otPct2>0?otCol2:'#e0ddd1'};margin:0 4px;position:relative">
-              <span style="position:absolute;right:-4px;top:-5px;color:${otPct2>0?otCol2:'#e0ddd1'};font-size:10px">▶</span>
+              <span style="position:absolute;right:-4px;top:-5px;color:${otPct2>0?otCol2:'#e0ddd1'};font-size:10px"></span>
             </div>
             <div style="font-size:0.6rem;color:#45524a;margin-top:4px;text-align:center">
               ${otPct2 > 0
@@ -1490,15 +1626,14 @@ async function runDocking() {
           <!-- Disease node -->
           <div style="text-align:center;padding:8px 12px;background:#faece9;border:2px solid #b3261e;border-radius:8px;min-width:90px">
             <div style="font-size:0.62rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.06em">Disease</div>
-            <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${gInfo.ot_disease||DISEASE||'—'}</div>
+            <div style="font-size:0.82rem;font-weight:800;color:#1f2a24;margin-top:2px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${gInfo.ot_disease||DISEASE||'-'}</div>
           </div>
         </div>
 
         ${gInfo.is_known_target
           ? `<div style="margin-top:8px;padding:6px 10px;background:#eef4ef;border-radius:6px;font-size:0.7rem;color:#065f46">
               <strong>Mechanistic rationale:</strong> ${c2.name||'This drug'} is a known <strong>${gInfo.known_action}</strong> of ${targetName}${gInfo.known_mech?'. '+gInfo.known_mech.slice(0,120)+'…':'.'}</div>`
-          : `<div style="margin-top:8px;font-size:0.7rem;color:#9aa39c;font-style:italic">
-              This compound is not a documented ChEMBL target of ${targetName}. Docking tests whether structural binding is possible — positive results would support a new repurposing hypothesis.</div>`}
+          : ''}
       </div>`;
 
     // Update status chips + evidence chain in dock-out
@@ -1506,8 +1641,8 @@ async function runDocking() {
       <div class="flex gap-05 mt-1" style="flex-wrap:wrap">
         <span class="chip green">Method: ${res.method||'Docking'}</span>
         <span class="chip cyan">${_dockPoses.length} poses</span>
-        <span class="chip purple">Target: ${res.target||targetName}</span>
-        ${res.note && !LOCAL_DIFFDOCK ? `<span class="chip amber" style="font-size:0.65rem">${res.note}</span>` : ''}
+        <span class="chip purple">Protein: ${res.target||targetName}</span>
+        ${res.pocket_source ? `<span class="chip amber" title="Where the docking box was placed on the receptor">Site: ${res.pocket_source}</span>` : ''}
       </div>
       ${chainHtml}`;
 
@@ -1526,7 +1661,7 @@ async function runDocking() {
           return `<button class="pose-sel-btn" onclick="selectPose(${i})"
             style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:6px 10px;margin-bottom:4px;border-radius:7px;border:1px solid ${i===0?'#2f6f5b':'#e0ddd1'};font-size:0.72rem;cursor:pointer;transition:all 0.15s;background:${i===0?'#2f6f5b':'#f6f5f0'};color:${i===0?'#fffdf9':'#45524a'};text-align:left">
             <span style="font-weight:700">Rank ${i+1}${pkTag}</span>
-            <span style="font-family:monospace;font-size:0.67rem;opacity:0.9">${aff!=null?aff.toFixed(1)+' kcal/mol':'—'}${b&&i>0?' · <span style=\'color:'+b.color+'\'>'+b.label+'</span>':''}</span>
+            <span style="font-family:monospace;font-size:0.67rem;opacity:0.9">${aff!=null?aff.toFixed(1)+' kcal/mol':'-'}${b&&i>0?' · <span style=\'color:'+b.color+'\'>'+b.label+'</span>':''}</span>
           </button>`;}).join('');
       }
     }
@@ -1539,14 +1674,25 @@ async function runDocking() {
       const aff0 = affs[0] != null ? affs[0] : null;
       const badge = aff0 != null ? _dockBadge(aff0) : null;
       const badgeHtml = badge ? `<span style="padding:2px 8px;border-radius:10px;background:${badge.bg};color:${badge.color};font-weight:600;font-size:0.68rem">${badge.label}</span>` : '';
-      const kiHtml = aff0 != null ? `<div class="kv"><span class="kv-k">Est. Ki</span><span class="kv-v mono">~${_dockKi(aff0)}</span></div>` : '';
+      // Real AutoDock Vina / DiffDock give a true docking ΔG; the built-in physics
+      // engine gives a geometric pose score. Label the derived Ki accordingly.
+      const isReal = /vina|diffdock|boltz/i.test(res.method || '');
+      const kiLbl  = isReal ? 'Docking-derived Ki' : 'Geometric-score Ki';
+      const kiHtml = aff0 != null ? `<div class="kv"><span class="kv-k">${kiLbl}</span><span class="kv-v mono">~${_dockKi(aff0)}</span></div>` : '';
+      const dgLbl  = isReal ? 'Docking ΔG (AutoDock Vina)' : 'Docking ΔG (pose score)';
+      const measured = await _measuredPotency(res.target || targetName);
+      const measuredHtml = measured ? `
+        <div class="kv"><span class="kv-k">Measured affinity</span><span class="kv-v mono" style="color:#2f6f5b;font-weight:700">${measured.type} ${_fmtNm(measured.nM)}${measured.pchembl?` · pChEMBL ${measured.pchembl.toFixed(1)}`:''}</span></div>`
+        : '';
+      const confHtml = isDL ? `
+        <div class="kv"><span class="kv-k">Pose confidence</span><span class="kv-v mono">${confs[0]!=null?confs[0].toFixed(3):'-'}</span></div>` : '';
       metricsInner.innerHTML = `
-        <div class="kv"><span class="kv-k">Confidence</span><span class="kv-v mono">${confs[0]!=null?confs[0].toFixed(3):'—'}</span></div>
-        <div class="kv" title="Typical drug-like binders: −5 to −10 kcal/mol. Below −8 = high affinity."><span class="kv-k">Binding ΔG</span><span class="kv-v mono">${aff0!=null?aff0.toFixed(2)+' kcal/mol':'—'} ${badgeHtml}</span></div>
+        ${measuredHtml}
+        <div class="kv" title="${isReal?'AutoDock Vina binding free energy (kcal/mol) for the top pose. A predicted ΔG for triage — where a measured potency exists, that is authoritative.':'Structural pose score for ranking poses and pockets — not an absolute affinity. Where a measured potency exists, that is authoritative.'}"><span class="kv-k">${dgLbl}</span><span class="kv-v mono">${aff0!=null?aff0.toFixed(2)+' kcal/mol':'-'} ${badgeHtml}</span></div>
         ${kiHtml}
-        <div class="kv"><span class="kv-k">Target</span><span class="kv-v">${res.target||'—'}</span></div>
-        <div class="kv"><span class="kv-k">Method</span><span class="kv-v" style="font-size:0.65rem">${res.method||'—'}</span></div>
-        ${aff0!=null?`<div style="margin-top:8px;padding:7px 10px;background:#f8f5ff;border-radius:6px;font-size:0.71rem;color:#4c1d95"><strong>${badge.label}</strong> — estimated Ki ~${_dockKi(aff0)} against ${res.target||'target'}</div>`:''}`;
+        ${confHtml}
+        <div class="kv"><span class="kv-k">Protein target</span><span class="kv-v">${res.target||'-'}</span></div>
+        <div class="kv"><span class="kv-k">Method</span><span class="kv-v" style="font-size:0.65rem">${res.method||'-'}</span></div>`;
 
     }
 
@@ -1555,7 +1701,7 @@ async function runDocking() {
     }
   } catch(e) {
     const msg = e.name === 'AbortError'
-      ? `Docking timed out (>${Math.round(_dockTimeout/1000)}s). ${useDiffDock ? 'DiffDock on CPU is slow — try the fast engine (uncheck DiffDock)' : 'Try again or pick a different target'}.`
+      ? `Docking timed out (>${Math.round(_dockTimeout/1000)}s). ${useDiffDock ? 'DiffDock on CPU is slow - try the fast engine (uncheck DiffDock)' : 'Try again or pick a different target'}.`
       : e.message;
     document.getElementById('dock-out').innerHTML = `<div class="alert alert-error">${msg}</div>`;
   } finally {
@@ -1610,13 +1756,13 @@ async function loadOptimization(el) {
 
     const _profileName = prf.name || 'Lipinski Ro5';
     const lipinskiBadge = res.lipinski_pass_all
-      ? `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#eef4ef;color:#166534">✓ Passes ${_profileName}</span>`
-      : `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#faece9;color:#922019">⚠ ${_profileName} Violation</span>`;
+      ? `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#eef4ef;color:#166534">Passes ${_profileName}</span>`
+      : `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#faece9;color:#922019">${_profileName} Violation</span>`;
 
     const roRows = res.lipinski.map(r=>`
       <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ecebe3">
         <span style="font-size:0.75rem;color:#45524a">${r.rule}</span>
-        <span style="font-weight:700;font-size:0.75rem;color:${r.pass?'#2f6f5b':'#b3261e'}">${r.pass?'✓':'✗'}</span>
+        <span class="material-symbols-outlined" style="font-size:0.95rem;color:${r.pass?'#2f6f5b':'#b3261e'}">${r.pass?'check':'close'}</span>
       </div>`).join('');
 
     // Multi-select suggestion cards
@@ -1697,7 +1843,7 @@ async function loadOptimization(el) {
       const wsResult     = document.getElementById('ws-result');
       const origSmiles   = origSmilesEl?.value || '';
       if (!origSmiles) {
-        if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES — open this compound from a disease search first.</div>';
+        if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES - open this compound from a disease search first.</div>';
         return;
       }
 
@@ -1731,7 +1877,7 @@ async function loadOptimization(el) {
       const changed = currentSmiles !== origSmiles;
       if (wsResult) wsResult.innerHTML = changed
         ? `<div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
-            <strong>✓ ${sugs.length} transform${sugs.length>1?'s':''} applied.</strong> ${appliedDesc.filter(d=>!d.includes('manual')).join(' · ')}
+            <strong>${sugs.length} transform${sugs.length>1?'s':''} applied.</strong> ${appliedDesc.filter(d=>!d.includes('manual')).join(' · ')}
             <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
            </div>`
         : `<div class="alert alert-warning" style="font-size:0.77rem">
@@ -1785,11 +1931,21 @@ async function loadOptimization(el) {
         </div>
       </div>
 
+      <!-- ── Quantum electronic structure (GFN2-xTB) ───────────── -->
+      <div class="card" id="qc-card" style="margin-bottom:1rem">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;flex-wrap:wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f6f5b" stroke-width="2"><circle cx="12" cy="12" r="1.6"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg>
+          <span style="font-weight:700;font-size:0.9rem;color:#1f2a24">Quantum Electronic Structure</span>
+          <span id="qc-engine-badge" style="padding:2px 9px;border-radius:999px;font-size:0.62rem;font-weight:700;background:#ecebe3;color:#6b776e">…</span>
+        </div>
+        <div id="qc-body" style="display:flex;align-items:center;gap:0.6rem;padding:0.8rem 0;color:var(--muted);font-size:0.78rem"><span class="spinner"></span> Running quantum calculation…</div>
+      </div>
+
       <!-- ── Molecular Workshop ────────────────────────────────── -->
       <div class="card" id="mol-workshop">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f6f5b" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          <span style="font-weight:700;font-size:0.9rem;color:#1f2a24">Molecular Workshop — Test a Modification</span>
+          <span style="font-weight:700;font-size:0.9rem;color:#1f2a24">Molecular Workshop - Test a Modification</span>
         </div>
         <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.65">
           Edit the SMILES below to apply a structural change (e.g., remove a polar group, add a methyl),
@@ -1841,7 +1997,55 @@ async function loadOptimization(el) {
       font:{family:'Inter,sans-serif',color:'#45524a',size:10},
       margin:{l:35,r:35,t:20,b:20}, showlegend:false,
     }, {displayModeBar:false, responsive:true});
+
+    renderQuantumPanel();
   } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+// Fetch + render real quantum-chemistry (GFN2-xTB) properties into the Optimization tab.
+async function renderQuantumPanel() {
+  const body  = document.getElementById('qc-body');
+  const badge = document.getElementById('qc-engine-badge');
+  if (!body) return;
+  try {
+    const r = await apiFetch(`/api/compound/${CHEMBL_ID}/quantum`);
+    const qp = r.quantum_properties || {};
+    const isReal = !!r.is_real_qc;
+    if (badge) {
+      badge.textContent = isReal ? 'GFN2-xTB · real QM' : 'RDKit estimate';
+      badge.style.background = isReal ? '#eef4ef' : '#f8f2df';
+      badge.style.color      = isReal ? '#166534' : '#8a6309';
+    }
+    if (!qp || (qp.gap_ev == null && qp.homo_ev == null)) {
+      body.style.display = 'block';
+      body.innerHTML = `<div style="font-size:0.76rem;color:#9aa39c">${r.error || 'Quantum properties unavailable for this molecule.'}</div>`;
+      return;
+    }
+    const tile = (label, val, unit, hint) => `
+      <div style="background:#f6f5f0;border-radius:9px;padding:10px 12px">
+        <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#9aa39c">${label}</div>
+        <div style="font-size:1.05rem;font-weight:800;color:#1f2a24;font-family:monospace">${val}<span style="font-size:0.62rem;font-weight:600;color:#6b776e;margin-left:3px">${unit||''}</span></div>
+        ${hint?`<div style="font-size:0.6rem;color:#9aa39c;margin-top:1px">${hint}</div>`:''}
+      </div>`;
+    const f = (v, d=2) => (v==null ? '-' : (+v).toFixed(d));
+    const tiles = [
+      tile('HOMO–LUMO gap', f(qp.gap_ev), 'eV', 'kinetic stability'),
+      tile('HOMO', f(qp.homo_ev), 'eV', 'ionization / donor'),
+      tile('LUMO', f(qp.lumo_ev), 'eV', 'affinity / acceptor'),
+      tile('Dipole', f(qp.dipole_debye), 'D', 'polarity'),
+      tile('Polarizability', f(qp.polarizability_au,1), 'a.u.', 'dispersion'),
+      tile('Solvation ΔG', f(qp.gsolv_kcal_mol,1), 'kcal/mol', 'implicit water'),
+      tile('Electrophilicity ω', f(qp.electrophilicity_ev), 'eV', 'reactivity'),
+      tile('Hardness η', f(qp.hardness_ev), 'eV', 'gap / 2'),
+    ];
+    body.style.display = 'block';
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.6rem">${tiles.join('')}</div>
+      <p style="font-size:0.66rem;color:#9aa39c;margin-top:0.7rem;line-height:1.5">${r.note || ''}${qp.formula?` · ${qp.formula}`:''}</p>`;
+  } catch (e) {
+    body.style.display = 'block';
+    body.innerHTML = `<div style="font-size:0.76rem;color:#9aa39c">Quantum engine unavailable.</div>`;
+  }
 }
 
 async function openWorkshop(property, action) {
@@ -1855,7 +2059,7 @@ async function openWorkshop(property, action) {
   if (descEl) descEl.value = action.slice(0, 120);
 
   if (!origSmiles) {
-    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES loaded — open the compound from a disease search first.</div>';
+    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES loaded - open the compound from a disease search first.</div>';
     return;
   }
 
@@ -1878,11 +2082,11 @@ async function openWorkshop(property, action) {
       }
       if (wsResult) wsResult.innerHTML = `
         <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
-          <strong>✓ Transform applied:</strong> ${res.description||action}
+          <strong>Transform applied:</strong> ${res.description||action}
           <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
         </div>`;
     } else {
-      // Transform not auto-applicable — guide user to edit manually
+      // Transform not auto-applicable - guide user to edit manually
       if (newSmilesEl) { newSmilesEl.select(); newSmilesEl.focus(); }
       if (wsResult) wsResult.innerHTML = `
         <div class="alert alert-warning" style="font-size:0.77rem">
@@ -1908,7 +2112,7 @@ async function runMolWorkshop() {
   if (newSmiles.trim() === origSmiles.trim()) {
     document.getElementById('ws-result').innerHTML = `
       <div class="alert alert-warning" style="font-size:0.78rem">
-        <strong>No change detected</strong> — the Modified SMILES is identical to the original.
+        <strong>No change detected</strong> - the Modified SMILES is identical to the original.
         <br/>Click <strong>Apply &amp; Analyze →</strong> on a recommendation above to auto-generate a structurally modified molecule, or edit the SMILES manually.
       </div>`;
     return;
@@ -1938,9 +2142,9 @@ async function runMolWorkshop() {
     const tableRows = Object.entries(propLabels).map(([k,lbl]) => {
       const ov = origP[k]; const nv = newP[k]; const d = deltas[k];
       if (ov === undefined && nv === undefined) return '';
-      const fmt = v => v !== undefined ? (typeof v==='number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v) : '—';
+      const fmt = v => v !== undefined ? (typeof v==='number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v) : '-';
       const dColor = d > 0 ? '#b3261e' : d < 0 ? '#2f6f5b' : '#9aa39c';
-      const dStr   = d !== undefined ? `<span style="font-weight:800;color:${dColor}">${d>0?'+':''}${typeof d==='number'?d.toFixed(2):d}${propUnits[k]||''}</span>` : '—';
+      const dStr   = d !== undefined ? `<span style="font-weight:800;color:${dColor}">${d>0?'+':''}${typeof d==='number'?d.toFixed(2):d}${propUnits[k]||''}</span>` : '-';
       return `<tr>
         <td style="font-size:0.77rem;font-weight:600;color:#45524a">${lbl}</td>
         <td style="font-size:0.77rem;font-family:monospace;color:#6b776e">${fmt(ov)}${propUnits[k]||''}</td>
@@ -1954,7 +2158,7 @@ async function runMolWorkshop() {
 
     const safetyHTML = (res.safety || []).map(s => `
       <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.74rem">
-        <span style="font-weight:800;color:${s.pass?'#2f6f5b':'#b3261e'};font-size:1rem;line-height:1">${s.pass?'✓':'✗'}</span>
+        <span class="material-symbols-outlined" style="color:${s.pass?'#2f6f5b':'#b3261e'};font-size:1.05rem;line-height:1">${s.pass?'check':'close'}</span>
         <span style="color:#45524a;flex:1">${s.check}</span>
         <span style="color:#6b776e;font-size:0.68rem;font-family:monospace">${s.detail||''}</span>
       </div>`).join('');
@@ -1984,9 +2188,9 @@ async function runMolWorkshop() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
         <div class="card" style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border-color:#cfe0d8;padding:1rem">
           <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#2f6f5b;margin-bottom:6px">
-            Repurposing Case${DISEASE?' — '+DISEASE:''}
+            Repurposing Case${DISEASE?' - '+DISEASE:''}
           </div>
-          <p style="font-size:0.83rem;color:#3730a3;line-height:1.72;margin:0">${res.narrative||'—'}</p>
+          <p style="font-size:0.83rem;color:#3730a3;line-height:1.72;margin:0">${res.narrative||'-'}</p>
         </div>
         <div class="card" style="padding:1rem">
           <div style="font-weight:700;font-size:0.82rem;margin-bottom:4px">Drug-Likeness Comparison</div>
@@ -2063,21 +2267,25 @@ async function loadPatents(el) {
   const c = compoundData || {};
   const drug = c.name || '';
   const cid  = CHEMBL_ID || '';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:0.6rem;padding:1rem 0;color:var(--muted)"><span class="spinner"></span> Loading patents & exclusivity…</div>`;
   try {
-    const patents = await apiFetch(`/api/patents?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(DISEASE)}&chembl_id=${encodeURIComponent(cid)}`);
-    if (!patents.length) {
+    const data = await apiFetch(`/api/patents?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(DISEASE)}&chembl_id=${encodeURIComponent(cid)}`);
+    const patents = data.patents || [];
+    const exclusivities = data.exclusivities || [];
+    const summary = data.summary || {};
+    if (!patents.length && !exclusivities.length) {
       const gName = drug || cid;
       el.innerHTML = `<div class="card"><div class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:36px;height:36px;opacity:0.35"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="1.5"/></svg>
-        <p>No patent documents found via ChEMBL or USPTO for <strong>${gName}</strong>.</p>
+        <p>No patent documents found via the source database or USPTO for <strong>${gName}</strong>.</p>
         <p style="font-size:0.75rem;color:var(--dim);line-height:1.6">
           This may be a generic / off-patent compound, or the drug name may not match patent records directly.
-          Expired patents still prove safety history — search below to find them.
+          Expired patents still prove safety history - search below to find them.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;margin-top:0.5rem">
           ${drug ? `<a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Google Patents: ${drug}</a>` : ''}
           ${cid  ? `<a href="https://patents.google.com/?q=${encodeURIComponent(cid)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Google Patents: ${cid}</a>` : ''}
-          ${drug ? `<a href="https://www.surechembl.org/search/#q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">SureChEMBL search</a>` : ''}
+          ${drug ? `<a href="https://www.surechembl.org/search/#q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Patent search</a>` : ''}
         </div>
       </div></div>`;
       return;
@@ -2092,46 +2300,61 @@ async function loadPatents(el) {
       const st = p.status || 'unknown';
       const stStyle = statusStyle[st] || 'background:#ecebe3;color:#45524a;';
       const stBadge = `<span style="font-size:0.65rem;font-weight:600;padding:1px 7px;border-radius:999px;${stStyle}">${statusLabel[st]||st}</span>`;
-      const expiry  = p.expiry ? `<div style="font-size:0.65rem;color:var(--dim)">Est. expiry: ${p.expiry}</div>` : '';
-      const abstract= p.abstract ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.55">${p.abstract}</div>` : '';
+      const exp = p.expiry ? (p.authoritative ? p.expiry : 'est. ' + p.expiry) : '-';
+      const typ = p.type ? `<div style="font-size:0.62rem;color:var(--dim)">${p.type}</div>` : '';
+      const abstract = p.abstract ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:3px;line-height:1.55">${p.abstract}</div>` : '';
       return `<tr>
-        <td>${p.url?`<a href="${p.url}" target="_blank" class="mono" style="font-size:0.73rem;color:#8a6309;text-decoration:underline">${p.id||'—'}</a>`:(p.id||'—')}</td>
-        <td style="font-size:0.77rem">${p.title||'—'}${abstract}</td>
-        <td style="font-size:0.73rem;color:var(--muted)">${p.assignee||'—'}</td>
-        <td style="font-size:0.73rem;color:var(--muted)">${p.year||'—'}${expiry}</td>
+        <td>${p.url?`<a href="${p.url}" target="_blank" class="mono" style="font-size:0.73rem;color:#8a6309;text-decoration:underline">${p.id||'-'}</a>`:(p.id||'-')}</td>
+        <td style="font-size:0.77rem">${p.title||'-'}${typ}${abstract}</td>
+        <td style="font-size:0.73rem;color:var(--muted)">${p.assignee||'-'}</td>
+        <td style="font-size:0.73rem;color:var(--muted);white-space:nowrap">${exp}</td>
         <td>${stBadge}</td>
-        <td><span class="chip ${p.source==='ChEMBL'?'purple':'cyan'}" style="font-size:0.65rem">${p.source||'—'}</span></td>
+        <td><span class="chip ${p.source==='FDA Orange Book'?'green':'cyan'}" style="font-size:0.62rem">${p.source||'-'}</span></td>
       </tr>`;
     }).join('');
-    const activeCount   = patents.filter(p=>p.status==='active').length;
-    const expiredCount  = patents.filter(p=>['expired','likely_expired'].includes(p.status)).length;
+    const exRows = exclusivities.map(e => {
+      const st = e.status || 'unknown';
+      const stBadge = `<span style="font-size:0.62rem;font-weight:600;padding:1px 7px;border-radius:999px;${statusStyle[st]||'background:#ecebe3;color:#45524a;'}">${statusLabel[st]||st}</span>`;
+      return `<tr>
+        <td style="font-size:0.74rem"><strong class="mono">${e.code||'-'}</strong>${e.label&&e.label!==e.code?` <span style="color:var(--muted)">· ${e.label}</span>`:''}</td>
+        <td style="font-size:0.73rem;color:var(--muted);white-space:nowrap">${e.expiry||'-'}</td>
+        <td>${stBadge}</td></tr>`;
+    }).join('');
+    const exclusivityCard = exclusivities.length ? `
+      <div class="card mb-1">
+        <div class="flex justify-between items-center mb-1"><span style="font-weight:700;font-size:0.85rem">FDA Regulatory Exclusivity</span><span class="chip green">${exclusivities.length}</span></div>
+        <div class="overflow-x"><table class="data-table"><thead><tr><th>Exclusivity</th><th>Expiry</th><th>Status</th></tr></thead><tbody>${exRows}</tbody></table></div>
+      </div>` : '';
+    const obBadge = summary.orange_book ? `<span style="font-size:0.77rem"><span style="background:#dbeafe;color:#1e40af;padding:1px 8px;border-radius:999px;font-weight:600">${summary.orange_book} FDA Orange Book</span></span>` : '';
     el.innerHTML = `
       <div class="card mb-1" style="border-left:3px solid var(--purple);padding:1.1rem 1.4rem">
         <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span style="font-size:0.78rem;font-weight:700;color:var(--text)">Patent Intelligence</span>
+          <span style="font-size:0.78rem;font-weight:700;color:var(--text)">Patent &amp; Exclusivity Intelligence</span>
         </div>
         <p style="font-size:0.79rem;color:var(--muted);line-height:1.65">
-          Patent landscape for <strong style="color:var(--text)">${drug}</strong>.
-          Sources: ChEMBL mechanism/indication refs, SureChEMBL, and USPTO PatentsView.
-          <a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" style="color:var(--cyan)">Search Google Patents →</a>
+          Protection landscape for <strong style="color:var(--text)">${drug}</strong>.
+          Authoritative status &amp; expiry from the <strong>FDA Orange Book</strong>; supplemented by curated and public patent sources.
+          <a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" style="color:var(--cyan)">Google Patents →</a>
         </p>
         <div style="background:#f8f2df;border:1px solid #e6cf95;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:0.73rem;color:#7a5c43;line-height:1.55">
-          <strong>Why expired patents matter:</strong> An expired patent documents regulatory precedent, prior clinical or pre-clinical safety data, and manufacturing know-how — all of which support a 505(b)(2) repurposing pathway and de-risk development for a new indication.
+          <strong>Why this matters for repurposing:</strong> active patents/exclusivity define freedom-to-operate and the earliest market entry; expired ones document regulatory precedent, prior safety data and manufacturing know-how that support a 505(b)(2) pathway.
         </div>
         <div style="display:flex;gap:1rem;margin-top:0.5rem;flex-wrap:wrap">
-          <span style="font-size:0.77rem"><span style="background:#d9e9df;color:#166534;padding:1px 8px;border-radius:999px;font-weight:600">${activeCount} Active</span></span>
-          <span style="font-size:0.77rem"><span style="background:#f0d9d2;color:#991b1b;padding:1px 8px;border-radius:999px;font-weight:600">${expiredCount} Expired / Likely Expired</span></span>
+          <span style="font-size:0.77rem"><span style="background:#d9e9df;color:#166534;padding:1px 8px;border-radius:999px;font-weight:600">${summary.active||0} Active</span></span>
+          <span style="font-size:0.77rem"><span style="background:#f0d9d2;color:#991b1b;padding:1px 8px;border-radius:999px;font-weight:600">${summary.expired||0} Expired</span></span>
+          ${obBadge}
         </div>
       </div>
+      ${exclusivityCard}
       <div class="card">
         <div class="flex justify-between items-center mb-1">
-          <span style="font-weight:700;font-size:0.85rem">Patent Documents</span>
-          <span class="chip purple">${patents.length} found</span>
+          <span style="font-weight:700;font-size:0.85rem">Patents</span>
+          <span class="chip purple">${patents.length} total</span>
         </div>
         <div class="overflow-x">
           <table class="data-table">
-            <thead><tr><th>Patent / Doc ID</th><th>Title / Abstract</th><th>Assignee</th><th>Year</th><th>Status</th><th>Source</th></tr></thead>
+            <thead><tr><th>Patent ID</th><th>Title / Type</th><th>Assignee</th><th>Expiry</th><th>Status</th><th>Source</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -2141,7 +2364,7 @@ async function loadPatents(el) {
 
 async function loadDossier(el) {
   if (!DISEASE) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><p>No disease context — open this compound from a disease search to generate a dossier.</p></div></div>`;
+    el.innerHTML = `<div class="card"><div class="empty-state"><p>No disease context - open this compound from a disease search to generate a dossier.</p></div></div>`;
     return;
   }
   el.innerHTML = `<div style="display:flex;align-items:center;gap:0.65rem;padding:1.2rem 0;color:var(--muted)"><span class="spinner"></span> Generating evidence dossier…</div>`;
@@ -2165,6 +2388,18 @@ async function loadDossier(el) {
     const dev = d.developability || {};
     const literature = d.literature || [];
     const trials = d.clinical_trials || [];
+    // Molecule-wide evidence (all indications) + safety + registries
+    const molTrials = d.molecule_trials || {};
+    const molLit = d.molecule_literature || {};
+    const ae = d.adverse_events || {};
+    const registries = d.registry_links || [];
+    const phaseChips = Object.entries(molTrials.by_phase||{}).map(([p,n])=>`<span class="chip cyan">${p.replace('PHASE','Phase ')} · ${n}</span>`).join(' ');
+    const condChips = (molTrials.top_conditions||[]).slice(0,8).map(c=>`<span class="chip purple">${c.name} · ${c.count}</span>`).join(' ');
+    const molTrialRows = (molTrials.trials||[]).slice(0,8).map(t=>`<div style="padding:6px 0;border-bottom:1px solid #ecebe3;font-size:0.74rem"><a href="${t.url}" target="_blank" style="color:#2f6f5b;font-weight:600">${t.nct}</a> <span style="color:#9aa39c">${t.phase} · ${t.status}</span><div style="color:#45524a">${t.title}</div></div>`).join('');
+    const aeMax = Math.max(1, ...((ae.top_reactions||[]).map(r=>r.count)));
+    const aeRows = (ae.top_reactions||[]).slice(0,8).map(r=>`<div style="display:flex;align-items:center;gap:8px;font-size:0.73rem;padding:2px 0"><span style="width:130px;flex-shrink:0">${r.term}</span><div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:${Math.round(r.count/aeMax*100)}%;background:#b5552f"></div></div><span class="mono" style="color:#9aa39c">${r.count}</span></div>`).join('');
+    const molLitRows = (molLit.recent||[]).slice(0,6).map(p=>`<div style="padding:6px 0;border-bottom:1px solid #ecebe3;font-size:0.73rem"><a href="${p.url}" target="_blank" style="color:#2f6f5b">${p.title}</a><div style="color:#9aa39c">${p.journal} · ${p.year}</div></div>`).join('');
+    const regHTML = registries.map(r=>`<a href="${r.url}" target="_blank" style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid #e6e2d7;border-radius:8px;text-decoration:none;background:#fbfaf6"><span style="font-weight:700;font-size:0.78rem;color:#1f2a24">${r.name}</span><span style="font-size:0.64rem;color:#9aa39c">${r.region} · ${r.kind}${r.desc?(' - '+r.desc):''}</span></a>`).join('');
     const _devStatusCol = s => s==='ideal'?'#2f6f5b':s==='acceptable'?'#97751a':'#b3261e';
     const devRows = (dev.properties||[]).map(p =>
       `<div class="kv"><span class="kv-k">${p.label}</span><span class="kv-v"><span class="mono">${p.value}${p.unit||''}</span> <span style="color:#9aa39c;font-weight:400">/ ${p.target}</span> <span style="color:${_devStatusCol(p.status)}">●</span></span></div>`
@@ -2178,19 +2413,19 @@ async function loadDossier(el) {
     function screenInterpret(key, val) {
       const pct = Math.round(val * 100);
       const interp = {
-        target:     pct >= 30 ? `${pct}% overlap — drug directly modulates disease-relevant genes` : pct > 0 ? `${pct}% overlap — indirect mechanism likely` : 'No direct gene overlap — indirect pathway evidence needed',
-        pathway:    pct >= 25 ? `${pct}% shared pathways — strong mechanistic rationale` : pct > 0 ? `${pct}% — some pathway convergence` : 'No shared Reactome pathways identified',
-        ppi:        pct >= 30 ? `${pct}% — drug targets are proximal to disease proteins in PPI network` : pct > 0 ? `${pct}% — some network proximity` : 'No PPI network proximity detected',
-        clinical:   pct >= 70 ? `${pct}% — approved drug, low development risk` : pct >= 40 ? `${pct}% — Phase 2/3 clinical data available` : `${pct}% — limited clinical history`,
-        indication: pct >= 70 ? `${pct}% — closely related indication, 505(b)(2) path supported` : pct >= 30 ? `${pct}% — partial indication overlap` : `${pct}% — indication is distinct, bridging evidence required`,
-        regulatory: pct >= 60 ? `${pct}% — strong regulatory feasibility for 505(b)(2)` : `${pct}% — regulatory path requires additional data`,
+        target:     pct >= 30 ? `${pct}% overlap - drug directly modulates disease-relevant genes` : pct > 0 ? `${pct}% overlap - indirect mechanism likely` : 'No direct gene overlap - indirect pathway evidence needed',
+        pathway:    pct >= 25 ? `${pct}% shared pathways - strong mechanistic rationale` : pct > 0 ? `${pct}% - some pathway convergence` : 'No shared curated pathways identified',
+        ppi:        pct >= 30 ? `${pct}% - drug targets are proximal to disease proteins in PPI network` : pct > 0 ? `${pct}% - some network proximity` : 'No PPI network proximity detected',
+        clinical:   pct >= 70 ? `${pct}% - approved drug, low development risk` : pct >= 40 ? `${pct}% - Phase 2/3 clinical data available` : `${pct}% - limited clinical history`,
+        indication: pct >= 70 ? `${pct}% - closely related indication, 505(b)(2) path supported` : pct >= 30 ? `${pct}% - partial indication overlap` : `${pct}% - indication is distinct, bridging evidence required`,
+        regulatory: pct >= 60 ? `${pct}% - strong regulatory feasibility for 505(b)(2)` : `${pct}% - regulatory path requires additional data`,
       };
       return interp[key] || `${pct}%`;
     }
 
     const screenDefs = [
-      ['target',     'Target Overlap',    '#2f6f5b', 'Drug targets ∩ disease gene set (Open Targets)'],
-      ['pathway',    'Pathway Overlap',   '#8a6309', 'Shared Reactome pathways'],
+      ['target',     'Target Overlap',    '#2f6f5b', 'Drug targets ∩ disease gene set'],
+      ['pathway',    'Pathway Overlap',   '#8a6309', 'Shared curated pathways'],
       ['ppi',        'PPI Network',       '#2f6f5b', 'STRING protein–protein interaction proximity'],
       ['clinical',   'Clinical Signal',   '#97751a', 'Phase/approval evidence'],
       ['indication', 'Indication Match',  '#b3261e', 'Existing indication semantic similarity'],
@@ -2219,15 +2454,15 @@ async function loadDossier(el) {
     if ((scores.target || 0) >= 0.2)   strengths.push('Direct target gene overlap supports mechanistic rationale');
     if ((scores.indication || 0) >= 0.5) strengths.push('Related existing indication enables 505(b)(2) regulatory path');
     if ((scores.pathway || 0) >= 0.2)  strengths.push('Shared disease pathways provide biological plausibility');
-    if (reg.orphan_drug)                strengths.push('Orphan drug eligibility — 7-year exclusivity available');
-    if ((scores.target || 0) < 0.1)    gaps.push('No direct target overlap — need transcriptomic or pathway bridging evidence');
-    if ((scores.ppi || 0) < 0.1)       gaps.push('Limited PPI network proximity — consider network medicine analysis');
-    if ((scores.clinical || 0) < 0.3)  gaps.push('Early-stage clinical history — full development program may be needed');
-    if ((scores.indication || 0) < 0.3) gaps.push('Indication distance — will require bridging studies for new indication');
-    if (!strengths.length) strengths.push('Exploratory candidate — further investigation warranted');
+    if (reg.orphan_drug)                strengths.push('Orphan drug eligibility - 7-year exclusivity available');
+    if ((scores.target || 0) < 0.1)    gaps.push('No direct target overlap - need transcriptomic or pathway bridging evidence');
+    if ((scores.ppi || 0) < 0.1)       gaps.push('Limited PPI network proximity - consider network medicine analysis');
+    if ((scores.clinical || 0) < 0.3)  gaps.push('Early-stage clinical history - full development program may be needed');
+    if ((scores.indication || 0) < 0.3) gaps.push('Indication distance - will require bridging studies for new indication');
+    if (!strengths.length) strengths.push('Exploratory candidate - further investigation warranted');
     if (!gaps.length) gaps.push('No major gaps identified at screening stage');
 
-    const nextStep = reg.level === 'strong' ? '505(b)(2) NDA filing — cite existing approval data' :
+    const nextStep = reg.level === 'strong' ? '505(b)(2) NDA filing - cite existing approval data' :
                      reg.level === 'moderate' ? 'IND filing with Phase 2 bridging study for new indication' :
                      reg.level === 'possible' ? 'Preclinical validation of target overlap, then Phase 1/2 IND' :
                      'Exploratory biomarker & mechanism studies before IND';
@@ -2241,17 +2476,17 @@ async function loadDossier(el) {
           ${d.drug_name||'This drug'} scores <strong>${(sc*100).toFixed(1)}/100</strong> for repurposing toward
           <strong>${d.disease_name||DISEASE}</strong>.
           ${(scores.clinical||0) >= 0.7 ? 'The strong clinical signal (approved or Phase 3) substantially reduces development risk. ' : ''}
-          ${(scores.target||0) >= 0.25 ? 'Direct target gene overlap provides mechanistic justification. ' : 'No direct gene target overlap was detected — the case relies on pathway and clinical evidence. '}
+          ${(scores.target||0) >= 0.25 ? 'Direct target gene overlap provides mechanistic justification. ' : 'No direct gene target overlap was detected - the case relies on pathway and clinical evidence. '}
           ${(scores.indication||0) >= 0.6 ? 'The related existing indication supports a streamlined 505(b)(2) regulatory path.' : ''}
         </p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
         <div>
-          <div style="font-size:0.68rem;font-weight:700;color:#2f6f5b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">✓ Strengths</div>
+          <div style="font-size:0.68rem;font-weight:700;color:#2f6f5b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Strengths</div>
           ${strengths.map(s=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #bfe0cd">• ${s}</div>`).join('')}
         </div>
         <div>
-          <div style="font-size:0.68rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">⚠ Gaps to Bridge</div>
+          <div style="font-size:0.68rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Gaps to Bridge</div>
           ${gaps.map(g=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #e8c3bb">• ${g}</div>`).join('')}
         </div>
       </div>
@@ -2271,7 +2506,7 @@ async function loadDossier(el) {
     const pwHTML = sharedPws.length
       ? sharedPws.map(pw=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #ecebe3;font-size:0.75rem">
           <span style="width:6px;height:6px;border-radius:50%;background:#8a6309;flex-shrink:0"></span>
-          <span style="color:#1f2a24">${pw.name||pw.id||'—'}</span>
+          <span style="color:#1f2a24">${pw.name||pw.id||'-'}</span>
           ${pw.id?`<span style="color:#9aa39c;font-size:0.68rem;margin-left:auto">${pw.id}</span>`:''}
         </div>`).join('')
       : '<p style="color:#9aa39c;font-size:0.78rem">No shared pathways identified.</p>';
@@ -2300,8 +2535,128 @@ async function loadDossier(el) {
 
     // Exclusivity list
     const exHTML = (reg.exclusivity||[]).map(e=>
-      `<div style="font-size:0.74rem;color:#2f6f5b;display:flex;gap:6px;align-items:baseline"><span style="font-weight:700">✓</span>${e}</div>`
+      `<div style="font-size:0.74rem;color:#2f6f5b;display:flex;gap:6px;align-items:baseline"><span class="material-symbols-outlined" style="font-size:0.95rem;color:#2f6f5b;vertical-align:middle">check</span>${e}</div>`
     ).join('');
+
+    // ── Asset Scoring · phase-progression Probability of Success ──────────────
+    const pos = d.pos || {};
+    const posCol = {High:'#2f6f5b',Moderate:'#97751a',Low:'#b3261e'}[pos.band] || '#9aa39c';
+    const posTrans = (pos.transitions||[]).map(t=>{
+      const p = Math.round((t.p||0)*100);
+      return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:0.7rem"><span style="color:#45524a">${t.from} to ${t.to}</span><span style="font-weight:700;color:${posCol}">${p}%</span></div><div style="background:#e0ddd1;border-radius:9999px;height:5px;overflow:hidden"><div style="width:${p}%;height:100%;background:${posCol}"></div></div></div>`;
+    }).join('');
+    const posHTML = (pos.loa_pct!=null) ? `
+      <div class="card mb-1">
+        <div class="card-title mb-1">Asset Scoring · Probability of Success</div>
+        <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin-bottom:10px">
+          <div><div style="font-family:monospace;font-size:2rem;font-weight:900;color:${posCol};line-height:1">${pos.loa_pct}%</div><div style="font-size:0.66rem;color:#9aa39c;text-transform:uppercase;letter-spacing:0.06em">LoA from ${pos.from_phase} · ${pos.band}</div></div>
+          <div style="width:1px;height:42px;background:#e0ddd1"></div>
+          <div style="font-size:0.74rem;color:#45524a"><div>De-novo baseline: <strong>${Math.round((pos.baseline_de_novo_loa||0)*100)}%</strong></div><div>Dominant risk: <strong>${pos.dominant_risk||'-'}</strong></div></div>
+        </div>
+        <div style="font-size:0.68rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Phase-transition survival</div>
+        ${posTrans}
+        <div style="font-size:0.64rem;color:#9aa39c;font-style:italic;margin-top:6px">${pos.model||''} · ${(pos.citations||[]).join('; ')}</div>
+      </div>` : '';
+
+    // ── Asset Acquisition Signal · FDA Orange Book ────────────────────────────
+    const acq = d.acquisition || {};
+    const acqScore = (acq.score!=null) ? Math.round(acq.score*100) : null;
+    const acqCol = acqScore==null?'#9aa39c':acqScore>=75?'#2f6f5b':acqScore>=50?'#97751a':'#b3261e';
+    const acqF = acq.facts || {};
+    const acqFacts = acq.available ? [
+      acqF.all_discontinued ? 'All products discontinued (shelved)' : null,
+      acqF.has_generics ? `${acqF.generic_competitors||0} generic sponsor(s)` : 'No generics on file',
+      acqF.substance_patent_until ? `Substance patent until ${acqF.substance_patent_until}` : 'No active substance patent',
+      acqF.has_active_formulation_patents ? 'Formulation/use patents remain' : null,
+      acqF.originator ? `Originator: ${acqF.originator}` : null,
+      acqF.rld_available ? '505(b)(2) reference (RLD) available' : null,
+    ].filter(Boolean) : [];
+    const acqHTML = (acq.signal) ? `
+      <div class="card mb-1">
+        <div class="card-title mb-1">Asset Acquisition Signal</div>
+        <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin-bottom:8px">
+          ${acqScore!=null?`<div><div style="font-family:monospace;font-size:2rem;font-weight:900;color:${acqCol};line-height:1">${acqScore}</div><div style="font-size:0.66rem;color:#9aa39c;text-transform:uppercase;letter-spacing:0.06em">Acquirability</div></div><div style="width:1px;height:42px;background:#e0ddd1"></div>`:''}
+          <div><div style="font-size:0.92rem;font-weight:800;color:${acqCol}">${acq.signal}</div><div style="font-size:0.74rem;color:#2f6f5b">${acq.regulatory_pathway||''}</div></div>
+        </div>
+        <p style="font-size:0.76rem;color:#45524a;line-height:1.6;margin:0 0 8px">${acq.rationale||''}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${acqFacts.map(f=>`<span class="chip green">${f}</span>`).join('')}</div>
+        <div style="font-size:0.64rem;color:#9aa39c;font-style:italic;margin-top:8px">${acq.source||''}</div>
+      </div>` : '';
+
+    // ── Signature-based connectivity · CMap/L1000 reversal ────────────────────
+    const sig = d.signature || {};
+    const sigHas = (sig.n_shared||0) > 0;
+    const sigCol = (sig.connectivity!=null && sig.connectivity<-0.1)?'#2f6f5b':((sig.connectivity||0)>0.1?'#b3261e':'#97751a');
+    const sigRev = sig.top_reversed || [];
+    const sigHTML = (sig.method) ? `
+      <div class="card mb-1">
+        <div class="card-title mb-1">Signature Connectivity · disease-signature reversal</div>
+        ${sigHas ? `
+        <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin-bottom:8px">
+          <div><div style="font-family:monospace;font-size:1.7rem;font-weight:900;color:${sigCol};line-height:1">${sig.connectivity}</div><div style="font-size:0.66rem;color:#9aa39c;text-transform:uppercase;letter-spacing:0.06em">Connectivity</div></div>
+          <div style="width:1px;height:38px;background:#e0ddd1"></div>
+          <div style="font-size:0.74rem;color:#45524a"><div>Reversal score: <strong style="color:${sigCol}">${sig.signature_score}</strong></div><div>${sig.n_shared}/${sig.n_disease_genes} disease genes · coverage ${Math.round((sig.coverage||0)*100)}%</div></div>
+        </div>
+        <p style="font-size:0.76rem;color:#45524a;line-height:1.6;margin:0 0 8px">${sig.interpretation||''}</p>
+        ${sigRev.length?`<div style="font-size:0.68rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Genes the drug reverses</div><div style="display:flex;flex-wrap:wrap;gap:4px">${sigRev.map(g=>`<span class="chip green">${g.gene} ${g.drug<0?'(down)':'(up)'}</span>`).join('')}</div>`:''}
+        ` : `<p style="font-size:0.76rem;color:#9aa39c">${sig.interpretation||'Insufficient directional mechanism data to compute a connectivity score.'}</p>`}
+        <div style="font-size:0.64rem;color:#9aa39c;font-style:italic;margin-top:8px">${sig.method} · ${(sig.citations||[]).join('; ')}</div>
+      </div>` : '';
+
+    // ── Reconciled Repurposing & Regulatory Verdict (single source of truth) ──
+    const verdict = d.verdict || {};
+    const nv = verdict.novelty || {};
+    const _novMeta = {
+      approved_here:    ['Not novel, approved here', '#b3261e', '#fce8e6'],
+      investigated_here:['Novel for approval, prior art', '#8a6309', '#fbf6ea'],
+      prior_signal:     ['Novel, early prior signal', '#97751a', '#f8f2df'],
+      novel:            ['Novel repurposing', '#2f6f5b', '#e8f3ec'],
+      unknown:          ['Novelty unverified', '#6b776e', '#f6f5f0'],
+    };
+    const [novLabel, novCol, novBg] = _novMeta[nv.state] || _novMeta.unknown;
+    // The old 505(b)(2) card label must not contradict the verdict.
+    const regLabelText = nv.is_known_indication
+      ? '505(b)(2) for THIS indication: blocked - molecule already approved here (see verdict)'
+      : (reg.label || '-');
+    const pathRows = (verdict.pathways||[]).map(p=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #ecebe3;font-size:0.76rem">
+        <span style="width:46px;font-weight:800;color:#1f2a24">${p.region}</span>
+        <span style="flex:1;color:#45524a">${p.pathway} <span style="color:#9aa39c">· ${p.reference}</span></span>
+        <span style="font-weight:700;color:${p.eligible?'#2f6f5b':'#b3261e'}">${p.eligible?'Eligible':'Blocked / not yet'}</span>
+      </div>`).join('');
+    const verdictHTML = verdict.headline ? `
+      <div class="card mb-1" style="background:${novBg};border-color:${novCol}40">
+        <div class="card-title mb-1" style="color:${novCol}">Repurposing & Regulatory Verdict</div>
+        <div style="display:inline-block;padding:3px 10px;border-radius:9999px;background:${novCol};color:#fff;font-size:0.7rem;font-weight:800;margin-bottom:8px">${novLabel}${nv.best_phase!=null?` · prior max Phase ${Math.round(nv.best_phase)}`:''}</div>
+        <p style="font-size:0.82rem;color:#1f2a24;line-height:1.65;margin:0 0 10px;font-weight:600">${verdict.headline}</p>
+        <p style="font-size:0.76rem;color:#45524a;line-height:1.6;margin:0 0 10px">${nv.note||''}</p>
+        <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Regulatory pathway by jurisdiction</div>
+        ${pathRows}
+        ${verdict.patentability?`<div style="margin-top:8px;padding:8px 10px;background:#fff;border-radius:6px;font-size:0.73rem;color:#45524a"><strong style="color:${novCol}">Patentability:</strong> ${verdict.patentability}</div>`:''}
+      </div>` : '';
+
+    // ── Global landscape (US / EU / India) - consolidated data, not link tiles ──
+    const gl = d.global_landscape || {};
+    const ynq = v => v===true?'<span style="color:#2f6f5b;font-weight:700">Yes</span>':v===false?'<span style="color:#b3261e">No</span>':'<span style="color:#9aa39c">-</span>';
+    const glRows = (gl.regions||[]).map(r=>`
+      <tr>
+        <td style="font-weight:800;color:#1f2a24">${r.region}${r.inferred?` <span title="${r.note||'inferred'}" style="color:#b8860b;font-size:0.56rem;font-weight:800;cursor:help;letter-spacing:0.04em">INFERRED</span>`:''}</td>
+        <td>${ynq(r.approved)}</td>
+        <td>${ynq(r.generics)}${r.n_generics?` <span style="color:#9aa39c">(${r.n_generics})</span>`:''}</td>
+        <td class="mono" style="color:#45524a">${r.ip_until||'-'}</td>
+        <td>${r.trials!=null?`<a href="${r.link}" target="_blank" style="color:#2f6f5b;font-weight:600">${(r.trials).toLocaleString()}</a>`:'-'}</td>
+        <td style="color:#45524a;font-size:0.72rem">${r.pathway} <span style="color:#9aa39c">· ${r.authority}</span></td>
+      </tr>`).join('');
+    const glHTML = glRows ? `
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title mb-1">Global landscape · US / EU / India
+          <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(consolidated; INFERRED marks an estimated cell, hover for basis)</span></div>
+        <div class="overflow-x"><table class="data-table">
+          <thead><tr><th>Market</th><th>Approved</th><th>Generics</th><th>IP until</th><th>Active trials</th><th>Pathway</th></tr></thead>
+          <tbody>${glRows}</tbody>
+        </table></div>
+        <div style="font-size:0.64rem;color:#9aa39c;font-style:italic;margin-top:8px">${gl.note||''}</div>
+      </div>` : '';
 
     el.innerHTML = `
       <!-- Header score card -->
@@ -2314,18 +2669,27 @@ async function loadDossier(el) {
           <div style="width:1px;height:56px;background:#cfe0d8"></div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2f6f5b;margin-bottom:4px">Drug → Disease</div>
-            <div style="font-size:1rem;font-weight:800;color:#1f2a24">${d.drug_name||'—'}</div>
+            <div style="font-size:1rem;font-weight:800;color:#1f2a24">${d.drug_name||'-'}</div>
             <div style="font-size:0.8rem;color:#2f6f5b">${d.disease_name||DISEASE}</div>
           </div>
           <div style="width:1px;height:56px;background:#cfe0d8"></div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2f6f5b;margin-bottom:4px">Regulatory Path</div>
-            <div style="font-size:0.9rem;font-weight:800;color:${regColor}">${reg.pathway||'—'}</div>
+            <div style="font-size:0.9rem;font-weight:800;color:${regColor}">${reg.pathway||'-'}</div>
             <div style="font-size:0.72rem;color:#2f6f5b">${reg.timeline||''}</div>
           </div>
-          ${reg.orphan_drug ? `<div style="padding:6px 12px;background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2f6f5b">🏥 Orphan Drug<br/><span style="font-weight:400;color:#2f6f5b">< 200k patients</span></div>` : ''}
+          ${reg.orphan_drug ? `<div style="padding:6px 12px;background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2f6f5b">Orphan Drug<br/><span style="font-weight:400;color:#2f6f5b">under 200k patients</span></div>` : ''}
         </div>
       </div>
+
+      <!-- Asset Scoring (PoS) + Acquisition Signal -->
+      <div class="grid-2" style="gap:1rem;margin-bottom:0">
+        ${posHTML || '<div></div>'}
+        ${acqHTML || '<div></div>'}
+      </div>
+
+      <!-- Signature-based connectivity -->
+      ${sigHTML}
 
       <div class="grid-2" style="gap:1rem;margin-bottom:1rem">
         <!-- 5-Screen Scores -->
@@ -2343,9 +2707,9 @@ async function loadDossier(el) {
           </div>
           <div style="font-size:0.78rem;color:#45524a;line-height:1.65;margin-bottom:10px">${dc.description||'No description available.'}</div>
           <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">
-            Top Disease Genes (${dc.gene_count||0} total, Open Targets)
+            Top Disease Genes (${dc.gene_count||0} total)
           </div>
-          <div style="margin-bottom:12px">${topGenes||'<span style="color:#9aa39c;font-size:0.74rem">—</span>'}</div>
+          <div style="margin-bottom:12px">${topGenes||'<span style="color:#9aa39c;font-size:0.74rem">-</span>'}</div>
           ${dev.available ? `
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
             <span style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em">Developability · ${dev.profile_label||''}</span>
@@ -2353,11 +2717,11 @@ async function loadDossier(el) {
           </div>
           ${dev.rationale ? `<div style="font-size:0.68rem;color:#9aa39c;line-height:1.5;margin-bottom:6px">${dev.rationale}</div>` : ''}
           ${devRows}
-          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${(dev.descriptors&&dev.descriptors.qed)||physchem.qed||'—'}</span></div>
+          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${(dev.descriptors&&dev.descriptors.qed)||physchem.qed||'-'}</span></div>
           ` : (physchem.bbb_level ? `
           <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">CNS Profile</div>
           <div class="kv"><span class="kv-k">BBB Penetration</span><span class="kv-v" style="font-weight:700;color:${physchem.bbb_level==='High'?'#2f6f5b':physchem.bbb_level==='Moderate'?'#97751a':'#b3261e'}">${physchem.bbb_level} (${physchem.bbb_score}/100)</span></div>
-          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${physchem.qed||'—'}</span></div>
+          <div class="kv"><span class="kv-k">QED Drug-likeness</span><span class="kv-v">${physchem.qed||'-'}</span></div>
           ` : '')}
         </div>
       </div>
@@ -2374,16 +2738,19 @@ async function loadDossier(el) {
         ${pwHTML}
       </div>
 
-      <!-- 505(b)(2) Regulatory Assessment -->
+      <!-- Reconciled verdict (leads; single source of truth) -->
+      ${verdictHTML}
+
+      <!-- 505(b)(2) Regulatory Assessment (molecule data-citation basis) -->
       <div class="card mb-1" style="background:${regBg};border-color:${regColor}40">
-        <div class="card-title mb-1" style="color:${regColor}">505(b)(2) Regulatory Assessment</div>
-        <div style="font-size:0.82rem;font-weight:700;color:${regColor};margin-bottom:10px;padding:10px;background:white;border-radius:8px;border-left:3px solid ${regColor}">${reg.label||'—'}</div>
+        <div class="card-title mb-1" style="color:${regColor}">505(b)(2) Data-Citation Basis</div>
+        <div style="font-size:0.82rem;font-weight:700;color:${nv.is_known_indication?'#b3261e':regColor};margin-bottom:10px;padding:10px;background:white;border-radius:8px;border-left:3px solid ${nv.is_known_indication?'#b3261e':regColor}">${regLabelText}</div>
         <div class="grid-2" style="gap:1rem">
           <div>
-            <div class="kv"><span class="kv-k">Regulatory Pathway</span><span class="kv-v" style="font-weight:700">${reg.pathway||'—'}</span></div>
-            <div class="kv"><span class="kv-k">Estimated Timeline</span><span class="kv-v">${reg.timeline||'—'}</span></div>
+            <div class="kv"><span class="kv-k">Regulatory Pathway</span><span class="kv-v" style="font-weight:700">${reg.pathway||'-'}</span></div>
+            <div class="kv"><span class="kv-k">Estimated Timeline</span><span class="kv-v">${reg.timeline||'-'}</span></div>
             <div class="kv"><span class="kv-k">Current Phase</span><span class="kv-v">Phase ${reg.phase||0}${reg.is_approved?' (Approved)':''}</span></div>
-            <div class="kv"><span class="kv-k">Orphan Drug</span><span class="kv-v" style="color:${reg.orphan_drug?'#2f6f5b':'#9aa39c'}">${reg.orphan_drug?'Yes — eligible (< 200k patients)':'No'}</span></div>
+            <div class="kv"><span class="kv-k">Orphan Drug</span><span class="kv-v" style="color:${reg.orphan_drug?'#2f6f5b':'#9aa39c'}">${reg.orphan_drug?'Yes - eligible (< 200k patients)':'No'}</span></div>
           </div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;color:#45524a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Exclusivity Benefits</div>
@@ -2400,12 +2767,154 @@ async function loadDossier(el) {
         </div>
         <!-- Clinical Trials -->
         <div class="card">
-          <div class="card-title mb-1">Clinical Trials <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${trials.length} found)</span></div>
+          <div class="card-title mb-1">Clinical Trials · this indication <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${trials.length} found)</span></div>
           ${trialHTML}
         </div>
-      </div>`;
+      </div>
+
+      <!-- Molecule-wide clinical landscape (all indications) -->
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title mb-1">Clinical landscape · all indications
+          <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${(molTrials.total||0).toLocaleString()} trials on ClinicalTrials.gov, across every condition)</span></div>
+        <div class="cc-tags" style="margin-bottom:8px">${phaseChips||''}</div>
+        <div style="font-size:0.7rem;color:#9aa39c;margin-bottom:4px">Top conditions studied</div>
+        <div class="cc-tags" style="margin-bottom:10px">${condChips||'<span class="text-dim">-</span>'}</div>
+        ${molTrialRows||'<span class="text-dim">No trials found.</span>'}
+      </div>
+
+      <div class="grid-2" style="gap:1rem;margin-top:1rem">
+        <!-- Adverse events / safety -->
+        <div class="card">
+          <div class="card-title mb-1">Safety signal · FDA FAERS
+            <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${(ae.total||0).toLocaleString()} reports · ${(ae.serious||0).toLocaleString()} serious)</span></div>
+          ${aeRows||'<span class="text-dim">No adverse-event reports found.</span>'}
+          <div style="font-size:0.62rem;color:#b3a98f;margin-top:8px;line-height:1.4">${ae.caveat||''}</div>
+        </div>
+        <!-- Molecule-wide literature -->
+        <div class="card">
+          <div class="card-title mb-1">Literature · all indications
+            <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(${(molLit.total||0).toLocaleString()} papers)</span></div>
+          ${molLitRows||'<span class="text-dim">-</span>'}
+        </div>
+      </div>
+
+      <!-- Consolidated global landscape (data) + demoted registry links (provenance) -->
+      ${glHTML}
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title mb-1">Additional registries
+          <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(authoritative deep-search - provenance)</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${registries.map(r=>`<a href="${r.url}" target="_blank" title="${r.region} · ${r.kind}" style="font-size:0.7rem;color:#2f6f5b;border:1px solid #e6e2d7;border-radius:6px;padding:3px 9px;text-decoration:none;background:#fbfaf6">${r.name}</a>`).join('')}</div>
+      </div>
+      <div id="class-comparison" class="card" style="margin-top:1rem"><div style="display:flex;align-items:center;gap:0.6rem;color:var(--muted)"><span class="spinner"></span> Building within-class / out-of-class differentiation…</div></div>`;
+    loadClassComparison();
 
   } catch(e) { el.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
+}
+
+async function loadClassComparison() {
+  const el = document.getElementById('class-comparison');
+  if (!el || !DISEASE) { if (el) el.remove(); return; }
+  const c = compoundData || {};
+  try {
+    const r = await apiFetch(`/api/compound/${CHEMBL_ID}/class-comparison?disease=${encodeURIComponent(DISEASE)}&drug=${encodeURIComponent(c.name||'')}`);
+    if (r.error) { el.innerHTML = `<div class="alert alert-error">${r.error}</div>`; return; }
+    const w = r.within_class || {}, o = r.out_of_class || {};
+    // Within-class table
+    let withinHTML;
+    if (w.available) {
+      const good='#2f6f5b', warn='#97751a', bad='#b3261e', dim='#9aa39c';
+      const peripheral = w.cns_relevance && w.cns_relevance !== 'required';
+      const statusCell = m => m.max_phase>=4?'<span class="chip green" style="font-size:9px">approved</span>':('Ph '+(m.max_phase||0));
+      let header, rows, axisNote;
+      if (peripheral) {
+        const hls = (w.members||[]).filter(m=>m.half_life_h!=null).map(m=>m.half_life_h).sort((a,b)=>a-b);
+        const medHl = hls.length ? hls[Math.floor(hls.length/2)] : null;
+        header = `<th>Drug</th><th style="text-align:center">Status</th><th style="text-align:right">t½ (h)</th><th style="text-align:center">Targets</th><th style="text-align:right">Serious AE%</th>`;
+        rows = (w.members||[]).map(m=>{
+          const hlCol = (m.half_life_h!=null && medHl) ? (m.half_life_h>=1.5*medHl?good:(m.half_life_h<=0.67*medHl?warn:'inherit')) : 'inherit';
+          const selCol = m.n_targets==1?good:(m.n_targets>=4?warn:'inherit');
+          const sCol = m.serious_pct!=null ? (m.serious_pct>=70?bad:(m.serious_pct>=50?warn:good)) : dim;
+          return `<tr style="${m.focal?'background:#630ed40f;font-weight:600':''}">
+            <td>${m.focal?'':''}${m.name}</td><td style="text-align:center">${statusCell(m)}</td>
+            <td style="text-align:right;color:${hlCol}">${m.half_life_h!=null?m.half_life_h:'-'}</td>
+            <td style="text-align:center;color:${m.n_targets!=null?selCol:dim}">${m.n_targets!=null?m.n_targets:'-'}</td>
+            <td style="text-align:right;color:${sCol}">${m.serious_pct!=null?m.serious_pct+'%':'-'}</td></tr>`;
+        }).join('');
+        axisNote = ' <span style="color:#9aa39c;font-weight:400">- axes for a peripheral indication (t½ predicted · fewer targets = more selective)</span>';
+      } else {
+        const mpoLabel = w.cns_mpo_label || 'CNS-MPO';
+        header = `<th>Drug</th><th style="text-align:center">Status</th><th style="text-align:right">${mpoLabel}</th><th style="text-align:right">t½ (h)</th>`;
+        rows = (w.members||[]).map(m=>{
+          const mpoCol = m.cns_mpo!=null ? (m.cns_druggable===true?good:(m.cns_mpo>=3?warn:bad)) : dim;
+          return `<tr style="${m.focal?'background:#630ed40f;font-weight:600':''}">
+            <td>${m.focal?'':''}${m.name}</td><td style="text-align:center">${statusCell(m)}</td>
+            <td style="text-align:right;color:${mpoCol}">${m.cns_mpo!=null?m.cns_mpo+'/6':'-'}</td>
+            <td style="text-align:right">${m.half_life_h!=null?m.half_life_h:'-'}</td></tr>`;
+        }).join('');
+        axisNote = '';
+      }
+      const j = w.justification || {};
+      const sel = j.selectivity || {};
+      let selText = '';
+      if (sel.available && sel.selectivity_fold) {
+        selText = `~${sel.selectivity_fold}× selective for ${sel.primary} over ${sel.top_offtarget} (potency ${sel.primary_pchembl} vs ${sel.offtarget_pchembl})` + (sel.ae_note ? ` - ${sel.ae_note}` : '');
+      } else if (sel.note) { selText = sel.note; }
+      const axisRow = (lbl,txt)=> txt ? `<div style="margin-top:5px"><span style="font-weight:600;color:#630ed4">${lbl}:</span> ${txt}</div>` : '';
+      const whyHTML = `<div style="background:#630ed40c;border-left:3px solid #630ed4;padding:10px 12px;margin-top:10px;font-size:0.77rem;line-height:1.5">
+        <div style="font-weight:700;margin-bottom:3px">Why this drug? - filing-grade justification</div>
+        ${axisRow('Selectivity', selText)}
+        ${axisRow('BBB / CNS exposure', (j.bbb||{}).statement)}
+        ${axisRow('Safety tenure', (j.safety||{}).statement)}
+        ${axisRow('PK fit for indication', (j.pk||{}).statement)}
+        ${!selText && !(j.bbb||{}).statement ? '<div style="margin-top:5px">'+(w.uniqueness||'')+'</div>' : ''}
+      </div>`;
+      withinHTML = `<div style="font-size:0.72rem;color:#9aa39c;margin-bottom:6px">Class: <strong>${w.class_definition}</strong>${axisNote}</div>
+        <table class="data-table" style="width:100%;font-size:0.74rem"><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table>
+        ${whyHTML}`;
+    } else {
+      withinHTML = `<div class="text-dim" style="font-size:0.78rem">${w.reason||'Not available.'}</div>`;
+    }
+    // Out-of-class table
+    let outHTML;
+    if (o.available) {
+      const rows = (o.alternatives||[]).map(a=>{
+        const rep = a.representative_drug||{};
+        return `<tr style="${a.is_focal_mechanism?'background:#630ed40f;font-weight:600':''}">
+          <td>${a.is_focal_mechanism?'':''}${a.gene}</td>
+          <td style="text-align:right">${a.score}</td>
+          <td>${a.is_focal_mechanism?'<em>focal mechanism</em>':(rep.name||'-')}</td></tr>`;
+      }).join('');
+      const rankTxt = o.focal_rank ? `Target ranks #${o.focal_rank} of ${o.total_targets} disease-associated targets` : `Target not in the top ${o.total_targets} disease-associated targets`;
+      outHTML = `<div style="font-size:0.72rem;color:#9aa39c;margin-bottom:6px">${rankTxt}</div>
+        <table class="data-table" style="width:100%;font-size:0.75rem"><thead><tr><th>Target</th><th style="text-align:right">OT score</th><th>Representative drug</th></tr></thead><tbody>${rows}</tbody></table>
+        <div style="background:#630ed40c;border-left:3px solid #630ed4;padding:8px 12px;margin-top:10px;font-size:0.78rem"><strong>Why this mechanism:</strong> ${o.validity}</div>`;
+    } else {
+      outHTML = `<div class="text-dim" style="font-size:0.78rem">${o.reason||'Not available.'}</div>`;
+    }
+    const nov = r.novelty || {};
+    // Phase-aware 3-state novelty (matches services/regulatory_verdict).
+    const _nvMeta = {
+      approved_here:    ['Novelty failure (approved here)', '#b3261e', '#fce8e6', '#f5b5ad', '#7a1d12'],
+      investigated_here:['Novel for approval, prior clinical art', '#8a6309', '#fbf6ea', '#e6cf93', '#6b4e0a'],
+      prior_signal:     ['Novel, early or PK prior signal only', '#97751a', '#f8f2df', '#e6cf93', '#6b4e0a'],
+      novel:            ['Novelty preserved', '#2f6f5b', '#e8f3ec', '#b6dcc4', '#1f5240'],
+      unknown:          ['Novelty unverified', '#6b776e', '#f6f5f0', '#dcdcd2', '#45524a'],
+    };
+    const _nm = _nvMeta[nov.state] || _nvMeta.unknown;
+    const novBanner = nov.note
+      ? `<div style="background:${_nm[2]};border:1px solid ${_nm[3]};border-left:4px solid ${_nm[1]};border-radius:6px;padding:9px 13px;margin-bottom:10px;font-size:0.77rem;color:${_nm[4]}"><strong>${_nm[0]}:</strong> ${nov.note}</div>`
+      : '';
+    const ctxNote = (r.context && r.context.organ) ? `<div style="font-size:0.7rem;color:#9aa39c;margin-bottom:8px">Indication biology: <strong>${r.context.organ}</strong> · CNS relevance: <strong>${r.context.cns_relevance}</strong> <span style="opacity:0.7">(from ${r.context.classification_source==='open_targets'?'ontology':'name'})</span></div>` : '';
+    el.innerHTML = `<div class="card-title mb-1">Differentiation · class comparison <span style="font-size:0.7rem;font-weight:400;color:#9aa39c">(required for 505(b)(2) / patent filings)</span></div>
+      ${novBanner}${ctxNote}
+      <div class="grid-2" style="gap:1rem">
+        <div><div style="font-weight:700;font-size:0.8rem;margin-bottom:6px">Within-class - “Why this drug?”</div>${withinHTML}</div>
+        <div><div style="font-weight:700;font-size:0.8rem;margin-bottom:6px">Out-of-class - “Why this mechanism?”</div>${outHTML}</div>
+      </div>
+      <div style="font-size:0.62rem;color:#b3a98f;margin-top:10px;line-height:1.4">${r.disclaimer||''}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
 }
 
 if (document.readyState === 'loading') {

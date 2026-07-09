@@ -8,7 +8,7 @@
   <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Repurpose a Molecule</h1>
   <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px">
     Enter a molecule you already hold approval for. We derive its protein targets, then surface
-    <strong>new candidate indications</strong> ranked by mechanistic and clinical evidence — the 505(b)(2) reverse search.
+    <strong>new candidate indications</strong> ranked by mechanistic and clinical evidence - the 505(b)(2) reverse search.
   </p>
 </div>
 
@@ -16,7 +16,7 @@
 <div class="card mb-2">
   <div class="grid-form">
     <div class="field" style="grid-column:span 2">
-      <label for="drug-input">Molecule (name or ChEMBL ID)</label>
+      <label for="drug-input">Molecule (name or compound ID)</label>
       <input id="drug-input" class="input" placeholder="e.g. Palbociclib, Erlotinib, CHEMBL553"
              value="{{ drug|e }}" onkeydown="if(event.key==='Enter')runScreen()"/>
     </div>
@@ -48,7 +48,7 @@
     </div>
   </div>
   <p style="font-size:0.7rem;color:#9aa39c;margin-top:8px">
-    Candidates are drawn from three sources — <strong>genetic associations</strong> (Open Targets), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co-mention</strong> (PubMed) — and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
+    Candidates are drawn from three sources - <strong>genetic associations</strong> (a target-association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co-mention</strong> (PubMed) - and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
   </p>
 </div>
 
@@ -74,12 +74,36 @@ function drugSummaryHtml(d){
   }
   var targets = (d.drug_targets||[]).map(function(g){return '<span class="chip purple">'+g+'</span>';}).join(' ');
   var known = (d.known_indications||[]).slice(0,8).map(function(i){return '<span class="chip cyan">'+i+'</span>';}).join(' ');
+  var mpo = d.cns_mpo || {};
+  var mpoRow = '';
+  if (mpo.score != null) {
+    // CNS exposure is a MOLECULAR property - relevant (good) for CNS indications,
+    // a side-effect consideration for peripheral ones. Frame it by context.
+    var hasCns = (d.candidates||[]).some(function(c){ return c.cns_relevant; });
+    var mc = mpo.cns_druggable ? '#2f6f5b' : (mpo.score >= 3 ? '#97751a' : '#b3261e');
+    var pct = Math.round((mpo.score/6)*100);
+    var note = hasCns
+      ? '(Wager 2010 CNS-MPO - relevant for the CNS indications in your results)'
+      : '(Wager 2010 CNS-MPO - a side-effect consideration for peripheral indications, not a goal)';
+    mpoRow = '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">CNS exposure '
+      + '<span style="color:#9aa39c;font-weight:400">'+note+'</span></div>'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '<div class="cc-bar-track" style="flex:1;max-width:220px"><div class="cc-bar-fill" style="width:'+pct+'%;background:'+mc+'"></div></div>'
+      + '<span class="chip" style="background:'+mc+'18;color:'+mc+';border:1px solid '+mc+'40;font-weight:700">CNS-MPO '+mpo.score+'/6 · '+mpo.verdict+'</span>'
+      + '</div></div>';
+  }
   return ''
     + '<div class="flex justify-between items-center" style="flex-wrap:wrap;gap:8px">'
     +   '<div><span class="drug-name" style="font-size:1.3rem">'+d.drug+'</span> '
     +     '<span class="drug-chembl">'+(d.chembl_id||'')+'</span></div>'
-    +   '<div>'+badge+'</div>'
+    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+badge
+    +     '<a href="/graph?compound='+encodeURIComponent(d.chembl_id||d.drug)+'" '
+    +     'style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;'
+    +     'background:#2f6f5b;color:#fff;text-decoration:none;font-size:12px;font-weight:600">'
+    +     '<span class="material-symbols-outlined" style="font-size:15px">hub</span>Knowledge Graph</a>'
+    +   '</div>'
     + '</div>'
+    + mpoRow
     + '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">Protein targets</div>'+ (targets||'<span class="text-dim">none found</span>') +'</div>'
     + '<div style="margin-top:10px"><div class="kv-k" style="margin-bottom:4px">Existing indications (excluded from results)</div>'+ (known||'<span class="text-dim">none on record</span>') +'</div>';
 }
@@ -138,16 +162,49 @@ function candidateCard(c, chembl){
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-center" style="gap:12px">'
   +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
-  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div></div>'
+  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+'</div>'
   +   '</div>'
   +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
   +     '<span class="cc-bar-lbl">Developability</span>'
   +     '<div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:'+(dvScore!=null?Math.round(dvScore*100):0)+'%"></div></div>'
-  +     '<span class="mono" style="font-size:11px;font-weight:600;color:'+dvCol+'">'+(dvScore!=null?(dvScore*100).toFixed(0):'—')+'</span>'
+  +     '<span class="mono" style="font-size:11px;font-weight:600;color:'+dvCol+'">'+(dvScore!=null?(dvScore*100).toFixed(0):'-')+'</span>'
   +   '</div>'
   +   '<div class="cc-tags">'+srcBadges+' '+kdBadge+'</div>'
+  +   (c.bbb_caution?'<div class="chip amber" style="align-self:flex-start" title="CNS indication, but the molecule\'s CNS-MPO is below 4 - blood-brain-barrier penetration is uncertain">BBB risk · brain penetration uncertain</div>':'')
+  +   ((c.safety && c.safety.penalized && (c.safety.flags||[]).length)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.safety.flags.join(' ')).replace(/"/g,'')+'">Safety penalty · '+Math.round((1-c.safety.multiplier)*100)+'% score reduction</div>'
+        : '')
+  +   ((c.coverage && c.coverage.penalized && (c.coverage.flags||[]).length)
+        ? '<div class="chip amber" style="align-self:flex-start;font-weight:600" title="'+(c.coverage.flags.join(' ')).replace(/"/g,'')+'">Partial target coverage · '+c.coverage.n_hit+'/'+c.coverage.n_drivers+' drivers</div>'
+        : '')
+  +   ((c.registry && c.registry.ghost)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.registry.reason||'')).replace(/"/g,'')+'">Discontinued program · '+(c.registry.latest_year||'')+'</div>'
+        : '')
+  +   ((c.ctpa && c.ctpa.phantom)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.ctpa.flag||'')).replace(/"/g,'')+'">No functional cohesion · off-target match ('+Math.round((1-(c.ctpa.multiplier!=null?c.ctpa.multiplier:0.35))*100)+'% penalty)</div>'
+        : '')
+  +   ((c.directional_evidence && c.directional_evidence.covered && c.directional_evidence.signal>0)
+        ? '<div class="chip" style="align-self:flex-start;background:#eef4ef;color:#065f46;border:1px solid #cfe0d8;font-weight:600" title="'+((c.directional_evidence.note||'')).replace(/"/g,'')+'">'+(c.directional_evidence.direct_treat?'Directional evidence · treats-edge':'Directional path · '+c.directional_evidence.n_paths+' gene link'+(c.directional_evidence.n_paths===1?'':'s'))+'</div>'
+        : '')
+  +   ((c.trial_failure && c.trial_failure.penalized)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.trial_failure.flag||'')).replace(/"/g,'')+'">Trial failed here · '+Math.round((1-c.trial_failure.multiplier)*100)+'% penalty</div>'
+        : '')
+  +   ((c.clinical_constraints && c.clinical_constraints.cancer_predisposition)
+        ? '<div class="chip" style="align-self:flex-start;background:#f4f0f6;color:#5b3b6b;border:1px solid #ddd0e4;font-weight:600" title="Hereditary cancer-predisposition syndrome - judged at oncology-grade severity, not benign.">Cancer-predisposition · oncology-grade</div>'
+        : '')
+  +   ((c.clinical_constraints && c.clinical_constraints.penalized && (c.clinical_constraints.flags||[]).length)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.clinical_constraints.flags.join(' ')).replace(/"/g,'')+'">Clinical mismatch · '+Math.round((1-c.clinical_constraints.multiplier)*100)+'% penalty</div>'
+        : '')
+  +   pivotsHtml(c.pivots)
+  +   ((c.mechanism_scope && c.mechanism_scope.target_mediated===false)
+        ? '<div class="chip" style="align-self:flex-start;background:#eef1f4;color:#41566b;border:1px solid #d5dde6" title="'+((c.mechanism_scope.note||'')).replace(/"/g,'')+'">Mechanism not target-mediated · ranked on clinical evidence</div>'
+        : '')
+  +   ((c.actionable===false)
+        ? '<div class="chip" style="align-self:flex-start;background:#f4f2ec;color:#8a7a52;border:1px solid #e2dcc9" title="Below the adaptive actionable threshold for this indication - triage/watchlist, not yet an actionable lead.">Below actionable bar'
+          + (c.cutoff_kind==='percentile' ? ' (needs top '+Math.round((1-c.effective_cutoff)*100)+'%)' : (c.effective_cutoff!=null?' ('+c.effective_cutoff.toFixed(2)+')':''))+'</div>'
+        : '')
   +   (areas?'<div class="cc-tags">'+areas+'</div>':'')
-  +   (clinLine?'<div style="font-size:0.7rem;color:#2f6f5b;font-weight:600">▸ '+clinLine+'</div>':'')
+  +   (clinLine?'<div style="font-size:0.7rem;color:#2f6f5b;font-weight:600">'+clinLine+'</div>':'')
   +   (weak && !clinLine?'<div class="chip amber" style="align-self:flex-start">association-only · weak mechanistic overlap</div>':'')
   +   (overlap?'<div><div class="cc-bar-lbl" style="margin-bottom:4px">Shared targets (drug ∩ disease)</div><div class="cc-tags">'+overlap+'</div></div>':'')
   +   '<div style="font-size:0.72rem;color:#45524a;line-height:1.5;border-left:2px solid #cfe0d8;padding-left:8px">'+(c.rationale||'')+'</div>'
@@ -161,6 +218,71 @@ function candidateCard(c, chembl){
   + '</div>';
 }
 
+// Positive Pivot box: when a candidate is clinically crushed, show how to make it
+// work (severe/orphan variant, dose-sparing combination, brain-penetrant analogue)
+// rather than only eliminating it. Every pivot is a labelled hypothesis.
+function pivotsHtml(pivots){
+  if(!pivots || !pivots.length) return '';
+  var rows = pivots.map(function(p){
+    var cands = (p.candidates||[]).filter(Boolean).map(function(c){return c.name;}).filter(Boolean);
+    var candLine = cands.length ? '<div style="font-size:0.66rem;color:#2f6f5b;margin-top:2px">Candidates: '+cands.join(', ')+'</div>' : '';
+    var modLine = (p.modify&&p.modify.length) ? '<div style="font-size:0.66rem;color:#8a6309;margin-top:2px">'+p.modify.map(function(m){return m.fix;}).join('; ')+'</div>' : '';
+    return '<div style="padding:6px 0;border-top:1px solid #dfe9e2">'
+      + '<div style="font-size:0.7rem;font-weight:700;color:#1f2a24">'+p.title+'</div>'
+      + '<div style="font-size:0.68rem;color:#45524a;line-height:1.4">'+p.suggestion+'</div>'
+      + candLine + modLine + '</div>';
+  }).join('');
+  return '<div style="margin-top:6px;background:#eef4ef;border:1px solid #cfe0d8;border-radius:8px;padding:8px 11px">'
+    + '<div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#2f6f5b">Positive pivot · how to make it work <span style="color:#9aa39c;font-weight:600">(hypotheses to validate)</span></div>'
+    + rows + '</div>';
+}
+
+// Calibrated tier badge (P1): shows where the score sits vs a null background of
+// random drug-disease pairs — so a strong lead reads as "Strong · top 3%" instead
+// of a weak-looking raw number. Falls back to the heuristic tier before the null
+// is built.
+var TIER_COL = {Strong:'#2f6f5b', Promising:'#b8860b', Moderate:'#a86b2d', Weak:'#9aa39c'};
+function tierBadge(cal){
+  if(!cal || !cal.tier) return '';
+  var col = TIER_COL[cal.tier] || '#9aa39c';
+  // The tier is read from the raw evidence bands; against the random-pair background
+  // we show the ENRICHMENT (fold over the null median), which discriminates leads —
+  // the percentile saturates near 100% once the signal separates cleanly from noise.
+  var sub = (cal.basis==='calibrated' && cal.enrichment!=null)
+    ? cal.enrichment+'x vs random'
+    : 'evidence band';
+  var tip = (cal.basis==='calibrated')
+    ? 'Tier from the evidence-score bands; '
+       + (cal.enrichment!=null ? cal.enrichment+'x the random-pair background median' : 'calibrated')
+       + (cal.percentile!=null ? ' (>'+Math.round(cal.percentile*100)+'% of random pairs)':'')+'.'
+    : 'Evidence band (score null not yet built).';
+  return '<div title="'+tip+'" style="margin-top:4px;font-size:0.58rem;font-weight:700;'
+    + 'text-transform:uppercase;letter-spacing:0.04em;color:'+col+'">'+cal.tier
+    + '<div style="font-size:0.54rem;font-weight:600;color:#9aa39c;letter-spacing:0">'+sub+'</div></div>';
+}
+
+// Score legend — makes the confidence cutoff explicit so it never has to be asked.
+// The Repurposing (mechanistic-evidence) score is a 0–100 evidence rank, NOT a
+// probability. The bands mirror window.scoreBand in base.html.
+function scoreLegendHtml(){
+  var band = function(col, range, label){
+    return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;color:#45524a">'
+      + '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+col+'"></span>'
+      + '<strong style="color:'+col+'">'+range+'</strong> '+label+'</span>';
+  };
+  return '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:9px 13px;margin-bottom:12px;'
+    + 'background:#f6f5f0;border:1px solid #e6e2d7;border-radius:9px">'
+    + '<span style="font-size:0.64rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#45524a">Repurposing score — how to read it</span>'
+    + band('#2f6f5b','65–100','prioritise / advance')
+    + band('#b8860b','40–64','watchlist')
+    + band('#a86b2d','20–39','weak')
+    + band('#9aa39c','&lt;20','deprioritise')
+    + '<span style="font-size:0.64rem;color:#9aa39c;flex-basis:100%;margin-top:2px">'
+    + 'Mechanistic-evidence rank (not a probability). For likelihood of approval, see the '
+    + 'Probability of Success on each candidate\'s 505(b)(2) dossier.</span>'
+    + '</div>';
+}
+
 async function runScreen(){
   var drug = document.getElementById('drug-input').value.trim();
   var area = document.getElementById('area-input').value;
@@ -171,7 +293,7 @@ async function runScreen(){
   btn.disabled = true;
   var status = document.getElementById('status-line');
   status.style.display = 'block';
-  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Resolving targets and scanning Open Targets…';
+  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Resolving targets and scanning target associations…';
   document.getElementById('results').innerHTML = '';
   document.getElementById('drug-summary').style.display = 'none';
 
@@ -194,6 +316,7 @@ async function runScreen(){
     }
     status.innerHTML = 'Ranked <strong>'+cands.length+'</strong> candidate indication'+(cands.length>1?'s':'')+' for '+d.drug+(area?(' · '+area):'')+'.';
     document.getElementById('results').innerHTML =
+      scoreLegendHtml() +
       '<div class="compound-grid">' + cands.map(function(c){return candidateCard(c, d.chembl_id);}).join('') + '</div>';
   } catch(e){
     status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';

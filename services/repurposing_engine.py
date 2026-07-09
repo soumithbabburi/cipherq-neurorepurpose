@@ -19,7 +19,13 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import requests
+import requests  # noqa: F401
+
+import psycopg2
+import psycopg2.pool
+
+from services import http_client
+from config import db_params
 
 logger = logging.getLogger(__name__)
 CACHE_FILE = Path(__file__).parent.parent / "data" / "repurposing_cache.json"
@@ -60,48 +66,365 @@ def _save_cache(cache: dict):
 
 # ── ChEMBL REST API helpers ───────────────────────────────────────────────────
 
-def _chembl_drug_indications(disease_name: str, limit: int = 50) -> List[Dict]:
-    """Query ChEMBL for compounds with matching disease indication."""
-    seen = set()
-    results = []
+_chembl_pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
 
-    for param in ("mesh_heading__icontains", "efo_term__icontains"):
-        if len(results) >= limit:
-            break
+
+def _get_chembl_pool() -> Optional[psycopg2.pool.ThreadedConnectionPool]:
+    global _chembl_pool
+    if _chembl_pool is None:
         try:
-            r = requests.get(
+            params = db_params()
+            params["dbname"] = "chembl_33"   # indications live in chembl_33, not neurorepurpose
+            _chembl_pool = psycopg2.pool.ThreadedConnectionPool(1, 4, **params)
+        except Exception as e:
+            logger.warning(f"chembl_33 pool unavailable (will fall back to REST): {e}")
+    return _chembl_pool
+
+
+def _local_drug_indications(disease_name: str, limit: int) -> Optional[List[Dict]]:
+    """Fast local indication lookup from the validated chembl_33 DB (~0.2s vs the
+    REST API's ~80s). Returns None (not []) when the local DB is unavailable, so
+    the caller falls back to the REST API."""
+    pool = _get_chembl_pool()
+    if pool is None:
+        return None
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT md.chembl_id,
+                       COALESCE(MAX(di.mesh_heading), MAX(di.efo_term)) AS indication,
+                       MAX(di.max_phase_for_ind) AS phase
+                FROM drug_indication di
+                JOIN molecule_dictionary md ON md.molregno = di.molregno
+                WHERE di.mesh_heading ILIKE %s OR di.efo_term ILIKE %s
+                GROUP BY md.chembl_id
+                ORDER BY phase DESC NULLS LAST
+                LIMIT %s
+                """,
+                (f"%{disease_name}%", f"%{disease_name}%", limit),
+            )
+            rows = cur.fetchall()
+        return [
+            {"chembl_id": r[0],
+             "indication": r[1] or disease_name,
+             "max_phase_for_ind": float(r[2]) if r[2] is not None else 0}
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"local drug_indication query failed: {e}")
+        return None
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
+def _chembl_drug_indications(disease_name: str, limit: int = 50) -> List[Dict]:
+    """Compounds indicated for a disease.
+
+    Fast path: the local chembl_33 `drug_indication` table (~0.2s). Falls back to
+    the ChEMBL REST API only when the local DB is unreachable. The two REST field
+    queries (MeSH heading + EFO term) run in PARALLEL with a tight timeout and a
+    single retry; returns [] if ChEMBL is unreachable so the caller degrades to a
+    clean "no candidates" result rather than hanging.
+    """
+    # Fast path — local validated DB (avoids the slow ChEMBL REST __icontains call).
+    local = _local_drug_indications(disease_name, limit)
+    if local is not None:
+        return local
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _fetch(param: str) -> List[Dict]:
+        try:
+            r = http_client.get(
                 f"{CHEMBL_BASE}/drug_indication.json",
                 params={param: disease_name, "limit": limit, "format": "json"},
-                timeout=12,
+                timeout=8, retries=1,        # fail fast — don't stack 12s x 3 retries
             )
-            if r.ok:
-                for ind in r.json().get("drug_indications", []):
-                    mol_id = ind.get("molecule_chembl_id", "")
-                    if mol_id and mol_id not in seen:
-                        seen.add(mol_id)
-                        results.append({
-                            "chembl_id":         mol_id,
-                            "indication":        ind.get("mesh_heading") or ind.get("efo_term") or disease_name,
-                            "max_phase_for_ind": ind.get("max_phase_for_ind") or 0,
-                        })
+            if r and r.ok:
+                return r.json().get("drug_indications", [])
         except Exception as e:
             logger.debug(f"ChEMBL {param} error: {e}")
+        return []
+
+    params = ("mesh_heading__icontains", "efo_term__icontains")
+    seen: set = set()
+    results: List[Dict] = []
+    with ThreadPoolExecutor(max_workers=len(params)) as pool:
+        for inds in pool.map(_fetch, params):
+            for ind in inds:
+                mol_id = ind.get("molecule_chembl_id", "")
+                if mol_id and mol_id not in seen:
+                    seen.add(mol_id)
+                    results.append({
+                        "chembl_id":         mol_id,
+                        "indication":        ind.get("mesh_heading") or ind.get("efo_term") or disease_name,
+                        "max_phase_for_ind": ind.get("max_phase_for_ind") or 0,
+                    })
+            if len(results) >= limit:
+                break
 
     return results
 
 
+def _local_molecule_details(chembl_ids: List[str]) -> Optional[Dict[str, Dict]]:
+    """Molecule details from local chembl_33. None if DB unavailable."""
+    pool = _get_chembl_pool()
+    if pool is None:
+        return None
+    ids = [c for c in chembl_ids if c]
+    if not ids:
+        return {}
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT md.chembl_id, md.pref_name, md.max_phase,
+                       cs.canonical_smiles, cp.mw_freebase, cp.alogp, cp.psa,
+                       cp.hba, cp.hbd, cp.num_ro5_violations
+                FROM molecule_dictionary md
+                LEFT JOIN compound_structures cs ON cs.molregno = md.molregno
+                LEFT JOIN compound_properties cp ON cp.molregno = md.molregno
+                WHERE md.chembl_id = ANY(%s)
+                """,
+                (ids,),
+            )
+            rows = cur.fetchall()
+        out: Dict[str, Dict] = {}
+        for r in rows:
+            out[r[0]] = {
+                "chembl_id": r[0],
+                "name": r[1] or r[0],
+                "smiles": r[3] or "",
+                "max_phase": float(r[2]) if r[2] is not None else 0,
+                "mw":    float(r[4]) if r[4] is not None else None,
+                "alogp": float(r[5]) if r[5] is not None else None,
+                "psa":   float(r[6]) if r[6] is not None else None,
+                "hba":   int(r[7]) if r[7] is not None else None,
+                "hbd":   int(r[8]) if r[8] is not None else None,
+                "ro5_violations": int(r[9]) if r[9] is not None else None,
+                "indications": "", "mechanisms": "", "targets": "",
+                "source": "chembl_33 (local)",
+            }
+        return out
+    except Exception as e:
+        logger.debug(f"local molecule details failed: {e}")
+        return None
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
+def _local_targets_for_molecules(chembl_ids: List[str]) -> Optional[Dict[str, List[str]]]:
+    """Target gene symbols per molecule from local chembl_33. None if DB unavailable.
+
+    Coverage strategy (validated on repoDB — fallback mode lifts drug coverage
+    46%→68% and AUROC 0.71→0.73 vs mechanism-only; see validate_predictions.py):
+      1. Curated mechanism targets (drug_mechanism), folding salt→parent so a salt
+         inherits the parent's targets.
+      2. ONLY for molecules still with no target, fall back to high-confidence
+         single-protein bioactivity (pchembl≥6, confidence≥8). Gap-fill only —
+         well-annotated drugs keep their clean curated targets (broadening every
+         drug with activity targets diluted precision in testing)."""
+    pool = _get_chembl_pool()
+    if pool is None:
+        return None
+    ids = [c for c in chembl_ids if c]
+    if not ids:
+        return {}
+    drug_genes: Dict[str, set] = {cid: set() for cid in ids}
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            # chembl_id → own + parent molregno (salt→parent)
+            cur.execute(
+                """
+                SELECT md.chembl_id, md.molregno, COALESCE(mh.parent_molregno, md.molregno)
+                FROM molecule_dictionary md
+                LEFT JOIN molecule_hierarchy mh ON mh.molregno = md.molregno
+                WHERE md.chembl_id = ANY(%s)
+                """,
+                (ids,),
+            )
+            mol_to_cids: Dict[int, set] = {}
+            all_mols: set = set()
+            for chembl, mol, parent in cur.fetchall():
+                for m in (mol, parent):
+                    if m is not None:
+                        mol_to_cids.setdefault(m, set()).add(chembl)
+                        all_mols.add(m)
+            if not all_mols:
+                return {cid: [] for cid in ids}
+            mol_list = list(all_mols)
+
+            # 1. curated mechanism targets
+            cur.execute(
+                """
+                SELECT dm.molregno, csyn.component_synonym
+                FROM drug_mechanism dm
+                JOIN target_components tc ON tc.tid = dm.tid
+                JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                            AND csyn.syn_type = 'GENE_SYMBOL'
+                WHERE dm.molregno = ANY(%s)
+                """,
+                (mol_list,),
+            )
+            for mol, gene in cur.fetchall():
+                if gene:
+                    for cid in mol_to_cids.get(mol, ()):
+                        drug_genes[cid].add(gene)
+
+            # 2. gap-fill from high-confidence bioactivity — but SELECTIVITY-FILTERED.
+            #    A promiscuous kinase inhibitor binds dozens of kinases at ≤1µM
+            #    (pchembl≥6) that it never engages therapeutically; crediting those
+            #    off-targets lets any of them force-match a disease (Erlotinib's
+            #    AURKB/JAK3/PDGFRB → phantom leads). So we take the per-gene MAX
+            #    potency and keep only targets within ~10× (1.0 log) of the drug's
+            #    MOST-potent target — its genuinely selective, therapeutic set.
+            gap_cids = {cid for cid in ids if not drug_genes[cid]}
+            if gap_cids:
+                gap_mols = [m for m, cids in mol_to_cids.items() if cids & gap_cids]
+                if gap_mols:
+                    cur.execute(
+                        """
+                        SELECT a.molregno, csyn.component_synonym, MAX(a.pchembl_value)
+                        FROM activities a
+                        JOIN assays ass            ON ass.assay_id = a.assay_id
+                        JOIN target_dictionary td  ON td.tid = ass.tid
+                                                  AND td.target_type = 'SINGLE PROTEIN'
+                        JOIN target_components tc  ON tc.tid = ass.tid
+                        JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                                    AND csyn.syn_type = 'GENE_SYMBOL'
+                        WHERE a.molregno = ANY(%s)
+                          AND a.pchembl_value >= 6
+                          AND a.standard_relation = '='
+                          AND ass.confidence_score >= 8
+                        GROUP BY a.molregno, csyn.component_synonym
+                        """,
+                        (gap_mols,),
+                    )
+                    # collect per-molecule (gene, max_pchembl), then keep the
+                    # selective window relative to each molecule's best target.
+                    by_mol: Dict[int, list] = {}
+                    for mol, gene, pot in cur.fetchall():
+                        if gene and pot is not None:
+                            by_mol.setdefault(mol, []).append((gene, float(pot)))
+                    for mol, rows in by_mol.items():
+                        best = max(p for _, p in rows)
+                        floor = max(6.5, best - 1.0)          # within 10× of the most potent
+                        for gene, pot in rows:
+                            if pot >= floor:
+                                for cid in (mol_to_cids.get(mol, set()) & gap_cids):
+                                    drug_genes[cid].add(gene)
+        return {cid: sorted(v) for cid, v in drug_genes.items()}
+    except Exception as e:
+        logger.debug(f"local targets failed: {e}")
+        return None
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
+def _actions_for_molecules(chembl_ids: List[str]) -> Dict[str, Dict[str, str]]:
+    """Map each molecule → {GENE_SYMBOL: action_type} from local chembl_33
+    drug_mechanism. Powers the direction-aware pathway score. Returns {} when the
+    local DB is unavailable, so scoring falls back to direction-blind coverage."""
+    pool = _get_chembl_pool()
+    ids = [c for c in chembl_ids if c]
+    if pool is None or not ids:
+        return {}
+    out: Dict[str, Dict[str, str]] = {cid: {} for cid in ids}
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT md.chembl_id, UPPER(csyn.component_synonym), dm.action_type
+                FROM molecule_dictionary md
+                JOIN drug_mechanism dm ON dm.molregno = md.molregno
+                JOIN target_components tc ON tc.tid = dm.tid
+                JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                            AND csyn.syn_type = 'GENE_SYMBOL'
+                WHERE md.chembl_id = ANY(%s) AND dm.action_type IS NOT NULL
+                """,
+                (ids,),
+            )
+            for cid, gene, action in cur.fetchall():
+                if cid and gene and action:
+                    out.setdefault(cid, {}).setdefault(gene, action)
+        return out
+    except Exception as e:
+        logger.debug(f"local actions failed: {e}")
+        return {}
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
+def _local_molecules_by_name(names: List[str]) -> Dict[str, Dict]:
+    """Map lowercased compound names -> ChEMBL molecule dicts (local chembl_33).
+    Used to turn HetioNet novelty compound names into scorable candidates."""
+    pool = _get_chembl_pool()
+    names = [n for n in names if n]
+    if pool is None or not names:
+        return {}
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT LOWER(md.pref_name), md.chembl_id, md.pref_name, md.max_phase,
+                       cs.canonical_smiles, cp.mw_freebase, cp.alogp, cp.psa
+                FROM molecule_dictionary md
+                LEFT JOIN compound_structures cs ON cs.molregno = md.molregno
+                LEFT JOIN compound_properties cp ON cp.molregno = md.molregno
+                WHERE LOWER(md.pref_name) = ANY(%s)
+                """,
+                ([n.lower() for n in names],),
+            )
+            out: Dict[str, Dict] = {}
+            for r in cur.fetchall():
+                out[r[0]] = {
+                    "chembl_id": r[1], "name": r[2] or r[1],
+                    "max_phase": float(r[3]) if r[3] is not None else 0,
+                    "smiles": r[4] or "",
+                    "mw": float(r[5]) if r[5] is not None else None,
+                    "alogp": float(r[6]) if r[6] is not None else None,
+                    "psa": float(r[7]) if r[7] is not None else None,
+                    "indications": "", "mechanisms": "", "targets": "",
+                }
+            return out
+    except Exception as e:
+        logger.debug(f"local molecules-by-name failed: {e}")
+        return {}
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 def _chembl_molecule_details(chembl_ids: List[str]) -> Dict[str, Dict]:
-    """Batch-fetch molecule details from ChEMBL REST API."""
+    """Molecule details — local chembl_33 first, ChEMBL REST API as fallback."""
+    local = _local_molecule_details(chembl_ids)
+    if local is not None:
+        return local
     results: Dict[str, Dict] = {}
     for i in range(0, min(len(chembl_ids), 60), 20):
         chunk = chembl_ids[i : i + 20]
         try:
-            r = requests.get(
+            r = http_client.get(
                 f"{CHEMBL_BASE}/molecule.json",
                 params={"molecule_chembl_id__in": ",".join(chunk), "limit": 20, "format": "json"},
                 timeout=12,
             )
-            if r.ok:
+            if r and r.ok:
                 for mol in r.json().get("molecules", []):
                     mid = mol.get("molecule_chembl_id", "")
                     props = mol.get("molecule_properties") or {}
@@ -128,32 +451,111 @@ def _chembl_molecule_details(chembl_ids: List[str]) -> Dict[str, Dict]:
 
 
 def _chembl_targets_for_molecules(chembl_ids: List[str]) -> Dict[str, List[str]]:
-    """Batch-fetch gene targets for a list of ChEMBL molecule IDs."""
-    drug_genes: Dict[str, List[str]] = {cid: [] for cid in chembl_ids}
-    for cid in chembl_ids[:20]:  # limit API calls
+    """Map each ChEMBL molecule ID to its target gene symbols.
+
+    Batched in two passes so the whole candidate set is covered with a handful of
+    requests, instead of the old 1 + (mechanisms) sequential per-compound calls
+    that timed out and left most candidates with no genes (→ target/pathway = 0):
+      1. mechanism.json?molecule_chembl_id__in=…  → {molecule: {target_chembl_id}}
+      2. target.json?target_chembl_id__in=…       → {target_chembl_id: [gene_symbol]}
+    Then join the two maps. Uses __in batching (the same filter the molecule
+    fetch already relies on), so it stays robust for 40-50 candidates.
+    """
+    # Fast path — local validated DB.
+    local = _local_targets_for_molecules(chembl_ids)
+    if local is not None:
+        return local
+
+    ids = [c for c in chembl_ids if c]
+    drug_genes: Dict[str, List[str]] = {cid: [] for cid in ids}
+    if not ids:
+        return drug_genes
+
+    # ── Pass 1: molecules → target ChEMBL ids ─────────────────────────────────
+    mol_targets: Dict[str, set] = {}
+    all_target_ids: set = set()
+    for i in range(0, len(ids), 20):
+        chunk = ids[i : i + 20]
         try:
-            r = requests.get(
+            r = http_client.get(
                 f"{CHEMBL_BASE}/mechanism.json",
-                params={"molecule_chembl_id": cid, "limit": 20, "format": "json"},
-                timeout=8,
+                params={"molecule_chembl_id__in": ",".join(chunk),
+                        "limit": 1000, "format": "json"},
+                timeout=15,
             )
-            if not r.ok:
+            if not r or not r.ok:
                 continue
             for mech in r.json().get("mechanisms", []):
-                target_id = mech.get("target_chembl_id", "")
-                if not target_id:
-                    continue
-                tr = requests.get(f"{CHEMBL_BASE}/target/{target_id}.json", timeout=6)
-                if not tr.ok:
-                    continue
-                for comp in (tr.json().get("target_components") or []):
+                mid = mech.get("molecule_chembl_id", "")
+                tid = mech.get("target_chembl_id", "")
+                if mid and tid:
+                    mol_targets.setdefault(mid, set()).add(tid)
+                    all_target_ids.add(tid)
+        except Exception as e:
+            logger.debug(f"mechanism batch error: {e}")
+
+    if not all_target_ids:
+        return drug_genes
+
+    # ── Pass 2: target ChEMBL ids → gene symbols ──────────────────────────────
+    target_genes: Dict[str, List[str]] = {}
+    tids = list(all_target_ids)
+    for i in range(0, len(tids), 20):
+        chunk = tids[i : i + 20]
+        try:
+            r = http_client.get(
+                f"{CHEMBL_BASE}/target.json",
+                params={"target_chembl_id__in": ",".join(chunk),
+                        "limit": 1000, "format": "json"},
+                timeout=15,
+            )
+            if not r or not r.ok:
+                continue
+            for t in r.json().get("targets", []):
+                tid = t.get("target_chembl_id", "")
+                genes: List[str] = []
+                for comp in (t.get("target_components") or []):
                     for syn in (comp.get("target_component_synonyms") or []):
-                        if syn.get("syn_type") == "GENE_SYMBOL":
-                            g = syn.get("component_synonym", "")
-                            if g:
-                                drug_genes[cid].append(g)
-        except Exception:
-            continue
+                        if syn.get("syn_type") == "GENE_SYMBOL" and syn.get("component_synonym"):
+                            genes.append(syn["component_synonym"])
+                if tid:
+                    target_genes[tid] = genes
+        except Exception as e:
+            logger.debug(f"target batch error: {e}")
+
+    # ── Join ──────────────────────────────────────────────────────────────────
+    for cid in ids:
+        joined: set = set()
+        for tid in mol_targets.get(cid, ()):
+            joined.update(target_genes.get(tid, []))
+        drug_genes[cid] = sorted(joined)
+
+    # ── Fallback for molecules ChEMBL has no curated mechanism row for ────────
+    # Drugs like ropinirole / bromocriptine have NO `mechanism` record under their
+    # ChEMBL id, yet well-known targets (DRD2/3/4). resolve_drug unions ChEMBL
+    # molecule forms (salts/parents) + activity to recover the gene symbols the
+    # mechanism endpoint misses, so they no longer score target = 0. Only the gaps
+    # are resolved, in parallel, so the cost stays bounded.
+    missing = [cid for cid in ids if not drug_genes.get(cid)]
+    if missing:
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            from services.reverse_repurposing import resolve_drug
+
+            def _fallback(cid: str):
+                try:
+                    info = resolve_drug(cid) or {}
+                    return cid, [g for g in (info.get("targets") or []) if g]
+                except Exception:
+                    return cid, []
+
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                for cid, genes in pool.map(_fallback, missing):
+                    if genes:
+                        drug_genes[cid] = sorted({g.upper() for g in genes})
+        except Exception as e:
+            logger.debug(f"resolve_drug target fallback failed: {e}")
+
     return drug_genes
 
 
@@ -180,15 +582,77 @@ def _score_target_overlap(drug_genes: List[str], disease_genes: List[str]) -> fl
     return min(1.0, 0.6 * recall + rank_bonus + hit_floor)
 
 
-def _score_pathway_overlap(drug_genes: List[str], disease_pathways: List[Dict]) -> float:
+def _score_target_overlap_weighted(drug_genes: List[str],
+                                   disease_weights: Dict[str, float]) -> float:
+    """Genetics-weighted target overlap. disease_weights: {GENE_UPPER:
+    genetic_association_score 0..1}. Rewards a drug for hitting GENETICALLY
+    supported disease genes (strength), for hitting disease genes at all (recall),
+    and for hitting several (breadth). Reduces to a sensible overlap score; used
+    when genetics weights are available, else the engine falls back to the flat
+    _score_target_overlap."""
+    if not drug_genes or not disease_weights:
+        return 0.0
+    a = {g.upper() for g in drug_genes}
+    hits = [disease_weights[g] for g in a if g in disease_weights]
+    if not hits:
+        return 0.0
+    # STRENGTH-dominated. The old form was recall-dominated, so a SELECTIVE drug
+    # hitting ONE weak-association gene got recall=1.0 → ~0.55 regardless of how
+    # weak the link was (Erlotinib→EGFR@0.35 for Cowden read like a real hit). Now
+    # the association STRENGTH gates the score: a weak best-hit caps it low, while
+    # hitting several genetically-supported drivers (weighted breadth) lifts it.
+    strength = max(hits)                                  # strongest disease-gene association hit
+    weighted_breadth = 1.0 - pow(2.71828, -sum(hits) / 1.0)   # saturating Σ of hit strengths
+    recall = len(hits) / len(a)                           # selectivity toward the disease (minor)
+    # strength sets the ceiling; breadth fills it in; recall a small bonus.
+    return min(1.0, round(strength * (0.65 + 0.35 * weighted_breadth) + 0.10 * recall, 4))
+
+
+def _score_pathway_overlap(drug_genes: List[str], disease_pathways: List[Dict],
+                           drug_signature: Optional[Dict[str, float]] = None,
+                           gene_damp: Optional[Dict[str, float]] = None) -> float:
+    """Fraction of the disease's pathways the drug touches.
+
+    When `drug_signature` (gene→signed action, from signature_engine.drug_signature)
+    is supplied, the raw coverage is modulated by DIRECTION: disease pathway genes
+    are treated as elevated in disease (the same documented proxy the signature
+    engine uses), so a drug that INHIBITS them reverses the disease (favourable)
+    while one that ACTIVATES them mimics it (unfavourable). Without a signature the
+    behaviour is identical to the original direction-blind coverage score."""
     if not drug_genes or not disease_pathways:
         return 0.0
     dg = {g.upper() for g in drug_genes}
-    hits = sum(1 for pw in disease_pathways[:20] if dg & {g.upper() for g in pw.get("genes", [])})
-    return min(1.0, hits / max(1, min(10, len(disease_pathways))))
+    # Degree-damped hit count: a pathway touched only through a HUB gene (EGFR…)
+    # counts for less than one touched through a specific gene (DWPC, Himmelstein).
+    hits = 0.0
+    for pw in disease_pathways[:20]:
+        touching = dg & {g.upper() for g in pw.get("genes", [])}
+        if touching:
+            hits += (max((gene_damp.get(g, 1.0) for g in touching), default=1.0)
+                     if gene_damp else 1.0)
+    base = min(1.0, hits / max(1, min(10, len(disease_pathways))))
+    if not base or not drug_signature:
+        return base
+    try:
+        from services.signature_engine import disease_signature, connectivity
+        pw_genes: set = set()
+        for pw in disease_pathways[:20]:
+            pw_genes.update(g.upper() for g in pw.get("genes", []))
+        conn = connectivity(disease_signature(list(pw_genes)), drug_signature)
+        if conn["n_shared"] == 0:
+            return base
+        c = conn["connectivity"]
+        if c > 0.1:                       # mimics disease direction → unfavourable
+            return round(base * max(0.2, 1.0 - c), 4)
+        # reversing / neutral → favourable; small boost for strong reversal
+        return round(min(1.0, base * (1.0 + 0.3 * conn["reversal_score"])), 4)
+    except Exception as e:
+        logger.debug(f"pathway direction modifier skipped: {e}")
+        return base
 
 
-def _score_ppi_network(drug_genes: List[str], ppi_adj: Dict[str, List[str]]) -> float:
+def _score_ppi_network(drug_genes: List[str], ppi_adj: Dict[str, List[str]],
+                       gene_damp: Optional[Dict[str, float]] = None) -> float:
     if not drug_genes or not ppi_adj:
         return 0.0
     dg = {g.upper() for g in drug_genes}
@@ -196,9 +660,16 @@ def _score_ppi_network(drug_genes: List[str], ppi_adj: Dict[str, List[str]]) -> 
     ppi_neighbors: set = set()
     for neighbors in ppi_adj.values():
         ppi_neighbors.update(g.upper() for g in neighbors)
-    direct   = len(dg & ppi_nodes)
-    neighbor = len(dg & ppi_neighbors)
-    return min(1.0, (direct * 1.0 + neighbor * 0.5) / len(dg))
+    # Each drug gene's contribution is degree-damped: a HUB target that "interacts"
+    # with a disease gene is far less specific than a low-degree target doing so.
+    total = 0.0
+    for g in dg:
+        d = gene_damp.get(g, 1.0) if gene_damp else 1.0
+        if g in ppi_nodes:
+            total += d * 1.0
+        elif g in ppi_neighbors:
+            total += d * 0.5
+    return min(1.0, total / len(dg))
 
 
 def _to_phase(max_phase) -> int:
@@ -208,13 +679,58 @@ def _to_phase(max_phase) -> int:
         return 0
 
 
-def _score_clinical(max_phase, existing_ind: str, disease_name: str) -> float:
-    phase_map = {4: 1.0, 3: 0.75, 2: 0.50, 1: 0.25}
-    score = phase_map.get(_to_phase(max_phase), 0.05)
-    disease_kws = [w for w in disease_name.lower().split() if len(w) > 4]
-    if any(kw in (existing_ind or "").lower() for kw in disease_kws):
-        score = min(1.0, score + 0.15)
-    return score
+def _indication_matches_disease(existing_ind: str, disease_name: str) -> bool:
+    """True when the drug's existing indication text specifically covers THIS
+    disease. Requires ALL of the disease's SPECIFIC tokens (generic words like
+    'syndrome', 'disease', 'carcinoma' stripped) to appear — so 'Cowden syndrome'
+    is NOT matched to a drug approved for 'Myelodysplastic syndromes' merely
+    because both contain 'syndrome' (which was inflating the clinical dimension)."""
+    ind = (existing_ind or "").lower()
+    if not ind:
+        return False
+    try:
+        from services.disease_id import canonical_key
+        toks = canonical_key(disease_name)
+    except Exception:
+        toks = frozenset(w for w in disease_name.lower().split() if len(w) > 4)
+    # Drop oncology/generic descriptors that are not disease-specific.
+    _generic = {"carcinoma", "neoplasm", "neoplasms", "cancer", "tumor", "tumour",
+                "deficiency", "familial", "congenital", "hereditary", "type"}
+    specific = [t for t in toks if t not in _generic and len(t) > 3]
+    if not specific:
+        specific = list(toks)
+    if not specific:
+        return False
+    return all(t in ind for t in specific)
+
+
+def _score_clinical(max_phase, existing_ind: str, disease_name: str,
+                    trial_count: int = 0, max_trial_phase: int = 0,
+                    trial_outcome: float = 0.0) -> float:
+    """Clinical evidence SPECIFIC to this drug-disease pair.
+
+    A drug's global development phase is clinical evidence only for the indications
+    it was developed FOR (an approved oncology drug has NO clinical evidence for
+    diabetic nephropathy — crediting its global Phase 4 there is reverse-causation).
+    So global-phase credit is gated on the disease matching an existing indication.
+
+    BUT real trials of THIS drug in THIS indication ARE disease-specific clinical
+    evidence — a human decided it was worth testing — so they earn direct credit
+    (this is what lifts a genuinely trial-backed lead like palbociclib→Fragile X
+    above a purely-inferred association)."""
+    if _indication_matches_disease(existing_ind, disease_name):
+        phase_map = {4: 1.0, 3: 0.75, 2: 0.50, 1: 0.25}
+        return phase_map.get(_to_phase(max_phase), 0.05)
+    if trial_count > 0 or max_trial_phase > 0:
+        base = min(0.7, 0.25 + 0.12 * max_trial_phase + 0.05 * min(trial_count, 5))
+        # Outcome direction (P3): a trial that FAILED for efficacy/safety here is
+        # negative evidence — the drug was tested and did not work — so the credit
+        # shrinks toward 0 (outcome ∈ [-1,0]); a completed / with-results trial
+        # earns a small boost (outcome > 0).
+        if trial_outcome < 0:
+            return round(max(0.0, base * (1.0 + trial_outcome)), 4)
+        return round(min(0.7, base * (1.0 + 0.3 * trial_outcome)), 4)
+    return 0.05                            # untested repurposing hypothesis
 
 
 def _score_indication(existing_ind: str, disease_name: str) -> float:
@@ -254,6 +770,12 @@ def score_compound_for_disease(
     disease_pathways: List[Dict],
     ppi_adj: Dict[str, List[str]],
     drug_genes: Optional[List[str]] = None,
+    drug_actions: Optional[Dict[str, str]] = None,
+    disease_gene_weights: Optional[Dict[str, float]] = None,
+    trial_count: int = 0,
+    max_trial_phase: int = 0,
+    trial_outcome: float = 0.0,
+    mechanistic_prior: Optional[float] = None,
 ) -> Dict:
     existing_ind = compound.get("indications", "") or ""
     raw_phase    = compound.get("max_phase") or compound.get("max_phase_for_ind") or 0
@@ -264,18 +786,298 @@ def score_compound_for_disease(
     if drug_genes is None:
         drug_genes = []
 
+    # Build a signed drug signature for the direction-aware pathway score when we
+    # have the drug's mechanism action types (gene→INHIBITOR/AGONIST/…). Optional:
+    # absent → pathway score stays direction-blind, exactly as before.
+    drug_sig = None
+    if drug_actions:
+        try:
+            from services.signature_engine import drug_signature
+            drug_sig = drug_signature(
+                [{"gene": g, "action": a} for g, a in drug_actions.items()])
+        except Exception as e:
+            logger.debug(f"drug signature build skipped: {e}")
+
+    # Genetics-weighted target overlap when weights are available (validated to
+    # improve recovery + reduce leakage); flat overlap otherwise.
+    target_score = (_score_target_overlap_weighted(drug_genes, disease_gene_weights)
+                    if disease_gene_weights
+                    else _score_target_overlap(drug_genes, disease_genes))
+    # Hub-degree damping (DWPC): weight each drug target's pathway/PPI contribution
+    # by its global connectivity, so a network hub (EGFR, TP53…) cannot trivially
+    # max out cohesion for every disease it touches. Fail-soft → no damping.
+    gene_damp = {}
+    try:
+        from services.hub_degree import damping_map
+        gene_damp = damping_map(drug_genes)
+    except Exception as e:
+        logger.debug(f"hub-degree damping skipped: {e}")
+
     scores = {
-        "target":     _score_target_overlap(drug_genes, disease_genes),
-        "pathway":    _score_pathway_overlap(drug_genes, disease_pathways),
-        "ppi":        _score_ppi_network(drug_genes, ppi_adj),
-        "clinical":   _score_clinical(max_phase, existing_ind, disease_name),
+        "target":     target_score,
+        "pathway":    _score_pathway_overlap(drug_genes, disease_pathways,
+                                             drug_signature=drug_sig, gene_damp=gene_damp),
+        "ppi":        _score_ppi_network(drug_genes, ppi_adj, gene_damp=gene_damp),
+        "clinical":   _score_clinical(max_phase, existing_ind, disease_name,
+                                       trial_count, max_trial_phase, trial_outcome),
         "indication": _score_indication(existing_ind, disease_name),
         "regulatory": _score_regulatory(max_phase, disease_name, existing_ind),
     }
-    composite = sum(scores[k] * WEIGHTS[k] for k in WEIGHTS)
+    _overlap_n = len({g.upper() for g in drug_genes} & {g.upper() for g in disease_genes})
+
+    # ── Externally-established mechanistic linkage (surfacing evidence) ───────────
+    # When a candidate was surfaced by an engine that has ALREADY established a
+    # mechanistic drug→disease link — the pathway screen (drug direction-matches a
+    # disease-driving pathway) or novel-target discovery (drug hits an inferred
+    # disease target) — that linkage is real evidence, yet it is invisible to the
+    # OT-gene-overlap sub-scores (the surfacing genes/pathways are by construction
+    # NOT in the disease's top-40 OT set). Discarding it is why strong pathway
+    # modulators read as "~5". We fold the prior into the PATHWAY dimension (bounded,
+    # so it credits a real-but-unproven hypothesis without flattening every
+    # direction-matched drug to the top). This also lets the pair clear the phantom-
+    # cohesion gate. Disease-specific evidence (real target overlap, trials, an
+    # existing indication) still differentiates candidates above this floor.
+    if mechanistic_prior is not None:
+        try:
+            scores["pathway"] = max(scores["pathway"],
+                                    round(0.5 * max(0.0, min(1.0, float(mechanistic_prior))), 4))
+        except (TypeError, ValueError):
+            pass
+
+    # ── Applicable-weight renormalization ────────────────────────────────────────
+    # For a GENUINE repurposing pair (drug not yet used for this disease), two of the
+    # six dimensions are structurally near-zero by construction: `indication` is 0
+    # (if it matched, it wouldn't be repurposing) and `clinical` sits at its 0.05
+    # "untested-hypothesis" floor unless a real trial exists. Summing them at 0 into a
+    # weighted mean silently caps the achievable score at ~0.3 no matter how strong
+    # the mechanism is — the exact reason good leads read as "~10". So we renormalize:
+    # the disease-specific mechanistic mass (target/pathway/ppi/clinical/indication,
+    # 0.90 of the weight) is spread over only the dimensions that actually carry
+    # disease-specific signal, with a denominator floor so a single weak signal is not
+    # over-amplified. `regulatory` is a GLOBAL de-risking prior (drug's overall phase),
+    # not disease-specific evidence, so it is kept as a small bounded term and is NOT
+    # eligible for amplification — otherwise an approved drug with zero mechanism for
+    # the disease (reverse causation) would inflate. A pair with NO disease-specific
+    # evidence therefore still scores low: this separates leads, it does not inflate.
+    _DISEASE_SPECIFIC = ("target", "pathway", "ppi", "clinical", "indication")
+    _DS_FLOOR = {"target": 1e-9, "pathway": 1e-9, "ppi": 1e-9,
+                 "clinical": 0.051, "indication": 1e-9}   # clinical 0.05 = "no info"
+    _DS_MASS = sum(WEIGHTS[k] for k in _DISEASE_SPECIFIC)          # 0.90
+    _DENOM_FLOOR = 0.45          # never divide the mechanistic mass by less than this
+    _active = [k for k in _DISEASE_SPECIFIC if scores[k] > _DS_FLOOR[k]]
+    if _active:
+        _w_active = sum(WEIGHTS[k] for k in _active)
+        _mech_raw = sum(scores[k] * WEIGHTS[k] for k in _active)
+        mech_component = (_mech_raw / max(_DENOM_FLOOR, _w_active)) * _DS_MASS
+    else:
+        mech_component = sum(scores[k] * WEIGHTS[k] for k in _DISEASE_SPECIFIC)  # ~0
+    composite = min(1.0, mech_component + scores["regulatory"] * WEIGHTS["regulatory"])
+
+    # Real HetioNet network evidence (Compound→Gene←Disease path). Independent of
+    # ChEMBL, so it can legitimately surface a candidate as a lead even when its
+    # targets don't overlap the Open Targets disease-gene set. Folded in as a
+    # bounded bonus and exposed in score_breakdown for the lead-mechanism filter
+    # and the dossier. Fail-soft — never block scoring if the graph is unavailable.
+    net = {"score": 0.0, "genes": [], "basis": ""}
+    try:
+        from services.repurposing_scorer import _network_evidence
+        cname = compound.get("name") or compound.get("pref_name") or ""
+        if cname:
+            net = _network_evidence(cname, [disease_name])
+    except Exception as e:
+        logger.debug(f"network evidence skipped: {e}")
+    net_score = float(net.get("score") or 0.0)
+    composite = min(1.0, composite + 0.10 * net_score)
+
+    # Directional literature evidence (P3): a typed drug→gene→disease path or a
+    # direct drug-treats-disease edge from DRKG (GNBR/DGIDB/DrugBank triples) —
+    # relational support, not co-occurrence. Bounded bonus; fail-soft (0) off-coverage.
+    directional = {"covered": False, "signal": 0.0, "direct_treat": False,
+                   "n_paths": 0, "path_genes": [], "note": ""}
+    try:
+        from services.directional_evidence import directional_evidence
+        dname = compound.get("name") or compound.get("pref_name") or ""
+        if dname and disease_name:
+            directional = directional_evidence(dname, disease_name)
+            composite = min(1.0, composite + 0.12 * float(directional.get("signal", 0.0)))
+    except Exception as e:
+        logger.debug(f"directional evidence skipped: {e}")
+
+    # Negative-safety cross-filter (generalized): down-rank a match when the drug
+    # carries a SERIOUS toxicity signal for the organ system the disease lives in
+    # (e.g. a pulmonary-embolism-risk drug for a pulmonary indication). Applied as
+    # a bounded multiplier on the composite. Fail-soft — multiplier 1.0 when no
+    # adverse-event data is available, so we never invent a penalty.
+    safety = {"multiplier": 1.0, "penalized": False, "flags": []}
+    try:
+        from services.safety_filter import assess as _assess_safety
+        cname = compound.get("name") or compound.get("pref_name") or ""
+        if cname and disease_name:
+            safety = _assess_safety(cname, disease_name)
+            # Recorded, not applied inline — soft penalties are consolidated below so
+            # two moderate ones don't compound multiplicatively into annihilation.
+    except Exception as e:
+        logger.debug(f"safety filter skipped: {e}")
+
+    # Clinical Constraint Harmonizer (CCH): multiply by clinical-reality fit —
+    # severity/therapeutic-window and chronicity/tolerability match. Distinct from
+    # the safety filter above (organ-toxicity↔disease-organ); this is a
+    # severity/duration MATCH check. Fail-soft (1.0 without data).
+    clinical = {"multiplier": 1.0, "penalized": False, "flags": [], "factors": {}}
+    try:
+        from services.clinical_constraints import harmonize as _harmonize
+        cname = compound.get("name") or compound.get("pref_name") or ""
+        if cname and disease_name:
+            clinical = _harmonize(cname, disease_name, smiles=compound.get("smiles", ""),
+                                  has_trials=(trial_count > 0 or max_trial_phase > 0),
+                                  indications=existing_ind)
+            # Recorded, not applied inline (consolidated with the other soft penalties).
+    except Exception as e:
+        logger.debug(f"clinical constraints skipped: {e}")
+
+    # Demonstrated-failure penalty (P3 trial outcomes): if this drug was actually
+    # TRIED and FAILED for efficacy/safety in this indication (trial_outcome < 0),
+    # down-rank it — a real clinical failure is stronger evidence than any
+    # inferred association. Bounded; positive/absent outcomes do nothing here.
+    trial_failure = {"multiplier": 1.0, "penalized": False, "outcome": round(trial_outcome, 3)}
+    if trial_outcome < -0.3:
+        tf_mult = max(0.35, 1.0 + 0.55 * trial_outcome)   # outcome -1 → 0.45, -0.6 → 0.67
+        # Hard, evidence-based penalty (a trial actually failed here) — applied below.
+        trial_failure = {"multiplier": round(tf_mult, 3), "penalized": True,
+                         "outcome": round(trial_outcome, 3),
+                         "flag": "Down-ranked: a trial of this drug in this indication "
+                                 "was terminated for efficacy/safety."}
+
+    # Target-coverage / mandatory-intersection gate (generalized): for a polygenic
+    # disease, penalize a drug that covers only part of the driver-target set. Uses
+    # the genetic-association weights; fail-soft (multiplier 1.0) without them.
+    coverage = {"multiplier": 1.0, "penalized": False, "coverage": None, "flags": []}
+    try:
+        if disease_gene_weights:
+            from services.target_coverage import assess_coverage
+            coverage = assess_coverage(drug_genes, disease_gene_weights)
+            # Recorded, not applied inline (consolidated with the other soft penalties).
+    except Exception as e:
+        logger.debug(f"target-coverage gate skipped: {e}")
+
+    # Mechanism scope (generalized): the composite is target/genetics-centric, so it
+    # is only meaningful for target-mediated diseases. A drug with no resolvable
+    # HUMAN protein targets — an anti-infective (bacterial/viral targets), a
+    # symptomatic/nutritional agent, or simply an unmapped molecule — will score
+    # near-zero on the mechanistic dimensions for reasons of SCOPE, not weak
+    # evidence. Flag it so the UI can say so instead of showing a silent ~0.
+    mechanism_applicable = bool(drug_genes)
+    mechanism_scope = {
+        "target_mediated": mechanism_applicable,
+        "note": ("" if mechanism_applicable else
+                 "No human protein target resolved — the mechanistic score does "
+                 "not apply (e.g. an anti-infective or symptomatic drug). Ranking "
+                 "reflects clinical / literature evidence only."),
+    }
+
+    # ── CTPA Rule 1 — harmonic affinity / cohesion gate (PLATFORM-WIDE) ──────────
+    # In the canonical scorer so EVERY surface (forward discovery, pathway, novel
+    # targets, reverse) inherits it. A pair resting on a single target/text match
+    # with NO functional cohesion (≤1 shared gene AND no pathway/PPI/directional/
+    # trial support) is a phantom — a low-affinity off-target string match. Crush it.
+    _cname = compound.get("name") or compound.get("pref_name") or ""
+    _overlap_n = len({g.upper() for g in drug_genes} & {g.upper() for g in disease_genes})
+    _cohesion = (_overlap_n >= 2 or scores["pathway"] > 0.05 or scores["ppi"] > 0.05
+                 or float(directional.get("signal", 0.0)) > 0 or trial_count > 0)
+    ctpa = {"cohesion": bool(_cohesion), "phantom": False, "multiplier": 1.0}
+    if drug_genes and not _cohesion:
+        # Phantom gate: a pair resting on a single target/text match with no pathway/
+        # PPI/directional/trial cohesion is likely a low-affinity off-target string
+        # match. Still a strong down-rank (0.35), but no longer an annihilation to
+        # ~0.15 that a genuinely selective single-target lead couldn't recover from.
+        # Applied as a hard gate in the consolidation block below.
+        ctpa = {"cohesion": False, "phantom": True, "multiplier": 0.35,
+                "flag": ("No functional cohesion beyond a single target/text "
+                         "association - likely a low-affinity off-target match.")}
+
+    # ── CTPA Rule 2 — registry ghost audit (PLATFORM-WIDE) ───────────────────────
+    # Zero a drug whose late-phase program in this indication failed / was abandoned
+    # (recommending it means repeating a dead trial). Only queried when there is a
+    # late-phase clinical footprint (bounded, cached); fail-soft.
+    registry = {"ghost": False, "multiplier": 1.0}
+    if _cname and disease_name and (trial_count > 0 or max_trial_phase >= 2):
+        try:
+            from services.registry_audit import audit as _reg_audit
+            registry = _reg_audit(_cname, disease_name)
+            # Hard gate (a late-phase program here failed/was abandoned) — applied below.
+        except Exception as e:
+            logger.debug(f"registry audit skipped: {e}")
+
+    # ── Penalty consolidation ────────────────────────────────────────────────────
+    # SOFT penalties (organ-toxicity fit, clinical-reality fit, incomplete polygenic
+    # coverage) are environmental-fit signals of similar kind. Compounding them
+    # multiplicatively double-counts the same "imperfect fit" and was a major driver
+    # of single-digit scores, so we take the SINGLE worst soft penalty instead of the
+    # product. HARD, evidence-based gates (phantom off-target, a trial that actually
+    # failed here, a dead registry program) remain multiplicative — each is a distinct
+    # real-world kill signal that should stack.
+    _soft_mult = min(float(safety.get("multiplier", 1.0)),
+                     float(clinical.get("multiplier", 1.0)),
+                     float(coverage.get("multiplier", 1.0)))
+    composite *= _soft_mult
+    composite *= float(ctpa.get("multiplier", 1.0))
+    composite *= float(trial_failure.get("multiplier", 1.0))
+    if registry.get("ghost"):
+        composite *= float(registry.get("multiplier", 1.0))
+
+    final_score = round(min(1.0, composite), 4)
+
+    # Calibration (P1): make the raw score interpretable by ranking it against a
+    # null distribution of random drug-disease pairs → percentile + tier, so a
+    # strong lead reads as "top 3%" rather than a weak-looking absolute number.
+    calibration = {"percentile": None, "enrichment": None, "tier": None, "basis": "none"}
+    try:
+        from services.score_calibration import calibrate as _calibrate
+        calibration = _calibrate(final_score)
+    except Exception as e:
+        logger.debug(f"score calibration skipped: {e}")
+
+    # ── Evidence-quality gate (anti-overselling + hub de-biasing) ────────────────
+    # Calibration ranks a score against RANDOM pairs, so any mechanistically-linked
+    # candidate looks top-percentile — that is not the same as a strong LEAD. A
+    # single-gene genetic association with no corroboration cannot be "Strong",
+    # however high its percentile. CORROBORATION deliberately EXCLUDES pathway/PPI,
+    # because a network HUB (EGFR, TP53…) trivially maxes those for every disease it
+    # touches — the very inflation that made a weak Cowden/Erlotinib hit read #1.
+    # Real corroboration = breadth of target overlap, real clinical/trial evidence,
+    # directional literature, or genuine driver coverage.
+    corroboration = sum([
+        _overlap_n >= 2,
+        scores["clinical"] > 0.10,
+        float(directional.get("signal", 0.0)) > 0,
+        trial_count > 0,
+        float(coverage.get("coverage") or 0.0) >= 0.5,
+    ])
+    if corroboration < 1 and calibration.get("tier") in ("Strong", "Promising"):
+        calibration = dict(calibration, tier="Moderate", evidence_capped=True,
+                           evidence_note=("Single-association evidence with no "
+                                          "corroboration (no breadth, clinical, "
+                                          "directional or coverage support) - capped "
+                                          "below Strong. Hub-target pathway/PPI signals "
+                                          "are excluded as non-discriminating."))
+
     return {
-        "composite_score": round(composite, 4),
+        "composite_score": final_score,
         "scores":          {k: round(v, 4) for k, v in scores.items()},
+        "score_breakdown": {
+            "network_score": round(net_score, 4),
+            "network_genes": net.get("genes", []),
+            "network_basis": net.get("basis", ""),
+        },
+        "safety":          safety,
+        "coverage":        coverage,
+        "clinical_constraints": clinical,
+        "trial_failure":   trial_failure,
+        "directional_evidence": directional,
+        "ctpa":            ctpa,
+        "registry":        registry,
+        "mechanism_scope": mechanism_scope,
+        "calibration":     calibration,
         "drug_genes":      drug_genes[:20],
     }
 
@@ -342,6 +1144,32 @@ def run_repurposing_screen(
         except Exception as e:
             logger.debug(f"ChEMBL API pool-build error: {e}")
 
+    # ── Augment with NOVEL HetioNet-connected candidates ──────────────────────
+    # Drugs the biology links to the disease (Compound→Gene←Disease) that are NOT
+    # already indicated for it — genuine repurposing leads, not confirmations.
+    # This is what makes the engine discover rather than merely confirm.
+    try:
+        from services.repurposing_scorer import hetionet_novel_compounds
+        novel = hetionet_novel_compounds([disease_name], limit=25)
+        if novel:
+            by_name = _local_molecules_by_name([n["name"] for n in novel])
+            added = 0
+            for n in novel:
+                mol = by_name.get(n["name"].lower())
+                if not mol or not mol.get("smiles"):
+                    continue
+                cid = mol["chembl_id"]
+                if cid in seen_ids:
+                    continue
+                seen_ids.add(cid)
+                candidates.append({**mol, "source": "Knowledge-graph novelty",
+                                   "novelty": True, "shared_disease_genes": n["shared_genes"]})
+                added += 1
+                if added >= 15:
+                    break
+    except Exception as e:
+        logger.debug(f"novelty augmentation skipped: {e}")
+
     if not candidates:
         return {
             "disease": disease_name, "disease_info": disease_info,
@@ -349,12 +1177,21 @@ def run_repurposing_screen(
             "error": "No candidates found", "_ts": time.time(),
         }
 
-    # ── Fetch drug genes for ChEMBL API compounds ─────────────────────────────
-    api_cids = [
-        c.get("chembl_id", "") for c in candidates
-        if c.get("source") == "ChEMBL API" and not c.get("targets")
+    # ── Fetch drug genes for EVERY candidate that lacks targets ───────────────
+    # (DB-sourced rows often have an empty `targets` field too — previously only
+    # ChEMBL-API compounds, capped at 20, were resolved, which is why most
+    # candidates scored target/pathway = 0). Batched, so covering the full set is cheap.
+    need_genes = [
+        c.get("chembl_id", "") for c in candidates[:max_candidates]
+        if (c.get("chembl_id", "") or "").startswith("CHEMBL") and not (c.get("targets") or "").strip()
     ]
-    api_gene_map = _chembl_targets_for_molecules(api_cids[:20]) if api_cids else {}
+    api_gene_map = _chembl_targets_for_molecules(need_genes) if need_genes else {}
+
+    # Mechanism action types (gene→INHIBITOR/AGONIST/…) for the candidate set —
+    # feeds the direction-aware pathway score. Local chembl_33; {} if unavailable.
+    all_cids = [c.get("chembl_id", "") for c in candidates[:max_candidates]
+                if (c.get("chembl_id", "") or "").startswith("CHEMBL")]
+    actions_map = _actions_for_molecules(all_cids) if all_cids else {}
 
     # ── Score each candidate ──────────────────────────────────────────────────
     scored: List[Dict] = []
@@ -365,8 +1202,17 @@ def run_repurposing_screen(
         if not drug_genes_list and cid in api_gene_map:
             drug_genes_list = api_gene_map[cid]
 
+        # KG-novelty candidates were surfaced by a Compound→Gene←Disease path (shared
+        # disease genes in HetioNet) whose genes are, by construction, outside the
+        # disease's OT top-40 — so the OT-overlap sub-scores miss them. Pass that shared
+        # -gene evidence as the mechanistic prior (same saturating scale the network
+        # signal uses) so a genuine KG lead isn't scored as zero-mechanism / phantom.
+        _prior = None
+        if comp.get("novelty") and comp.get("shared_disease_genes"):
+            _prior = min(0.85, 0.35 + 0.12 * int(comp["shared_disease_genes"]))
         sr = score_compound_for_disease(
             comp, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
+            drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}
         scored.append(sc)
