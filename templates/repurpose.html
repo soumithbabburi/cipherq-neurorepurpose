@@ -162,7 +162,7 @@ function candidateCard(c, chembl){
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-center" style="gap:12px">'
   +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
-  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+'</div>'
+  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+'</div>'
   +   '</div>'
   +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
   +     '<span class="cc-bar-lbl">Developability</span>'
@@ -241,6 +241,23 @@ function pivotsHtml(pivots){
 // random drug-disease pairs — so a strong lead reads as "Strong · top 3%" instead
 // of a weak-looking raw number. Falls back to the heuristic tier before the null
 // is built.
+// Validated DWPC plausibility P(treats) — the one number with a held-out AUC (0.98
+// vs random). Shown only where the pair maps into Hetionet. Deliberately labeled
+// "plausibility", not "success probability": the model ranks plausible pairs above
+// noise but does NOT separate eventual successes from failures (AUC 0.42 on real
+// trial failures), so overselling it would be dishonest.
+function plausibilityBadge(pl){
+  if(!pl || pl.probability==null) return '';
+  var pct = Math.round(pl.probability*100);
+  var col = pl.actionable ? '#2f6f5b' : '#9aa39c';
+  var tip = 'DWPC metapath model, validated AUC 0.98 vs random pairs (0.978 on unseen '
+    + 'drugs). Mechanistic PLAUSIBILITY / triage - not a probability of clinical '
+    + 'success (AUC 0.42 vs real trial failures). Actionable cutoff P>=0.15.';
+  return '<div title="'+tip+'" style="margin-top:4px;font-size:0.56rem;font-weight:700;'
+    + 'color:'+col+'">PLAUSIBILITY '+pct+'%'
+    + '<div style="font-size:0.5rem;font-weight:600;color:#9aa39c">DWPC · AUC 0.98 vs random</div></div>';
+}
+
 var TIER_COL = {Strong:'#2f6f5b', Promising:'#b8860b', Moderate:'#a86b2d', Weak:'#9aa39c'};
 function tierBadge(cal){
   if(!cal || !cal.tier) return '';

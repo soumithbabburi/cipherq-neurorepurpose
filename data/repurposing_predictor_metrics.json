@@ -1,0 +1,21 @@
+{
+  "stratified_auc": 0.9775,
+  "stratified_sd": 0.0075,
+  "compound_disjoint_auc": 0.9776,
+  "compound_disjoint_sd": 0.0041,
+  "youden_prob_cutoff": 0.1525,
+  "youden_j": 0.9007,
+  "n_pos": 755,
+  "n_neg": 7550,
+  "features": [
+    "CbGaD",
+    "CdGuD",
+    "CuGdD",
+    "CbGiGaD",
+    "CbGrGaD",
+    "CbG_PW_GaD",
+    "CrCbGaD",
+    "CbGaD_via_DuG",
+    "CbGaD_via_DdG"
+  ]
+}

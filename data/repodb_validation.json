@@ -1,0 +1,5302 @@
+{
+  "n_resolved": 351,
+  "n_approved": 166,
+  "n_failed": 185,
+  "auc_composite": 0.4141,
+  "auc_mechanistic": 0.5423,
+  "composite_approved": {
+    "n": 166,
+    "mean": 0.2357,
+    "median": 0.1645,
+    "p25": 0.0306,
+    "p75": 0.3916
+  },
+  "composite_failed": {
+    "n": 185,
+    "mean": 0.2821,
+    "median": 0.21,
+    "p25": 0.07,
+    "p75": 0.4611
+  },
+  "mech_approved": {
+    "n": 166,
+    "mean": 0.15,
+    "median": 0.0,
+    "p25": 0.0,
+    "p75": 0.3229
+  },
+  "mech_failed": {
+    "n": 185,
+    "mean": 0.1166,
+    "median": 0.0,
+    "p25": 0.0,
+    "p75": 0.1994
+  },
+  "rows": [
+    {
+      "drug": "hydrocortisone",
+      "ind": "Itching of ear",
+      "label": 1,
+      "composite": 0.3143,
+      "mech": 0.2061,
+      "scores": {
+        "target": 0.405,
+        "pathway": 0.0794,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "butenafine",
+      "ind": "Tinea Pedis",
+      "label": 1,
+      "composite": 0.2012,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triamcinolone diacetate",
+      "ind": "Cerebral Edema",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "canagliflozin",
+      "ind": "Chronic kidney disease due to type 2 diabetes mellitus",
+      "label": 1,
+      "composite": 0.4825,
+      "mech": 0.2125,
+      "scores": {
+        "target": 0.4055,
+        "pathway": 0.1,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.8,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "codeine",
+      "ind": "Pain",
+      "label": 1,
+      "composite": 0.3862,
+      "mech": 0.5242,
+      "scores": {
+        "target": 0.5797,
+        "pathway": 0.6,
+        "ppi": 0.3333,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "fluorouracil",
+      "ind": "metastasis from malignant neoplasm of colon",
+      "label": 1,
+      "composite": 0.063,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.4,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ticarcillin",
+      "ind": "Serratia Infections",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "aztreonam",
+      "ind": "Serratia sepsis",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sulfamethizole",
+      "ind": "Acute otitis media",
+      "label": 1,
+      "composite": 0.0236,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "pegfilgrastim",
+      "ind": "Chemotherapy induced neutropenia",
+      "label": 1,
+      "composite": 0.0239,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone benzoate",
+      "ind": "Chronic small plaque psoriasis",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "isosorbide mononitrate",
+      "ind": "Angina Pectoris",
+      "label": 1,
+      "composite": 0.6205,
+      "mech": 0.5414,
+      "scores": {
+        "target": 0.6532,
+        "pathway": 0.2,
+        "ppi": 0.75,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "desoximetasone",
+      "ind": "Seborrheic dermatitis",
+      "label": 1,
+      "composite": 0.3466,
+      "mech": 0.2482,
+      "scores": {
+        "target": 0.3927,
+        "pathway": 0.2382,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "caffeine",
+      "ind": "Sinus headache",
+      "label": 1,
+      "composite": 0.5729,
+      "mech": 0.4979,
+      "scores": {
+        "target": 0.4231,
+        "pathway": 0.4,
+        "ppi": 0.75,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "butoconazole",
+      "ind": "Candidiasis, Vulvovaginal",
+      "label": 1,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "carbamazepine",
+      "ind": "Bipolar affective disorder, current episode manic",
+      "label": 1,
+      "composite": 0.2837,
+      "mech": 0.5968,
+      "scores": {
+        "target": 0.8021,
+        "pathway": 0.3,
+        "ppi": 0.5833,
+        "clinical": 0.05,
+        "indication": 0.2,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lamotrigine",
+      "ind": "Lennox-Gastaut syndrome",
+      "label": 1,
+      "composite": 0.4628,
+      "mech": 0.6322,
+      "scores": {
+        "target": 0.6586,
+        "pathway": 0.3,
+        "ppi": 0.9833,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "venetoclax",
+      "ind": "Small Lymphocytic Lymphoma",
+      "label": 1,
+      "composite": 0.3745,
+      "mech": 0.4578,
+      "scores": {
+        "target": 0.7373,
+        "pathway": 0.0,
+        "ppi": 0.504,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pilocarpine",
+      "ind": "Ocular Hypertension",
+      "label": 1,
+      "composite": 0.6441,
+      "mech": 0.4133,
+      "scores": {
+        "target": 0.2962,
+        "pathway": 0.1,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "clocortolone pivalate",
+      "ind": "Pruritus Ani",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tioconazole",
+      "ind": "Candidiasis, Vulvovaginal",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "hydrocortisone succinate",
+      "ind": "Berylliosis",
+      "label": 1,
+      "composite": 0.6319,
+      "mech": 0.5825,
+      "scores": {
+        "target": 0.3239,
+        "pathway": 0.794,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "brimonidine",
+      "ind": "Rosacea",
+      "label": 1,
+      "composite": 0.6002,
+      "mech": 0.4793,
+      "scores": {
+        "target": 0.3874,
+        "pathway": 0.6,
+        "ppi": 0.5,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pravastatin",
+      "ind": "Hypercholesterolemia",
+      "label": 1,
+      "composite": 0.7672,
+      "mech": 0.6443,
+      "scores": {
+        "target": 0.8297,
+        "pathway": 0.1748,
+        "ppi": 0.874,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "enarodustat",
+      "ind": "Anemia of renal disease",
+      "label": 1,
+      "composite": 0.0543,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.55
+      }
+    },
+    {
+      "drug": "betamethasone",
+      "ind": "Post traumatic osteoarthritis",
+      "label": 1,
+      "composite": 0.1425,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "meticillin",
+      "ind": "Staphylococcal Pneumonia",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cetuximab",
+      "ind": "Squamous cell carcinoma of mouth",
+      "label": 1,
+      "composite": 0.5258,
+      "mech": 0.3246,
+      "scores": {
+        "target": 0.4749,
+        "pathway": 0.0396,
+        "ppi": 0.396,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ciprofloxacin",
+      "ind": "Acute maxillary sinusitis",
+      "label": 1,
+      "composite": 0.2383,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "piperacillin",
+      "ind": "Urinary tract infection caused by Klebsiella",
+      "label": 1,
+      "composite": 0.0271,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.4,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tranylcypromine",
+      "ind": "Major Depressive Disorder",
+      "label": 1,
+      "composite": 0.5594,
+      "mech": 0.1736,
+      "scores": {
+        "target": 0.3229,
+        "pathway": 0.0942,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "epalrestat",
+      "ind": "Diabetic Neuropathies",
+      "label": 1,
+      "composite": 0.0945,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "metizoline",
+      "ind": "Nasal congestion (finding)",
+      "label": 1,
+      "composite": 0.0373,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.4
+      }
+    },
+    {
+      "drug": "melevodopa",
+      "ind": "Parkinsonian Disorders",
+      "label": 1,
+      "composite": 0.0096,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.2
+      }
+    },
+    {
+      "drug": "amphotericin B",
+      "ind": "Brucellosis",
+      "label": 1,
+      "composite": 0.0101,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "glycine",
+      "ind": "Common Cold",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "quinestrol",
+      "ind": "Atrophic Vaginitis",
+      "label": 1,
+      "composite": 0.639,
+      "mech": 0.6601,
+      "scores": {
+        "target": 0.3957,
+        "pathway": 1.0,
+        "ppi": 0.728,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "azithromycin",
+      "ind": "Staphylococcus aureus infection",
+      "label": 1,
+      "composite": 0.0548,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "amantadine",
+      "ind": "Influenza due to Influenza A virus",
+      "label": 1,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "metacycline",
+      "ind": "Bacterial enteritis",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "demeclocycline",
+      "ind": "Gingivostomatitis",
+      "label": 1,
+      "composite": 0.0101,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "lanreotide",
+      "ind": "Pituitary Neoplasms",
+      "label": 1,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone dipropionate",
+      "ind": "Exanthema",
+      "label": 1,
+      "composite": 0.277,
+      "mech": 0.5355,
+      "scores": {
+        "target": 0.3255,
+        "pathway": 0.6352,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "clavulanic acid",
+      "ind": "Urinary tract infection",
+      "label": 1,
+      "composite": 0.1762,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone",
+      "ind": "Bacterial keratitis",
+      "label": 1,
+      "composite": 0.0276,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "triamcinolone acetonide",
+      "ind": "Lichen Simplex Chronicus",
+      "label": 1,
+      "composite": 0.2694,
+      "mech": 0.3229,
+      "scores": {
+        "target": 0.294,
+        "pathway": 0.6352,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "budesonide",
+      "ind": "Primary immunoglobulin A nephropathy (disorder)",
+      "label": 1,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "nafarelin",
+      "ind": "Endometriosis",
+      "label": 1,
+      "composite": 0.6429,
+      "mech": 0.4563,
+      "scores": {
+        "target": 0.3917,
+        "pathway": 0.1,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bictegravir",
+      "ind": "HIV Infections",
+      "label": 1,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ulobetasol propionate",
+      "ind": "Exanthema",
+      "label": 1,
+      "composite": 0.277,
+      "mech": 0.5355,
+      "scores": {
+        "target": 0.3255,
+        "pathway": 0.6352,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "amiodarone",
+      "ind": "Ventricular Fibrillation",
+      "label": 1,
+      "composite": 0.5484,
+      "mech": 0.2905,
+      "scores": {
+        "target": 0.327,
+        "pathway": 0.2,
+        "ppi": 0.3333,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "meropenem",
+      "ind": "Abdominal Abscess",
+      "label": 1,
+      "composite": 0.0136,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ciprofloxacin",
+      "ind": "Lower respiratory tract infection",
+      "label": 1,
+      "composite": 0.155,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.25,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ofloxacin",
+      "ind": "Dysentery",
+      "label": 1,
+      "composite": 0.0925,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "nortriptyline",
+      "ind": "Depressive disorder",
+      "label": 1,
+      "composite": 0.37,
+      "mech": 0.3291,
+      "scores": {
+        "target": 0.3869,
+        "pathway": 0.1,
+        "ppi": 0.5,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pembrolizumab",
+      "ind": "Microsatellite instability-high colorectal cancer",
+      "label": 1,
+      "composite": 0.0525,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.4,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pemirolast",
+      "ind": "Allergic rhinitis (disorder)",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "clotrimazole",
+      "ind": "Diaper Rash",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "terbinafine",
+      "ind": "Onychomycosis",
+      "label": 1,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pramocaine",
+      "ind": "Arthropod bite wound",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "amoxicillin",
+      "ind": "Streptococcal pneumonia",
+      "label": 1,
+      "composite": 0.0665,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "phenoxybenzamine",
+      "ind": "Pheochromocytoma",
+      "label": 1,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "loracarbef",
+      "ind": "Upper Respiratory Infections",
+      "label": 1,
+      "composite": 0.0478,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ceftriaxone",
+      "ind": "Acute gonococcal endometritis",
+      "label": 1,
+      "composite": 0.2383,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "apraclonidine",
+      "ind": "Glaucoma, Open-Angle",
+      "label": 1,
+      "composite": 0.1192,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "lansoprazole",
+      "ind": "Zollinger-Ellison syndrome",
+      "label": 1,
+      "composite": 0.3688,
+      "mech": 0.4755,
+      "scores": {
+        "target": 0.4271,
+        "pathway": 0.1111,
+        "ppi": 1.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "triamcinolone",
+      "ind": "Asthma",
+      "label": 1,
+      "composite": 0.6705,
+      "mech": 0.3811,
+      "scores": {
+        "target": 0.4057,
+        "pathway": 0.0,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "betamethasone acetate",
+      "ind": "Mycosis Fungoides",
+      "label": 1,
+      "composite": 0.218,
+      "mech": 0.3912,
+      "scores": {
+        "target": 0.3752,
+        "pathway": 0.0794,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "diphenoxylate",
+      "ind": "Diarrhea",
+      "label": 1,
+      "composite": 0.5008,
+      "mech": 0.3607,
+      "scores": {
+        "target": 0.4016,
+        "pathway": 0.6,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "hydrocortisone",
+      "ind": "Chronic ulcerative proctitis",
+      "label": 1,
+      "composite": 0.3033,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone",
+      "ind": "Musculoskeletal Diseases",
+      "label": 1,
+      "composite": 0.07,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "landiolol",
+      "ind": "Ventricular Fibrillation",
+      "label": 1,
+      "composite": 0.4645,
+      "mech": 0.1803,
+      "scores": {
+        "target": 0.2674,
+        "pathway": 0.2,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pregabalin",
+      "ind": "Fibromyalgia",
+      "label": 1,
+      "composite": 0.7666,
+      "mech": 0.6391,
+      "scores": {
+        "target": 0.4965,
+        "pathway": 1.0,
+        "ppi": 0.4626,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "calcifediol",
+      "ind": "Renal Osteodystrophy",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone",
+      "ind": "Crohn Disease",
+      "label": 1,
+      "composite": 0.5369,
+      "mech": 0.4043,
+      "scores": {
+        "target": 0.4045,
+        "pathway": 0.0794,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tepotinib",
+      "ind": "Metastatic non-small cell lung cancer",
+      "label": 1,
+      "composite": 0.0366,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sulbactam",
+      "ind": "Rhinoscleroma",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "budesonide",
+      "ind": "Crohn's disease in remission",
+      "label": 1,
+      "composite": 0.2947,
+      "mech": 0.1466,
+      "scores": {
+        "target": 0.2729,
+        "pathway": 0.0794,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cefazolin",
+      "ind": "Biliary tract infection",
+      "label": 1,
+      "composite": 0.1245,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cortisone acetate",
+      "ind": "Acute lymphocytic leukemia",
+      "label": 1,
+      "composite": 0.0513,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "futibatinib",
+      "ind": "Intrahepatic Cholangiocarcinoma",
+      "label": 1,
+      "composite": 0.3605,
+      "mech": 0.3586,
+      "scores": {
+        "target": 0.3704,
+        "pathway": 0.0,
+        "ppi": 0.7677,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "naltrexone",
+      "ind": "Severe pain",
+      "label": 1,
+      "composite": 0.2028,
+      "mech": 0.0296,
+      "scores": {
+        "target": 0.0657,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone",
+      "ind": "Allergic Conjunctivitis",
+      "label": 1,
+      "composite": 0.6315,
+      "mech": 0.2752,
+      "scores": {
+        "target": 0.3999,
+        "pathway": 0.3176,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "hydroxychloroquine",
+      "ind": "Ovale malaria",
+      "label": 1,
+      "composite": 0.0648,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "norfloxacin",
+      "ind": "Malignant otitis externa due to Pseudomonas aeruginosa",
+      "label": 1,
+      "composite": 0.1045,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "prednisolone",
+      "ind": "Granuloma Annulare",
+      "label": 1,
+      "composite": 0.0188,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tigecycline",
+      "ind": "Abdominal Infection",
+      "label": 1,
+      "composite": 0.1645,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "acetazolamide",
+      "ind": "Secondary glaucoma",
+      "label": 1,
+      "composite": 0.0437,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "testosterone cypionate",
+      "ind": "Klinefelter Syndrome",
+      "label": 1,
+      "composite": 0.2852,
+      "mech": 0.4562,
+      "scores": {
+        "target": 0.3813,
+        "pathway": 0.3972,
+        "ppi": 0.662,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "irbesartan",
+      "ind": "Diabetic Nephropathy",
+      "label": 1,
+      "composite": 0.4705,
+      "mech": 0.5164,
+      "scores": {
+        "target": 0.392,
+        "pathway": 0.3,
+        "ppi": 1.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "favipiravir",
+      "ind": "Influenza",
+      "label": 1,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "rituximab",
+      "ind": "Purpura, Thrombotic Thrombocytopenic",
+      "label": 1,
+      "composite": 0.0712,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cefotetan",
+      "ind": "Endometritis",
+      "label": 1,
+      "composite": 0.0109,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "amcinonide",
+      "ind": "Pruritus of genital organs",
+      "label": 1,
+      "composite": 0.0236,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "kanamycin",
+      "ind": "Infection of bone",
+      "label": 1,
+      "composite": 0.0271,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dapsone",
+      "ind": "Dermatitis Herpetiformis",
+      "label": 1,
+      "composite": 0.1155,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "quinupristin",
+      "ind": "Group A Streptococcal Infections",
+      "label": 1,
+      "composite": 0.0219,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "bazedoxifene",
+      "ind": "Hot flushes",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "methotrexate",
+      "ind": "Rheumatoid Arthritis",
+      "label": 1,
+      "composite": 0.802,
+      "mech": 0.182,
+      "scores": {
+        "target": 0.4045,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "medrysone",
+      "ind": "Cyclitis",
+      "label": 1,
+      "composite": 0.5099,
+      "mech": 0.4642,
+      "scores": {
+        "target": 0.22,
+        "pathway": 0.5558,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "telaprevir",
+      "ind": "Hepatitis C, Chronic",
+      "label": 1,
+      "composite": 0.617,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tadalafil",
+      "ind": "Prostatic Hypertrophy",
+      "label": 1,
+      "composite": 0.4267,
+      "mech": 0.2679,
+      "scores": {
+        "target": 0.3953,
+        "pathway": 0.3,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "fluvastatin",
+      "ind": "Familial hypercholesterolemia - heterozygous",
+      "label": 1,
+      "composite": 0.1767,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ampicillin",
+      "ind": "Bacterial Endocarditis",
+      "label": 1,
+      "composite": 0.2082,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "aztreonam",
+      "ind": "Pneumonia due to Escherichia coli",
+      "label": 1,
+      "composite": 0.0239,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "amoxicillin",
+      "ind": "Urinary tract infection",
+      "label": 1,
+      "composite": 0.1832,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cortisone acetate",
+      "ind": "Tuberculosis, Miliary",
+      "label": 1,
+      "composite": 0.063,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "clindamycin",
+      "ind": "Staphylococcus aureus infection",
+      "label": 1,
+      "composite": 0.0376,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ergotamine",
+      "ind": "Cluster Headache",
+      "label": 1,
+      "composite": 0.1838,
+      "mech": 0.2013,
+      "scores": {
+        "target": 0.1758,
+        "pathway": 0.2222,
+        "ppi": 0.2222,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "promazine",
+      "ind": "Sneezing",
+      "label": 1,
+      "composite": 0.3934,
+      "mech": 0.3397,
+      "scores": {
+        "target": 0.3697,
+        "pathway": 0.3,
+        "ppi": 0.3333,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tolmetin",
+      "ind": "Degenerative polyarthritis",
+      "label": 1,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "doxylamine",
+      "ind": "Influenza-like symptoms",
+      "label": 1,
+      "composite": 0.0236,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "olanzapine",
+      "ind": "Schizophrenia",
+      "label": 1,
+      "composite": 0.9626,
+      "mech": 0.6561,
+      "scores": {
+        "target": 0.648,
+        "pathway": 0.4,
+        "ppi": 0.978,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone",
+      "ind": "Serum Sickness",
+      "label": 1,
+      "composite": 0.0153,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cefadroxil",
+      "ind": "Staphylococcus aureus infection",
+      "label": 1,
+      "composite": 0.0359,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triamcinolone",
+      "ind": "Rheumatoid Arthritis",
+      "label": 1,
+      "composite": 0.5521,
+      "mech": 0.4046,
+      "scores": {
+        "target": 0.405,
+        "pathway": 0.0794,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone",
+      "ind": "Rheumatoid Arthritis",
+      "label": 1,
+      "composite": 0.5321,
+      "mech": 0.4046,
+      "scores": {
+        "target": 0.405,
+        "pathway": 0.0794,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "somatropin",
+      "ind": "Pituitary dwarfism",
+      "label": 1,
+      "composite": 0.4709,
+      "mech": 0.7605,
+      "scores": {
+        "target": 0.8012,
+        "pathway": 0.5,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "doxepin",
+      "ind": "Anxiety",
+      "label": 1,
+      "composite": 0.582,
+      "mech": 0.1988,
+      "scores": {
+        "target": 0.3084,
+        "pathway": 0.2,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "prednisolone",
+      "ind": "Nephrotic Syndrome",
+      "label": 1,
+      "composite": 0.3661,
+      "mech": 0.1821,
+      "scores": {
+        "target": 0.4047,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "voxilaprevir",
+      "ind": "Hepatitis C, Chronic",
+      "label": 1,
+      "composite": 0.1097,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "methadone",
+      "ind": "Opioid withdrawal",
+      "label": 1,
+      "composite": 0.2104,
+      "mech": 0.2278,
+      "scores": {
+        "target": 0.2396,
+        "pathway": 0.4,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ceftriaxone",
+      "ind": "Meningitis caused by Klebsiella aerogenes",
+      "label": 1,
+      "composite": 0.155,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.25,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "travoprost",
+      "ind": "Ocular Hypertension",
+      "label": 1,
+      "composite": 0.603,
+      "mech": 0.2423,
+      "scores": {
+        "target": 0.405,
+        "pathway": 0.2,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "enalapril",
+      "ind": "Congestive heart failure",
+      "label": 1,
+      "composite": 0.5512,
+      "mech": 0.4459,
+      "scores": {
+        "target": 0.3961,
+        "pathway": 0.0956,
+        "ppi": 0.956,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cefoxitin",
+      "ind": "Rhinoscleroma",
+      "label": 1,
+      "composite": 0.0101,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "fusidic acid",
+      "ind": "Cutaneous anthrax",
+      "label": 1,
+      "composite": 0.0059,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tolazoline",
+      "ind": "Cerebrovascular Disorders",
+      "label": 1,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "dronabinol",
+      "ind": "Chemotherapy-induced nausea and vomiting",
+      "label": 1,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triamcinolone",
+      "ind": "Uveitis",
+      "label": 1,
+      "composite": 0.4835,
+      "mech": 0.4276,
+      "scores": {
+        "target": 0.4033,
+        "pathway": 0.1588,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "mepyramine",
+      "ind": "Sinus headache",
+      "label": 1,
+      "composite": 0.5135,
+      "mech": 0.4605,
+      "scores": {
+        "target": 0.4011,
+        "pathway": 0.1,
+        "ppi": 1.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "prednisolone",
+      "ind": "Rheumatoid Arthritis",
+      "label": 1,
+      "composite": 0.348,
+      "mech": 0.4046,
+      "scores": {
+        "target": 0.405,
+        "pathway": 0.0794,
+        "ppi": 0.794,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triamcinolone",
+      "ind": "Lichen Simplex Chronicus",
+      "label": 1,
+      "composite": 0.2872,
+      "mech": 0.3229,
+      "scores": {
+        "target": 0.294,
+        "pathway": 0.6352,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "prednisolone",
+      "ind": "Dermatitis Herpetiformis",
+      "label": 1,
+      "composite": 0.3946,
+      "mech": 0.3635,
+      "scores": {
+        "target": 0.3843,
+        "pathway": 0.6352,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "minocycline",
+      "ind": "Meningococcus carrier",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "diazepam",
+      "ind": "Status Epilepticus",
+      "label": 1,
+      "composite": 0.7237,
+      "mech": 0.5091,
+      "scores": {
+        "target": 0.4772,
+        "pathway": 0.2,
+        "ppi": 0.9375,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "secbutabarbital",
+      "ind": "Sleeplessness",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "etidronic acid",
+      "ind": "Heterotopic Ossification",
+      "label": 1,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "paroxetine",
+      "ind": "Premenstrual Dysphoric Disorder",
+      "label": 1,
+      "composite": 0.1175,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "epoprostenol",
+      "ind": "Rhinitis",
+      "label": 1,
+      "composite": 0.0058,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "dexamethasone",
+      "ind": "Adrenogenital disorder",
+      "label": 1,
+      "composite": 0.3916,
+      "mech": 0.7887,
+      "scores": {
+        "target": 0.8882,
+        "pathway": 0.6352,
+        "ppi": 0.794,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Retinoblastoma",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "amikacin",
+      "ind": "Staphylococcal meningitis",
+      "label": 1,
+      "composite": 0.0997,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sotagliflozin",
+      "ind": "Diabetes Mellitus, Insulin-Dependent",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "macrogol",
+      "ind": "Redness of eye",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "teriparatide",
+      "ind": "Osteoporosis, Postmenopausal",
+      "label": 1,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "amineptine",
+      "ind": "Depressive disorder",
+      "label": 1,
+      "composite": 0.3272,
+      "mech": 0.4726,
+      "scores": {
+        "target": 0.7437,
+        "pathway": 0.089,
+        "ppi": 0.445,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "naftidrofuryl",
+      "ind": "Cerebrovascular Disorders",
+      "label": 1,
+      "composite": 0.0026,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.0
+      }
+    },
+    {
+      "drug": "ezetimibe",
+      "ind": "Hypercholesterolemia",
+      "label": 1,
+      "composite": 0.9183,
+      "mech": 0.5856,
+      "scores": {
+        "target": 0.7458,
+        "pathway": 0.0,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "carbamazepine",
+      "ind": "Epilepsies, Partial",
+      "label": 1,
+      "composite": 0.396,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "betamethasone",
+      "ind": "Tuberculosis, Miliary",
+      "label": 1,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "indomethacin",
+      "ind": "Synovitis",
+      "label": 1,
+      "composite": 0.3028,
+      "mech": 0.2356,
+      "scores": {
+        "target": 0.17,
+        "pathway": 0.222,
+        "ppi": 0.37,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "colecalciferol",
+      "ind": "Rickets",
+      "label": 1,
+      "composite": 0.3094,
+      "mech": 0.2275,
+      "scores": {
+        "target": 0.4388,
+        "pathway": 0.1,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "demeclocycline",
+      "ind": "Rickettsialpox",
+      "label": 1,
+      "composite": 0.0101,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "olaparib",
+      "ind": "Epithelial tumor of ovary",
+      "label": 1,
+      "composite": 0.102,
+      "mech": 0.1393,
+      "scores": {
+        "target": 0.3096,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cefmetazole",
+      "ind": "Streptococcal pneumonia",
+      "label": 1,
+      "composite": 0.0254,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tripelennamine",
+      "ind": "Rhinorrhea",
+      "label": 1,
+      "composite": 0.0236,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "fusidic acid",
+      "ind": "Osteomyelitis due to Staphylococcus aureus",
+      "label": 1,
+      "composite": 0.0236,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "caffeine",
+      "ind": "Influenza-like symptoms",
+      "label": 1,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "norethisterone",
+      "ind": "Female hypogonadism syndrome",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "amikacin",
+      "ind": "Sepsis of the newborn",
+      "label": 1,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "kanamycin",
+      "ind": "Cholangitis",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "levofloxacin",
+      "ind": "Chlamydial pneumonia",
+      "label": 1,
+      "composite": 0.205,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pentoxyverine",
+      "ind": "Rhinitis, Vasomotor",
+      "label": 1,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "finasteride",
+      "ind": "Prostatic Hypertrophy",
+      "label": 1,
+      "composite": 0.5499,
+      "mech": 0.4614,
+      "scores": {
+        "target": 0.403,
+        "pathway": 0.1,
+        "ppi": 1.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "diphenylpyraline",
+      "ind": "Allergic Conjunctivitis",
+      "label": 1,
+      "composite": 0.1664,
+      "mech": 0.2415,
+      "scores": {
+        "target": 0.4033,
+        "pathway": 0.2,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "epoetin alfa",
+      "ind": "Rheumatoid Arthritis",
+      "label": 0,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "sirolimus",
+      "ind": "Neuroblastoma",
+      "label": 0,
+      "composite": 0.305,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "atorvastatin",
+      "ind": "Peripheral arterial stenosis",
+      "label": 0,
+      "composite": 0.1285,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "decitabine",
+      "ind": "Non-Small Cell Lung Carcinoma",
+      "label": 0,
+      "composite": 0.1802,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "esomeprazole",
+      "ind": "Ulcerative Colitis",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "naltrexone",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.1837,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "methylprednisolone",
+      "ind": "Microscopic Polyarteritis",
+      "label": 0,
+      "composite": 0.2494,
+      "mech": 0.3217,
+      "scores": {
+        "target": 0.2915,
+        "pathway": 0.6352,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tacrolimus",
+      "ind": "Multiple Myeloma",
+      "label": 0,
+      "composite": 0.629,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pregabalin",
+      "ind": "Neuralgia",
+      "label": 0,
+      "composite": 0.5705,
+      "mech": 0.5974,
+      "scores": {
+        "target": 0.4874,
+        "pathway": 1.0,
+        "ppi": 0.3121,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lapatinib",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.5299,
+      "mech": 0.4804,
+      "scores": {
+        "target": 0.7714,
+        "pathway": 0.2176,
+        "ppi": 0.272,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "olanzapine",
+      "ind": "Nausea",
+      "label": 0,
+      "composite": 0.4414,
+      "mech": 0.5158,
+      "scores": {
+        "target": 0.4473,
+        "pathway": 0.4,
+        "ppi": 0.778,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexrazoxane",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.1837,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "infliximab",
+      "ind": "Berylliosis",
+      "label": 0,
+      "composite": 0.2046,
+      "mech": 0.0646,
+      "scores": {
+        "target": 0.1435,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "anastrozole",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.0583,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "moxifloxacin",
+      "ind": "Asthma",
+      "label": 0,
+      "composite": 0.2012,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "voriconazole",
+      "ind": "Aspergillosis",
+      "label": 0,
+      "composite": 0.305,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "fenofibrate",
+      "ind": "Multiple Myeloma",
+      "label": 0,
+      "composite": 0.629,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cannabidiol",
+      "ind": "Bipolar Disorder",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "etoposide",
+      "ind": "Peripheral T-Cell Lymphoma",
+      "label": 0,
+      "composite": 0.3685,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "rituximab",
+      "ind": "Peripheral T-Cell Lymphoma",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "etoposide",
+      "ind": "Neuroblastoma",
+      "label": 0,
+      "composite": 0.3694,
+      "mech": 0.3526,
+      "scores": {
+        "target": 0.3202,
+        "pathway": 0.0,
+        "ppi": 0.834,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "acetylsalicylic acid",
+      "ind": "COVID19 (disease)",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "etoposide",
+      "ind": "Multiple Myeloma",
+      "label": 0,
+      "composite": 0.655,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "chloroquine",
+      "ind": "COVID19 (disease)",
+      "label": 0,
+      "composite": 0.0752,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cisplatin",
+      "ind": "Human epidermal growth factor 2 negative carcinoma of breast",
+      "label": 0,
+      "composite": 0.065,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.4286,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "amiodarone",
+      "ind": "Atrial Fibrillation",
+      "label": 0,
+      "composite": 0.5481,
+      "mech": 0.3757,
+      "scores": {
+        "target": 0.5163,
+        "pathway": 0.2,
+        "ppi": 0.3333,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "mometasone furoate",
+      "ind": "Eosinophilic esophagitis",
+      "label": 0,
+      "composite": 0.6799,
+      "mech": 0.5224,
+      "scores": {
+        "target": 0.2964,
+        "pathway": 0.6352,
+        "ppi": 0.794,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "glibenclamide",
+      "ind": "Diabetes Mellitus",
+      "label": 0,
+      "composite": 0.4515,
+      "mech": 0.79,
+      "scores": {
+        "target": 1.0,
+        "pathway": 0.3,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "rosuvastatin",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.1957,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bendamustine",
+      "ind": "Acute lymphoblastic leukemia - category",
+      "label": 0,
+      "composite": 0.0424,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.75,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "colecalciferol",
+      "ind": "Ulcerative Colitis",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "imatinib",
+      "ind": "Myeloid Leukemia, Chronic",
+      "label": 0,
+      "composite": 0.4138,
+      "mech": 0.7598,
+      "scores": {
+        "target": 0.9032,
+        "pathway": 0.7716,
+        "ppi": 0.4877,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "vancomycin",
+      "ind": "Fever",
+      "label": 0,
+      "composite": 0.0335,
+      "mech": 0.1228,
+      "scores": {
+        "target": 0.2729,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "domperidone",
+      "ind": "Gastroparesis",
+      "label": 0,
+      "composite": 0.6408,
+      "mech": 0.4022,
+      "scores": {
+        "target": 0.3399,
+        "pathway": 0.089,
+        "ppi": 0.89,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bupivacaine",
+      "ind": "Pain",
+      "label": 0,
+      "composite": 0.356,
+      "mech": 0.5513,
+      "scores": {
+        "target": 0.5363,
+        "pathway": 0.2,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "capecitabine",
+      "ind": "Pain",
+      "label": 0,
+      "composite": 0.0153,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "fluphenazine",
+      "ind": "Psoriasis",
+      "label": 0,
+      "composite": 0.0244,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "eplerenone",
+      "ind": "Ascites",
+      "label": 0,
+      "composite": 0.3453,
+      "mech": 0.2208,
+      "scores": {
+        "target": 0.2906,
+        "pathway": 0.3,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tadalafil",
+      "ind": "Heart failure",
+      "label": 0,
+      "composite": 0.2047,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "buspirone",
+      "ind": "Epilepsy",
+      "label": 0,
+      "composite": 0.2485,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Acute lymphoblastic leukemia - category",
+      "label": 0,
+      "composite": 0.143,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.75,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "melatonin",
+      "ind": "Atrial Fibrillation",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lansoprazole",
+      "ind": "Asthma",
+      "label": 0,
+      "composite": 0.1045,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Crohn Disease",
+      "label": 0,
+      "composite": 0.3085,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "leuprorelin",
+      "ind": "Obesity",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "fentanyl",
+      "ind": "Pain, Postoperative",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dasatinib",
+      "ind": "Acute lymphoblastic leukemia - category",
+      "label": 0,
+      "composite": 0.3522,
+      "mech": 0.7119,
+      "scores": {
+        "target": 0.8308,
+        "pathway": 1.0,
+        "ppi": 0.1522,
+        "clinical": 0.05,
+        "indication": 0.75,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "warfarin",
+      "ind": "Atrial Fibrillation",
+      "label": 0,
+      "composite": 0.7421,
+      "mech": 0.1821,
+      "scores": {
+        "target": 0.4046,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dobutamine",
+      "ind": "Tetralogy of Fallot",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "dronedarone",
+      "ind": "Congestive heart failure",
+      "label": 0,
+      "composite": 0.0365,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "rosuvastatin",
+      "ind": "Venous Thrombosis",
+      "label": 0,
+      "composite": 0.07,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "enoxaparin sodium",
+      "ind": "Nephrotic Syndrome",
+      "label": 0,
+      "composite": 0.0997,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "atorvastatin",
+      "ind": "Hyperlipidemia",
+      "label": 0,
+      "composite": 0.7492,
+      "mech": 0.6171,
+      "scores": {
+        "target": 0.8275,
+        "pathway": 0.0874,
+        "ppi": 0.874,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bevacizumab",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.0478,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "prazosin",
+      "ind": "Anxiety",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nimodipine",
+      "ind": "Schizophrenia",
+      "label": 0,
+      "composite": 0.7142,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ephedrine",
+      "ind": "Sinusitis",
+      "label": 0,
+      "composite": 0.7685,
+      "mech": 0.7384,
+      "scores": {
+        "target": 0.4863,
+        "pathway": 1.0,
+        "ppi": 0.8784,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "oxycodone",
+      "ind": "Opiate Addiction",
+      "label": 0,
+      "composite": 0.3511,
+      "mech": 0.6527,
+      "scores": {
+        "target": 0.6283,
+        "pathway": 0.4,
+        "ppi": 1.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "pioglitazone",
+      "ind": "Asthma",
+      "label": 0,
+      "composite": 0.617,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "donepezil",
+      "ind": "Dementia",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "etanercept",
+      "ind": "Chronic Spontaneous Urticaria",
+      "label": 0,
+      "composite": 0.1608,
+      "mech": 0.2188,
+      "scores": {
+        "target": 0.1839,
+        "pathway": 0.0878,
+        "ppi": 0.439,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lorazepam",
+      "ind": "Nausea",
+      "label": 0,
+      "composite": 0.0289,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "clopidogrel",
+      "ind": "Atherosclerosis",
+      "label": 0,
+      "composite": 0.4916,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sirolimus",
+      "ind": "Pemphigus",
+      "label": 0,
+      "composite": 0.305,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "paclitaxel",
+      "ind": "Triple Negative Breast Neoplasms",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "docetaxel",
+      "ind": "Rhabdomyosarcoma",
+      "label": 0,
+      "composite": 0.6204,
+      "mech": 0.4263,
+      "scores": {
+        "target": 0.2807,
+        "pathway": 1.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "paclitaxel",
+      "ind": "Renal Cell Carcinoma",
+      "label": 0,
+      "composite": 0.629,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "methotrexate",
+      "ind": "Myeloid Leukemia, Chronic",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "docetaxel",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.2743,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "exenatide",
+      "ind": "Obesity",
+      "label": 0,
+      "composite": 0.3171,
+      "mech": 0.4913,
+      "scores": {
+        "target": 0.4028,
+        "pathway": 0.2,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "aprepitant",
+      "ind": "COVID19 (disease)",
+      "label": 0,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "epinephrine",
+      "ind": "Pain, Postoperative",
+      "label": 0,
+      "composite": 0.19,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.305,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Systemic Scleroderma",
+      "label": 0,
+      "composite": 0.3145,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cyclophosphamide",
+      "ind": "Glioblastoma Multiforme",
+      "label": 0,
+      "composite": 0.105,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "verapamil",
+      "ind": "Sinusitis",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "atorvastatin",
+      "ind": "Atrial Fibrillation",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dapsone",
+      "ind": "Pemphigus Vulgaris",
+      "label": 0,
+      "composite": 0.105,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tacrolimus",
+      "ind": "Ulcerative Colitis",
+      "label": 0,
+      "composite": 0.3265,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "megestrol acetate",
+      "ind": "Dementia",
+      "label": 0,
+      "composite": 0.2047,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "promethazine",
+      "ind": "Gastroparesis due to diabetes mellitus",
+      "label": 0,
+      "composite": 0.1767,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "acetylsalicylic acid",
+      "ind": "Disseminated Intravascular Coagulation",
+      "label": 0,
+      "composite": 0.0583,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "formoterol",
+      "ind": "Asthma",
+      "label": 0,
+      "composite": 0.5005,
+      "mech": 0.451,
+      "scores": {
+        "target": 0.4361,
+        "pathway": 0.4718,
+        "ppi": 0.453,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "doxorubicin",
+      "ind": "Rhabdomyosarcoma",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sufentanil",
+      "ind": "Pain",
+      "label": 0,
+      "composite": 0.385,
+      "mech": 0.6639,
+      "scores": {
+        "target": 0.5197,
+        "pathway": 0.6,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "sunitinib",
+      "ind": "Glioblastoma Multiforme",
+      "label": 0,
+      "composite": 0.2585,
+      "mech": 0.4889,
+      "scores": {
+        "target": 0.6168,
+        "pathway": 0.6439,
+        "ppi": 0.0728,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "pemetrexed",
+      "ind": "Microglioma",
+      "label": 0,
+      "composite": 0.0646,
+      "mech": 0.0942,
+      "scores": {
+        "target": 0.2093,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "cycloserine",
+      "ind": "Panic Disorder",
+      "label": 0,
+      "composite": 0.1218,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lorazepam",
+      "ind": "Schizophrenia",
+      "label": 0,
+      "composite": 0.715,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "calcitriol",
+      "ind": "Vitamin D Deficiency",
+      "label": 0,
+      "composite": 0.3989,
+      "mech": 0.269,
+      "scores": {
+        "target": 0.3978,
+        "pathway": 0.3,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "tacrolimus",
+      "ind": "Lupus Nephritis",
+      "label": 0,
+      "composite": 0.2676,
+      "mech": 0.2465,
+      "scores": {
+        "target": 0.222,
+        "pathway": 0.2538,
+        "ppi": 0.282,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "penamecillin",
+      "ind": "Psoriasis",
+      "label": 0,
+      "composite": 0.0096,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.2
+      }
+    },
+    {
+      "drug": "minocycline",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.749,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "simvastatin",
+      "ind": "Cystic Fibrosis",
+      "label": 0,
+      "composite": 0.655,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "rituximab",
+      "ind": "Neuroblastoma",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ipilimumab",
+      "ind": "Metastatic urothelial carcinoma",
+      "label": 0,
+      "composite": 0.0478,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "imatinib",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.4664,
+      "mech": 0.4051,
+      "scores": {
+        "target": 0.7048,
+        "pathway": 0.2176,
+        "ppi": 0.0907,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "miconazole",
+      "ind": "Folliculitis",
+      "label": 0,
+      "composite": 0.0975,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "axitinib",
+      "ind": "Non-Small Cell Lung Carcinoma",
+      "label": 0,
+      "composite": 0.6128,
+      "mech": 0.3049,
+      "scores": {
+        "target": 0.6208,
+        "pathway": 0.085,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nivolumab",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.0357,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bortezomib",
+      "ind": "Amyloidosis",
+      "label": 0,
+      "composite": 0.655,
+      "mech": 0.4864,
+      "scores": {
+        "target": 0.401,
+        "pathway": 1.0,
+        "ppi": 0.0238,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nivolumab",
+      "ind": "Squamous non-small cell lung cancer",
+      "label": 0,
+      "composite": 0.102,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.8,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "bortezomib",
+      "ind": "Rheumatoid Arthritis",
+      "label": 0,
+      "composite": 0.0713,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "thalidomide",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.2077,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sorafenib",
+      "ind": "Kaposi Sarcoma",
+      "label": 0,
+      "composite": 0.2257,
+      "mech": 0.0949,
+      "scores": {
+        "target": 0.2108,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "heparin",
+      "ind": "Shock, Cardiogenic",
+      "label": 0,
+      "composite": 0.0297,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "fluorouracil",
+      "ind": "Squamous cell carcinoma of esophagus",
+      "label": 0,
+      "composite": 0.568,
+      "mech": 0.3052,
+      "scores": {
+        "target": 0.3016,
+        "pathway": 0.0,
+        "ppi": 0.678,
+        "clinical": 0.05,
+        "indication": 0.75,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "mifepristone",
+      "ind": "Uterine Fibroids",
+      "label": 0,
+      "composite": 0.1285,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "melatonin",
+      "ind": "Obesity",
+      "label": 0,
+      "composite": 0.1285,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "methylprednisolone",
+      "ind": "COVID19 (disease)",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "prednicarbate",
+      "ind": "Hemangioma",
+      "label": 0,
+      "composite": 0.0219,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "testosterone",
+      "ind": "Dyspareunia",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "oxytocin",
+      "ind": "Obesity",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "etoposide",
+      "ind": "Marginal Zone B-Cell Lymphoma",
+      "label": 0,
+      "composite": 0.0385,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "floxacillin",
+      "ind": "Chronic Kidney Diseases",
+      "label": 0,
+      "composite": 0.0659,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.55
+      }
+    },
+    {
+      "drug": "modafinil",
+      "ind": "Schizophrenia",
+      "label": 0,
+      "composite": 0.761,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triptorelin",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.0478,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone phosphate",
+      "ind": "Amyloidosis",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "azacitidine",
+      "ind": "Multiple Myeloma",
+      "label": 0,
+      "composite": 0.653,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nitric oxide",
+      "ind": "Cystic Fibrosis",
+      "label": 0,
+      "composite": 0.605,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nitric oxide",
+      "ind": "Pulmonary arterial hypertension",
+      "label": 0,
+      "composite": 0.4611,
+      "mech": 0.2465,
+      "scores": {
+        "target": 0.4145,
+        "pathway": 0.2,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "insulin glargine",
+      "ind": "Diabetes Mellitus",
+      "label": 0,
+      "composite": 0.4025,
+      "mech": 0.763,
+      "scores": {
+        "target": 0.8995,
+        "pathway": 0.4998,
+        "ppi": 0.833,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ticagrelor",
+      "ind": "Diabetes Mellitus",
+      "label": 0,
+      "composite": 0.3702,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "triamcinolone",
+      "ind": "Vitiligo",
+      "label": 0,
+      "composite": 0.534,
+      "mech": 0.1291,
+      "scores": {
+        "target": 0.2339,
+        "pathway": 0.0794,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "abatacept",
+      "ind": "COVID19 (disease)",
+      "label": 0,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "rimonabant",
+      "ind": "Prader-Willi Syndrome",
+      "label": 0,
+      "composite": 0.5289,
+      "mech": 0.1445,
+      "scores": {
+        "target": 0.2544,
+        "pathway": 0.1,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ceftriaxone",
+      "ind": "Schizophrenia",
+      "label": 0,
+      "composite": 0.6686,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "gefitinib",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.465,
+      "mech": 0.2715,
+      "scores": {
+        "target": 0.4978,
+        "pathway": 0.1584,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "erlotinib",
+      "ind": "Ewings sarcoma",
+      "label": 0,
+      "composite": 0.07,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "cimetidine",
+      "ind": "Generalized Anxiety Disorder",
+      "label": 0,
+      "composite": 0.07,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone phosphate",
+      "ind": "Postoperative Nausea and Vomiting",
+      "label": 0,
+      "composite": 0.3635,
+      "mech": 0.2265,
+      "scores": {
+        "target": 0.1858,
+        "pathway": 0.4764,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "dasatinib",
+      "ind": "Polycythemia Vera",
+      "label": 0,
+      "composite": 0.2821,
+      "mech": 0.2133,
+      "scores": {
+        "target": 0.3885,
+        "pathway": 0.1283,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "midazolam",
+      "ind": "Dyspnea",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "ticagrelor",
+      "ind": "Peripheral arterial stenosis",
+      "label": 0,
+      "composite": 0.4226,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "abciximab",
+      "ind": "Cerebrovascular accident",
+      "label": 0,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "interferon beta-1b",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.371,
+      "mech": 0.5618,
+      "scores": {
+        "target": 0.434,
+        "pathway": 0.478,
+        "ppi": 0.8925,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "haloperidol",
+      "ind": "Vomiting",
+      "label": 0,
+      "composite": 0.3603,
+      "mech": 0.5487,
+      "scores": {
+        "target": 0.4123,
+        "pathway": 0.4,
+        "ppi": 0.9725,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "vorinostat",
+      "ind": "leiomyosarcoma",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "donepezil",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.6806,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lucanthone",
+      "ind": "Glioblastoma Multiforme",
+      "label": 0,
+      "composite": 0.0543,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.4
+      }
+    },
+    {
+      "drug": "mesalazine",
+      "ind": "Rheumatoid Arthritis",
+      "label": 0,
+      "composite": 0.3839,
+      "mech": 0.2927,
+      "scores": {
+        "target": 0.4317,
+        "pathway": 0.174,
+        "ppi": 0.185,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "methotrexate",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.2883,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "irinotecan",
+      "ind": "Glioblastoma Multiforme",
+      "label": 0,
+      "composite": 0.035,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dexamethasone phosphate",
+      "ind": "Acute otitis media",
+      "label": 0,
+      "composite": 0.1196,
+      "mech": 0.3138,
+      "scores": {
+        "target": 0.2269,
+        "pathway": 0.7058,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dronabinol",
+      "ind": "Nausea",
+      "label": 0,
+      "composite": 0.3276,
+      "mech": 0.4346,
+      "scores": {
+        "target": 0.3436,
+        "pathway": 0.1,
+        "ppi": 1.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ramipril",
+      "ind": "Atrial Flutter",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "colecalciferol",
+      "ind": "Multiple Sclerosis",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "glyceryl trinitrate",
+      "ind": "Ischemic stroke",
+      "label": 0,
+      "composite": 0.0595,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "mycophenolate mofetil",
+      "ind": "Renal transplant rejection",
+      "label": 0,
+      "composite": 0.5629,
+      "mech": 0.2992,
+      "scores": {
+        "target": 0.1355,
+        "pathway": 0.0,
+        "ppi": 0.953,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "tacrolimus",
+      "ind": "Marginal Zone B-Cell Lymphoma",
+      "label": 0,
+      "composite": 0.0524,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "mycophenolate mofetil",
+      "ind": "Acute lymphoblastic leukemia - category",
+      "label": 0,
+      "composite": 0.0875,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.75,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "oxytocin",
+      "ind": "Bipolar Disorder",
+      "label": 0,
+      "composite": 0.0271,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "thiamine",
+      "ind": "Cardiac Arrest",
+      "label": 0,
+      "composite": 0.07,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "erythromycin",
+      "ind": "Gastroparesis",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "heparin",
+      "ind": "Burn injury",
+      "label": 0,
+      "composite": 0.0823,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 0.5,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "celecoxib",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.1837,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ibandronic acid",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.0712,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "iloprost",
+      "ind": "Systemic Scleroderma",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lenograstim",
+      "ind": "Lymphoma",
+      "label": 0,
+      "composite": 0.1995,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nivolumab",
+      "ind": "Giant Cell Arteritis",
+      "label": 0,
+      "composite": 0.0408,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "ketamine",
+      "ind": "Acute onset pain",
+      "label": 0,
+      "composite": 0.2433,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "aprepitant",
+      "ind": "Nausea",
+      "label": 0,
+      "composite": 0.329,
+      "mech": 0.295,
+      "scores": {
+        "target": 0.3889,
+        "pathway": 0.4,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "aripiprazole",
+      "ind": "Schizoaffective Disorder",
+      "label": 0,
+      "composite": 0.3593,
+      "mech": 0.528,
+      "scores": {
+        "target": 0.4456,
+        "pathway": 0.289,
+        "ppi": 0.9633,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "etretinate",
+      "ind": "melanoma",
+      "label": 0,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "erlotinib",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.5196,
+      "mech": 0.2715,
+      "scores": {
+        "target": 0.4978,
+        "pathway": 0.1584,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "denosumab",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.0712,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "azithromycin",
+      "ind": "Trachoma",
+      "label": 0,
+      "composite": 0.0271,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "vancomycin",
+      "ind": "Clostridium difficile infection",
+      "label": 0,
+      "composite": 0.0365,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.6667,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "lamotrigine",
+      "ind": "Bipolar Disorder",
+      "label": 0,
+      "composite": 0.3578,
+      "mech": 0.5968,
+      "scores": {
+        "target": 0.8021,
+        "pathway": 0.3,
+        "ppi": 0.5833,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "sildenafil",
+      "ind": "Ischemic stroke",
+      "label": 0,
+      "composite": 0.5782,
+      "mech": 0.1994,
+      "scores": {
+        "target": 0.3765,
+        "pathway": 0.1,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "vinorelbine",
+      "ind": "Malignant neoplasm of breast",
+      "label": 0,
+      "composite": 0.2217,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "nelfinavir",
+      "ind": "Multiple Myeloma",
+      "label": 0,
+      "composite": 0.617,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "quetiapine",
+      "ind": "Major Depressive Disorder",
+      "label": 0,
+      "composite": 0.55,
+      "mech": 0.6402,
+      "scores": {
+        "target": 0.8321,
+        "pathway": 0.689,
+        "ppi": 0.2363,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "fluoxetine",
+      "ind": "Dementia",
+      "label": 0,
+      "composite": 0.61,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "azithromycin",
+      "ind": "Bronchiectasis",
+      "label": 0,
+      "composite": 0.2059,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "ketorolac",
+      "ind": "Tenosynovitis",
+      "label": 0,
+      "composite": 0.2119,
+      "mech": 0.131,
+      "scores": {
+        "target": 0.2278,
+        "pathway": 0.0949,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "paclitaxel",
+      "ind": "Biliary Tract Cancer",
+      "label": 0,
+      "composite": 0.2197,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "valproic acid",
+      "ind": "Systemic Scleroderma",
+      "label": 0,
+      "composite": 0.21,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "levodopa",
+      "ind": "Acute onset pain",
+      "label": 0,
+      "composite": 0.0408,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.3333,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "ropivacaine",
+      "ind": "Postoperative Nausea and Vomiting",
+      "label": 0,
+      "composite": 0.5982,
+      "mech": 0.2155,
+      "scores": {
+        "target": 0.2788,
+        "pathway": 0.3,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "losartan",
+      "ind": "Cystic Fibrosis",
+      "label": 0,
+      "composite": 0.641,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "esomeprazole",
+      "ind": "Coughing",
+      "label": 0,
+      "composite": 0.0306,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "liraglutide",
+      "ind": "Diabetes Mellitus",
+      "label": 0,
+      "composite": 0.466,
+      "mech": 0.3273,
+      "scores": {
+        "target": 0.7273,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 1.0,
+        "indication": 1.0,
+        "regulatory": 0.7
+      }
+    },
+    {
+      "drug": "dimethyl fumarate",
+      "ind": "Systemic Scleroderma",
+      "label": 0,
+      "composite": 0.0201,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.5
+      }
+    },
+    {
+      "drug": "metformin",
+      "ind": "Generalized Anxiety Disorder",
+      "label": 0,
+      "composite": 0.0376,
+      "mech": 0.0,
+      "scores": {
+        "target": 0.0,
+        "pathway": 0.0,
+        "ppi": 0.0,
+        "clinical": 0.05,
+        "indication": 0.0,
+        "regulatory": 0.7
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "n_seen": 11339,
+  "n_resolved": 962,
+  "n_approved": 455,
+  "n_failed": 507,
+  "external_auc_approved_vs_failed": 0.4233,
+  "prob_approved_mean": 0.2439,
+  "prob_approved_median": 0.1441,
+  "prob_failed_mean": 0.3792,
+  "prob_failed_median": 0.1441
+}

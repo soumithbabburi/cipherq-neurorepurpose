@@ -50,3 +50,6 @@ biocypher-log/
 .qc/                          # micromamba root: qc + drugdisc-agent envs
 vendor/vina_bin/*.exe         # AutoDock Vina Windows binaries (re-downloadable)
 vendor/AtomisticSkills/**/__pycache__/
+
+# Predictor DWPC cache — rebuilt from the DB on first use (services/repurposing_predictor.py)
+data/dwpc_cache.npz

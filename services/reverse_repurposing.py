@@ -705,8 +705,30 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
            "directional_evidence": sr.get("directional_evidence", {}),
            "calibration": sr.get("calibration", {}),
            "drug_genes": drug_genes[:20], "_ts": time.time()}
+
+    # Validated mechanistic-plausibility probability (DWPC/metapath model; held-out
+    # AUC 0.98 vs random). Additive + fail-soft: present only where the pair maps
+    # into the Hetionet subgraph, and clearly scoped as plausibility/triage — NOT a
+    # probability of clinical success (which is not learnable from the graph).
+    try:
+        from services.repurposing_predictor import plausibility
+        pl = plausibility(drug_name, disease)
+        if pl:
+            out["plausibility"] = pl
+    except Exception as e:
+        logger.debug(f"plausibility skipped: {e}")
     _cache_put(cache_key, out)
     return out
+
+
+def _plausibility_for(drug_name: str, disease: str):
+    """Validated DWPC plausibility P(treats) for a pair, or None off Hetionet
+    coverage. Fail-soft wrapper so the reverse screen never breaks on it."""
+    try:
+        from services.repurposing_predictor import plausibility
+        return plausibility(drug_name, disease)
+    except Exception:
+        return None
 
 
 # ── Candidate generation + scoring ──────────────────────────────────────────
@@ -1122,6 +1144,7 @@ def screen_indications_for_drug(
             "registry":             ctpa_registry,                        # CTPA Rule 2 ghost audit verdict
             "mechanism_scope":      sr.get("mechanism_scope", {}),  # target-mediated? (else score N/A)
             "calibration":          sr.get("calibration", {}),      # percentile/tier vs null background
+            "plausibility":         _plausibility_for(info.get("name", drug), c["disease"]),  # validated DWPC P(treats), where covered
             "effective_cutoff":     eff_cutoff,
             "cutoff_kind":          cutoff_kind,
             "actionable":           bool(actionable),
