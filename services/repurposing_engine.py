@@ -980,9 +980,17 @@ def score_compound_for_disease(
     # targets, reverse) inherits it. A pair resting on a single target/text match
     # with NO functional cohesion (≤1 shared gene AND no pathway/PPI/directional/
     # trial support) is a phantom — a low-affinity off-target string match. Crush it.
+    #
+    # A single driver hit is NOT a phantom when that driver is a STRONG genetic
+    # association: the weighted target score already gates on association strength, so
+    # target ≥ 0.40 means at least one high-confidence disease-gene hit — real (if
+    # narrow) cohesion, not a coincidental string match. Without this, a selective
+    # drug hitting one strongly-associated driver (e.g. CDK4 for Alzheimer, assoc
+    # 0.54 → target 0.52) got both a high target sub-score AND the phantom penalty.
     _cname = compound.get("name") or compound.get("pref_name") or ""
     _overlap_n = len({g.upper() for g in drug_genes} & {g.upper() for g in disease_genes})
     _cohesion = (_overlap_n >= 2 or scores["pathway"] > 0.05 or scores["ppi"] > 0.05
+                 or scores["target"] >= 0.40 or float(net_score) >= 0.35
                  or float(directional.get("signal", 0.0)) > 0 or trial_count > 0)
     ctpa = {"cohesion": bool(_cohesion), "phantom": False, "multiplier": 1.0}
     if drug_genes and not _cohesion:
