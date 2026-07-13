@@ -170,6 +170,7 @@ function candidateCard(c, chembl){
   +     '<span class="mono" style="font-size:11px;font-weight:600;color:'+dvCol+'">'+(dvScore!=null?(dvScore*100).toFixed(0):'-')+'</span>'
   +   '</div>'
   +   '<div class="cc-tags">'+srcBadges+' '+kdBadge+'</div>'
+  +   funnelHtml(c.lead_viability)
   +   (c.bbb_caution?'<div class="chip amber" style="align-self:flex-start" title="CNS indication, but the molecule\'s CNS-MPO is below 4 - blood-brain-barrier penetration is uncertain">BBB risk · brain penetration uncertain</div>':'')
   +   ((c.safety && c.safety.penalized && (c.safety.flags||[]).length)
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.safety.flags.join(' ')).replace(/"/g,'')+'">Safety penalty · '+Math.round((1-c.safety.multiplier)*100)+'% score reduction</div>'
@@ -256,6 +257,39 @@ function plausibilityBadge(pl){
   return '<div title="'+tip+'" style="margin-top:4px;font-size:0.56rem;font-weight:700;'
     + 'color:'+col+'">PLAUSIBILITY '+pct+'%'
     + '<div style="font-size:0.5rem;font-weight:600;color:#9aa39c">DWPC · AUC 0.98 vs random</div></div>';
+}
+
+// Lead-viability funnel: plausibility → potency (IC50) → window (Cmax/IC50) → verdict.
+// The physical gates ELIMINATE what cannot work (a µM binder, or a dose that can't
+// reach the target safely) — turning a plausible hypothesis into a lab-ready lead.
+var _VERDICT = {
+  'lab-ready':          ['#2f6f5b','#eef4ef','Lab-ready'],
+  'needs-optimization': ['#8a6d1a','#f7f1e0','Needs optimization'],
+  'eliminated':         ['#922019','#faece9','Eliminated'],
+  'insufficient-data':  ['#6b6b6b','#f1efe9','Insufficient potency data']
+};
+function funnelHtml(lv){
+  if(!lv || !lv.verdict) return '';
+  var v = _VERDICT[lv.verdict] || ['#6b6b6b','#f1efe9',lv.verdict];
+  var pot = (lv.steps&&lv.steps.potency)||{}, win=(lv.steps&&lv.steps.window)||{};
+  var parts = [];
+  if(pot.covered){
+    var pc = pot.klass==='sloppy'?'#922019':(pot.klass==='potent'?'#2f6f5b':'#8a6d1a');
+    parts.push('<span style="color:'+pc+';font-weight:700">Potency: IC50 ~'
+      + (pot.ic50_nm>=1000?(pot.ic50_nm/1000).toFixed(1)+' µM':Math.round(pot.ic50_nm)+' nM')
+      + ' @'+(pot.target_gene||'')+' ('+pot.klass+')</span>');
+  }
+  if(win.covered){
+    var wc = win.pass?'#2f6f5b':'#922019';
+    parts.push('<span style="color:'+wc+'">Window: '+win.margin+'× free Cmax/IC50</span>');
+  }
+  return '<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:'+v[1]
+    + ';border:1px solid '+v[0]+'33">'
+    + '<div style="font-size:0.66rem;font-weight:800;color:'+v[0]+';text-transform:uppercase;letter-spacing:0.03em">'
+    + 'Lead viability · '+v[2]+'</div>'
+    + (parts.length?'<div style="font-size:0.66rem;color:#45524a;margin-top:3px">'+parts.join(' &nbsp;·&nbsp; ')+'</div>':'')
+    + (lv.reason?'<div style="font-size:0.6rem;color:#9aa39c;margin-top:2px">'+lv.reason+'</div>':'')
+    + '</div>';
 }
 
 var TIER_COL = {Strong:'#2f6f5b', Promising:'#b8860b', Moderate:'#a86b2d', Weak:'#9aa39c'};

@@ -1,0 +1,31 @@
+{
+  "n_pairs": 360,
+  "n_approved": 180,
+  "n_failed": 180,
+  "coverage_potency": 188,
+  "coverage_window": 186,
+  "auc_plausibility_only": 0.3551,
+  "n_plausibility": 67,
+  "auc_potency_only": 0.4825,
+  "auc_window_only": 0.4809,
+  "auc_potency_x_window": 0.4858,
+  "auc_full_funnel": 0.4659,
+  "auc_potency_by_source": {
+    "disease-target": {
+      "auc": 0.5681,
+      "n": 86
+    },
+    "mechanism-target": {
+      "auc": 0.5202,
+      "n": 39
+    },
+    "best-measured": {
+      "auc": 0.4612,
+      "n": 63
+    }
+  },
+  "auc_potency_specific": {
+    "auc": 0.5457,
+    "n": 125
+  }
+}

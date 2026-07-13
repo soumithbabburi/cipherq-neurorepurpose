@@ -731,6 +731,18 @@ def _plausibility_for(drug_name: str, disease: str):
         return None
 
 
+def _lead_viability_for(chembl_id: str, name: str, disease: str, genes, smiles: str = "",
+                        plaus_p=None):
+    """Lead-viability funnel (potency gate here; PBPK window is deferred to the
+    dossier for speed). Fail-soft — never breaks the screen."""
+    try:
+        from services.lead_viability import assess
+        return assess(name, chembl_id, disease, list(genes or []), smiles=smiles,
+                      plausibility_p=plaus_p, run_window=False)
+    except Exception:
+        return None
+
+
 # ── Candidate generation + scoring ──────────────────────────────────────────
 
 # Ranking weights for the REVERSE direction. The drug's GLOBAL clinical/regulatory
@@ -1145,6 +1157,9 @@ def screen_indications_for_drug(
             "mechanism_scope":      sr.get("mechanism_scope", {}),  # target-mediated? (else score N/A)
             "calibration":          sr.get("calibration", {}),      # percentile/tier vs null background
             "plausibility":         _plausibility_for(info.get("name", drug), c["disease"]),  # validated DWPC P(treats), where covered
+            "lead_viability":       _lead_viability_for(c.get("chembl_id", ""), info.get("name", drug),
+                                                        c["disease"], overlap[:10] or drug_genes,
+                                                        smiles=info.get("smiles", "")),  # potency funnel (window deferred to dossier)
             "effective_cutoff":     eff_cutoff,
             "cutoff_kind":          cutoff_kind,
             "actionable":           bool(actionable),
