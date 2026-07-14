@@ -703,6 +703,7 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
            "clinical_constraints": sr.get("clinical_constraints", {}),
            "trial_failure": sr.get("trial_failure", {}),
            "directional_evidence": sr.get("directional_evidence", {}),
+           "proliferation": sr.get("proliferation", {}),
            "calibration": sr.get("calibration", {}),
            "drug_genes": drug_genes[:20], "_ts": time.time()}
 

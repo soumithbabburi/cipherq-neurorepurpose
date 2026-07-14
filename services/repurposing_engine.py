@@ -825,6 +825,23 @@ def score_compound_for_disease(
     }
     _overlap_n = len({g.upper() for g in drug_genes} & {g.upper() for g in disease_genes})
 
+    # ── Target-driven pathogenic proliferation ───────────────────────────────────
+    # A mechanism the genetic-overlap sub-scores are STRUCTURALLY blind to: the drug
+    # inhibits a positive proliferation driver (CDK4/6, cyclins…) and the disease is
+    # built on pathogenic hyperproliferation (RA synovial hyperplasia, fibrosis,
+    # restenosis…). Data-driven + direction-aware (services/proliferation.py). When it
+    # fires it becomes the mechanistic prior (un-phantoms the pair + credits it) and
+    # adds a bounded bonus — so palbociclib→RA is no longer buried at ~0.01.
+    prolif = {"match": False, "score": 0.0}
+    try:
+        from services.proliferation import proliferation_match
+        _pname = compound.get("name") or compound.get("pref_name") or ""
+        prolif = proliferation_match(drug_genes, drug_actions, disease_name)
+        if prolif.get("match"):
+            mechanistic_prior = max(float(mechanistic_prior or 0.0), float(prolif["score"]))
+    except Exception as e:
+        logger.debug(f"proliferation match skipped: {e}")
+
     # ── Externally-established mechanistic linkage (surfacing evidence) ───────────
     # When a candidate was surfaced by an engine that has ALREADY established a
     # mechanistic drug→disease link — the pathway screen (drug direction-matches a
@@ -888,6 +905,12 @@ def score_compound_for_disease(
         logger.debug(f"network evidence skipped: {e}")
     net_score = float(net.get("score") or 0.0)
     composite = min(1.0, composite + 0.10 * net_score)
+
+    # Target-driven proliferation bonus (bounded) — the mechanism is credited on top of
+    # the renormalised pathway prior it already set, so a genuine proliferation-arrest
+    # lead (palbociclib→RA) reaches a real Moderate score instead of ~0.01.
+    if prolif.get("match"):
+        composite = min(1.0, composite + 0.18 * float(prolif["score"]))
 
     # Directional literature evidence (P3): a typed drug→gene→disease path or a
     # direct drug-treats-disease edge from DRKG (GNBR/DGIDB/DrugBank triples) —
@@ -1077,6 +1100,7 @@ def score_compound_for_disease(
             "network_genes": net.get("genes", []),
             "network_basis": net.get("basis", ""),
         },
+        "proliferation":   prolif,     # target-driven proliferation match (RA-type mechanism)
         "safety":          safety,
         "coverage":        coverage,
         "clinical_constraints": clinical,
