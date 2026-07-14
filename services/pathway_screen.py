@@ -450,11 +450,25 @@ def _inferred_diseases(genes: List[str], max_genes: int = 15,
                 if gene not in e["genes"]:
                     e["genes"].append(gene)
 
+    # Attach the Repurposing Value Score so a pathway's inferred indications are ranked
+    # by "would a pharma company pursue this disease?" (burden × unmet-need × market),
+    # not only by how many pathway genes drive it — the same filter the reverse screen
+    # uses, so trivial inferred indications don't top the pathway results either.
+    try:
+        from services.disease_value import value_for
+    except Exception:
+        value_for = None
+    for e in agg.values():
+        dv = value_for(e["name"], e.get("efo", "")) if value_for else None
+        e["disease_value"] = dv
+        e["_vw"] = (dv or {}).get("value_score", 0.5) if dv else 0.5
     ranked = sorted(agg.values(),
-                    key=lambda x: (len(x["genes"]), x["score_sum"]), reverse=True)
+                    key=lambda x: (x["_vw"] * (0.4 + 0.15 * len(x["genes"])), x["score_sum"]),
+                    reverse=True)
     for r in ranked:
         r["score_sum"] = round(r["score_sum"], 3)
         r["n_pathway_genes"] = len(r["genes"])
+        r.pop("_vw", None)
     return ranked[:top]
 
 
@@ -710,6 +724,15 @@ def _attach_indications(top: List[Dict], mode: str, disease: Optional[str],
                     current_phase=float(c.get("max_phase") or 0),
                     evidence_score=c.get("repurposing_score"),
                     is_repurposing=True)
+            except Exception:
+                pass
+        # Same platform quality filters — potency/lead-viability + the value of the
+        # best inferred indication — so the pathway surface is consistent with the rest.
+        if c.get("best_indication"):
+            try:
+                from services.quality_overlay import overlay
+                c.update(overlay(c.get("name", ""), cid, c["best_indication"],
+                                 sorted({n["gene"] for n in c.get("nodes_hit", [])})))
             except Exception:
                 pass
 

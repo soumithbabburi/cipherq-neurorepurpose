@@ -217,25 +217,31 @@ def enrich_burden(conn):
     conn.commit()
 
 
-# ICD-10 chapter → coarse severity prior (0..1), a defensible burden proxy when a
-# precise DALY-per-disease mapping isn't available. High-mortality/disabling chapters
-# score high; benign/functional chapters score low.
+# ICD-10 chapter → burden base, GROUNDED IN GBD 2021 Level-2 age-standardised DALY
+# rates (IHME GBD 2021, The Lancet 2024; https://vizhub.healthdata.org/gbd-results),
+# normalised to cardiovascular disease = 1.0. Per-cause GBD DALYs are license-gated
+# (IHME/OWID redistribution), so we map ICD chapter → the corresponding GBD Level-2
+# cause and use its published relative DALY rate. This is CATEGORY-level; the
+# definition-severity refinement below separates severe from benign WITHIN a category
+# (a category rate is dominated by its commonest condition — e.g. neurological is
+# dominated by headache/migraine, so the base is moderate and neurodegeneration is
+# lifted by the severity keywords).
 _ICD_CHAPTER_BURDEN = {
-    "A": 0.7, "B": 0.7,   # infectious
-    "C": 1.0, "D": 0.8,   # neoplasms / blood
-    "E": 0.6,             # endocrine/metabolic
-    "F": 0.6,             # mental/behavioural
-    "G": 0.8,             # nervous system (neurodegeneration)
-    "H": 0.3,             # eye/ear
-    "I": 0.9,             # circulatory
-    "J": 0.6,             # respiratory
-    "K": 0.5,             # digestive
-    "L": 0.25,            # skin  ← "skin allergy" lands low
-    "M": 0.45,            # musculoskeletal
-    "N": 0.6,             # genitourinary
-    "O": 0.5, "P": 0.7, "Q": 0.7,  # pregnancy/perinatal/congenital
-    "R": 0.2,             # symptoms/signs (headache etc.) ← very low
-    "S": 0.4, "T": 0.4,   # injury/poisoning
+    "A": 0.34, "B": 0.34,  # infectious (resp infections/TB, enteric, HIV) ~2000/100k
+    "C": 0.52, "D": 0.22,  # neoplasms ~3100/100k ; blood/nutritional
+    "E": 0.38,             # endocrine/metabolic (diabetes & kidney) ~2300/100k
+    "F": 0.32,             # mental disorders ~1900/100k
+    "G": 0.36,             # neurological (category dominated by headache — severity refines)
+    "H": 0.17,             # sense organ (eye/ear) ~1000/100k
+    "I": 1.00,             # cardiovascular ~6100/100k (highest Level-2 cause)
+    "J": 0.30,             # chronic respiratory ~1750/100k
+    "K": 0.27,             # digestive ~1600/100k
+    "L": 0.07,             # skin & subcutaneous ~400/100k  ← "skin allergy" lands low
+    "M": 0.34,             # musculoskeletal ~2000/100k
+    "N": 0.30,             # genitourinary / kidney
+    "O": 0.40, "P": 0.42, "Q": 0.35,  # maternal / neonatal / congenital
+    "R": 0.10,             # symptoms/signs (headache etc.) ← very low
+    "S": 0.22, "T": 0.22,  # injury/poisoning
 }
 
 
@@ -324,11 +330,14 @@ _BENIGN_TYPES = ("headache", "rhinitis", "conjunctivit", "pharyngit", "dermatit"
 
 
 def _severity_mult(text: str) -> float:
+    # Stronger per-disease severity refinement (the within-category separator, since
+    # the GBD base is category-level): a fatal/progressive/malignant disease is lifted
+    # well above a benign one sharing the same ICD chapter.
     t = (text or "").lower()
     if any(k in t for k in _SEV_HIGH):
-        return 1.25
+        return 2.2          # fatal / progressive / malignant / neurodegenerative
     if any(k in t for k in _BENIGN_TYPES):
-        return 0.3          # clear benign family — strong cut
+        return 0.25         # clear benign family (headache/rhinitis/dermatitis …)
     if any(k in t for k in _SEV_LOW):
         return 0.5
     return 1.0

@@ -1223,12 +1223,27 @@ def run_repurposing_screen(
             drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}
+        # Same quality filters as every other surface (plausibility + lead-viability;
+        # disease is the fixed input here so its value is attached once on the result).
+        try:
+            from services.quality_overlay import overlay
+            sc.update(overlay(comp.get("name", ""), cid, disease_name, drug_genes_list,
+                              smiles=comp.get("smiles", ""), with_disease_value=False))
+        except Exception as e:
+            logger.debug(f"discover overlay skipped: {e}")
         scored.append(sc)
 
     scored.sort(key=lambda x: x.get("composite_score", 0), reverse=True)
 
+    _dv = None
+    try:
+        from services.disease_value import value_for
+        _dv = value_for(disease_name)
+    except Exception:
+        pass
     result = {
         "disease":               disease_name,
+        "disease_value":         _dv,      # is THIS disease worth a repurposing program?
         "disease_info":          disease_info,
         "disease_gene_count":    len(disease_genes),
         "disease_pathway_count": len(disease_pathways),
