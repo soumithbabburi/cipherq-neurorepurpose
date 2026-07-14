@@ -731,6 +731,16 @@ def _plausibility_for(drug_name: str, disease: str):
         return None
 
 
+def _disease_value_for(disease_name: str, efo_id: str = ""):
+    """Repurposing Value Score for the candidate INDICATION — 'would a pharma company
+    pursue this disease at all' (burden × unmet-need × market-fit). Fail-soft → None."""
+    try:
+        from services.disease_value import value_for
+        return value_for(disease_name, efo_id)
+    except Exception:
+        return None
+
+
 def _lead_viability_for(chembl_id: str, name: str, disease: str, genes, smiles: str = "",
                         plaus_p=None):
     """Lead-viability funnel (potency gate here; PBPK window is deferred to the
@@ -1177,12 +1187,22 @@ def screen_indications_for_drug(
             "bbb_caution":          bool(is_cns and drug_mpo.get("score") is not None
                                          and drug_mpo["score"] < 4.0),
             "exploratory":          c.get("known_drugs", 0) == 0,
+            # Would a pharma company pursue THIS disease? (burden × unmet-need × market)
+            "disease_value":        _disease_value_for(c["disease"], c.get("efo_id", "")),
         }
         scored.append(entry)
 
-    # Tractable indications (those with existing drugs to reference for 505(b)(2)) rank
-    # above untreatable rare leaves; within each tier, by the canonical repurposing score.
-    scored.sort(key=lambda x: (x.get("known_drugs", 0) > 0, x["composite_score"]), reverse=True)
+    # DEFAULT SORT = pharma repurposing value × pair evidence. The disease Value Score
+    # (burden/unmet-need/market-fit) modulates the mechanistic evidence so that a great
+    # drug-fit for a TRIVIAL indication (headache, skin allergy) sinks below a good fit
+    # for a serious, high-unmet-need one — the fix for "that's not what a pharma company
+    # would repurpose for". Unmapped diseases get a neutral 0.5 (never zeroed on a data
+    # gap); association strength remains a separate, visible evidence field.
+    def _rank(x):
+        dv = x.get("disease_value") or {}
+        vw = dv.get("value_score", 0.5) if dv else 0.5
+        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw)
+    scored.sort(key=_rank, reverse=True)
 
     # Positive-Pivot generation: for CCH-crushed candidates, turn the mismatch into a
     # discovery lead (severe/orphan variant, dose-sparing combination, or brain-

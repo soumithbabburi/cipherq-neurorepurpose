@@ -161,7 +161,7 @@ function candidateCard(c, chembl){
   return ''
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-center" style="gap:12px">'
-  +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
+  +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div>'+diseaseValueBadge(c.disease_value)+'</div>'
   +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+'</div>'
   +   '</div>'
   +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
@@ -290,6 +290,24 @@ function funnelHtml(lv){
     + (parts.length?'<div style="font-size:0.66rem;color:#45524a;margin-top:3px">'+parts.join(' &nbsp;·&nbsp; ')+'</div>':'')
     + (lv.reason?'<div style="font-size:0.6rem;color:#9aa39c;margin-top:2px">'+lv.reason+'</div>':'')
     + '</div>';
+}
+
+// Repurposing Value Score — "would a pharma company pursue THIS disease?" (burden ×
+// unmet-need × market-fit), from the MONDO-keyed disease reference table. Drives the
+// default ranking so trivial indications (headache, skin allergy) no longer top the list.
+var _DV_COL = {'High priority':'#2f6f5b','Attractive':'#3f7d68','Marginal':'#a86b2d','Low value':'#b3261e'};
+function diseaseValueBadge(dv){
+  if(!dv || dv.value_score==null) return '';
+  var col = _DV_COL[dv.tier] || '#9aa39c';
+  var p = dv.pillars||{};
+  var tip = 'Repurposing Value Score '+dv.value_score+' ('+dv.tier+') — how attractive '
+    + 'this INDICATION is to pursue: disease burden '+(p.burden!=null?p.burden:'-')
+    + ', unmet need '+(p.unmet_need!=null?p.unmet_need:'-')+', market fit '+(p.market_fit!=null?p.market_fit:'-')
+    + (dv.approved_drugs!=null?'. '+dv.approved_drugs+' approved drugs':'')
+    + (dv.is_orphan?'. Orphan/rare':'')+'.';
+  return '<span title="'+tip+'" class="chip" style="background:'+col+'14;color:'+col
+    + ';border:1px solid '+col+'33;font-weight:700;font-size:0.6rem">Value '
+    + Math.round(dv.value_score*100)+' · '+dv.tier+(dv.category?' · '+dv.category:'')+'</span>';
 }
 
 var TIER_COL = {Strong:'#2f6f5b', Promising:'#b8860b', Moderate:'#a86b2d', Weak:'#9aa39c'};

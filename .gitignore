@@ -53,3 +53,7 @@ vendor/AtomisticSkills/**/__pycache__/
 
 # Predictor DWPC cache — rebuilt from the DB on first use (services/repurposing_predictor.py)
 data/dwpc_cache.npz
+
+# Raw MONDO ontology download (83MB) — re-fetched by build_disease_table.py.
+# The built disease_value.db (11MB) IS committed so the feature works out of the box.
+data/disease_reference/mondo-simple.json
