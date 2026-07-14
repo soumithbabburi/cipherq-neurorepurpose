@@ -70,8 +70,12 @@ def parse_mondo():
         meta = n.get("meta", {}) or {}
         if meta.get("deprecated"):
             continue
+        syns = [s.get("val", "") for s in (meta.get("synonyms") or [])
+                if s.get("val") and s.get("pred") in
+                ("hasExactSynonym", "hasRelatedSynonym", None)]
         nodes[nid] = {"id": nid, "label": n.get("lbl", ""),
                       "xrefs": _xref_map(meta.get("xrefs")),
+                      "synonyms": syns[:12],
                       "definition": (meta.get("definition") or {}).get("val", "")}
     for e in g["edges"]:
         if e.get("pred") != "is_a":
@@ -120,7 +124,7 @@ def build_spine(conn):
         CREATE TABLE diseases (
             mondo_id TEXT PRIMARY KEY, label TEXT, category TEXT,
             icd10 TEXT, orphanet TEXT, mesh TEXT, umls TEXT, doid TEXT,
-            definition TEXT, is_disease INTEGER,
+            definition TEXT, synonyms TEXT, is_disease INTEGER,
             approved_drugs INTEGER, unmet REAL,
             prevalence_class TEXT, prevalence_n REAL, is_orphan INTEGER,
             burden_daly REAL, burden REAL, market REAL,
@@ -139,17 +143,17 @@ def build_spine(conn):
                      (xr.get("MESH") or [""])[0],
                      (xr.get("UMLS") or [""])[0],
                      (xr.get("DOID") or [""])[0],
-                     n["definition"][:500],
+                     n["definition"][:500], " | ".join(n.get("synonyms", []))[:600],
                      is_disease, None, None, None, None, None, None, None, None, None))
     cur.executemany("INSERT OR REPLACE INTO diseases (mondo_id,label,category,icd10,"
-                    "orphanet,mesh,umls,doid,definition,is_disease,approved_drugs,unmet,"
-                    "prevalence_class,prevalence_n,is_orphan,burden_daly,burden,market,"
-                    "value_score) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+                    "orphanet,mesh,umls,doid,definition,synonyms,is_disease,approved_drugs,"
+                    "unmet,prevalence_class,prevalence_n,is_orphan,burden_daly,burden,market,"
+                    "value_score) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     conn.commit()
     for col in ("mesh", "icd10", "orphanet"):
         cur.execute(f"CREATE INDEX IF NOT EXISTS ix_{col} ON diseases({col})")
     conn.commit()
-    _log(f"  wrote {len(rows)} rows ({sum(r[9] for r in rows)} true diseases)")
+    _log(f"  wrote {len(rows)} rows ({sum(r[10] for r in rows)} true diseases)")
 
 
 # ── UNMET NEED: approved-drug count from local chembl_33 ────────────────────────

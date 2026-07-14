@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 _DB = Path(__file__).parent.parent.parent / "data" / "disease_reference" / "disease_value.db"
 
 _conn = None
-_name_index: Dict[str, str] = {}       # normalized label -> mondo_id
+_name_index: Dict[str, str] = {}       # normalized label / synonym -> mondo_id
+_mesh_index: Dict[str, str] = {}       # MESH:Dxxxxxx -> mondo_id
 _loaded = False
 
 
@@ -51,13 +52,20 @@ def _load():
     try:
         _conn = sqlite3.connect(f"file:{_DB}?mode=ro", uri=True, check_same_thread=False)
         cur = _conn.cursor()
-        cur.execute("SELECT mondo_id, label FROM diseases "
+        cur.execute("SELECT mondo_id, label, synonyms, mesh FROM diseases "
                     "WHERE is_disease=1 AND value_score IS NOT NULL")
-        for mid, label in cur.fetchall():
-            key = _norm(label)
-            if key:
-                _name_index.setdefault(key, mid)
-        logger.info("disease_value: loaded %d disease scores", len(_name_index))
+        for mid, label, synonyms, mesh in cur.fetchall():
+            # index the preferred label AND every exact/related synonym so an Open
+            # Targets / ChEMBL disease name that differs from the MONDO label still
+            # resolves (the preferred label wins ties via setdefault ordering).
+            for nm in [label] + ((synonyms or "").split(" | ") if synonyms else []):
+                key = _norm(nm)
+                if key:
+                    _name_index.setdefault(key, mid)
+            if mesh:
+                _mesh_index.setdefault(mesh, mid)      # e.g. MESH:D000544
+        logger.info("disease_value: loaded %d names / %d MeSH → scores",
+                    len(_name_index), len(_mesh_index))
     except Exception as e:
         logger.warning("disease_value load failed: %s", e)
         _conn = None
@@ -82,25 +90,32 @@ def _row(mondo_id: str) -> Optional[Dict]:
     }
 
 
-def value_for(disease_name: str = "", efo_id: str = "") -> Optional[Dict]:
-    """Repurposing Value Score for a disease. Resolves by MONDO/EFO id, then name.
-    Returns {value_score, tier, pillars, category, ...} or None (fail-soft)."""
+def value_for(disease_name: str = "", efo_id: str = "",
+              mesh_id: str = "") -> Optional[Dict]:
+    """Repurposing Value Score for a disease. Resolves by MONDO id → MeSH id →
+    name/synonym. Returns {value_score, tier, pillars, category, ...} or None."""
     _load()
     if not _conn:
         return None
-    # 1. direct id (Open Targets often returns MONDO_xxxx / MONDO:xxxx)
+    # 1. direct MONDO id (Open Targets often returns MONDO_xxxx / MONDO:xxxx)
     eid = (efo_id or "").strip().replace("_", ":")
     if eid.upper().startswith("MONDO:"):
         r = _row(eid.upper())
         if r:
             return r
-    # 2. normalized name — exact, then loose containment on the index
+    # 2. MeSH id (ChEMBL indications are MeSH-keyed) — accept D###### or MESH:D######
+    mid = (mesh_id or "").strip().upper()
+    if mid:
+        key = mid if mid.startswith("MESH:") else f"MESH:{mid.split(':')[-1]}"
+        if key in _mesh_index:
+            return _row(_mesh_index[key])
+    # 3. normalized name / synonym — exact, then loose containment on the index
     n = _norm(disease_name)
     if not n:
         return None
     if n in _name_index:
         return _row(_name_index[n])
-    for k, mid in _name_index.items():
+    for k, mm in _name_index.items():
         if (n in k or k in n) and abs(len(n) - len(k)) < 8:
-            return _row(mid)
+            return _row(mm)
     return None
