@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set active_page = "graph" %}
-{% block title %}Biomedical Network · CipherQ{% endblock %}
+{% block title %}Biomedical Network · RepurposeIQ{% endblock %}
 
 {% block head %}
 <style>
@@ -66,7 +66,7 @@
     <div class="relative flex items-center">
       <span class="material-symbols-outlined absolute left-sm text-text-dim pointer-events-none" style="font-size:18px;top:50%;transform:translateY(-50%)">search</span>
       <input id="graph-q" class="bg-transparent border-none pl-8 pr-sm py-xs text-sm focus:ring-0 w-52 outline-none"
-             type="text" placeholder="Disease name…"
+             type="text" placeholder="Disease or molecule…"
              onkeydown="if(event.key==='Enter')searchGraph()"
              value="{{ disease }}"/>
     </div>
@@ -138,18 +138,21 @@ let cy = null;
 // ── Disease + focal compound persistence ──────────────────────────────────────
 const URL_DISEASE   = {{ ('"' ~ disease ~ '"')|safe }};
 const storedDisease = (() => { try { return sessionStorage.getItem('cq_last_disease') || ''; } catch(_) { return ''; } })();
-const INIT_DISEASE  = URL_DISEASE || storedDisease;
 const FOCAL_ID      = new URLSearchParams(window.location.search).get('compound') || '';
+// A molecule in the URL takes precedence: a molecule-first graph must build FROM
+// the molecule (-> targets -> diseases) and never be hijacked by a previously
+// stored disease. The disease-first (disease -> drug) flow via ?disease= is unchanged.
+const INIT_DISEASE  = URL_DISEASE || (FOCAL_ID ? '' : storedDisease);
 
-if (!URL_DISEASE && storedDisease) {
+if (!URL_DISEASE && !FOCAL_ID && storedDisease) {
   document.getElementById('graph-q').value = storedDisease;
 }
 
 // ── Node / edge color maps ─────────────────────────────────────────────────────
-// Distinct warm hues — color encodes node KIND, so each must stay separable
+// Distinct warm hues - color encodes node KIND, so each must stay separable
 const NODE_COLORS = {
-  'Disease':   '#b3261e',   // brick — the pathology
-  'Compound':  '#2f6f5b',   // botanical green — the drug
+  'Disease':   '#b3261e',   // brick - the pathology
+  'Compound':  '#2f6f5b',   // botanical green - the drug
   'Gene':      '#b8860b',   // gold
   'Protein':   '#7a5c43',   // warm brown
   'Pathway':   '#b5552f',   // terracotta
@@ -182,12 +185,19 @@ async function loadGraph(disease) {
 
   try {
     const focalParam = FOCAL_ID ? `&compound=${encodeURIComponent(FOCAL_ID)}` : '';
-    const url = disease
+    // A focal molecule alone is enough - the server derives its disease.
+    const url = (disease || FOCAL_ID)
       ? `/api/repurpose-graph?disease=${encodeURIComponent(disease)}&n=3${focalParam}`
       : '/api/graph';
     const data = await apiFetch(url);
     const elems  = data.elements || [];
     const legend = data.legend || {};
+    // Server may have derived the disease from the focal compound.
+    if (!disease && data.disease) {
+      disease = data.disease;
+      const qbox = document.getElementById('graph-q');
+      if (qbox && !qbox.value) qbox.value = disease;
+    }
 
     if (!elems.length) {
       document.getElementById('cy-container').innerHTML =
@@ -207,13 +217,26 @@ async function loadGraph(disease) {
     const prots   = nodes.filter(n => n.data?.kind === 'Protein');
     const paths   = nodes.filter(n => n.data?.kind === 'Pathway');
 
+    const diseaseNodes = nodes.filter(n => n.data?.kind === 'Disease');
     document.getElementById('graph-stats').textContent =
       `${nodes.length} nodes · ${edges.length} edges`;
 
-    if (disease) {
+    if (data.mode === 'compound') {
+      // Molecule-centric repurposing map (no pre-selected disease needed)
+      const focalNode = nodes.find(n => n.data?.focal) || drugs[0];
+      const focalName = focalNode?.data?.full_label || focalNode?.data?.label || 'this molecule';
+      document.getElementById('graph-subtitle').textContent =
+        `Repurposing map for "${focalName}" - ${genes.length} target${genes.length !== 1 ? 's' : ''} · ${diseaseNodes.length} candidate disease${diseaseNodes.length !== 1 ? 's' : ''}`;
+      document.getElementById('edge-legend-bar').style.display = '';
+      const crumb = document.getElementById('graph-focal-crumb');
+      if (crumb) {
+        crumb.innerHTML = `<strong>${focalName}</strong> - molecule at centre; lines trace targets → candidate diseases`;
+        crumb.style.display = 'block';
+      }
+    } else if (disease) {
       const protPart = prots.length ? ` · ${prots.length} proteins` : '';
       document.getElementById('graph-subtitle').textContent =
-        `Top ${drugs.length} repurposing candidate${drugs.length !== 1 ? 's' : ''} for "${disease}" — ${genes.length} genes${protPart} · ${paths.length} pathways`;
+        `Top ${drugs.length} repurposing candidate${drugs.length !== 1 ? 's' : ''} for "${disease}" - ${genes.length} genes${protPart} · ${paths.length} pathways`;
       document.getElementById('edge-legend-bar').style.display = '';
       // Focal compound breadcrumb (with score from sessionStorage if available)
       const crumb = document.getElementById('graph-focal-crumb');
@@ -233,14 +256,14 @@ async function loadGraph(disease) {
             }
           }
         } catch(_) {}
-        crumb.innerHTML = `⭐ <strong>${focalName}</strong>${scoreChip} — highlighted in gold`;
+        crumb.innerHTML = `<strong>${focalName}</strong>${scoreChip} - highlighted in gold`;
         crumb.style.display = 'block';
         // Load narrative after graph renders
         loadNarrative(FOCAL_ID, disease);
       }
     } else {
       document.getElementById('graph-subtitle').textContent =
-        `Disease landscape — ${nodes.length} nodes`;
+        `Disease landscape - ${nodes.length} nodes`;
       document.getElementById('edge-legend-bar').style.display = 'none';
     }
 
@@ -282,17 +305,33 @@ function renderCytoscape(elems, disease) {
     }
   }));
 
+  // Molecule-first graphs must put the MOLECULE at the centre. With a force layout
+  // the high-degree target hub drifts to the middle and the molecule looks peripheral,
+  // so for a focal molecule use a concentric layout rooted on it:
+  //   molecule (centre) → targets (inner ring) → candidate diseases (outer ring).
+  const focalEl = elems.find(e => e.data && e.data.focal && !e.data.source);
+  const layoutCfg = focalEl ? {
+    name: 'concentric',
+    animate: false,
+    concentric: n => n.data('focal') ? 4
+                   : (n.data('kind') === 'Gene' || n.data('kind') === 'Protein') ? 3
+                   : (n.data('kind') === 'Pathway') ? 2 : 1,
+    levelWidth: () => 1,
+    minNodeSpacing: 32,
+    equidistant: false,
+  } : {
+    name: 'cose',
+    animate: false,
+    nodeRepulsion: 14000,
+    idealEdgeLength: 90,
+    gravity: 0.6,
+    numIter: 1000,
+  };
+
   cy = cytoscape({
     container: document.getElementById('cy-container'),
     elements: elems,
-    layout: {
-      name: 'cose',
-      animate: false,
-      nodeRepulsion: 14000,
-      idealEdgeLength: 90,
-      gravity: 0.6,
-      numIter: 1000,
-    },
+    layout: layoutCfg,
     style: [
       {
         selector: 'node',
@@ -317,6 +356,15 @@ function renderCytoscape(elems, disease) {
       { selector: "node[kind='Disease']",
         style: { 'font-size': '11px', 'font-weight': 'bold', 'border-width': 3, 'border-color': 'rgba(255,255,255,0.45)' }
       },
+      // Fuse the Repurposing Value Score into the graph: high-value indications pop
+      // with a green ring, low-value ones fade — so the picture itself communicates
+      // "which of these diseases is actually worth pursuing".
+      { selector: "node[kind='Disease'][value_tier='High priority']",
+        style: { 'border-width': 5, 'border-color': '#2f6f5b' } },
+      { selector: "node[kind='Disease'][value_tier='Attractive']",
+        style: { 'border-width': 4, 'border-color': '#3f7d68' } },
+      { selector: "node[kind='Disease'][value_tier='Low value']",
+        style: { 'border-color': 'rgba(179,38,30,0.6)', 'opacity': 0.55 } },
       { selector: "node[kind='Compound']",
         style: { 'shape': 'round-rectangle' }
       },
@@ -369,7 +417,7 @@ function renderCytoscape(elems, disease) {
     if (d.kind === 'Gene') {
       rows.push(['Name', d.gene_name || d.full_label || d.label]);
       rows.push(['Symbol', d.full_label || d.label]);
-      if (d.bridge) rows.push(['Role', '<span style="color:#97751a;font-weight:700">Bridge Gene</span> — links drug to disease']);
+      if (d.bridge) rows.push(['Role', '<span style="color:#97751a;font-weight:700">Bridge Gene</span> - links drug to disease']);
       if (d.ot_score > 0) rows.push(['OT Evidence', scoreBar(d.ot_score) + ' ' + d.ot_score]);
       if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
       if (d.note) rows.push(['Note', d.note]);
@@ -395,7 +443,7 @@ function renderCytoscape(elems, disease) {
         rows.push(['__layer', 'Targeted by Drugs']);
         drugEdges.forEach(e2 => {
           const drug = e2.source().id() === d.id ? e2.target() : e2.source();
-          rows.push(['', `<span style="color:#2f6f5b">${drug.data('label')}</span> — ${e2.data('mechanism') || e2.data('label')}`]);
+          rows.push(['', `<span style="color:#2f6f5b">${drug.data('label')}</span> - ${e2.data('mechanism') || e2.data('label')}`]);
         });
       }
       const pwEdges = connEdges.filter(e2 => e2.data('label') === 'PARTICIPATES_IN');
@@ -409,10 +457,10 @@ function renderCytoscape(elems, disease) {
     } else if (d.kind === 'Compound') {
       rows.push(['Drug Name', d.full_label || d.label]);
       rows.push(['Rank', `#${d.rank || '?'} repurposing candidate`]);
-      rows.push(['Score', scoreBar(d.score) + ' ' + (d.score ? (d.score*100).toFixed(1)+'%' : '—')]);
+      rows.push(['Score', scoreBar(d.score) + ' ' + (d.score ? (d.score*100).toFixed(1)+'%' : '-')]);
       rows.push(['Clinical Stage', phaseLabel(d.phase)]);
       if (d.approved_for) rows.push(['Approved For', d.approved_for.slice(0,60) + (d.approved_for.length>60?'…':'')]);
-      if (d.chembl_id) rows.push(['ChEMBL ID',
+      if (d.chembl_id) rows.push(['Compound ID',
         `<a href="https://www.ebi.ac.uk/chembl/compound_report_card/${d.chembl_id}/" target="_blank" style="color:#2f6f5b">${d.chembl_id}</a>`]);
       if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
       // Protein/Gene targets
@@ -427,14 +475,14 @@ function renderCytoscape(elems, disease) {
           const isProtein = g.data('kind') === 'Protein';
           const isBridge = g.data('bridge');
           const col = isProtein ? '#8a6309' : (isBridge ? '#97751a' : '#2f6f5b');
-          const tag = isProtein ? ' (protein)' : (isBridge ? ' ★' : '');
-          rows.push(['', `<span style="color:${col};font-weight:600">${g.data('label')}</span>${mech ? ' — '+mech : ''}${tag}`]);
+          const tag = isProtein ? ' (protein)' : (isBridge ? ' (bridge)' : '');
+          rows.push(['', `<span style="color:${col};font-weight:600">${g.data('label')}</span>${mech ? ' - '+mech : ''}${tag}`]);
         });
       }
       rows.push(['__link', `/analysis?id=${d.chembl_id||''}&disease=${encodeURIComponent(INIT_DISEASE)}`]);
     } else if (d.kind === 'Pathway') {
       rows.push(['Pathway', d.full_label || d.label]);
-      if (d.reactome_id) rows.push(['Reactome ID',
+      if (d.reactome_id) rows.push(['Pathway ID',
         `<a href="${d.reactome_url||'https://reactome.org'}" target="_blank" style="color:#97751a">${d.reactome_id}</a>`]);
       if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
       // Proteins/Genes participating in this pathway
@@ -459,14 +507,22 @@ function renderCytoscape(elems, disease) {
       }
     } else if (d.kind === 'Disease') {
       rows.push(['Disease', d.full_label || d.label]);
-      if (d.efo_id) rows.push(['EFO/MONDO ID',
+      if (d.efo_id) rows.push(['Ontology ID',
         `<a href="https://platform.opentargets.org/disease/${d.efo_id}" target="_blank" style="color:#b3261e">${d.efo_id}</a>`]);
+      // Validated platform signals fused into the graph.
+      if (d.value_score != null) {
+        var vt = d.value_tier || '', vc = (vt==='High priority')?'#2f6f5b':(vt==='Attractive')?'#3f7d68':(vt==='Marginal')?'#a86b2d':'#b3261e';
+        rows.push(['Repurposing value', scoreBar(d.value_score) + ` <span style="color:${vc};font-weight:700">${Math.round(d.value_score*100)} · ${vt}</span>`]);
+        rows.push(['__sub', 'Burden × unmet-need × market — is this indication worth pursuing?']);
+      }
+      if (d.plausibility != null)
+        rows.push(['Plausibility P(treats)', scoreBar(d.plausibility) + ` ${(d.plausibility*100).toFixed(0)}% <span style="color:#9aa39c;font-size:10px">DWPC, AUC 0.98 vs random</span>`]);
       if (d.description) rows.push(['Description', d.description.slice(0,120)+'…']);
-      rows.push(['Source', srcBadge('Open Targets')]);
+      rows.push(['Source', srcBadge('Curated')]);
       rows.push(['__link_discover', d.full_label || d.label]);
     }
 
-    showPanel(d.kind + ' — ' + (d.full_label || d.label), kindColor, rows);
+    showPanel(d.kind + ' - ' + (d.full_label || d.label), kindColor, rows);
   });
 
   // ── Edge tap: show provenance panel ─────────────────────────────────────────
@@ -490,7 +546,7 @@ function renderCytoscape(elems, disease) {
     if (d.approved_for)   rows.push(['Approved For', d.approved_for.slice(0,60)]);
     if (d.pathway_id)     rows.push(['Pathway', `<a href="https://reactome.org/PathwayBrowser/#/${d.pathway_id}" target="_blank" style="color:#97751a">${d.pathway_id}</a>`]);
     if (d.source_id)      rows.push(['Source ID', d.source_id]);
-    if (d.source_url)     rows.push(['Evidence Link', `<a href="${d.source_url}" target="_blank" style="color:#2f6f5b">Open Targets</a>`]);
+    if (d.source_url)     rows.push(['Evidence Link', `<a href="${d.source_url}" target="_blank" style="color:#2f6f5b">Evidence</a>`]);
 
     showPanel('Relationship Evidence', color, rows);
   });
@@ -535,13 +591,15 @@ function phaseLabel(phase) {
 }
 
 function srcBadge(src) {
-  const colors = {
-    'Open Targets': '#1e40af', 'ChEMBL': '#2f6f5b',
-    'Reactome': '#97751a', 'DrugBank': '#2f6f5b',
-    'DRKG': '#8a6309',
+  // Generic, source-name-free display labels (database sources are not named in the UI).
+  const generic = {
+    'Open Targets': 'Genetic association', 'ChEMBL': 'Curated bioactivity',
+    'Reactome': 'Curated pathway', 'DrugBank': 'Drug reference',
+    'DRKG': 'Knowledge graph', 'Curated': 'Curated',
   };
-  const col = colors[src] || '#45524a';
-  return `<span class="evidence-badge" style="background:${col}18;color:${col};border:1px solid ${col}40">${src}</span>`;
+  const label = generic[src] || (src && src.indexOf('://') < 0 ? 'Curated source' : src);
+  const col = '#45524a';
+  return `<span class="evidence-badge" style="background:${col}18;color:${col};border:1px solid ${col}40">${label}</span>`;
 }
 
 function setLayout(name) {
@@ -552,13 +610,24 @@ function setLayout(name) {
   }).run();
 }
 
-function searchGraph() {
+async function searchGraph() {
   const q = document.getElementById('graph-q').value.trim();
-  if (q) {
-    try { sessionStorage.setItem('cq_last_disease', q); } catch(_) {}
-  }
+  if (!q) return;
+  document.getElementById('graph-stats').textContent = 'Resolving…';
+  // Molecule-aware: a DRUG query builds the molecule graph (drug -> targets ->
+  // diseases); a DISEASE query keeps the existing disease -> drug graph unchanged.
+  try {
+    const r = await apiFetch('/api/resolve-entity?q=' + encodeURIComponent(q));
+    if (r && r.type === 'drug' && r.chembl_id) {
+      try { sessionStorage.removeItem('cq_last_disease'); } catch(_) {}
+      window.location.href = '/graph?compound=' + encodeURIComponent(r.chembl_id);
+      return;
+    }
+  } catch(_) {}
+  // Disease path - unchanged
+  try { sessionStorage.setItem('cq_last_disease', q); } catch(_) {}
+  history.pushState({}, '', '/graph?disease=' + encodeURIComponent(q));
   loadGraph(q);
-  if (q) history.pushState({}, '', '/graph?disease=' + encodeURIComponent(q));
 }
 
 // ── Treatment hypothesis narrative ────────────────────────────────────────────

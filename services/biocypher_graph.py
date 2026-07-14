@@ -12,7 +12,9 @@ import re
 import time
 from typing import Dict, List, Optional, Tuple
 
-import requests
+import requests  # noqa: F401
+
+from services import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -260,10 +262,10 @@ def _ot_disease_targets(efo_id: str, n: int = 25) -> List[Dict]:
       }
     }"""
     try:
-        r = requests.post(OT_URL,
+        r = http_client.post(OT_URL,
             json={"query": q, "variables": {"id": efo_id, "n": n}},
             timeout=12, headers={"Content-Type": "application/json"})
-        if r.ok:
+        if r and r.ok:
             dis = r.json().get("data", {}).get("disease") or {}
             rows = dis.get("associatedTargets", {}).get("rows", [])
             return [
@@ -277,6 +279,41 @@ def _ot_disease_targets(efo_id: str, n: int = 25) -> List[Dict]:
     return []
 
 
+_GENE_PW_CACHE: Dict[str, list] = {}
+
+def _gene_pathways(gene: str, top: int = 2) -> List[Tuple[str, str]]:
+    """Reactome pathways a target gene participates in → [(name, reactome_id)].
+    Curated neuro map first (fast/relevant); else live from Open Targets."""
+    g = (gene or "").upper().strip()
+    if not g:
+        return []
+    if g in _PATHWAY_MAP:
+        return [_PATHWAY_MAP[g]]
+    if g in _GENE_PW_CACHE:
+        return _GENE_PW_CACHE[g][:top]
+    out: List[Tuple[str, str]] = []
+    q = """query($s:String!){ search(queryString:$s, entityNames:["target"],
+        page:{index:0,size:3}){ hits{ object{ __typename
+        ... on Target{ approvedSymbol pathways{ pathwayId pathway } } } } } }"""
+    try:
+        r = http_client.post(OT_URL, json={"query": q, "variables": {"s": g}},
+                             timeout=12, headers={"Content-Type": "application/json"})
+        if r and r.ok:
+            for h in (r.json().get("data", {}).get("search", {}) or {}).get("hits", []):
+                obj = h.get("object") or {}
+                if obj.get("__typename") == "Target" and (obj.get("approvedSymbol", "").upper() == g):
+                    seen = set()
+                    for pw in (obj.get("pathways") or []):
+                        pid, pname = pw.get("pathwayId"), pw.get("pathway")
+                        if pid and pname and pid not in seen:
+                            seen.add(pid); out.append((pname, pid))
+                    break
+    except Exception as e:
+        logger.debug(f"gene pathways error {g}: {e}")
+    _GENE_PW_CACHE[g] = out
+    return out[:top]
+
+
 def _chembl_indications(disease: str, limit: int = 15) -> List[Dict]:
     """ChEMBL drug indications for a disease name."""
     seen, results = set(), []
@@ -284,9 +321,9 @@ def _chembl_indications(disease: str, limit: int = 15) -> List[Dict]:
         if len(results) >= limit:
             break
         try:
-            r = requests.get(f"{CHEMBL_BASE}/drug_indication.json",
+            r = http_client.get(f"{CHEMBL_BASE}/drug_indication.json",
                 params={param: disease, "limit": limit, "format": "json"}, timeout=10)
-            if r.ok:
+            if r and r.ok:
                 for ind in r.json().get("drug_indications", []):
                     mid = ind.get("molecule_chembl_id", "")
                     if mid and mid not in seen:
@@ -301,16 +338,169 @@ def _chembl_indications(disease: str, limit: int = 15) -> List[Dict]:
     return results
 
 
+def _compound_top_disease(chembl_id: str) -> str:
+    """Top indication (disease name) for a compound, by highest clinical phase.
+    Lets the repurposing knowledge graph build when a molecule is opened
+    without a pre-selected disease (e.g. straight from a molecule search)."""
+    if not chembl_id:
+        return ""
+    try:
+        r = http_client.get(f"{CHEMBL_BASE}/drug_indication.json",
+            params={"molecule_chembl_id": chembl_id, "limit": 50, "format": "json"}, timeout=10)
+        if r and r.ok:
+            inds = r.json().get("drug_indications", [])
+            inds.sort(key=lambda d: d.get("max_phase_for_ind") or 0, reverse=True)
+            for ind in inds:
+                name = ind.get("mesh_heading") or ind.get("efo_term")
+                if name:
+                    return name
+    except Exception:
+        pass
+    return ""
+
+
+def build_compound_graph(drug_id: str, top_n: int = 14) -> Tuple[List[dict], dict]:
+    """Molecule-centric repurposing knowledge graph — works with NO pre-selected
+    disease. Built from the same reverse-repurposing engine that powers the
+    candidate list, so graph and list always agree:
+
+        Compound  --BINDS_TO-->  Target gene  --ASSOCIATED_WITH-->  Candidate disease
+
+    A repurposing scientist starts from the molecule, not a disease — this is the
+    graph they actually need.
+    """
+    try:
+        from services.reverse_repurposing import screen_indications_for_drug
+        r = screen_indications_for_drug(drug_id)
+    except Exception as e:
+        logger.debug(f"compound graph — screen error: {e}")
+        return [], {}
+
+    chembl  = r.get("chembl_id") or drug_id
+    name    = r.get("drug") or drug_id
+    targets = r.get("drug_targets") or []
+    cands   = (r.get("candidates") or [])[:top_n]
+    if not targets and not cands:
+        return [], {}
+
+    elements, legend, seen = [], {}, set()
+
+    def add_node(el):
+        nid = el["data"].get("id")
+        if nid in seen:
+            return
+        seen.add(nid)
+        elements.append(el)
+        legend[el["data"]["kind"]] = el["data"].get("color")
+
+    # Focal molecule at the centre
+    add_node(_net_node("cmp_center", name, "Compound", chembl_id=chembl,
+                       focal=True, size=64, source_db="ChEMBL"))
+
+    # Mechanism of action per target (ChEMBL): gene -> action_type / mechanism text
+    mech = {}
+    try:
+        for m in _chembl_mechanism_detail(chembl):
+            mech[m["gene"].upper()] = m
+    except Exception:
+        pass
+
+    # ── Targets as PROTEIN nodes: mechanism-of-action edge + the pathways they sit in ──
+    gene_ids, gene_pw = {}, {}
+    for g in targets:
+        gU, gid = g.upper(), f"gene_{g}"
+        gene_ids[gU] = gid
+        m = mech.get(gU)
+        action = _action_to_edge_label((m or {}).get("action_type", ""))
+        add_node(_net_node(gid, g, "Protein", source_db="ChEMBL",
+                           mechanism=(m or {}).get("mechanism", ""),
+                           action_type=(m or {}).get("action_type", "")))
+        elements.append(_net_edge("cmp_center", gid, action, 1.0))
+        pw_ids = []
+        for (pname, pid) in _gene_pathways(g, top=2):
+            pwid = f"pw_{pid}"
+            add_node(_net_node(pwid, pname, "Pathway", reactome_id=pid,
+                               reactome_url=f"https://reactome.org/PathwayBrowser/#/{pid}",
+                               source_db="Reactome", size=42))
+            elements.append(_net_edge(gid, pwid, "PARTICIPATES_IN", 0.85))
+            pw_ids.append(pwid)
+        gene_pw[gU] = pw_ids
+
+    # ── Candidate diseases via their target — evidence-bearing edges ──
+    # Fuse the platform's validated signals INTO the graph so it reads as a decision
+    # tool, not just a topology picture: each Disease node carries its Repurposing
+    # Value Score (burden × unmet-need × market — "worth pursuing?") and each
+    # drug→disease edge carries the validated DWPC plausibility P(treats). Fail-soft.
+    try:
+        from services.disease_value import value_for as _dvalue
+    except Exception:
+        _dvalue = None
+    try:
+        from services.repurposing_predictor import plausibility as _plaus
+    except Exception:
+        _plaus = None
+
+    gene_dis = {}
+    for c in cands:
+        dis = c.get("disease")
+        if not dis:
+            continue
+        did = f"dis_{c.get('efo_id') or dis}"
+        sc  = float(c.get("score") or c.get("association_score") or 0.0)
+        dv = _dvalue(dis, c.get("efo_id", "")) if _dvalue else None
+        vscore = (dv or {}).get("value_score")
+        vtier  = (dv or {}).get("tier")
+        pl = _plaus(name, dis) if _plaus else None
+        p_treats = (pl or {}).get("probability")
+        # Node SIZE now reflects pharma value (fallback to association score); tier +
+        # plausibility ride along for colour/tooltip in the front end.
+        node_val = vscore if vscore is not None else min(sc, 1.0)
+        add_node(_net_node(did, dis, "Disease", efo_id=c.get("efo_id"),
+                           score=round(sc, 3), via_target=c.get("via_target"),
+                           value_score=vscore, value_tier=vtier,
+                           plausibility=p_treats,
+                           therapeutic_areas=c.get("therapeutic_areas", []),
+                           sources=c.get("sources", []),
+                           trial_count=c.get("trial_count", 0),
+                           max_trial_phase=c.get("max_trial_phase", 0),
+                           source_db="Open Targets",
+                           size=32 + node_val * 34))
+        via = (c.get("via_target") or "").upper()
+        if via and via in gene_ids:
+            elements.append({"data": {
+                "source": gene_ids[via], "target": did, "label": "ASSOCIATED_WITH",
+                "weight": sc, "evidence_score": round(float(c.get("evidence_score", 0) or 0), 3),
+                "plausibility": p_treats, "value_score": vscore,
+                "sources": c.get("sources", []), "trial_count": c.get("trial_count", 0),
+                "max_trial_phase": c.get("max_trial_phase", 0), "source_db": "Open Targets"}})
+            gene_dis.setdefault(via, []).append((did, sc))
+        else:
+            e = _net_edge("cmp_center", did, "REPURPOSE_CANDIDATE", sc)
+            e["data"]["plausibility"] = p_treats
+            e["data"]["value_score"] = vscore
+            elements.append(e)
+
+    # ── Pathway → Disease (mechanistic bridge): the target's pathway is a candidate
+    #    mechanism for the diseases that target associates with (top few, for clarity) ──
+    for gU, pw_ids in gene_pw.items():
+        top_dis = sorted(gene_dis.get(gU, []), key=lambda t: -t[1])[:5]
+        for pwid in pw_ids:
+            for (did, sc) in top_dis:
+                elements.append(_net_edge(pwid, did, "IMPLICATED_IN", round(sc * 0.8, 3)))
+
+    return elements, legend
+
+
 def _chembl_molecules(chembl_ids: List[str]) -> Dict[str, Dict]:
     """Batch-fetch molecule names + phases."""
     results = {}
     for i in range(0, min(len(chembl_ids), 40), 20):
         chunk = chembl_ids[i:i + 20]
         try:
-            r = requests.get(f"{CHEMBL_BASE}/molecule.json",
+            r = http_client.get(f"{CHEMBL_BASE}/molecule.json",
                 params={"molecule_chembl_id__in": ",".join(chunk), "limit": 20, "format": "json"},
                 timeout=10)
-            if r.ok:
+            if r and r.ok:
                 for mol in r.json().get("molecules", []):
                     mid = mol.get("molecule_chembl_id", "")
                     results[mid] = {
@@ -326,8 +516,8 @@ def _get_chembl_target(tid: str) -> Optional[dict]:
     """Cached fetch of a ChEMBL target record."""
     if tid not in _CHEMBL_TARGET_CACHE:
         try:
-            r = requests.get(f"{CHEMBL_BASE}/target/{tid}.json", timeout=6)
-            _CHEMBL_TARGET_CACHE[tid] = r.json() if r.ok else {}
+            r = http_client.get(f"{CHEMBL_BASE}/target/{tid}.json", timeout=6)
+            _CHEMBL_TARGET_CACHE[tid] = r.json() if (r and r.ok) else {}
         except Exception:
             _CHEMBL_TARGET_CACHE[tid] = {}
     return _CHEMBL_TARGET_CACHE[tid] or None
@@ -350,9 +540,9 @@ def _chembl_mechanism_detail(chembl_id: str) -> List[Dict]:
     results: List[Dict] = []
     seen: set = set()
     try:
-        r = requests.get(f"{CHEMBL_BASE}/mechanism.json",
+        r = http_client.get(f"{CHEMBL_BASE}/mechanism.json",
             params={"molecule_chembl_id": chembl_id, "limit": 20, "format": "json"}, timeout=8)
-        if not r.ok:
+        if not r or not r.ok:
             return []
         for mech in r.json().get("mechanisms", []):
             tid = mech.get("target_chembl_id", "")
@@ -396,14 +586,14 @@ def _string_ppi(gene_symbols: List[str], species: int = 9606) -> Dict[str, List[
     if not gene_symbols:
         return {}
     try:
-        r = requests.get(f"{STRING_URL}/network",
+        r = http_client.get(f"{STRING_URL}/network",
             params={
                 "identifiers":     "%0d".join(gene_symbols[:20]),
                 "species":         species,
                 "required_score":  700,
                 "caller_identity": "neurorepurpose_platform",
             }, timeout=10)
-        if r.ok:
+        if r and r.ok:
             adj: Dict[str, List[str]] = {}
             for link in r.json():
                 a = link.get("preferredName_A", "")
@@ -874,9 +1064,37 @@ def build_repurpose_story_graph(disease: str, top_n: int = 3,
 
     top_drugs = candidates[:top_n]
 
-    # Ensure focal compound is in the list even if outside top-N
+    # Ensure the focal compound is in the graph even when it is NOT among the
+    # disease's own forward candidates. Otherwise, selecting a drug the platform
+    # does not already rank for this disease (a genuine repurposing hypothesis)
+    # would render a graph showing only OTHER drugs — never the one the user chose.
     if focal_compound and not any(c.get("chembl_id") == focal_compound for c in top_drugs):
         focal_cand = next((c for c in candidates if c.get("chembl_id") == focal_compound), None)
+        if focal_cand is None:
+            # Build the focal candidate from its own ChEMBL record so the graph is
+            # ABOUT the selected drug; its mechanism edges (below) connect it to the
+            # disease genes, or — honestly — show no bridge when there is no shared
+            # target (a weak hypothesis reads as a drug with no molecular link).
+            try:
+                from services.reverse_repurposing import resolve_drug, canonical_pair_score
+                info = resolve_drug(focal_compound)
+                if info.get("chembl_id"):
+                    try:
+                        _sr = canonical_pair_score(info["chembl_id"], disease,
+                                                   drug_genes=info.get("targets"))
+                        _score = _sr.get("composite_score", 0)
+                    except Exception:
+                        _score = 0
+                    focal_cand = {
+                        "name":        info.get("name", ""),
+                        "chembl_id":   info["chembl_id"],
+                        "max_phase":   info.get("max_phase", 0),
+                        "indications": "; ".join(k["name"] for k in info.get("known_indications", [])),
+                        "targets":     ";".join(info.get("targets", [])),
+                        "score":       _score,
+                    }
+            except Exception as e:
+                logger.debug(f"focal compound build failed: {e}")
         if focal_cand:
             top_drugs = [focal_cand] + top_drugs[:top_n]
 
