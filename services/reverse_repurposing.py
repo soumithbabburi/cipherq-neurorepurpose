@@ -864,6 +864,32 @@ def screen_indications_for_drug(
                 candidate_map[efo]["association_score"] = d["score"]
                 candidate_map[efo]["via_target"] = gene
 
+    # 1a-KG. KG-GENERATED candidates (gap #2 — the Rephetio/TxGNN inversion) ─────────
+    # Instead of only scoring what OT target-associations surfaced, the validated DWPC
+    # model scores the drug against EVERY Hetionet disease and adds its top P(treats)
+    # indications — ones genetic association misses (imatinib→epilepsy / IgA-GN). The KG
+    # GENERATES candidates (recall); the canonical composite still RANKS them (precision).
+    # Bounded by Hetionet coverage (2016; sparse/newer drugs add nothing — fail-soft).
+    try:
+        from services.repurposing_predictor import top_diseases_for_drug
+        _existing = {v["disease"].lower(): k for k, v in candidate_map.items()}
+        for kg in top_diseases_for_drug(info.get("name", drug), k=25):
+            nm = kg["disease"]; low = nm.lower()
+            if low in _existing:                       # OT already has it → mark KG-corroborated
+                v = candidate_map[_existing[low]]
+                v["sources"] = set(v.get("sources", set())) | {"knowledge-graph"}
+                v["kg_probability"] = kg["probability"]
+                continue
+            candidate_map[f"kg:{nm}"] = {
+                "disease": nm, "efo_id": "", "therapeutic_areas": [],
+                "association_score": 0.0, "via_target": "", "sources": {"knowledge-graph"},
+                "trial_count": 0, "max_trial_phase": 0, "lit_count": 0,
+                "kg_probability": kg["probability"],
+            }
+            _existing[low] = f"kg:{nm}"
+    except Exception as e:
+        logger.debug(f"KG candidate generation skipped: {e}")
+
     # 1b. Add candidates from clinical trials + literature (real-world repurposing
     #     signal that genetic associations miss — e.g. an eye-drop trial of an
     #     oncology drug). Resolve each to a disease/EFO and merge by EFO id.
@@ -982,14 +1008,19 @@ def screen_indications_for_drug(
             base = max(base, 0.5 + 0.1 * c.get("max_trial_phase", 0))
         elif "literature" in srcs:
             base = max(base, 0.25)
+        # KG-generated candidates (genetic assoc = 0) rank on the validated DWPC
+        # P(treats) so they survive trimming and get scored alongside OT candidates.
+        if "knowledge-graph" in srcs:
+            base = max(base, 0.4 * c.get("kg_probability", 0.0))
         return base * (0.5 if _is_genetic_leaf(c) else 1.0)
 
     candidates.sort(key=_rank_score, reverse=True)
-    pool = candidates[: max_candidates + 15]
+    pool = candidates[: max_candidates + 20]
     tractable: List[Dict] = []
     for c in pool:
-        c["known_drugs"] = _disease_known_drugs(c["efo_id"])
-        if c["known_drugs"] > 0:
+        c["known_drugs"] = _disease_known_drugs(c["efo_id"]) if c.get("efo_id") else 0
+        # keep druggable indications AND strong KG-generated leads (no efo to look up)
+        if c["known_drugs"] > 0 or c.get("kg_probability", 0.0) >= 0.5:
             tractable.append(c)
     # If the tractability filter is too aggressive, fall back to the ranked pool
     candidates = (tractable or pool)

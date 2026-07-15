@@ -56,6 +56,8 @@ class _Predictor:
         self.stack = None                       # (n_cmp, n_dis, n_feat) float32
         self.cmp_name2i: Dict[str, int] = {}
         self.dis_name2i: Dict[str, int] = {}
+        self.dis_names: list = []               # disease index -> Hetionet display name
+        self.cmp_names: list = []               # compound index -> Hetionet display name
         self._loaded = False
 
     def _load(self):
@@ -78,10 +80,13 @@ class _Predictor:
     def _load_or_build_cache(self):
         if _CACHE_FILE.exists():
             d = np.load(_CACHE_FILE, allow_pickle=True)
-            if list(d["features"]) == list(self.feats):
+            # "dis_names" was added for the KG candidate GENERATOR — rebuild older caches.
+            if list(d["features"]) == list(self.feats) and "dis_names" in d.files:
                 self.stack = d["stack"]
                 self.cmp_name2i = d["cmp_name2i"].item()
                 self.dis_name2i = d["dis_name2i"].item()
+                self.dis_names = list(d["dis_names"])
+                self.cmp_names = list(d["cmp_names"])
                 return
         self._build_cache()
 
@@ -93,8 +98,11 @@ class _Predictor:
         mats = [eng.dwpc[f] for f in self.feats]
         self.stack = np.stack(mats, axis=-1).astype(np.float32)   # (n_cmp,n_dis,n_feat)
 
-        # node id → matrix index, then NAME → index for resolution
+        # node id → matrix index, then NAME → index for resolution + index → display name
         cmp_id2i, dis_id2i = eng.cmp_index, eng.dis_index
+        n_cmp, n_dis = self.stack.shape[0], self.stack.shape[1]
+        self.cmp_names = [""] * n_cmp
+        self.dis_names = [""] * n_dis
         conn = psycopg2.connect(**db_params()); cur = conn.cursor()
         cur.execute("SELECT id, name, kind FROM hetionet_nodes "
                     "WHERE kind IN ('Compound','Disease')")
@@ -104,12 +112,16 @@ class _Predictor:
             key = _norm(nm)
             if kind == "Compound" and nid in cmp_id2i:
                 self.cmp_name2i.setdefault(key, cmp_id2i[nid])
+                self.cmp_names[cmp_id2i[nid]] = nm
             elif kind == "Disease" and nid in dis_id2i:
                 self.dis_name2i.setdefault(key, dis_id2i[nid])
+                self.dis_names[dis_id2i[nid]] = nm
         conn.close()
         try:
             np.savez_compressed(_CACHE_FILE, stack=self.stack, features=np.array(self.feats),
-                                cmp_name2i=self.cmp_name2i, dis_name2i=self.dis_name2i)
+                                cmp_name2i=self.cmp_name2i, dis_name2i=self.dis_name2i,
+                                dis_names=np.array(self.dis_names, dtype=object),
+                                cmp_names=np.array(self.cmp_names, dtype=object))
         except Exception as e:
             logger.debug(f"DWPC cache save skipped: {e}")
 
@@ -162,6 +174,56 @@ class _Predictor:
                       "success (AUC 0.42 vs real trial failures)."),
         }
 
+    # ── KG-as-candidate-generator (gap #2) ───────────────────────────────────────
+    # Instead of only SCORING candidates that OT target-associations already surfaced,
+    # the validated DWPC model can GENERATE them: score the drug against EVERY Hetionet
+    # disease (one matrix pass) and return the top P(treats). This is the Rephetio/TxGNN
+    # inversion — the KG model drives discovery, evidence enriches — and unblocks the
+    # narrow OT-bounded universe (e.g. Palbociclib's 25 candidates).
+    def top_diseases_for_drug(self, drug_name: str, k: int = 30,
+                              min_p: float = ACTIONABLE_CUTOFF) -> List[Dict]:
+        self._load()
+        if not self.ok:
+            return []
+        ci = self._resolve(drug_name, self.cmp_name2i)
+        if ci is None:
+            return []
+        X = np.log1p(self.stack[ci].astype(float))          # (n_dis, n_feat)
+        p = self.clf.predict_proba(self.scaler.transform(X))[:, 1]
+        order = np.argsort(-p)
+        out = []
+        for i in order[:k * 2]:
+            if p[i] < min_p:
+                break
+            nm = self.dis_names[i] if i < len(self.dis_names) else ""
+            if nm:
+                out.append({"disease": nm, "probability": round(float(p[i]), 4)})
+            if len(out) >= k:
+                break
+        return out
+
+    def top_drugs_for_disease(self, disease_name: str, k: int = 30,
+                              min_p: float = ACTIONABLE_CUTOFF) -> List[Dict]:
+        self._load()
+        if not self.ok:
+            return []
+        di = self._resolve(disease_name, self.dis_name2i)
+        if di is None:
+            return []
+        X = np.log1p(self.stack[:, di].astype(float))       # (n_cmp, n_feat)
+        p = self.clf.predict_proba(self.scaler.transform(X))[:, 1]
+        order = np.argsort(-p)
+        out = []
+        for i in order[:k * 2]:
+            if p[i] < min_p:
+                break
+            nm = self.cmp_names[i] if i < len(self.cmp_names) else ""
+            if nm:
+                out.append({"drug": nm, "probability": round(float(p[i]), 4)})
+            if len(out) >= k:
+                break
+        return out
+
 
 _singleton = _Predictor()
 
@@ -173,6 +235,25 @@ def plausibility(drug_name: str, disease_name: str) -> Optional[Dict]:
     except Exception as e:
         logger.debug(f"plausibility predict failed: {e}")
         return None
+
+
+def top_diseases_for_drug(drug_name: str, k: int = 30) -> List[Dict]:
+    """KG-generated candidate INDICATIONS for a drug — the drug's highest-P(treats)
+    diseases across the whole Hetionet, ranked. [] off coverage. Fail-soft."""
+    try:
+        return _singleton.top_diseases_for_drug(drug_name, k)
+    except Exception as e:
+        logger.debug(f"top_diseases_for_drug failed: {e}")
+        return []
+
+
+def top_drugs_for_disease(disease_name: str, k: int = 30) -> List[Dict]:
+    """KG-generated candidate DRUGS for a disease — highest-P(treats) compounds. Fail-soft."""
+    try:
+        return _singleton.top_drugs_for_disease(disease_name, k)
+    except Exception as e:
+        logger.debug(f"top_drugs_for_disease failed: {e}")
+        return []
 
 
 if __name__ == "__main__":
