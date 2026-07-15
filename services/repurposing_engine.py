@@ -856,6 +856,23 @@ def score_compound_for_disease(
     except Exception as e:
         logger.debug(f"proliferation match skipped: {e}")
 
+    # ── Signature reversal (CMap/LINCS, gap #3) ──────────────────────────────────
+    # Real transcriptional connectivity: does the drug REVERSE the disease's expression
+    # signature? Orthogonal to target/KG/genetics — catches mechanisms none of them see.
+    # A reversing signal feeds the mechanistic prior (un-phantoms) + a bonus; a MIMICKING
+    # signal (drug amplifies the disease signature) is a contraindication-like penalty.
+    reversal = {"covered": False, "score": 0.0, "direction": "none"}
+    try:
+        from services.signature_reversal import reversal_score
+        _cname = compound.get("name") or compound.get("pref_name") or ""
+        if _cname:
+            reversal = reversal_score(_cname, disease_name)
+            if reversal.get("direction") == "reversing":
+                mechanistic_prior = max(float(mechanistic_prior or 0.0),
+                                        0.5 * float(reversal.get("score", 0.0)))
+    except Exception as e:
+        logger.debug(f"signature reversal skipped: {e}")
+
     # ── Externally-established mechanistic linkage (surfacing evidence) ───────────
     # When a candidate was surfaced by an engine that has ALREADY established a
     # mechanistic drug→disease link — the pathway screen (drug direction-matches a
@@ -925,6 +942,12 @@ def score_compound_for_disease(
     # lead (palbociclib→RA) reaches a real Moderate score instead of ~0.01.
     if prolif.get("match"):
         composite = min(1.0, composite + 0.18 * float(prolif["score"]))
+
+    # Signature-reversal bonus / mimic penalty (bounded, orthogonal).
+    if reversal.get("direction") == "reversing":
+        composite = min(1.0, composite + 0.15 * float(reversal.get("score", 0.0)))
+    elif reversal.get("direction") == "mimicking":
+        composite *= 0.85          # the drug amplifies the disease signature (wrong way)
 
     # Directional literature evidence (P3): a typed drug→gene→disease path or a
     # direct drug-treats-disease edge from DRKG (GNBR/DGIDB/DrugBank triples) —
@@ -1119,6 +1142,7 @@ def score_compound_for_disease(
             "network_basis": net.get("basis", ""),
         },
         "proliferation":   prolif,     # target-driven proliferation match (RA-type mechanism)
+        "signature_reversal": reversal, # CMap/LINCS transcriptional connectivity (gap #3)
         "direction":       direction,  # mechanism direction (corrective/harmful) + contraindication flag
         "safety":          safety,
         "coverage":        coverage,

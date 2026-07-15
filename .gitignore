@@ -57,3 +57,7 @@ data/dwpc_cache.npz
 # Raw MONDO ontology download (83MB) — re-fetched by build_disease_table.py.
 # The built disease_value.db (11MB) IS committed so the feature works out of the box.
 data/disease_reference/mondo-simple.json
+
+# CREEDS raw signatures (34MB, re-downloadable) — the compact signature_store.pkl is committed
+data/signatures/creeds_drugs.json
+data/signatures/creeds_diseases.json
