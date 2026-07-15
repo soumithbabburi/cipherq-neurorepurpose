@@ -823,6 +823,20 @@ def score_compound_for_disease(
         "indication": _score_indication(existing_ind, disease_name),
         "regulatory": _score_regulatory(max_phase, disease_name, existing_ind),
     }
+
+    # ── Mechanism direction (fix the direction-blindness bug) ────────────────────
+    # Target overlap alone can't tell an INHIBITOR of a disease-driving gene (treats)
+    # from an ACTIVATOR of it (exacerbates). Fold the drug's action × the disease's
+    # up/down-regulated genes (HetioNet) into the target dimension, and raise a
+    # contraindication flag when the net effect would push the disease the wrong way.
+    direction = {"factor": 1.0, "net": "neutral", "covered": False, "flag": ""}
+    try:
+        from services.mechanism_direction import mechanism_direction
+        direction = mechanism_direction(drug_genes, drug_actions, disease_name)
+        scores["target"] = round(scores["target"] * direction["factor"], 4)
+    except Exception as e:
+        logger.debug(f"mechanism direction skipped: {e}")
+
     _overlap_n = len({g.upper() for g in drug_genes} & {g.upper() for g in disease_genes})
 
     # ── Target-driven pathogenic proliferation ───────────────────────────────────
@@ -1051,6 +1065,10 @@ def score_compound_for_disease(
                      float(clinical.get("multiplier", 1.0)),
                      float(coverage.get("multiplier", 1.0)))
     composite *= _soft_mult
+    # A net-HARMFUL mechanism direction is a contraindication signal — down-rank the
+    # whole pair (the drug would push the disease the wrong way), not just its target dim.
+    if direction.get("net") == "harmful":
+        composite *= float(direction.get("factor", 1.0))
     composite *= float(ctpa.get("multiplier", 1.0))
     composite *= float(trial_failure.get("multiplier", 1.0))
     if registry.get("ghost"):
@@ -1101,6 +1119,7 @@ def score_compound_for_disease(
             "network_basis": net.get("basis", ""),
         },
         "proliferation":   prolif,     # target-driven proliferation match (RA-type mechanism)
+        "direction":       direction,  # mechanism direction (corrective/harmful) + contraindication flag
         "safety":          safety,
         "coverage":        coverage,
         "clinical_constraints": clinical,
