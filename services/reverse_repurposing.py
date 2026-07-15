@@ -533,6 +533,65 @@ def _molecule_forms(parent_id: str) -> List[str]:
     return forms
 
 
+def _local_indications(chembl_ids: List[str]) -> List[Dict]:
+    """Known indications from the local chembl_33 drug_indication table (salt→parent),
+    as [{name, efo_id, max_phase}] — the best phase per indication label. Primary source:
+    it's more complete and reliable than the flaky live drug_indication API (e.g. it has
+    nintedanib's IPF at phase 4, which the API snapshot misses). [] if the DB is absent."""
+    try:
+        from services.repurposing_engine import _get_chembl_pool
+    except Exception:
+        return []
+    pool = _get_chembl_pool()
+    ids = [c for c in chembl_ids if c]
+    if pool is None or not ids:
+        return []
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT COALESCE(mh.parent_molregno, md.molregno), md.molregno
+                FROM molecule_dictionary md
+                LEFT JOIN molecule_hierarchy mh ON mh.molregno = md.molregno
+                WHERE md.chembl_id = ANY(%s)
+                """, (ids,))
+            molregnos = set()
+            for parent, mol in cur.fetchall():
+                molregnos.update(m for m in (parent, mol) if m is not None)
+            if not molregnos:
+                return []
+            cur.execute(
+                """
+                SELECT di.mesh_heading, di.efo_id, MAX(di.max_phase_for_ind)
+                FROM drug_indication di
+                WHERE di.molregno = ANY(%s) AND di.mesh_heading IS NOT NULL
+                GROUP BY di.mesh_heading, di.efo_id
+                """, (list(molregnos),))
+            by_label: Dict[str, Dict] = {}
+            for label, efo, ph in cur.fetchall():
+                if not label:
+                    continue
+                key = label.lower()
+                try:
+                    ph = float(ph or 0)
+                except (TypeError, ValueError):
+                    ph = 0.0
+                efo_id = (efo or "").replace(":", "_")
+                if key in by_label:
+                    by_label[key]["max_phase"] = max(by_label[key]["max_phase"], ph)
+                else:
+                    by_label[key] = {"name": label, "efo_id": efo_id, "max_phase": ph}
+            return list(by_label.values())
+    except Exception as e:
+        logger.debug(f"local indications failed: {e}")
+        return []
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 def resolve_drug(drug: str) -> Dict:
     """
     Resolve a drug name or ChEMBL ID to {chembl_id, name, max_phase, targets, known_indications}.
@@ -600,30 +659,34 @@ def resolve_drug(drug: str) -> Dict:
     # (phase 4, blocks a same-use claim) from one merely STUDIED at a low phase
     # (e.g. a drug-interaction/PK co-mention), which does not. Keep the best phase
     # seen per indication. Consumed by services.regulatory_verdict.
-    by_label: Dict[str, Dict] = {}
-    for cid in ids:
-        try:
-            r = http_client.get(f"{CHEMBL_BASE}/drug_indication.json",
-                             params={"molecule_chembl_id": cid, "limit": 100,
-                                     "format": "json"}, timeout=10)
-            if r and r.ok:
-                for ind in r.json().get("drug_indications", []):
-                    label = ind.get("mesh_heading") or ind.get("efo_term") or ""
-                    if not label:
-                        continue
-                    efo = (ind.get("efo_id") or "").replace(":", "_")
-                    try:
-                        ph = float(ind.get("max_phase_for_ind") or 0)
-                    except (TypeError, ValueError):
-                        ph = 0.0
-                    key = label.lower()
-                    if key in by_label:
-                        by_label[key]["max_phase"] = max(by_label[key]["max_phase"], ph)
-                    else:
-                        by_label[key] = {"name": label, "efo_id": efo, "max_phase": ph}
-        except Exception:
-            pass
-    known_indications: List[Dict] = list(by_label.values())
+    # Primary: local chembl_33 (complete + reliable). Fallback: live API only if local
+    # gives nothing — so a flaky API call no longer blanks known_indications.
+    known_indications: List[Dict] = _local_indications(ids)
+    if not known_indications:
+        by_label: Dict[str, Dict] = {}
+        for cid in ids:
+            try:
+                r = http_client.get(f"{CHEMBL_BASE}/drug_indication.json",
+                                 params={"molecule_chembl_id": cid, "limit": 100,
+                                         "format": "json"}, timeout=10)
+                if r and r.ok:
+                    for ind in r.json().get("drug_indications", []):
+                        label = ind.get("mesh_heading") or ind.get("efo_term") or ""
+                        if not label:
+                            continue
+                        efo = (ind.get("efo_id") or "").replace(":", "_")
+                        try:
+                            ph = float(ind.get("max_phase_for_ind") or 0)
+                        except (TypeError, ValueError):
+                            ph = 0.0
+                        key = label.lower()
+                        if key in by_label:
+                            by_label[key]["max_phase"] = max(by_label[key]["max_phase"], ph)
+                        else:
+                            by_label[key] = {"name": label, "efo_id": efo, "max_phase": ph}
+            except Exception:
+                pass
+        known_indications = list(by_label.values())
 
     return {
         "chembl_id":         parent_id,
