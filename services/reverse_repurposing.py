@@ -720,6 +720,20 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
             out["plausibility"] = pl
     except Exception as e:
         logger.debug(f"plausibility skipped: {e}")
+
+    # Modern-KG plausibility (DRKG DistMult) — covers ~5.1k diseases / newer drugs the
+    # 2016 Hetionet model misses. Kept as its own axis; also promoted to the primary
+    # `plausibility` field when Hetionet has no coverage for this pair, so newer drugs
+    # (Palbociclib etc.) still get a KG plausibility instead of a blank.
+    try:
+        from services.drkg_predictor import treat_probability
+        kgp = treat_probability(drug=drug_name, disease=disease, chembl_id=chembl_id)
+        if kgp is not None:
+            out["kg_plausibility"] = kgp
+            if not out.get("plausibility"):
+                out["plausibility"] = kgp
+    except Exception as e:
+        logger.debug(f"DRKG plausibility skipped: {e}")
     _cache_put(cache_key, out)
     return out
 
@@ -890,6 +904,38 @@ def screen_indications_for_drug(
             _existing[low] = f"kg:{nm}"
     except Exception as e:
         logger.debug(f"KG candidate generation skipped: {e}")
+
+    # 1a-DRKG. MODERN-KG candidates — same Rephetio/TxGNN inversion, but on DRKG
+    # (~5.1k diseases / ~23k compounds, 6 sources) instead of 2016 Hetionet (213/8894).
+    # This is what lets newer drugs Hetionet never saw get a KG signal — e.g. Palbociclib
+    # (CDK4/6i, 2015) surfaces Rheumatoid Arthritis, which Hetionet cannot. Diseases carry
+    # a MeSH/DOID id; the canonical composite still ranks them. Fail-soft on missing model.
+    try:
+        from services.drkg_predictor import top_diseases_for_drug as _drkg_top
+        _existing = {v["disease"].lower(): k for k, v in candidate_map.items()}
+        for kg in _drkg_top(info.get("name", drug), chembl_id=info.get("chembl_id", ""),
+                            k=30, min_p=0.95):
+            nm = kg["disease"]; low = nm.lower()
+            if low in _existing:
+                v = candidate_map[_existing[low]]
+                v["sources"] = set(v.get("sources", set())) | {"knowledge-graph"}
+                v["kg_probability"] = max(v.get("kg_probability", 0.0), kg["probability"])
+                continue
+            # Tag oncology from the disease name so exclude_oncology can filter DRKG
+            # cancer candidates (they carry no OT therapeutic_area to key off otherwise).
+            _onc = any(t in low for t in ("neoplasm", "carcinoma", "leukemia", "lymphoma",
+                                          "melanoma", "sarcoma", "cancer", "tumor", "glioma",
+                                          "adenoma", "blastoma", "myeloma"))
+            candidate_map[f"drkg:{nm}"] = {
+                "disease": nm, "efo_id": "",
+                "therapeutic_areas": (["cancer or benign tumor"] if _onc else []),
+                "association_score": 0.0, "via_target": "", "sources": {"knowledge-graph"},
+                "trial_count": 0, "max_trial_phase": 0, "lit_count": 0,
+                "kg_probability": kg["probability"], "mesh_id": kg.get("identifier", ""),
+            }
+            _existing[low] = f"drkg:{nm}"
+    except Exception as e:
+        logger.debug(f"DRKG candidate generation skipped: {e}")
 
     # 1b. Add candidates from clinical trials + literature (real-world repurposing
     #     signal that genetic associations miss — e.g. an eye-drop trial of an

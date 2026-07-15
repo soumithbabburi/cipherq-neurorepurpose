@@ -61,3 +61,13 @@ data/disease_reference/mondo-simple.json
 # CREEDS raw signatures (34MB, re-downloadable) — the compact signature_store.pkl is committed
 data/signatures/creeds_drugs.json
 data/signatures/creeds_diseases.json
+
+# DRKG modern-KG: raw dumps + build intermediates (regenerate via services/drkg_train)
+data/drkg/drkg.tsv
+data/drkg/drkg.tar.gz
+data/drkg/entity2src.tsv
+data/drkg/relation_glossary.tsv
+data/drkg/drkg_graph.npz
+data/drkg/unichem_chembl_drugbank.txt.gz
+data/drkg/embed/
+data/drkg/._*
