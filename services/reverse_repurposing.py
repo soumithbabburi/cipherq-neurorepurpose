@@ -825,6 +825,27 @@ def _is_oncology_name(name: str) -> bool:
     return any(t in n for t in _ONCOLOGY_TERMS)
 
 
+# Anti-targets: proteins a drug commonly BINDS as a safety/ADME liability but never
+# engages therapeutically. Their disease associations are toxicities (hERG->arrhythmia),
+# not repurposing opportunities — so they must not GENERATE candidate indications. This
+# only bites drugs whose target list came from bioactivity gap-fill (no curated
+# mechanism); curated-mechanism drugs never list these. Extensible, deliberately small
+# and high-confidence so we never drop a real therapeutic target.
+_ANTI_TARGETS = frozenset({
+    "KCNH2",   # hERG — cardiac repolarisation; the canonical cardiotoxicity anti-target
+    "KCNQ1", "SCN5A",           # cardiac ion channels (QT/arrhythmia liability screens)
+    "CYP3A4", "CYP2D6", "CYP2C9", "CYP1A2", "CYP2C19",  # drug-metabolising enzymes (ADME)
+    "HTR2B",   # 5-HT2B — valvulopathy off-target liability
+})
+
+
+def _repurposing_targets(drug_genes: List[str]) -> List[str]:
+    """The drug's targets minus safety anti-targets, for candidate GENERATION. Falls back
+    to the full list if filtering would leave nothing (don't blank an anti-target-only drug)."""
+    kept = [g for g in drug_genes if g.upper() not in _ANTI_TARGETS]
+    return kept or drug_genes
+
+
 def _is_oncology_drug(info: Dict) -> bool:
     """Is the QUERY drug itself an oncology drug — i.e. is its established use cancer?
     We look only at its top development-phase tier (its approved/lead indications, not
@@ -885,9 +906,14 @@ def screen_indications_for_drug(
                 "error": "No protein targets found for this molecule",
                 "candidates": [], "drug_targets": []}
 
+    # Repurposing target set = the drug's targets minus safety anti-targets (hERG etc.),
+    # so a toxicity liability can't GENERATE or target-score a candidate indication.
+    screen_genes = _repurposing_targets(drug_genes)
+    excluded_anti = [g for g in drug_genes if g not in screen_genes]
+
     # 1. Candidate diseases from each target's Open Targets associations ────────
     candidate_map: Dict[str, Dict] = {}
-    for gene in drug_genes[:12]:
+    for gene in screen_genes[:12]:
         ensembl = _gene_to_ensembl(gene)
         if not ensembl:
             continue
@@ -1156,7 +1182,7 @@ def screen_indications_for_drug(
                            (t.get("quality_score") or t.get("genetic_score") or t.get("score", 0.0))
                            for t in dinfo.get("targets", []) if t.get("gene_symbol")}
         sr = score_compound_for_disease(
-            drug_compound, c["disease"], disease_genes, disease_pathways, ppi_adj, drug_genes,
+            drug_compound, c["disease"], disease_genes, disease_pathways, ppi_adj, screen_genes,
             disease_gene_weights=disease_weights or None,
             trial_count=c.get("trial_count", 0), max_trial_phase=c.get("max_trial_phase", 0),
             trial_outcome=c.get("trial_outcome_signal", 0.0),
@@ -1347,6 +1373,7 @@ def screen_indications_for_drug(
         "area_filter":       area_filter or "",
         "exclude_oncology":  exclude_oncology,
         "is_oncology_drug":  onc_drug,
+        "excluded_anti_targets": excluded_anti,
         "candidate_count":   len(scored),
         "candidates":        scored,
         "cns_mpo":           drug_mpo,
