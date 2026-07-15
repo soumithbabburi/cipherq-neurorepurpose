@@ -2737,8 +2737,14 @@ def api_new_indications(drug_id):
     if not REVERSE_OK:
         return jsonify({"error": "Reverse repurposing engine unavailable", "candidates": []}), 503
     area = request.args.get("area", "").strip() or None
-    # exclude_oncology defaults to True; pass ?oncology=1 to include cancer indications
-    exclude_oncology = request.args.get("oncology", "0").strip() not in ("1", "true", "yes")
+    # Oncology handling is DRUG-AWARE by default (exclude only for oncology drugs). The
+    # user can force it: ?oncology=1 includes cancer, ?oncology=0 excludes it. Absent =
+    # let the engine decide from the drug's own indications.
+    _onc = request.args.get("oncology")
+    if _onc is None or _onc.strip() == "":
+        exclude_oncology = None
+    else:
+        exclude_oncology = _onc.strip().lower() not in ("1", "true", "yes")
     try:
         result = screen_indications_for_drug(drug_id, area_filter=area,
                                              exclude_oncology=exclude_oncology)

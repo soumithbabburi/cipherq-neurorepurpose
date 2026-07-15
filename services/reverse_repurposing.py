@@ -813,36 +813,73 @@ def _area_is_oncology(area_filter: str) -> bool:
     return "oncolog" in af or "cancer" in af or "neoplasm" in af
 
 
+# Disease-name oncology check — used to tag DRKG candidates and to classify a drug's
+# own indications (a MeSH heading / disease name, not an OT therapeutic-area label).
+_ONCOLOGY_TERMS = ("neoplasm", "carcinoma", "cancer", "leukemia", "lymphoma", "melanoma",
+                   "sarcoma", "tumor", "tumour", "glioma", "glioblastoma", "myeloma",
+                   "blastoma", "mesothelioma", "adenocarcinoma", "malignan")
+
+
+def _is_oncology_name(name: str) -> bool:
+    n = (name or "").lower()
+    return any(t in n for t in _ONCOLOGY_TERMS)
+
+
+def _is_oncology_drug(info: Dict) -> bool:
+    """Is the QUERY drug itself an oncology drug — i.e. is its established use cancer?
+    We look only at its top development-phase tier (its approved/lead indications, not
+    the long tail of exploratory trials) and ask whether those are predominantly cancer.
+    Palbociclib (phase-4 = breast cancer) -> True, so we repurpose it OUT of oncology;
+    Nintedanib (top tier = IPF/scleroderma/NSCLC, ~half fibrosis) -> False, so oncology
+    stays a valid repurposing target. Unknown/undocumented -> False (don't over-filter)."""
+    inds = info.get("known_indications") or []
+    if not inds:
+        return False
+    top = max((float(i.get("max_phase") or 0) for i in inds), default=0.0)
+    if top <= 0:
+        return False
+    tier = [i for i in inds if float(i.get("max_phase") or 0) >= top - 0.001]
+    onc = sum(1 for i in tier if _is_oncology_name(i.get("name", "")))
+    return onc / max(1, len(tier)) >= 0.75
+
+
 def screen_indications_for_drug(
     drug: str,
     area_filter: Optional[str] = None,
     max_candidates: int = MAX_SCORED_CANDIDATES,
-    exclude_oncology: bool = True,
+    exclude_oncology: Optional[bool] = None,
 ) -> Dict:
     """
     Find and rank NEW candidate indications for a molecule.
 
-    exclude_oncology: drop cancer indications (default True) — repurposing an
-    oncology drug into more oncology isn't a repurposing story. Ignored when the
-    requested area_filter is itself oncology.
+    exclude_oncology: drop cancer indications. None (default) = DRUG-AWARE: exclude
+    oncology only if the query drug is ITSELF an oncology drug (repurpose it outward);
+    for a non-oncology drug (e.g. nintedanib, a fibrosis drug) oncology stays a valid
+    repurposing target. Pass True/False to force. Ignored when area_filter is oncology.
 
     Candidates are ranked by a mechanism EVIDENCE score (target overlap, OT
     association, pathway, PPI), not by the drug's clinical/regulatory status
     (which is constant for a fixed drug). The 505(b)(2) feasibility is reported
     separately per candidate.
     """
-    cache_key = (f"drug:{drug.lower().strip()}|area:{(area_filter or '').lower()}"
-                 f"|noonc:{int(exclude_oncology)}")
-    cache = _load_cache()
-    if cache_key in cache:
-        return cache[cache_key]
-
     info = resolve_drug(drug)
     chembl_id = info["chembl_id"]
     drug_genes = info["targets"]
 
     if not chembl_id:
         return {"drug": drug, "error": "Could not resolve drug in ChEMBL", "candidates": []}
+
+    # Drug-aware oncology default: only an oncology drug repurposes OUT of oncology.
+    onc_drug = _is_oncology_drug(info)
+    if exclude_oncology is None:
+        exclude_oncology = onc_drug
+
+    cache_key = (f"drug:{drug.lower().strip()}|area:{(area_filter or '').lower()}"
+                 f"|noonc:{int(exclude_oncology)}")
+    cache = _load_cache()
+    if cache_key in cache:
+        return cache[cache_key]
+
     if not drug_genes:
         return {"drug": info["name"], "chembl_id": chembl_id,
                 "error": "No protein targets found for this molecule",
@@ -923,12 +960,9 @@ def screen_indications_for_drug(
                 continue
             # Tag oncology from the disease name so exclude_oncology can filter DRKG
             # cancer candidates (they carry no OT therapeutic_area to key off otherwise).
-            _onc = any(t in low for t in ("neoplasm", "carcinoma", "leukemia", "lymphoma",
-                                          "melanoma", "sarcoma", "cancer", "tumor", "glioma",
-                                          "adenoma", "blastoma", "myeloma"))
             candidate_map[f"drkg:{nm}"] = {
                 "disease": nm, "efo_id": "",
-                "therapeutic_areas": (["cancer or benign tumor"] if _onc else []),
+                "therapeutic_areas": (["cancer or benign tumor"] if _is_oncology_name(nm) else []),
                 "association_score": 0.0, "via_target": "", "sources": {"knowledge-graph"},
                 "trial_count": 0, "max_trial_phase": 0, "lit_count": 0,
                 "kg_probability": kg["probability"], "mesh_id": kg.get("identifier", ""),
@@ -1312,6 +1346,7 @@ def screen_indications_for_drug(
         "known_indications": [k["name"] for k in info["known_indications"]],
         "area_filter":       area_filter or "",
         "exclude_oncology":  exclude_oncology,
+        "is_oncology_drug":  onc_drug,
         "candidate_count":   len(scored),
         "candidates":        scored,
         "cns_mpo":           drug_mpo,
