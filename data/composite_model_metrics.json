@@ -1,0 +1,35 @@
+{
+  "n": 180,
+  "n_pos": 45,
+  "auc_hand_weighted_composite": 0.97,
+  "auc_learned_logistic_compound_disjoint": 0.8588,
+  "lr_sd": 0.0527,
+  "auc_learned_gbm_compound_disjoint": 0.8618,
+  "gb_sd": 0.0679,
+  "learned_weights": {
+    "target": 0.985,
+    "pathway": -0.527,
+    "ppi": 0.005,
+    "clinical": 0.539,
+    "indication": 1.4,
+    "regulatory": 0.341,
+    "network": 0.0,
+    "directional": 0.023,
+    "proliferation": -0.108,
+    "signature": -0.284,
+    "direction": 0.079
+  },
+  "features": [
+    "target",
+    "pathway",
+    "ppi",
+    "clinical",
+    "indication",
+    "regulatory",
+    "network",
+    "directional",
+    "proliferation",
+    "signature",
+    "direction"
+  ]
+}

@@ -963,6 +963,28 @@ def score_compound_for_disease(
     except Exception as e:
         logger.debug(f"directional evidence skipped: {e}")
 
+    # ── Learned composite (gap #4) ───────────────────────────────────────────────
+    # If a supervised model has been fitted AND validated to BEAT the hand weights
+    # (services/train_composite.py only saves it in that case), use its evidence score
+    # in place of the hand-weighted sum + bonuses. Fail-soft: no model → keep the hand
+    # composite, which is itself validated (AUC 0.97 CtD-vs-random). The clinical
+    # PENALTIES below still apply on top either way. DWPC plausibility stays its own
+    # axis (excluded from the features to avoid circularity).
+    try:
+        from services.composite_model import learned_composite
+        _lc = learned_composite([
+            scores["target"], scores["pathway"], scores["ppi"], scores["clinical"],
+            scores["indication"], scores["regulatory"], net_score,
+            float(directional.get("signal", 0.0) or 0.0),
+            float(prolif.get("score", 0.0) or 0.0),
+            float(reversal.get("connectivity", 0.0) or 0.0),
+            float(direction.get("factor", 1.0) or 1.0),
+        ])
+        if _lc is not None:
+            composite = float(_lc)
+    except Exception as e:
+        logger.debug(f"learned composite skipped: {e}")
+
     # Negative-safety cross-filter (generalized): down-rank a match when the drug
     # carries a SERIOUS toxicity signal for the organ system the disease lives in
     # (e.g. a pulmonary-embolism-risk drug for a pulmonary indication). Applied as
