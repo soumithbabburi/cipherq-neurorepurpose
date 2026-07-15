@@ -1233,6 +1233,32 @@ def screen_indications_for_drug(
     except Exception:
         _dev = None
 
+    # Direction + appropriateness inputs, computed ONCE per drug ────────────────
+    from services.disease_appropriateness import infer_drug_action, appropriateness
+    # A. Drug action for the direction engine: curated ChEMBL mechanism, else inferred
+    #    from the name (nintedanib has no curated mechanism, so direction was blind).
+    try:
+        from services.repurposing_engine import _actions_for_molecules
+        _curated_actions = _actions_for_molecules([chembl_id]).get(chembl_id, {}) or {}
+    except Exception:
+        _curated_actions = {}
+    _inferred_action = infer_drug_action(info.get("name", drug), screen_genes)
+    drug_action_map = dict(_curated_actions)
+    if not drug_action_map and _inferred_action:
+        drug_action_map = {g: _inferred_action for g in screen_genes}
+    drug_action = _inferred_action
+    if not drug_action and _curated_actions:
+        _blob = " ".join(_curated_actions.values()).lower()
+        drug_action = ("inhibitor" if any(w in _blob for w in ("inhib", "antagon", "block"))
+                       else "agonist" if "agonist" in _blob else "")
+    # C. The drug's serious FAERS reactions — to flag AE-not-target candidates.
+    try:
+        from services.safety_filter import _faers_serious_reactions
+        _faers_rx = _faers_serious_reactions(info.get("name", drug))
+    except Exception:
+        _faers_rx = []
+    _faers_total = sum(cnt for _, cnt in _faers_rx)
+
     drug_gene_set = {g.upper() for g in drug_genes}
     scored: List[Dict] = []
     for c in candidates:
@@ -1246,11 +1272,17 @@ def screen_indications_for_drug(
                            for t in dinfo.get("targets", []) if t.get("gene_symbol")}
         sr = score_compound_for_disease(
             drug_compound, c["disease"], disease_genes, disease_pathways, ppi_adj, screen_genes,
-            disease_gene_weights=disease_weights or None,
+            disease_gene_weights=disease_weights or None, drug_actions=drug_action_map or None,
             trial_count=c.get("trial_count", 0), max_trial_phase=c.get("max_trial_phase", 0),
             trial_outcome=c.get("trial_outcome_signal", 0.0),
         )
         sc = sr["scores"]
+
+        # Disease-appropriateness gate (B loss-of-function/developmental, C adverse-event):
+        # would the drug WORSEN or does it CAUSE this disease? Gates ranking + actionability;
+        # does not overwrite the mechanistic composite.
+        appr = appropriateness(info.get("name", drug), c["disease"], c["therapeutic_areas"],
+                               drug_action, faers_reactions=_faers_rx, faers_total=_faers_total)
         overlap = sorted(drug_gene_set & {g.upper() for g in disease_genes})
 
         # Clinical/literature signal SPECIFIC to this indication (varies per disease,
@@ -1375,7 +1407,8 @@ def screen_indications_for_drug(
                                                         smiles=info.get("smiles", "")),  # potency funnel (window deferred to dossier)
             "effective_cutoff":     eff_cutoff,
             "cutoff_kind":          cutoff_kind,
-            "actionable":           bool(actionable),
+            "actionable":           bool(actionable and appr["appropriate"]),
+            "appropriateness":      appr,   # B/C: would the drug worsen or cause this disease?
             "scores":               sc,
             "clinical_signal":      round(clinical_signal, 4),
             "trial_count":          trial_count,
@@ -1404,7 +1437,8 @@ def screen_indications_for_drug(
     def _rank(x):
         dv = x.get("disease_value") or {}
         vw = dv.get("value_score", 0.5) if dv else 0.5
-        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw)
+        appr_f = (x.get("appropriateness") or {}).get("factor", 1.0)
+        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f
     scored.sort(key=_rank, reverse=True)
 
     # Positive-Pivot generation: for CCH-crushed candidates, turn the mismatch into a

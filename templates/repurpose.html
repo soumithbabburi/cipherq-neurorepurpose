@@ -196,6 +196,9 @@ function candidateCard(c, chembl){
   +   ((c.clinical_constraints && c.clinical_constraints.penalized && (c.clinical_constraints.flags||[]).length)
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.clinical_constraints.flags.join(' ')).replace(/"/g,'')+'">Clinical mismatch · '+Math.round((1-c.clinical_constraints.multiplier)*100)+'% penalty</div>'
         : '')
+  +   ((c.appropriateness && c.appropriateness.appropriate===false && (c.appropriateness.flags||[]).length)
+        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.appropriateness.reasons||[]).join(' ')).replace(/"/g,'')+'">Wrong direction · '+c.appropriateness.flags.join(', ')+'</div>'
+        : '')
   +   pivotsHtml(c.pivots)
   +   ((c.mechanism_scope && c.mechanism_scope.target_mediated===false)
         ? '<div class="chip" style="align-self:flex-start;background:#eef1f4;color:#41566b;border:1px solid #d5dde6" title="'+((c.mechanism_scope.note||'')).replace(/"/g,'')+'">Mechanism not target-mediated · ranked on clinical evidence</div>'
