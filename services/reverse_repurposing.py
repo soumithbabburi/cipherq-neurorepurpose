@@ -961,10 +961,15 @@ def _matches_area(therapeutic_areas: List[str], area_filter: str) -> bool:
     if not area_filter:
         return True
     af = area_filter.lower().strip()
-    # Accept a few common synonyms without hardcoding disease lists
+    # Accept a few common synonyms without hardcoding disease lists. Oncology is the
+    # important one: Open Targets labels cancers "cancer or benign tumor", NOT "oncology",
+    # so the bare filter matched nothing (0 candidates → "no oncology indication").
     synonyms = {
         "dermatology": ["skin", "dermat", "integument"],
         "ophthalmology": ["eye", "ophthalm", "visual", "ocular"],
+        "oncology": ["cancer or benign tumor", "cancer", "neoplasm", "tumor", "tumour",
+                     "carcinoma", "leukemia", "leukaemia", "lymphoma", "sarcoma",
+                     "melanoma", "myeloma", "oncolog"],
     }
     needles = [af] + synonyms.get(af, [])
     blob = " ".join(therapeutic_areas).lower()
