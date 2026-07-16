@@ -592,16 +592,55 @@ def _local_indications(chembl_ids: List[str]) -> List[Dict]:
             pool.putconn(conn)
 
 
+def _local_chembl_id_for_name(name: str) -> str:
+    """Resolve a drug NAME to a ChEMBL ID from the local chembl_33 DB (pref_name, then
+    synonym), preferring the highest development phase. Primary path so a flaky live
+    ChEMBL search API can't block resolution. '' if not found or no local DB."""
+    try:
+        from services.repurposing_engine import _get_chembl_pool
+    except Exception:
+        return ""
+    pool = _get_chembl_pool()
+    q = (name or "").strip().lower()
+    if pool is None or not q:
+        return ""
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT chembl_id FROM molecule_dictionary WHERE LOWER(pref_name) = %s "
+                        "ORDER BY max_phase DESC NULLS LAST LIMIT 1", (q,))
+            row = cur.fetchone()
+            if row and row[0]:
+                return row[0]
+            cur.execute("SELECT md.chembl_id FROM molecule_synonyms ms "
+                        "JOIN molecule_dictionary md ON md.molregno = ms.molregno "
+                        "WHERE LOWER(ms.synonyms) = %s ORDER BY md.max_phase DESC NULLS LAST LIMIT 1", (q,))
+            row = cur.fetchone()
+            return row[0] if row and row[0] else ""
+    except Exception as e:
+        logger.debug(f"local chembl name resolve failed: {e}")
+        return ""
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 def resolve_drug(drug: str) -> Dict:
     """
     Resolve a drug name or ChEMBL ID to {chembl_id, name, max_phase, targets, known_indications}.
-    Salts are mapped to their parent molecule. Targets and indications are fetched live from ChEMBL.
+    Salts are mapped to their parent molecule. Name→ID resolves from the local chembl_33 DB
+    first (reliable), falling back to the live ChEMBL search API only if the local DB misses.
     """
     chembl_id = ""
 
     if re.fullmatch(r"CHEMBL\d+", drug.strip(), re.I):
         chembl_id = drug.strip().upper()
     else:
+        # Local chembl_33 first — the live ChEMBL search API is intermittently 500-ing,
+        # which was blocking resolution of drugs the local DB has (e.g. nintedanib).
+        chembl_id = _local_chembl_id_for_name(drug)
+    if not chembl_id and not re.fullmatch(r"CHEMBL\d+", drug.strip(), re.I):
         try:
             r = http_client.get(f"{CHEMBL_BASE}/molecule/search.json",
                              params={"q": drug, "limit": 25}, timeout=15)
