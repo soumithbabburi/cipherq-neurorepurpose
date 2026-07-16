@@ -626,11 +626,70 @@ def _local_chembl_id_for_name(name: str) -> str:
             pool.putconn(conn)
 
 
+def _local_molecule_bundle(chembl_id: str) -> Optional[Dict]:
+    """Everything resolve_drug needs from the local chembl_33 DB for a ChEMBL id — parent
+    chembl_id, all salt/parent forms, display name, max_phase, SMILES — in one lookup.
+    None if the molecule isn't in the local DB (caller falls back to the live ChEMBL API)."""
+    try:
+        from services.repurposing_engine import _get_chembl_pool
+    except Exception:
+        return None
+    pool = _get_chembl_pool()
+    cid = (chembl_id or "").strip().upper()
+    if pool is None or not cid:
+        return None
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT md.molregno, COALESCE(mh.parent_molregno, md.molregno) "
+                        "FROM molecule_dictionary md "
+                        "LEFT JOIN molecule_hierarchy mh ON mh.molregno = md.molregno "
+                        "WHERE md.chembl_id = %s", (cid,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            molregno, parent_molregno = row[0], row[1]
+            cur.execute("SELECT chembl_id, pref_name, max_phase FROM molecule_dictionary "
+                        "WHERE molregno = %s", (parent_molregno,))
+            prow = cur.fetchone()
+            parent_chembl = (prow[0] if prow and prow[0] else cid)
+            name = (prow[1] if prow and prow[1] else "")
+            try:
+                max_phase = float(prow[2]) if prow and prow[2] is not None else 0.0
+            except (TypeError, ValueError):
+                max_phase = 0.0
+            cur.execute("SELECT md.chembl_id FROM molecule_dictionary md "
+                        "LEFT JOIN molecule_hierarchy mh ON mh.molregno = md.molregno "
+                        "WHERE md.molregno = %s OR mh.parent_molregno = %s",
+                        (parent_molregno, parent_molregno))
+            forms = [r[0] for r in cur.fetchall() if r[0]]
+            for x in (cid, parent_chembl):
+                if x not in forms:
+                    forms.insert(0, x)
+            smiles = ""
+            for mr in (parent_molregno, molregno):
+                cur.execute("SELECT canonical_smiles FROM compound_structures WHERE molregno = %s", (mr,))
+                srow = cur.fetchone()
+                if srow and srow[0]:
+                    smiles = srow[0]
+                    break
+            return {"parent_chembl_id": parent_chembl, "forms": forms,
+                    "name": name, "max_phase": max_phase, "smiles": smiles}
+    except Exception as e:
+        logger.debug(f"local molecule bundle failed: {e}")
+        return None
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 def resolve_drug(drug: str) -> Dict:
     """
     Resolve a drug name or ChEMBL ID to {chembl_id, name, max_phase, targets, known_indications}.
-    Salts are mapped to their parent molecule. Name→ID resolves from the local chembl_33 DB
-    first (reliable), falling back to the live ChEMBL search API only if the local DB misses.
+    Fully LOCAL-FIRST over the chembl_33 DB — name→ID, salt→parent, forms, name/phase/SMILES,
+    targets, and indications all read from :5433. The live ChEMBL web API (which intermittently
+    500s) is only a fallback, so EBI's uptime can no longer block a resolution.
     """
     chembl_id = ""
 
@@ -666,22 +725,29 @@ def resolve_drug(drug: str) -> Dict:
         return {"chembl_id": "", "name": drug, "max_phase": 0,
                 "targets": [], "known_indications": []}
 
-    # ChEMBL records mechanisms / indications inconsistently across the parent and
-    # its salt forms — gather every form and union the results.
-    parent_id = _to_parent(chembl_id)
-    ids = _molecule_forms(parent_id)
+    # Parent + salt forms + name/phase/SMILES: local chembl_33 first (one query), live
+    # ChEMBL API only if the molecule isn't in the local DB. ChEMBL records mechanisms /
+    # indications inconsistently across forms, so we keep every form.
+    bundle = _local_molecule_bundle(chembl_id)
+    if bundle:
+        parent_id = bundle["parent_chembl_id"] or chembl_id
+        ids = list(bundle["forms"]) or [chembl_id]
+        name = bundle["name"] or drug
+        max_phase = bundle["max_phase"] or 0
+        smiles = bundle["smiles"] or ""
+    else:
+        parent_id = _to_parent(chembl_id)
+        ids = _molecule_forms(parent_id)
+        name, max_phase, smiles = drug, 0, ""
+        for cid in (parent_id, chembl_id):
+            d = _molecule_detail(cid)
+            smiles = smiles or (d.get("molecule_structures") or {}).get("canonical_smiles", "")
+            if d.get("pref_name"):
+                name = d["pref_name"]
+                max_phase = d.get("max_phase") or 0
+                break
     if chembl_id not in ids:
         ids.insert(0, chembl_id)
-
-    # Display name / phase / SMILES: prefer the parent's record, fall back to the salt's.
-    name, max_phase, smiles = drug, 0, ""
-    for cid in (parent_id, chembl_id):
-        d = _molecule_detail(cid)
-        smiles = smiles or (d.get("molecule_structures") or {}).get("canonical_smiles", "")
-        if d.get("pref_name"):
-            name = d["pref_name"]
-            max_phase = d.get("max_phase") or 0
-            break
 
     targets: List[str] = []
     try:
