@@ -329,7 +329,7 @@ def _classify_why_stopped(why: str) -> str:
     return "other"
 
 
-def _trials_for_drug(drug_name: str, page_size: int = 50) -> Dict[str, Dict]:
+def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
     """Conditions studied in ClinicalTrials.gov for this drug → candidate indications,
     WITH per-condition trial OUTCOMES (P3): completed / with-results / failed-for-
     efficacy / failed-for-safety / ongoing, and a directional outcome_signal
@@ -384,11 +384,70 @@ def _trials_for_drug(drug_name: str, page_size: int = 50) -> Dict[str, Dict]:
 
 
 def _trial_outcome_signal(e: Dict) -> float:
-    """Directional trial-outcome signal in [-1, 1]: positive for completed / with-
-    results trials, negative for efficacy/safety failures in this indication."""
-    pos = 0.20 * e.get("completed", 0) + 0.35 * e.get("with_results", 0) + 0.08 * e.get("ongoing", 0)
+    """Directional trial-outcome signal in [-1, 1]. POSTED RESULTS at a real phase are
+    the only strong positive — bare 'completed' just means the trial ran (its readout may
+    have been negative), so it counts near-neutral. Efficacy/safety failures are negative."""
+    pos = 0.10 * e.get("completed", 0) + 0.35 * e.get("with_results", 0) + 0.06 * e.get("ongoing", 0)
     neg = 0.60 * e.get("failed_efficacy", 0) + 0.40 * e.get("failed_safety", 0)
     return round(max(-1.0, min(1.0, pos - neg)), 3)
+
+
+def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
+    """Attach trial outcomes to a candidate by DISEASE NAME when the EFO-keyed merge
+    missed it — a mechanism-generated candidate and its trial often resolve to different
+    EFO ids, so a drug that FAILED a trial in this indication would otherwise carry no
+    negative. Runs before scoring so the failure actually lowers the composite."""
+    if c.get("trial_count") or not trials:
+        return
+    dn = (c.get("disease") or "").strip().lower()
+    if not dn:
+        return
+    best = trials.get(dn)
+    if best is None:
+        _norm = lambda s: set(re.sub(r"[^a-z0-9 ]", " ", s.lower()).split()) - {"the", "of", "and"}
+        toks = _norm(dn)
+        for k, v in trials.items():
+            kt = _norm(k)
+            if kt and len(kt) >= 2 and (kt <= toks or toks <= kt):   # one name's tokens ⊆ the other
+                best = v
+                break
+    if best:
+        c["trial_count"] = best.get("count", 0)
+        c["max_trial_phase"] = best.get("max_phase", 0)
+        c["trial_outcome_signal"] = best.get("outcome_signal", 0.0)
+        c["failed_efficacy"] = best.get("failed_efficacy", 0)
+        c["failed_safety"] = best.get("failed_safety", 0)
+        c["sources"] = set(c.get("sources", set())) | {"clinical_trial"}
+
+
+def _evidence_tier(c: Dict) -> Dict:
+    """Honest real-world-evidence strength for a candidate indication, from its trial
+    outcomes — so a Phase-III benefit, an unproven early signal, and a failed trial are
+    never shown as the same thing. tier ∈ {contradicted, trial-supported, promising,
+    literature, preclinical}."""
+    fe = c.get("failed_efficacy", 0) or 0
+    fs = c.get("failed_safety", 0) or 0
+    ph = int(c.get("max_trial_phase", 0) or 0)
+    tc = c.get("trial_count", 0) or 0
+    lit = c.get("lit_count", 0) or 0
+    osig = float(c.get("trial_outcome_signal", 0.0) or 0.0)
+    if fe > 0 or osig <= -0.30:
+        return {"tier": "contradicted", "label": "Contradicted here",
+                "note": "a trial failed for efficacy in this indication"}
+    if fs > 0:
+        return {"tier": "contradicted", "label": "Failed on safety",
+                "note": "a trial stopped for safety in this indication"}
+    if (osig >= 0.50 and ph >= 2) or (ph >= 3 and osig >= 0.30):
+        return {"tier": "trial-supported", "label": "Trial-supported",
+                "note": f"Phase {ph} trial(s) with positive posted results here"}
+    if tc > 0 or ph >= 1:
+        return {"tier": "promising", "label": "Promising · unproven",
+                "note": f"{tc} trial(s) up to Phase {ph}, no positive readout yet — results-parsing pending"}
+    if lit >= 3:
+        return {"tier": "literature", "label": "Literature signal",
+                "note": f"{lit} co-mentions, no clinical trial"}
+    return {"tier": "preclinical", "label": "Mechanistic only",
+            "note": "genetic / pathway association only"}
 
 
 def _literature_for_drug(drug_name: str, retmax: int = 120) -> Dict[str, int]:
@@ -1211,6 +1270,7 @@ def screen_indications_for_drug(
             e["sources"].add("literature")
             e["lit_count"] = max(e["lit_count"], lit_count)
 
+    trials: Dict[str, Dict] = {}
     try:
         trials = _trials_for_drug(info["name"])
         for v in sorted(trials.values(), key=lambda x: -x["count"])[:MAX_TRIAL_CONDITIONS]:
@@ -1372,6 +1432,7 @@ def screen_indications_for_drug(
     drug_gene_set = {g.upper() for g in drug_genes}
     scored: List[Dict] = []
     for c in candidates:
+        _attach_trials_by_name(c, trials)   # so a failed trial reaches a mechanism-only candidate
         dinfo = resolve_disease(c["disease"]) or {}
         disease_genes    = [t["gene_symbol"] for t in dinfo.get("targets", [])[:40]]
         disease_pathways = dinfo.get("pathways", [])
@@ -1519,6 +1580,7 @@ def screen_indications_for_drug(
             "cutoff_kind":          cutoff_kind,
             "actionable":           bool(actionable and appr["appropriate"]),
             "appropriateness":      appr,   # B/C: would the drug worsen or cause this disease?
+            "evidence_tier":        _evidence_tier(c),   # real-world strength: supported / promising / contradicted
             "scores":               sc,
             "clinical_signal":      round(clinical_signal, 4),
             "trial_count":          trial_count,

@@ -138,6 +138,14 @@ function devBlock(dv){
     + '</div>';
 }
 
+function evidenceTierBadge(et){
+  if(!et || !et.label) return '';
+  var m={'trial-supported':['#e6f4ea','#1b5e20','#bfe0c8'],'promising':['#fdf3e3','#8a5a00','#e6d3aa'],
+         'contradicted':['#faece9','#922019','#e6c3bb'],'literature':['#eef1f4','#41566b','#d5dde6'],
+         'preclinical':['#eef1f4','#41566b','#d5dde6']};
+  var col=m[et.tier]||m['preclinical'];
+  return '<span class="chip" title="'+(et.note||'').replace(/"/g,'')+'" style="margin-top:5px;background:'+col[0]+';color:'+col[1]+';border:1px solid '+col[2]+';font-weight:600;font-size:11px">'+et.label+'</span>';
+}
 function candidateCard(c, chembl){
   var ev = (c.score != null ? c.score : c.composite_score) || 0;   // canonical score (same on every screen)
   var evCol = window.scoreColor(ev);
@@ -161,7 +169,7 @@ function candidateCard(c, chembl){
   return ''
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-center" style="gap:12px">'
-  +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div>'+diseaseValueBadge(c.disease_value)+'</div>'
+  +     '<div style="min-width:0"><div class="cc-name">'+c.disease+'</div><div class="cc-id">'+(c.efo_id||'')+'</div>'+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
   +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+'</div>'
   +   '</div>'
   +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
