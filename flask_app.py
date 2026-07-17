@@ -2727,6 +2727,24 @@ def api_dossier(chembl_id):
     return jsonify(dossier)
 
 
+@app.route("/api/drug/<path:drug_id>/trial-design")
+def api_trial_design(drug_id):
+    """Participant-selection assistant: for ?disease=<name>, propose an enrichment
+    biomarker, safety exclusions, dose note, feasibility, and a design sketch."""
+    disease = request.args.get("disease", "").strip()
+    if not disease:
+        return jsonify({"error": "disease parameter required"}), 400
+    try:
+        from services.trial_design import participant_selection
+        info = resolve_drug(drug_id) or {}
+        rec = participant_selection(info.get("name", drug_id), disease,
+                                    chembl_id=info.get("chembl_id", ""),
+                                    drug_genes=info.get("targets") or None)
+        return jsonify(rec)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/drug/<path:drug_id>/new-indications")
 def api_new_indications(drug_id):
     """
