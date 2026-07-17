@@ -225,9 +225,53 @@ function candidateCard(c, chembl){
   +     barRow('Clinical/trials', c.clinical_signal) + barRow('Pathway', sc.pathway) + barRow('PPI network', sc.ppi)
   +   '</div>'
   +   devBlock(dv)
+  +   whyNotHtml(c.why_not)
+  +   trialDesignPanel(chembl, c.disease)
   +   '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
   +     '<span class="material-symbols-outlined" style="font-size:15px">description</span>505(b)(2) Dossier</a>'
   + '</div>';
+}
+
+// "Why not (yet)" — the reasons a candidate is down-ranked / non-actionable.
+function whyNotHtml(w){
+  if(!w || !w.length) return '';
+  return '<div style="border-left:2px solid #e0c78a;padding-left:8px;font-size:0.72rem;color:#8a6d2f;line-height:1.5">'
+    +'<b>Why not (yet):</b> '+w.map(function(x){return x.replace(/</g,'&lt;');}).join(' · ')+'</div>';
+}
+
+// Participant-selection assistant — lazy-loads a trial population sketch on click.
+function trialDesignPanel(drug, disease){
+  return '<button class="btn btn-secondary" style="justify-content:center" '
+    +'onclick="loadTrialDesign(this,\''+encodeURIComponent(drug)+'\',\''+encodeURIComponent(disease)+'\')">'
+    +'<span class="material-symbols-outlined" style="font-size:15px">groups</span>Trial design</button>'
+    +'<div class="td-box" style="display:none;background:var(--bg-sunken);border-radius:8px;padding:11px 13px;margin-top:-2px"></div>';
+}
+async function loadTrialDesign(btn, drugEnc, disEnc){
+  var box = btn.nextElementSibling;
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  box.style.display='block';
+  if(box.dataset.loaded){ return; }
+  box.innerHTML='<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Designing trial…';
+  try{
+    var d = await window.apiFetch('/api/drug/'+drugEnc+'/trial-design?disease='+disEnc);
+    box.dataset.loaded='1'; box.innerHTML = trialDesignHtml(d);
+  }catch(e){ box.innerHTML='<span class="alert-error" style="display:inline-block">Could not build trial design.</span>'; }
+}
+function trialDesignHtml(d){
+  if(!d || d.error) return '<span class="alert-error" style="display:inline-block">'+((d&&d.error)||'No result')+'</span>';
+  function esc(s){return String(s||'').replace(/</g,'&lt;');}
+  var enr = (d.enrichment||[]).slice(0,4).map(function(e){
+    var strong = e.basis==='disease driver';
+    return '<span class="chip" style="background:'+(strong?'#e6f4ea':'#eef1f4')+';color:'+(strong?'#1b5e20':'#41566b')+';border:1px solid '+(strong?'#bfe0c8':'#d5dde6')+'" title="'+esc(e.basis)+' · assoc '+e.assoc+'">'+esc(e.gene)+'</span>';
+  }).join(' ');
+  var exc = (d.exclusions||[]).map(function(e){return '<li>'+esc(e.criterion)+' <span class="mono" style="color:#8a94a6;font-size:10px">('+esc(e.faers_signal)+')</span></li>';}).join('');
+  return '<div style="font-size:12.5px;line-height:1.55">'
+    +'<div class="mono" style="font-weight:700;color:#41566b;margin-bottom:7px">'+esc(d.design)+'</div>'
+    +'<div style="margin-bottom:6px"><b>Enrich for:</b> '+(enr||'<span style="color:#8a6d2f">no clear biomarker — unselected, higher risk</span>')+'</div>'
+    +(exc?'<div><b>Exclude:</b><ul style="margin:3px 0 6px 16px;padding:0">'+exc+'</ul></div>':'')
+    +(d.feasibility&&d.feasibility.note?'<div style="margin-bottom:4px"><b>Feasibility:</b> '+esc(d.feasibility.note)+'</div>':'')
+    +(d.rationale?'<div style="color:#54617a;border-top:1px solid #e1e3ea;padding-top:6px;margin-top:4px">'+esc(d.rationale)+'</div>':'')
+    +'</div>';
 }
 
 // Positive Pivot box: when a candidate is clinically crushed, show how to make it

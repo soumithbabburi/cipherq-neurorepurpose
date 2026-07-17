@@ -420,6 +420,35 @@ def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
         c["sources"] = set(c.get("sources", set())) | {"clinical_trial"}
 
 
+def _why_not(e: Dict) -> List[str]:
+    """Concise reasons a candidate is down-ranked or non-actionable — the 'why not' view,
+    assembled from the gates/penalties already computed for the card."""
+    out: List[str] = []
+    et = e.get("evidence_tier") or {}
+    if et.get("tier") == "contradicted":
+        out.append("Contradicted — " + (et.get("note") or "a trial failed for efficacy here"))
+    appr = e.get("appropriateness") or {}
+    if appr.get("appropriate") is False and appr.get("flags"):
+        out.append("Wrong direction — " + ", ".join(appr["flags"]))
+    saf = e.get("safety") or {}
+    if saf.get("penalized") and saf.get("flags"):
+        out.append("Safety liability — " + "; ".join(saf["flags"][:2]))
+    tf = e.get("trial_failure") or {}
+    if tf.get("penalized"):
+        out.append("Failed a prior clinical trial in this indication")
+    cov = e.get("coverage") or {}
+    if cov.get("penalized"):
+        out.append(f"Partial target coverage ({cov.get('n_hit', '?')}/{cov.get('n_drivers', '?')} drivers)")
+    cc = e.get("clinical_constraints") or {}
+    if cc.get("penalized") and cc.get("flags"):
+        out.append("Clinical mismatch — " + "; ".join(cc["flags"][:1]))
+    if (e.get("ctpa") or {}).get("phantom"):
+        out.append("No functional cohesion — off-target match")
+    if not e.get("actionable") and not out:
+        out.append("Below the evidence threshold — mechanistic signal too weak to act on")
+    return out
+
+
 def _evidence_tier(c: Dict) -> Dict:
     """Honest real-world-evidence strength for a candidate indication, from its trial
     outcomes — so a Phase-III benefit, an unproven early signal, and a failed trial are
@@ -1598,6 +1627,7 @@ def screen_indications_for_drug(
             # Would a pharma company pursue THIS disease? (burden × unmet-need × market)
             "disease_value":        _disease_value_for(c["disease"], c.get("efo_id", "")),
         }
+        entry["why_not"] = _why_not(entry)
         scored.append(entry)
 
     # DEFAULT SORT = pharma repurposing value × pair evidence. The disease Value Score
@@ -1606,11 +1636,17 @@ def screen_indications_for_drug(
     # for a serious, high-unmet-need one — the fix for "that's not what a pharma company
     # would repurpose for". Unmapped diseases get a neutral 0.5 (never zeroed on a data
     # gap); association strength remains a separate, visible evidence field.
+    # Real-world evidence tier nudges rank order: a trial-supported candidate outranks an
+    # equal-scoring mechanism-only one, and a contradicted one sinks — without overwriting
+    # the mechanistic composite (which stays the displayed score).
+    _TIER_RANK = {"trial-supported": 1.15, "promising": 1.03, "literature": 0.97,
+                  "preclinical": 0.95, "mechanistic": 0.95, "contradicted": 0.55}
     def _rank(x):
         dv = x.get("disease_value") or {}
         vw = dv.get("value_score", 0.5) if dv else 0.5
         appr_f = (x.get("appropriateness") or {}).get("factor", 1.0)
-        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f
+        tier_f = _TIER_RANK.get((x.get("evidence_tier") or {}).get("tier", ""), 1.0)
+        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f * tier_f
     scored.sort(key=_rank, reverse=True)
 
     # Positive-Pivot generation: for CCH-crushed candidates, turn the mismatch into a
