@@ -162,10 +162,40 @@ function devBlock(dv){
 function evidenceTierBadge(et){
   if(!et || !et.label) return '';
   var m={'trial-supported':['#e6f4ea','#1b5e20','#bfe0c8'],'promising':['#fdf3e3','#8a5a00','#e6d3aa'],
+         'biomarker-only':['#f8f2df','#8a5a00','#e6cf95'],'failed-endpoint':['#faece9','#922019','#e6c3bb'],
+         'tested-unverified':['#eef1f4','#41566b','#d5dde6'],
          'contradicted':['#faece9','#922019','#e6c3bb'],'literature':['#eef1f4','#41566b','#d5dde6'],
          'preclinical':['#eef1f4','#41566b','#d5dde6']};
   var col=m[et.tier]||m['preclinical'];
   return '<span class="chip" title="'+(et.note||'').replace(/"/g,'')+'" style="margin-top:5px;background:'+col[0]+';color:'+col[1]+';border:1px solid '+col[2]+';font-weight:600;font-size:11px">'+et.label+'</span>';
+}
+// Layer 2 — Commercial & off-label friction
+function commercialFrictionChip(cf){
+  if(!cf || !cf.penalized || !(cf.flags||[]).length) return '';
+  var label = (cf.off_label_risk>=0.4) ? 'Off-label reachable' : 'Commercial friction';
+  return '<div class="chip" style="align-self:flex-start;background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-weight:600" title="'+(cf.flags.join(' ')).replace(/"/g,'')+'">'+label+' · ×'+(cf.multiplier||1).toFixed(2)+' rank</div>';
+}
+// Layer 3 — therapeutic-organ overlap (a false safety penalty that was correctly suppressed)
+function safetyContextChip(s){
+  if(!s || !(s.suppressed_organs||[]).length) return '';
+  var organ=(s.suppressed_organs||[]).join('/').replace(/_/g,'/');
+  return '<div class="chip" style="align-self:flex-start;background:#eef4ef;color:#065f46;border:1px solid #cfe0d8;font-weight:600" title="The drug is developed to act on this organ, so its serious-AE signal there is therapeutic context, not a contraindication — no false safety penalty is applied.">Therapeutic-organ overlap · no false '+organ+' penalty</div>';
+}
+// Layer 4 — 505(b)(2) feasibility & exclusivity
+function reg505b2Block(r){
+  if(!r || !r.feasibility_score) return '';
+  var tc = r.tier==='Fundable'?['#e6f4ea','#1b5e20']:(r.tier==='Workable'?['#eef3fb','#1e40af']:['#f4f2ec','#8a7a52']);
+  var form = r.formulation_opportunity;
+  return '<div style="border-top:1px solid #e8edf6;padding-top:8px">'
+    + '<div class="flex justify-between items-center" style="margin-bottom:4px">'
+    +   '<span class="cc-bar-lbl">505(b)(2) feasibility</span>'
+    +   '<span class="chip" style="background:'+tc[0]+';color:'+tc[1]+';font-weight:700;font-size:11px">'+r.tier+' · '+r.feasibility_score+'/100</span>'
+    + '</div>'
+    + (r.route?'<div style="font-size:0.68rem;color:#47526b;line-height:1.45">'+r.route+'</div>':'')
+    + (r.runway_years!=null?'<div style="font-size:0.68rem;color:#98a1b6;margin-top:3px">Base exclusivity runway: <b style="color:#0f1e3d">'+r.runway_years+'y</b>'+((r.patents_primary||r.patents_secondary)?(' · '+(r.patents_primary||0)+' substance / '+(r.patents_secondary||0)+' formulation-or-use'):'')+'</div>':'')
+    + (form && form.opportunity ? '<div class="chip" style="align-self:flex-start;margin-top:5px;background:#eef4ef;color:#065f46;border:1px solid #cfe0d8;font-weight:600" title="'+(form.note||'').replace(/"/g,'')+'">Reformulation opportunity · '+form.route+' → new IP</div>':'')
+    + (r.exclusivity_narrative?'<div style="font-size:0.66rem;color:#98a1b6;margin-top:4px;line-height:1.4">'+r.exclusivity_narrative+'</div>':'')
+    + '</div>';
 }
 function candidateCard(c, chembl){
   var ev = (c.score != null ? c.score : c.composite_score) || 0;   // canonical score (same on every screen)
@@ -210,6 +240,8 @@ function candidateCard(c, chembl){
   +   ((c.safety && c.safety.penalized && (c.safety.flags||[]).length)
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.safety.flags.join(' ')).replace(/"/g,'')+'">Safety penalty · '+Math.round((1-c.safety.multiplier)*100)+'% score reduction</div>'
         : '')
+  +   safetyContextChip(c.safety)
+  +   commercialFrictionChip(c.commercial_friction)
   +   ((c.coverage && c.coverage.penalized && (c.coverage.flags||[]).length)
         ? '<div class="chip amber" style="align-self:flex-start;font-weight:600" title="'+(c.coverage.flags.join(' ')).replace(/"/g,'')+'">Partial target coverage · '+c.coverage.n_hit+'/'+c.coverage.n_drivers+' drivers</div>'
         : '')
@@ -252,6 +284,7 @@ function candidateCard(c, chembl){
   +     barRow('Clinical/trials', c.clinical_signal) + barRow('Pathway', sc.pathway) + barRow('PPI network', sc.ppi)
   +   '</div>'
   +   devBlock(dv)
+  +   reg505b2Block(c.regulatory_505b2)
   +   whyNotHtml(c.why_not)
   +   trialDesignPanel(chembl, c.disease)
   +   '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
