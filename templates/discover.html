@@ -60,6 +60,9 @@
 <!-- Subtype-grouped results (broad diseases only) -->
 <div id="subtype-groups" style="display:none;margin-bottom:1.75rem"></div>
 
+<!-- Development-reality context: molecules excluded from the leads (already approved / not viable) -->
+<div id="excluded-context" style="display:none;margin-bottom:1.5rem"></div>
+
 <!-- Compound Grid -->
 <div class="compound-grid" id="compound-grid">
   <div style="grid-column:1/-1" class="empty-state" id="empty-default">
@@ -75,6 +78,7 @@
 const meshIds = {{ mesh_ids|safe }};
 window._compounds = {};
 window._initialResults = [];
+window._initialExcluded = {{ excluded|safe if excluded else '[]' }};
 {% for c in results %}
 try { var _c = {{ c|tojson }}; window._compounds[_c.chembl_id] = _c; window._initialResults.push(_c); } catch(_e) {}
 {% endfor %}
@@ -137,6 +141,32 @@ function novelBadge(c) {
   return `<div style="background:rgba(37, 99, 235,0.10);border:1px solid rgba(37, 99, 235,0.30);border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#2563eb;line-height:1.4">Novel via knowledge graph - ${n} shared disease gene${n==1?'':'s'}${genes ? ' · ' + genes : ''}</div>`;
 }
 
+// Mechanism relative to the approved standard of care for this disease. A candidate
+// that reaches the disease through a target with NO approved drug is genuine
+// whitespace (highlight); one whose mechanism is already covered is a me-too (flag).
+function mechanismBadge(c) {
+  const mc = c.mechanism_crowding;
+  if (!mc) return '';
+  if (mc.novel && (mc.novel_targets || []).length) {
+    return `<div style="background:rgba(16,122,87,0.10);border:1px solid rgba(16,122,87,0.30);border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#0e7454;line-height:1.4">Novel mechanism for this disease · ${(mc.novel_targets||[]).slice(0,4).join(', ')} (no approved drug on this target)</div>`;
+  }
+  if (mc.crowded) {
+    return `<div style="background:#fbf3e2;border:1px solid #e7cf97;border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#8a5a1a;line-height:1.4">Me-too mechanism · ${(mc.crowded_targets||[]).slice(0,4).join(', ')} already has an approved drug for this indication</div>`;
+  }
+  return '';
+}
+
+// Regulatory market status: obsolete / discontinued / withdrawn drugs are not viable
+// development assets even when the target matches. Withdrawn drugs are removed upstream;
+// obsolete/discontinued ones are demoted and flagged here with the cited reason.
+function marketStatusBadge(c) {
+  const ms = c.market_status;
+  if (!ms) return '';
+  const red = ms.disqualifier === 'hard';
+  const bg = red ? '#fce8e6' : '#fbf3e2', bd = red ? '#f5b5ad' : '#e7cf97', fg = red ? '#7a1d12' : '#8a5a1a';
+  return `<div style="background:${bg};border:1px solid ${bd};border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:${fg};line-height:1.4" title="${(ms.reason||'').replace(/"/g,'')}">${ms.label}${ms.source ? ' · ' + ms.source : ''}</div>`;
+}
+
 // Per-card data provenance: which sources the numbers came from + a link to the
 // live validation page. Trust shown where the decision is made.
 function provFooter(c) {
@@ -166,7 +196,7 @@ function buildCard(c, disease) {
         <div class="seal-lbl" style="margin-top:3px">Confidence</div>
       </div>
     </div>
-    ${approvedBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
@@ -196,7 +226,7 @@ function buildTop3Card(c, disease, rank) {
       </div>
       ${window.scoreSeal(sc, 60)}
     </div>
-    ${approvedBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
@@ -254,6 +284,32 @@ function renderGrid(compounds, disease) {
   filterCards();   // honour the active phase filter on (re)render
 }
 
+// Molecules the development-reality guardrails removed from the lead list: drugs already
+// approved for this indication (not a repurposing opportunity) and drugs withdrawn for
+// safety. Shown as honest context — a saturated indication SHOULD surface few novel
+// leads and many already-approved drugs, and hiding that would overstate the whitespace.
+function renderExcluded(excluded, disease) {
+  const box = document.getElementById('excluded-context');
+  if (!box) return;
+  const list = (excluded || []).filter(e => e && e.name);
+  if (!list.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const approved = list.filter(e => (e.reason || '').toLowerCase().indexOf('approved') >= 0);
+  const notViable = list.filter(e => (e.reason || '').toLowerCase().indexOf('approved') < 0);
+  const chip = (e) => `<span title="${((e.market_status||{}).reason || e.reason || '').replace(/"/g,'')}" style="display:inline-block;font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:99px;background:#fff;color:#6b7280;border:1px solid #e5e7eb;margin:0 5px 5px 0">${e.name}</span>`;
+  let html = `<div style="background:#fafafa;border:1px solid #ececec;border-radius:12px;padding:14px 16px">`;
+  if (approved.length) {
+    html += `<div style="font-size:0.8rem;color:#374151;font-weight:600;margin-bottom:8px">${approved.length} drug${approved.length==1?'':'s'} already approved for ${disease} — excluded from leads (reference, not a repurposing opportunity)</div>
+      <div style="line-height:1.9">${approved.map(chip).join('')}</div>`;
+  }
+  if (notViable.length) {
+    html += `<div style="font-size:0.8rem;color:#7a1d12;font-weight:600;margin:${approved.length?'12px':'0'} 0 8px">${notViable.length} withdrawn / not a viable asset — excluded</div>
+      <div style="line-height:1.9">${notViable.map(chip).join('')}</div>`;
+  }
+  html += `</div>`;
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
 function doSearch() {
   const q = document.getElementById('disc-q').value.trim();
   if (!q) return;
@@ -267,8 +323,10 @@ function doSearch() {
   .then(data => {
     if (data.error) { toast(data.error, 'error'); return; }
     const disease = data.disease;
-    document.getElementById('subtitle-text').innerHTML = `Reviewing <strong>${data.compounds.length}</strong> candidates for <strong>${disease}</strong>`;
+    const nExcl = (data.excluded || []).length;
+    document.getElementById('subtitle-text').innerHTML = `Reviewing <strong>${data.compounds.length}</strong> novel-lead candidate${data.compounds.length==1?'':'s'} for <strong>${disease}</strong>` + (nExcl ? ` · <span style="color:var(--text-muted)">${nExcl} already-approved or non-viable drug${nExcl==1?'':'s'} excluded</span>` : '');
     document.getElementById('status-bar').innerHTML = '';
+    renderExcluded(data.excluded, disease);
     renderGrid(data.compounds, disease);
     data.compounds.forEach(c => { if (c.chembl_id) window._compounds[c.chembl_id] = c; });
     window._currentDisease = disease;
@@ -393,6 +451,7 @@ function _loadSession() {
 
 // Initial render - single JS path for both server results and session restore
 if (window._initialResults.length) {
+  renderExcluded(window._initialExcluded || [], window._currentDisease);
   renderGrid(window._initialResults, window._currentDisease);
   _saveSession(window._initialResults, window._currentDisease);
   renderTop3(window._initialResults, window._currentDisease);

@@ -241,24 +241,27 @@ def _resolve_fetch(query: str):
                         c["developability_score"]  = dvr.get("score")
     except Exception as _e:
         logger.debug(f"developability annotate failed: {_e}")
-    # Flag candidates already APPROVED for this indication (the one true novelty
-    # disqualifier). Local indication data is sparse and many DB rows lack a real
-    # ChEMBL id, so this checks ChEMBL drug_indication phase directly — the same
-    # authoritative source the dossier verdict uses. Bounded to the candidates a
-    # user actually sees, run in parallel and cached.
+    # Development-reality guardrails (forward path). Target matching on a saturated
+    # target surfaces the drugs that are ALREADY the standard of care — e.g. asthma →
+    # ADRB2 → beta-2 agonists, several already approved for asthma, some obsolete or
+    # discontinued. These guardrails, grounded in the local indication/mechanism tables:
+    #   • EXCLUDE molecules already approved for this indication (not a repurposing lead)
+    #   • EXCLUDE molecules withdrawn for safety; DEMOTE + flag obsolete/discontinued ones
+    #   • DEMOTE + flag me-too candidates whose mechanism is already occupied by an
+    #     approved drug for the disease, and surface novel-mechanism (whitespace) leads
+    # The removed molecules are returned separately so the UI can show them as context
+    # ("already approved / not viable") rather than as leads.
+    removed_candidates: List[dict] = []
     try:
-        top = [c for c in comps[:18] if (c.get("chembl_id") or "").startswith("CHEMBL")]
-        if top:
-            with ThreadPoolExecutor(max_workers=6) as pool:
-                flags = list(pool.map(
-                    lambda c: _approved_for_disease(c.get("chembl_id"), canonical_name), top))
-            for c, f in zip(top, flags):
-                c["approved_here"] = f
+        from services import forward_guardrails as _fg
+        part = _fg.apply(comps, canonical_name)
+        comps = part["leads"]
+        removed_candidates = part["removed"]
+    except Exception as _e:
+        logger.debug(f"forward guardrails failed: {_e}")
         for c in comps:
             c.setdefault("approved_here", False)
-    except Exception as _e:
-        logger.debug(f"approved-here annotate failed: {_e}")
-    return resolved, expanded, comps
+    return resolved, expanded, comps, removed_candidates
 
 
 def _approved_for_disease(chembl_id: str, disease_name: str) -> bool:
@@ -649,15 +652,18 @@ def assets(filename):
 @app.route("/discover")
 def discover():
     q = request.args.get("q", "").replace("+", " ").strip()
-    results = []; disease_name = q; mesh_ids = []
+    results = []; disease_name = q; mesh_ids = []; excluded = []
     if q:
-        resolved, expanded, comps = _resolve_fetch(q)
+        resolved, expanded, comps, _removed = _resolve_fetch(q)
         results = comps
         disease_name = resolved[0]["heading"] if resolved else q
         mesh_ids = expanded
+        excluded = [{"name": c.get("name"), "chembl_id": c.get("chembl_id"),
+                     "reason": c.get("removed_reason", ""),
+                     "market_status": c.get("market_status")} for c in (_removed or [])]
     return render_template("discover.html", results=results,
                            disease_name=disease_name, mesh_ids=json.dumps(mesh_ids),
-                           query=q, db_ok=DB_OK)
+                           excluded=json.dumps(excluded), query=q, db_ok=DB_OK)
 
 
 @app.route("/analysis")
@@ -1002,7 +1008,7 @@ def api_search():
     data = request.get_json() or {}
     q = data.get("query", "").strip()
     if not q: return jsonify({"error": "No query"}), 400
-    resolved, expanded, comps = _resolve_fetch(q)
+    resolved, expanded, comps, removed = _resolve_fetch(q)
     disease_name = resolved[0]["heading"] if resolved else q
     # If the disease search found nothing, the query may actually be a DRUG name
     # (a biologic like 'mepolizumab' resolves to no disease compounds). Detect it and
@@ -1022,7 +1028,14 @@ def api_search():
                                 f"indications it could be repurposed into.")})
         except Exception as e:
             logger.debug(f"drug-detect in search failed: {e}")
-    return jsonify({"disease": disease_name, "mesh_ids": expanded, "compounds": comps})
+    # `removed` = molecules excluded from the lead list by the development-reality
+    # guardrails (already approved for this indication, or withdrawn for safety), kept
+    # for transparency so the UI can show them as context rather than silently dropping.
+    excluded = [{"name": c.get("name"), "chembl_id": c.get("chembl_id"),
+                 "reason": c.get("removed_reason", ""),
+                 "market_status": c.get("market_status")} for c in (removed or [])]
+    return jsonify({"disease": disease_name, "mesh_ids": expanded, "compounds": comps,
+                    "excluded": excluded})
 
 
 @app.route("/api/search-subtypes", methods=["POST"])
@@ -1045,7 +1058,7 @@ def api_search_subtypes():
 
     def _run(label):
         try:
-            resolved, expanded, comps = _resolve_fetch(label)
+            resolved, expanded, comps, _removed = _resolve_fetch(label)
             heading = resolved[0]["heading"] if resolved else label
             return {"subtype": heading, "n": len(comps), "compounds": comps[:8]}
         except Exception as e:
@@ -2982,7 +2995,7 @@ def api_repurposing_screen():
     if not ENGINE_OK:
         return jsonify({"error": "Repurposing engine not available"}), 503
     try:
-        resolved, expanded, db_comps = _resolve_fetch(disease)
+        resolved, expanded, db_comps, _removed = _resolve_fetch(disease)
         screen = run_repurposing_screen(disease, max_candidates=50, db_compounds=db_comps)
         screen.pop("_ts", None)
         if "candidates" in screen:
@@ -3031,7 +3044,7 @@ def api_dossier(chembl_id):
     screen = None
     if ENGINE_OK and c.get("id"):
         try:
-            resolved, expanded, db_comps = _resolve_fetch(disease)
+            resolved, expanded, db_comps, _removed = _resolve_fetch(disease)
             screen = run_repurposing_screen(disease, max_candidates=50, db_compounds=db_comps)
         except Exception:
             pass
