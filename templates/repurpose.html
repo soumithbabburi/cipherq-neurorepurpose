@@ -219,10 +219,11 @@ function candidateCard(c, chembl){
   var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease);
   return ''
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
-  +   '<div class="flex justify-between items-center" style="gap:12px">'
-  +     '<div style="min-width:0"><div class="cc-name">'+tcase(c.disease)+(c.narrowed_from?' <span class="text-dim" style="font-weight:400;font-size:11px">(narrowed from '+tcase(c.narrowed_from)+')</span>':'')+'</div><div class="cc-id">'+(c.efo_id||'')+'</div>'+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
+  +   '<div class="flex justify-between items-start" style="gap:12px">'
+  +     '<div style="min-width:0;flex:1"><div class="cc-name">'+tcase(c.disease)+(c.narrowed_from?' <span class="text-dim" style="font-weight:400;font-size:11px">(narrowed from '+tcase(c.narrowed_from)+')</span>':'')+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
   +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+'</div>'
   +   '</div>'
+  +   '<div style="display:flex;flex-wrap:wrap;gap:5px">'+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
   +   (c.is_subtype
         ? '<span class="chip" style="align-self:flex-start;background:#eef3f0;color:#2563eb;border:1px solid #cfe0d8;font-size:0.66rem;font-weight:600" title="Scored individually as a specific subtype rather than as the broad umbrella indication.">Subtype of '+(c.parent_indication||'')+'</span>'
         : '')
