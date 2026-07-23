@@ -1443,18 +1443,43 @@ def api_docking():
 
 @app.route("/api/graph")
 def api_graph():
-    disease = request.args.get("disease", "").strip()
-    limit   = min(int(request.args.get("limit", 80)), 200)
+    # entity-agnostic: q resolves to a drug / gene / pathway / disease (disease= kept for
+    # backward compat). Hetionet first (one unified, richly-connected, click-expandable
+    # graph), then the live Open-Targets/DRKG builder for entities Hetionet's 2016 lacks.
+    q = (request.args.get("q") or request.args.get("disease") or "").strip()
+    limit = min(int(request.args.get("limit", 80)), 200)
     try:
-        elems, legend = build_network_graph(disease=disease, limit=limit)
+        from services.hetionet_graph import build as het_build, available as het_ok
+        if q and het_ok():
+            g = het_build(q, limit=limit)
+            if g.get("anchor"):
+                return jsonify({"elements": g["elements"], "legend": g["legend"],
+                                "hetionet": True, "anchor": g["anchor"]})
+    except Exception as e:
+        logger.debug(f"hetionet graph failed: {e}")
+    try:
+        elems, legend = build_network_graph(disease=q, limit=limit)
         try:
             from services.biocypher_graph import drkg_available
             drkg_ok = drkg_available()
         except Exception:
             drkg_ok = False
-        return jsonify({"elements": elems, "legend": legend, "drkg": drkg_ok})
+        return jsonify({"elements": elems, "legend": legend, "drkg": drkg_ok, "hetionet": False})
     except Exception as e:
         return jsonify({"elements": [], "legend": {}, "error": str(e)})
+
+
+@app.route("/api/graph/expand")
+def api_graph_expand():
+    """1-hop neighbours of a clicked node — graph traversal / click-to-expand (Hetionet)."""
+    node_id = (request.args.get("id") or "").strip()
+    ex = request.args.get("existing") or ""
+    existing = [x for x in ex.split(",") if x]
+    try:
+        from services.hetionet_graph import expand
+        return jsonify(expand(node_id, existing_ids=existing))
+    except Exception as e:
+        return jsonify({"elements": [], "error": str(e)})
 
 
 def _filter_graph_confidence(elems):
