@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% set active_page = 'novel' %}
+{% block title %}Novel Targets · RepurposeIQ{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head" style="margin-bottom:4px"><span class="s-kicker">Discovery · Network Inference</span></div>
+  <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Novel Target Discovery</h1>
+  <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px;max-width:60rem">
+    Enter a disease. We take its known genetically-associated genes as seeds, expand through the
+    protein-protein interaction network, and surface <strong>targets NOT yet annotated to the disease</strong>
+    - candidate novel targets one hop off the known disease module - then the drugs reachable
+    <strong>only through those inferred targets</strong>. Everything here is
+    <strong>inferred (network-based)</strong>, a hypothesis to validate, not a known association.
+  </p>
+</div>
+
+<div class="card mb-2">
+  <div class="grid-form">
+    <div class="field" style="grid-column:span 3">
+      <label for="dis-input">Disease</label>
+      <input id="dis-input" class="input" autocomplete="off"
+             placeholder="e.g. Alzheimer disease, rheumatoid arthritis, idiopathic pulmonary fibrosis"
+             value="{{ disease|e }}" onkeydown="if(event.key==='Enter')runDiscovery()"/>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" onclick="runDiscovery()" id="run-btn">
+        <span class="material-symbols-outlined" style="font-size:16px">travel_explore</span>
+        Discover
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="status-line" class="text-text-muted" style="font-size:0.82rem;display:none;margin-bottom:10px"></div>
+<div id="results"></div>
+
+<script>
+var TIER = {high:'#2563eb', mid:'#06b6d4', low:'#a86b2d'};
+function confCol(c){ return c>=0.7?TIER.high : c>=0.4?TIER.mid : TIER.low; }
+function phaseLabel(p){ return (p||'').toString().replace('PHASE_','Phase ').replace('_',' ').toLowerCase().replace(/^\w/,function(m){return m.toUpperCase();}) || '-'; }
+
+async function runDiscovery(){
+  var disease = document.getElementById('dis-input').value.trim();
+  if(!disease){ return; }
+  var btn = document.getElementById('run-btn'); btn.disabled = true;
+  var status = document.getElementById('status-line'); status.style.display='block';
+  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Seeding from known targets, expanding the PPI network, and finding drugs via inferred targets…';
+  document.getElementById('results').innerHTML = '';
+  // Broad-disease → subtype refinement (same platform-wide helper as Discover/Graph)
+  if (window.renderDiseaseExpansion) {
+    var _sb = document.getElementById('nt-subtype-banner');
+    if (!_sb) {
+      _sb = document.createElement('div'); _sb.id = 'nt-subtype-banner';
+      _sb.style.margin = '0 0 12px'; _sb.style.display = 'none';
+      var _r = document.getElementById('results'); _r.parentNode.insertBefore(_sb, _r);
+    }
+    window.renderDiseaseExpansion(disease, _sb, function (sub) {
+      document.getElementById('dis-input').value = sub; runDiscovery();
+    });
+  }
+  try {
+    var d = await window.apiFetch('/api/novel-targets?disease='+encodeURIComponent(disease));
+    if(d.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+d.error+'</span>'; btn.disabled=false; return; }
+    var nts = d.novel_targets || [], drugs = d.drugs || [];
+    if(!nts.length){ status.innerHTML = 'No inferred novel targets found for '+disease+' (no seed genes or PPI expansion).'; btn.disabled=false; return; }
+    status.innerHTML = 'Inferred <strong>'+nts.length+'</strong> novel target'+(nts.length>1?'s':'')+' and <strong>'+drugs.length+'</strong> drug'+(drugs.length!==1?'s':'')+' reachable through them for '+disease+'.';
+    document.getElementById('results').innerHTML = targetsCard(nts) + drugsCard(drugs);
+  } catch(e){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>'; }
+  btn.disabled=false;
+}
+
+function targetsCard(nts){
+  var rows = nts.map(function(t){
+    var col = confCol(t.confidence);
+    var bar = '<div class="cc-bar-track" style="width:90px"><div class="cc-bar-fill" style="width:'+Math.round(t.confidence*100)+'%;background:'+col+'"></div></div>';
+    return '<tr>'
+      + '<td style="font-weight:700;color:#0f1e3d">'+t.gene+'</td>'
+      + '<td>'+bar+'</td>'
+      + '<td class="mono" style="color:'+col+';font-weight:700">'+t.confidence.toFixed(2)+'</td>'
+      + '<td style="font-size:0.72rem;color:#47526b">'+(t.seed_links||0)+' seed link'+(t.seed_links===1?'':'s')+' · via '+((t.via_seeds||[]).slice(0,4).join(', '))+'</td>'
+      + '</tr>';
+  }).join('');
+  return '<div class="card mb-2">'
+    + '<div class="card-title mb-1">Inferred novel targets '
+    + '<span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(network guilt-by-association from known seeds · inferred, not a known association)</span></div>'
+    + '<div style="overflow-x:auto"><table class="doc-table" style="width:100%">'
+    + '<thead><tr><th>Gene</th><th>Confidence</th><th></th><th>Evidence (connected seed genes)</th></tr></thead>'
+    + '<tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function drugsCard(drugs){
+  if(!drugs.length) return '<div class="card"><div class="card-title mb-1">Drugs via novel targets</div><span class="text-dim">No drugs found for the inferred targets.</span></div>';
+  var cards = drugs.map(function(d){
+    var col = confCol(d.target_confidence||0);
+    return '<div style="border:1px solid #e6e2d7;border-radius:10px;padding:10px 12px;background:#fbfaf6">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
+      + '<span style="font-weight:800;font-size:0.86rem;color:#0f1e3d">'+(d.name||d.chembl_id)+'</span>'
+      + '<span class="chip cyan" style="font-size:0.6rem">'+phaseLabel(d.max_phase)+'</span></div>'
+      + '<div style="font-size:0.7rem;color:#47526b;margin-top:5px">via inferred target '
+      + '<strong style="color:'+col+'">'+d.via_novel_target+'</strong> '
+      + '<span style="color:#98a1b6">(target conf '+(d.target_confidence!=null?d.target_confidence.toFixed(2):'-')+')</span></div>'
+      + ((d.clinical_constraints && d.clinical_constraints.penalized)
+          ? '<div style="font-size:0.62rem;color:#922019;margin-top:4px;font-weight:600" title="'+((d.clinical_constraints.flags||[]).join(' ')).replace(/"/g,'')+'">Clinical mismatch · '+Math.round((1-d.clinical_multiplier)*100)+'% penalty</div>'
+          : '')
+      + '</div>';
+  }).join('');
+  return '<div class="card">'
+    + '<div class="card-title mb-1">Drugs reachable via novel targets '
+    + '<span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(repurposing hypotheses through an inferred target - validate before acting)</span></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">'+cards+'</div></div>';
+}
+
+if ("{{ disease|e }}".trim()) runDiscovery();
+</script>
+{% endblock %}

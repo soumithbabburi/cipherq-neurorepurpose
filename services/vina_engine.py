@@ -42,6 +42,30 @@ _VINA_EXE = Path(os.getenv(
 _WORKER = _ROOT / "vendor" / "vina_worker.py"
 
 
+def _clean_receptor(pdb: str) -> str:
+    """Strip a receptor PDB down to protein atoms only before docking:
+      - drop ALL HETATM (co-crystal ligand, waters, ions) — critically, a holo
+        structure's bound ligand SITS IN the pocket we dock into; leaving it there
+        blocks the box and can crash the Vina worker (receptor-prep access violation).
+        The dock box centre is already fixed from pocket detection, so removing the
+        ligand is both the crash fix and the scientifically correct empty-pocket prep.
+      - keep only the blank/'A' alternate location so duplicate altloc atoms don't
+        confuse protonation.
+    """
+    out = []
+    for ln in pdb.splitlines():
+        rec = ln[:6].strip()
+        if rec == "ATOM":
+            alt = ln[16] if len(ln) > 16 else " "
+            if alt not in (" ", "A"):
+                continue
+            out.append(ln)
+        elif rec == "TER":
+            out.append(ln)
+    out.append("END")
+    return "\n".join(out)
+
+
 class VinaEngine:
     def __init__(self):
         self.available = (_DRUGDISC_PY.exists() and _VINA_EXE.exists()
@@ -68,7 +92,7 @@ class VinaEngine:
         with tempfile.TemporaryDirectory(prefix="vina_job_") as td:
             tdp = Path(td)
             prot_file = tdp / "receptor.pdb"
-            prot_file.write_text(protein_pdb, encoding="utf-8")
+            prot_file.write_text(_clean_receptor(protein_pdb), encoding="utf-8")
             out_json = tdp / "result.json"
             job = {
                 "protein_pdb_file": str(prot_file),

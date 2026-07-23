@@ -77,16 +77,40 @@ def participant_selection(drug_name: str, disease: str, chembl_id: str = "",
 
     genes = _drug_targets(drug_name, chembl_id, drug_genes)
     drivers = _disease_drivers(disease)
+    try:
+        from services.disease_appropriateness import infer_drug_action
+        _action = infer_drug_action(drug_name, genes)
+    except Exception:
+        _action = ""
+    inhibitor = _action == "inhibitor"
 
-    # ── enrichment: the drug's targets as candidate biomarkers, ranked by whether they
-    #    also drive THIS disease (a driver = strong enrichment; else a subset marker).
+    # ── enrichment: score each of the drug's targets as a candidate biomarker on a
+    #    3-tier support model — an association is a HYPOTHESIS, not a validated marker.
+    #    support = biology (target↔disease assoc) + directional fit; the top tier is gated
+    #    on real clinical-response evidence, which we do not have a source for, so it never
+    #    fires (deliberately — we never claim a marker is clinically validated on biology alone).
     enr = []
     for g in genes:
         assoc = drivers.get(g, 0.0)
-        enr.append({"gene": g, "assoc": round(assoc, 2),
-                    "basis": "disease driver" if assoc >= 0.30 else "target-expressing subset",
-                    "criterion": f"{g}-altered / high-{g} disease (amplification, overexpression, or activating alteration)"})
-    enr.sort(key=lambda x: -x["assoc"])
+        biology = min(1.0, assoc)
+        if assoc >= 0.30 and inhibitor:
+            direction = 1.0          # inhibiting a disease driver is directionally corrective
+        elif assoc >= 0.30:
+            direction = 0.6          # relevant target, action direction unclear
+        else:
+            direction = 0.4
+        evidence = 0.0               # no marker-level clinical-response source available
+        support = round(0.55 * biology + 0.30 * direction + 0.15 * evidence, 2)
+        if support >= 0.70 and evidence >= 0.5:
+            tier, label = "clinically-supported", "Clinically validated subgroup"
+        elif support >= 0.52 and assoc >= 0.30:
+            tier, label = "enrichment-candidate", "Plausible enrichment · mechanistic"
+        else:
+            tier, label = "hypothesis", "Hypothesis-generating"
+        enr.append({"gene": g, "assoc": round(assoc, 2), "support": support,
+                    "tier": tier, "label": label,
+                    "criterion": f"{g}-altered / high-{g} (amplification, overexpression, or activating alteration)"})
+    enr.sort(key=lambda x: -x["support"])
     out["enrichment"] = enr[:5]
 
     # ── safety exclusions from the drug's serious FAERS reactions
@@ -129,30 +153,44 @@ def participant_selection(drug_name: str, disease: str, chembl_id: str = "",
     except Exception as e:
         logger.debug(f"feasibility failed: {e}")
 
-    # ── one-line design sketch
-    marker = out["enrichment"][0]["gene"] if out["enrichment"] else None
+    # ── safety gate: a biomarker can be biologically valid but the drug still a poor fit
+    try:
+        from services.safety_filter import assess as _safety
+        sg = _safety(drug_name, disease) or {}
+        if sg.get("penalized"):
+            out["safety_gate"] = {"compatible": False, "flags": (sg.get("flags") or [])[:2],
+                                  "note": "drug toxicity may conflict with this indication/population — verify before enrichment"}
+        else:
+            out["safety_gate"] = {"compatible": True, "note": "no blocking toxicity–indication conflict detected"}
+    except Exception:
+        out["safety_gate"] = {}
+
+    # ── a HYPOTHESIS does not trigger enrichment; only an enrichment-candidate+ does.
+    strong = [e for e in out["enrichment"] if e["tier"] in ("enrichment-candidate", "clinically-supported")]
+    marker = strong[0] if strong else None
     tier = (evidence_tier or {}).get("tier", "")
     phase = "Phase 2 (proof-of-concept)" if tier in ("mechanistic", "preclinical", "literature", "promising") else "Phase 2/3"
     parts = [phase]
-    if marker:
-        parts.append(f"biomarker-enriched ({marker}+)")
-    else:
-        parts.append("unselected — no enrichment marker found (higher risk)")
+    parts.append(f"enrich for {marker['gene']}+ (mechanistic hypothesis)" if marker
+                 else "unselected — no marker rises above hypothesis-generating")
     if out["exclusions"]:
-        parts.append(f"excluding {out['exclusions'][0]['criterion']}")
+        parts.append(f"exclude {out['exclusions'][0]['criterion']}")
     out["design"] = " · ".join(parts)
 
-    # ── plain-language rationale
+    # ── plain-language rationale — honest, no subgroup-response claim
     r = []
-    if marker and out["enrichment"][0]["assoc"] >= 0.30:
-        r.append(f"The drug's target {marker} is a driver of {disease} (association {out['enrichment'][0]['assoc']}), "
-                 f"so enriching for {marker}-altered patients raises the chance of a signal — this is exactly why an "
-                 f"unselected trial can fail while a marker-defined subgroup responds.")
-    elif marker:
-        r.append(f"No target is a top disease driver, but testing in the {marker}-expressing subset (the drug's "
-                 f"primary target) is a more informative first trial than an unselected population.")
+    if marker:
+        r.append(f"{marker['gene']} is biologically relevant to {disease} (association {marker['assoc']}) and the drug's "
+                 f"action is directionally appropriate, so a {marker['gene']}-enriched arm is a defensible mechanistic "
+                 f"hypothesis — NOT a validated biomarker. There is no subgroup-response data here, so treat it as "
+                 f"hypothesis-generating, not a guarantee of benefit.")
+    elif out["enrichment"]:
+        r.append(f"The drug's targets appear in {disease} biology but none rises above hypothesis-generating "
+                 f"(association only, no directional or clinical support). An unselected design or translational "
+                 f"biomarker work should precede any enrichment claim.")
+    if out.get("safety_gate", {}).get("compatible") is False:
+        r.append("Safety gate: " + out["safety_gate"]["note"] + ".")
     if out["exclusions"]:
-        r.append("Its FAERS profile flags " + ", ".join(e["criterion"] for e in out["exclusions"][:2])
-                 + " — exclude those patients up front.")
+        r.append("Exclude patients with " + ", ".join(e["criterion"] for e in out["exclusions"][:2]) + ".")
     out["rationale"] = " ".join(r)
     return out

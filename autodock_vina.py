@@ -1,6 +1,17 @@
 """
-AutoDock Vina - REAL EXECUTABLE IMPLEMENTATION
-Uses installed Vina (1.2.3) to run actual docking
+AutoDock Vina — LEGACY / UNUSED
+===============================
+
+DEPRECATED: this module is not wired into the docking pipeline. It predates the
+current services/docking_service.py chain (local DiffDock → NVIDIA DiffDock →
+built-in physics engine) and exposes module-level functions rather than the
+`AutoDockVina` class the service once tried to import — so it was never actually
+invoked. It also reads a relative `drugs.json` from the current working directory,
+which only works when launched from the repo root.
+
+Kept for reference only. Do not add it back to the fallback chain without porting
+it to take SMILES/SDF from the caller (like the rest of the pipeline) instead of
+re-reading drugs.json.
 """
 import logging
 import os

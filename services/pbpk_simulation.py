@@ -120,10 +120,30 @@ _TISSUE_ALIAS = {
 }
 
 
+# Route-of-administration models. k_abs (1/h) and systemic availability f are
+# literature-typical ESTIMATES; first-pass metabolism applies only to enteral
+# routes. `entry` = the compartment absorbed drug enters. Intranasal carries a
+# small direct nose-to-brain fraction that bypasses the blood-brain barrier.
+_ROUTE_MODEL: Dict[str, dict] = {
+    "iv":          {"label": "Intravenous (IV)",   "entry": "blood", "k_abs": None, "f": 1.00, "first_pass": False},
+    "oral":        {"label": "Oral",               "entry": "gut",   "k_abs": "ka", "f": None, "first_pass": True},
+    "sublingual":  {"label": "Sublingual",         "entry": "blood", "k_abs": 1.2,  "f": 0.70, "first_pass": False},
+    "buccal":      {"label": "Buccal",             "entry": "blood", "k_abs": 0.8,  "f": 0.60, "first_pass": False},
+    "sc":          {"label": "Subcutaneous (SC)",  "entry": "blood", "k_abs": 0.4,  "f": 0.90, "first_pass": False},
+    "im":          {"label": "Intramuscular (IM)", "entry": "blood", "k_abs": 0.8,  "f": 0.95, "first_pass": False},
+    "intranasal":  {"label": "Intranasal",         "entry": "blood", "k_abs": 1.5,  "f": 0.60, "first_pass": False, "nose_to_brain": 0.10},
+    "inhalation":  {"label": "Inhalation",         "entry": "blood", "k_abs": 2.0,  "f": 0.60, "first_pass": False},
+    "transdermal": {"label": "Transdermal",        "entry": "blood", "k_abs": 0.05, "f": 0.50, "first_pass": False},
+    "rectal":      {"label": "Rectal",             "entry": "blood", "k_abs": 0.5,  "f": 0.60, "first_pass": False},
+    "ocular":      {"label": "Ophthalmic (local)", "entry": "blood", "k_abs": 0.3,  "f": 0.05, "first_pass": False},
+    "topical":     {"label": "Topical (local)",    "entry": "skin",  "k_abs": 0.15, "f": 0.05, "first_pass": False},
+}
+
+
 class PBPKSimulator:
     """Perfusion-limited whole-body PBPK model with free-drug target engagement."""
 
-    def __init__(self, disease_name: str = "Alzheimer's Disease"):
+    def __init__(self, disease_name: str = ""):
         self.disease_name = disease_name
         self.human_params = {"body_weight": 70.0, "blood_volume": _BLOOD_VOLUME}
         self.target_tissue = self._resolve_target_tissue(disease_name)
@@ -257,15 +277,27 @@ class PBPKSimulator:
         q_gu = Q_arr[gi]
         q_co = float(Q_arr.sum())
 
-        # Absorption rate + initial conditions per route
-        k_abs = ka if route == "oral" else (0.15 if route == "topical" else 0.0)
+        # Absorption rate + initial conditions per route (literature-typical models)
+        rm = _ROUTE_MODEL.get(route, _ROUTE_MODEL["oral"])
+        entry = rm["entry"]
+        if route == "oral":
+            k_abs, f_abs = ka, fa
+        elif route == "iv":
+            k_abs, f_abs = 0.0, 1.0
+        else:
+            k_abs, f_abs = float(rm["k_abs"]), float(rm["f"])
+        n2b = float(rm.get("nose_to_brain", 0.0))
+        bi = tissues.index("brain")
+
         y0 = np.zeros(m + 2)                       # [Xblood, Xtissue..., depot]
         if route == "iv":
             y0[0] = dose_mg
-        elif route == "topical":
-            y0[-1] = dose_mg
-        else:  # oral
-            y0[-1] = fa * dose_mg
+        else:
+            y0[-1] = f_abs * dose_mg               # bioavailable fraction held in depot
+            if n2b > 0:                            # intranasal: direct nose-to-brain bolus
+                brain_dose = n2b * dose_mg
+                y0[1 + bi] = brain_dose
+                y0[-1] = max(0.0, y0[-1] - brain_dose)
 
         def f(t, y):
             Xb = y[0]; depot = y[-1]
@@ -274,17 +306,20 @@ class PBPKSimulator:
             E  = (Xt / V_arr) / kp_arr             # effluent blood conc per tissue
             dXt = Q_arr * (Cb - E)                 # base perfusion exchange
             absorb = k_abs * depot
-            # gut: portal effluent goes to liver; oral absorption enters gut
+            # gut: portal effluent goes to liver; oral absorption enters gut (then first-pass)
             dXt[gi] = Q_arr[gi] * (Cb - E[gi]) + (absorb if route == "oral" else 0.0)
             # liver: hepatic artery + portal in − combined out − intrinsic clearance
             liver_out = (q_ha + q_gu) * E[li]
             dXt[li] = q_ha * Cb + q_gu * E[gi] - liver_out - clint * fu * E[li]
-            # topical: absorption enters skin locally
-            if route == "topical":
+            # local-skin routes (topical): absorption stays in skin
+            if entry == "skin":
                 dXt[si] = dXt[si] + absorb
             # blood: venous returns (excl. gut/liver) + liver effluent − arterial out − renal CL
             venous_direct = float(np.sum(Q_arr * E) - Q_arr[gi] * E[gi] - Q_arr[li] * E[li])
             dXb = venous_direct + liver_out - q_co * Cb - cl_r * Cb
+            # parenteral / nasal / transdermal / inhalation: absorbed drug enters blood, no first-pass
+            if entry == "blood" and route != "iv":
+                dXb = dXb + absorb
             d_depot = -k_abs * depot
             out = np.empty(m + 2)
             out[0] = dXb; out[1:1 + m] = dXt; out[-1] = d_depot
@@ -339,10 +374,14 @@ class PBPKSimulator:
         psa  = float(p.get("psa", 80.0))
         hbd  = int(p.get("hbd", 2))
         route = (route or "oral").lower()
-        if route not in ("oral", "iv", "topical"):
+        if route not in _ROUTE_MODEL:
             route = "oral"
+        rmodel = _ROUTE_MODEL[route]
 
         adme = self._estimate_adme(mw, logp, psa, hbd, binding_affinity, drug_name=drug_name)
+        # Route-specific systemic bioavailability (oral F emerges from first-pass;
+        # parenteral/nasal/etc. use the route model's typical F)
+        route_f = 1.0 if route == "iv" else (adme["f"] if route == "oral" else float(rmodel["f"]))
         times, conc = self._integrate(dose_mg, duration_hours, route, adme)
 
         plasma = conc["plasma"]
@@ -368,7 +407,8 @@ class PBPKSimulator:
 
         cl_total = adme["cl"]
         adme_ui = {
-            "F_pct":        round(adme["f"] * 100),
+            "F_pct":        round(route_f * 100),
+            "route_label":  rmodel["label"],
             "t_half":       pk["t_half_hours"],
             "vd_l":         pk["vd_l"],
             "cl_l_h":       pk["clearance_l_h"],
@@ -574,3 +614,139 @@ class PBPKSimulator:
 
 # Global instance
 pbpk_simulator = PBPKSimulator()
+
+
+# ── Route-of-administration analysis ──────────────────────────────────────────
+def _chembl_route_flags(chembl_id: str) -> Dict:
+    """Coarse known-administration flags from ChEMBL (oral / parenteral / topical)."""
+    out = {"oral": None, "parenteral": None, "topical": None}
+    if not chembl_id:
+        return out
+    try:
+        from services import http_client
+        r = http_client.get(f"https://www.ebi.ac.uk/chembl/api/data/molecule/{chembl_id}.json", timeout=8)
+        if r and r.ok:
+            j = r.json()
+            out = {"oral": bool(j.get("oral")), "parenteral": bool(j.get("parenteral")),
+                   "topical": bool(j.get("topical"))}
+    except Exception as e:
+        logger.debug(f"ChEMBL route flags failed for {chembl_id}: {e}")
+    return out
+
+
+def feasible_routes(mw: float, logp: float, psa: float, hbd: int) -> Dict[str, Dict]:
+    """Physicochemical feasibility per route (rule-based; clearly an estimate)."""
+    drug_like_oral = (mw <= 500 and psa <= 140 and hbd <= 5)
+    return {
+        "iv":          {"feasible": True, "note": "Parenteral — universal; needs an injectable/soluble form."},
+        "im":          {"feasible": True, "note": "Intramuscular depot — broadly feasible."},
+        "sc":          {"feasible": True, "note": "Subcutaneous — feasible for small molecules & biologics."},
+        "oral":        {"feasible": drug_like_oral,
+                        "note": "Oral — drug-like permeability (MW≤500, PSA≤140)." if drug_like_oral
+                                else "Oral — permeability-limited (high MW/PSA); bioavailability uncertain."},
+        "intranasal":  {"feasible": (mw <= 400 and psa <= 90),
+                        "note": "Intranasal — favoured by low MW & moderate polarity; nose-to-brain for CNS."},
+        "transdermal": {"feasible": (mw <= 400 and 1 <= logp <= 4 and psa <= 90),
+                        "note": "Transdermal — needs MW<400 & logP 1–4 for adequate skin flux."},
+        "inhalation":  {"feasible": (mw <= 600),
+                        "note": "Inhalation — pulmonary delivery; broad for small molecules."},
+        "sublingual":  {"feasible": (mw <= 500 and logp >= 1),
+                        "note": "Sublingual — lipophilic, low-dose molecules."},
+        "buccal":      {"feasible": (mw <= 500 and logp >= 1),
+                        "note": "Buccal — lipophilic, low-dose molecules."},
+        "rectal":      {"feasible": True, "note": "Rectal — partial first-pass bypass."},
+        "ocular":      {"feasible": True, "note": "Ophthalmic — local eye delivery."},
+        "topical":     {"feasible": True, "note": "Topical — local skin delivery."},
+    }
+
+
+def _recommend_route(results: List[Dict], context: Dict) -> Optional[Dict]:
+    """Recommend the route for the indication's organ (disease-agnostic)."""
+    if not results:
+        return None
+    pool = [r for r in results if r.get("feasible")] or results
+    organ = (context or {}).get("organ", "systemic")
+
+    if organ == "brain":
+        # Peak brain delivery is the decisive CNS metric — surfaces intranasal's
+        # direct nose-to-brain advantage over routes that only reach it systemically.
+        best = max(pool, key=lambda r: r["brain_cmax"])
+        why = (f"For a CNS target, highest peak brain exposure (brain Cmax {best['brain_cmax']} ng/mL)"
+               + (" — direct nose-to-brain transport bypassing the blood-brain barrier, and non-invasive."
+                  if best["route"] == "intranasal" else f" at {best['F_pct']}% bioavailability."))
+        return {"route": best["route"], "label": best["label"], "rationale": why}
+
+    # Local-delivery organs: prefer the local route when it ran & is feasible
+    local = {"eye": "ocular", "skin": "topical", "lung": "inhalation"}.get(organ)
+    if local:
+        cand = next((r for r in pool if r["route"] == local), None)
+        if cand:
+            return {"route": cand["route"], "label": cand["label"],
+                    "rationale": f"Local {organ} delivery concentrates drug at the target site with minimal systemic exposure."}
+
+    # Systemic / cardiovascular / GI / hepatic / renal / blood: oral if adequate, else best bioavailability
+    oral = next((r for r in pool if r["route"] == "oral" and r.get("feasible")), None)
+    if oral and oral["F_pct"] >= 30:
+        return {"route": "oral", "label": oral["label"],
+                "rationale": f"Oral is feasible and patient-friendly with adequate bioavailability ({oral['F_pct']}%)."}
+    best = max(pool, key=lambda r: r["F_pct"])
+    return {"route": best["route"], "label": best["label"],
+            "rationale": f"Highest systemic bioavailability ({best['F_pct']}%) given limited oral absorption."}
+
+
+def analyze_routes(drug_name: str, chembl_id: str = "", params: Optional[Dict] = None,
+                   dose_mg: float = 100.0, disease_name: str = "",
+                   target_organ: str = "", binding_affinity: Optional[float] = None) -> Dict:
+    """Run the PBPK across every administration route, with known/feasible flags and a
+    route recommended for the indication's organ (disease-agnostic)."""
+    params = params or {}
+    mw = float(params.get("mw", 350.0)); logp = float(params.get("logp", 2.5))
+    psa = float(params.get("psa", 80.0)); hbd = int(params.get("hbd", 2))
+    try:
+        from services.therapeutic_context import therapeutic_context
+        context = therapeutic_context(disease_name)
+    except Exception:
+        context = {"organ": target_organ or "systemic"}
+    if not target_organ:
+        target_organ = context.get("organ", "")
+    sim = PBPKSimulator(disease_name)
+    if target_organ:
+        sim.target_tissue = _TISSUE_ALIAS.get(target_organ.lower(), sim.target_tissue)
+    known = _chembl_route_flags(chembl_id)
+    feas = feasible_routes(mw, logp, psa, hbd)
+    order = ["iv", "oral", "sc", "im", "intranasal", "transdermal", "inhalation",
+             "sublingual", "ocular", "topical"]
+    results = []
+    for r in order:
+        try:
+            res = sim.simulate_drug_exposure(drug_name, dose_mg=dose_mg, route=r,
+                                             duration_hours=24.0, binding_affinity=binding_affinity,
+                                             params=params)
+        except Exception as e:
+            logger.debug(f"route {r} sim failed: {e}")
+            continue
+        bconc = res.get("brain_concentration_ng_ml", []) or []
+        times = res.get("time_hours", []) or []
+        brain_cmax = max(bconc) if bconc else 0.0
+        brain_auc = (sum((bconc[i] + bconc[i + 1]) / 2.0 * (times[i + 1] - times[i])
+                         for i in range(len(times) - 1))
+                     if (len(bconc) == len(times) and len(bconc) > 1) else 0.0)
+        results.append({
+            "route": r, "label": _ROUTE_MODEL[r]["label"],
+            "F_pct": res["adme_ui"]["F_pct"], "cmax_plasma": round(res["cmax_plasma"], 1),
+            "tmax_h": res["tmax"], "half_life_h": res["half_life"],
+            "brain_cmax": round(brain_cmax, 1), "brain_auc": round(brain_auc, 1),
+            "brain_plasma_ratio": res["brain_plasma_ratio"],
+            "first_pass": _ROUTE_MODEL[r]["first_pass"],
+            "feasible": feas.get(r, {}).get("feasible"),
+            "feasibility_note": feas.get(r, {}).get("note", ""),
+        })
+    return {
+        "drug_name": drug_name, "target_tissue": sim.target_tissue, "dose_mg": dose_mg,
+        "known_routes": known, "routes": results, "organ": context.get("organ", "systemic"),
+        "recommended": _recommend_route(results, context),
+        "disclaimer": ("Per-route absorption rate & bioavailability are literature-typical "
+                       "estimates (anchored to measured systemic PK where available); the "
+                       "intranasal route includes a heuristic nose-to-brain term. Decision "
+                       "support — not a substitute for formal CMC/clinical PK."),
+    }

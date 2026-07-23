@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RepurposeIQ &middot; Clinical Repurposing OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --canvas:#f7f9fc; --canvas-2:#eef2f9; --card:#ffffff; --sunken:#e8edf6;
+      --accent:#2563eb; --accent-bright:#3b82f6; --accent-deep:#1e40af;
+      --gold:#06b6d4; --gold-bright:#22d3ee;
+      --ink:#0f1e3d; --text:#1f2a44; --text-2:#47526b; --text-mute:#6b7690; --text-dim:#98a1b6;
+      --border:#dbe3f0; --border-soft:#e9eef7;
+      --g-a:37,99,235; --g-gold:6,182,212; --g-dim:120,132,158; --g-line:37,99,235;
+      --glow1:rgba(37,99,235,.16); --glow2:rgba(6,182,212,.14);
+      --serif:'Newsreader',Georgia,'Times New Roman',serif;
+      --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+      --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    }
+    @media (prefers-color-scheme:dark){:root{
+      --canvas:#0a1120; --canvas-2:#0d1626; --card:#111c30; --sunken:#080e1a;
+      --accent:#5b8dff; --accent-bright:#7ea9ff; --accent-deep:#3b6fe0;
+      --gold:#22d3ee; --gold-bright:#67e8f9;
+      --ink:#e8eefb; --text:#dbe4f5; --text-2:#a7b4cc; --text-mute:#7f8ba3; --text-dim:#5a6478;
+      --border:#22304a; --border-soft:#182337;
+      --g-a:91,141,255; --g-gold:34,211,238; --g-dim:90,100,120; --g-line:91,141,255;
+      --glow1:rgba(91,141,255,.20); --glow2:rgba(34,211,238,.13);
+    }}
+    :root[data-theme="light"]{
+      --canvas:#f7f9fc; --canvas-2:#eef2f9; --card:#ffffff; --sunken:#e8edf6;
+      --accent:#2563eb; --accent-bright:#3b82f6; --accent-deep:#1e40af;
+      --gold:#06b6d4; --gold-bright:#22d3ee;
+      --ink:#0f1e3d; --text:#1f2a44; --text-2:#47526b; --text-mute:#6b7690; --text-dim:#98a1b6;
+      --border:#dbe3f0; --border-soft:#e9eef7;
+      --g-a:37,99,235; --g-gold:6,182,212; --g-dim:120,132,158; --g-line:37,99,235;
+      --glow1:rgba(37,99,235,.16); --glow2:rgba(6,182,212,.14);
+    }
+    :root[data-theme="dark"]{
+      --canvas:#0a1120; --canvas-2:#0d1626; --card:#111c30; --sunken:#080e1a;
+      --accent:#5b8dff; --accent-bright:#7ea9ff; --accent-deep:#3b6fe0;
+      --gold:#22d3ee; --gold-bright:#67e8f9;
+      --ink:#e8eefb; --text:#dbe4f5; --text-2:#a7b4cc; --text-mute:#7f8ba3; --text-dim:#5a6478;
+      --border:#22304a; --border-soft:#182337;
+      --g-a:91,141,255; --g-gold:34,211,238; --g-dim:90,100,120; --g-line:91,141,255;
+      --glow1:rgba(91,141,255,.20); --glow2:rgba(34,211,238,.13);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--sans);color:var(--text);background:var(--canvas);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    svg{display:block}
+    .mk{stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    ::selection{background:rgba(var(--g-a),.22)}
+    a{color:inherit}
+    p{overflow-wrap:break-word;word-break:break-word}
+
+    /* ---------- top bar ---------- */
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;
+      padding:13px 30px;backdrop-filter:saturate(1.1) blur(12px);background:color-mix(in srgb,var(--canvas) 74%,transparent);
+      border-bottom:1px solid transparent;transition:border-color .3s,background .3s}
+    .topbar.scrolled{border-bottom-color:var(--border-soft)}
+    .brand{display:flex;align-items:center;gap:11px;text-decoration:none;min-width:0}
+    .brand .badge{width:37px;height:37px;flex:0 0 auto;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent-bright) 62%,var(--gold) 150%);
+      display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 18px rgba(var(--g-a),.30)}
+    .brand .badge svg{width:20px;height:20px}
+    .brand b{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-.01em;white-space:nowrap}
+    .brand .pill{font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin-top:1px;white-space:nowrap}
+    .nav{display:flex;align-items:center;gap:24px}
+    .nav a.lnk{font-size:13px;font-weight:500;color:var(--text-2);text-decoration:none;transition:color .2s;position:relative;white-space:nowrap}
+    .nav a.lnk::after{content:"";position:absolute;left:0;bottom:-5px;height:1.5px;width:0;background:var(--accent);transition:width .25s}
+    .nav a.lnk:hover{color:var(--accent)} .nav a.lnk:hover::after{width:100%}
+    .themebtn{width:34px;height:34px;flex:0 0 auto;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text-2);
+      display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+    .themebtn:hover{color:var(--accent);border-color:var(--accent)} .themebtn svg{width:17px;height:17px}
+    @media(max-width:820px){.nav a.lnk{display:none}}
+
+    .btn{font-family:var(--sans);font-weight:600;border-radius:12px;cursor:pointer;text-decoration:none;
+      display:inline-flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap;
+      transition:transform .2s ease,box-shadow .25s ease,color .25s,border-color .25s;position:relative}
+    .btn svg{width:18px;height:18px;flex:0 0 auto;transition:transform .2s ease}
+    .btn-sm{font-size:13px;padding:8px 15px}
+    .btn-lg{font-size:15px;padding:14px 26px}
+    .btn-primary{color:#fff;border:none;background:linear-gradient(135deg,var(--accent-deep),var(--accent) 55%,var(--accent-bright));
+      box-shadow:0 10px 26px rgba(var(--g-a),.32)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(var(--g-a),.42)}
+    .btn-primary:hover svg{transform:translateX(3px)}
+    .btn-ghost{color:var(--accent-deep);background:var(--card);border:1px solid var(--border)}
+    .btn-ghost:hover{transform:translateY(-2px);color:var(--accent);border-color:var(--accent)}
+    :root[data-theme="dark"] .btn-ghost{color:var(--accent-bright)}
+
+    /* ---------- hero ---------- */
+    .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:122px 24px 78px;overflow:hidden}
+    #graph{position:absolute;inset:0;width:100%;height:100%;z-index:1;opacity:0;cursor:grab;transition:opacity .35s ease}
+    #graph:active{cursor:grabbing}
+    .glow{position:absolute;border-radius:50%;filter:blur(94px);z-index:0;pointer-events:none;will-change:transform}
+    .glow.a{width:540px;height:540px;background:radial-gradient(circle,var(--glow1),transparent 70%);top:-9%;left:-7%;animation:drift1 26s ease-in-out infinite}
+    .glow.b{width:480px;height:480px;background:radial-gradient(circle,var(--glow2),transparent 70%);bottom:-11%;right:-7%;animation:drift2 30s ease-in-out infinite}
+    .hero-in{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;pointer-events:none;max-width:100%;will-change:transform}
+    .hero-in a,.hero-in .chip{pointer-events:auto}
+    .kicker{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+      color:var(--accent);margin-bottom:22px;padding:6px 15px;border:1px solid var(--border);border-radius:99px;
+      background:color-mix(in srgb,var(--card) 62%,transparent);backdrop-filter:blur(4px);animation:fadeUp .8s ease .1s both}
+    .kicker .dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:var(--accent);animation:pulse 2.4s ease-out infinite}
+    h1{font-family:var(--serif);font-weight:600;letter-spacing:-.028em;line-height:.96;font-size:clamp(52px,11vw,132px);margin-bottom:6px;
+      color:var(--ink);text-wrap:balance;perspective:900px}
+    h1 .grad{background:linear-gradient(100deg,var(--accent-deep),var(--accent) 28%,var(--gold-bright) 52%,var(--accent) 76%,var(--accent-deep));
+      background-size:240% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:sheen 7s linear infinite}
+    /* Bundle A: per-letter 3D flip-in + cursor depth */
+    h1 .ltr{display:inline-block;transform-origin:50% 90%;opacity:0;will-change:transform,opacity;transition:transform .18s ease-out}
+    h1 .ltr.sp{width:.24em}
+    h1 .ltr.done{opacity:1}
+    /* Bundle A: subtitle word stagger */
+    .sub .word{display:inline-block;animation:wordup .6s cubic-bezier(.2,.8,.25,1) both}
+    .sub{font-size:clamp(16px,2vw,20.5px);color:var(--text-2);max-width:610px;line-height:1.55;margin:16px auto 30px;text-wrap:balance;animation:fadeUp 1s ease .35s both}
+    .sub .em{font-weight:600;background:linear-gradient(100deg,var(--accent-deep),var(--accent-bright) 42%,var(--gold-bright) 58%,var(--accent) 80%);
+      background-size:220% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:emsweep 6s linear infinite}
+    :root[data-theme="dark"] .sub .em{color:var(--accent-bright)}
+    .cta-row{display:flex;gap:13px;flex-wrap:wrap;justify-content:center;max-width:100%;animation:fadeUp 1s ease .5s both}
+    .trustline{margin-top:28px;font-size:12px;color:var(--text-mute);display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;max-width:640px;animation:fadeUp 1s ease .68s both}
+    .trustline .d{width:4px;height:4px;flex:0 0 auto;border-radius:50%;background:var(--text-dim)}
+    .legend{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:20px;max-width:100%;animation:fadeUp 1s ease .8s both}
+    .legend .chip{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;color:var(--text-2);
+      background:color-mix(in srgb,var(--card) 66%,transparent);border:1px solid var(--border);border-radius:99px;padding:5px 12px;backdrop-filter:blur(4px)}
+    .legend .sw{width:9px;height:9px;flex:0 0 auto;border-radius:50%}
+    .sw.drug{background:var(--gold);box-shadow:0 0 8px rgba(var(--g-gold),.7)}
+    .sw.dis{background:var(--accent);box-shadow:0 0 8px rgba(var(--g-a),.6)}
+    .sw.gene{background:var(--text-dim)}
+    .draghint{font-weight:500;color:var(--text-dim);background:transparent;border-color:transparent}
+    .scrollcue{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:7px;
+      font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);animation:fadeUp 1s ease 1s both}
+    .scrollcue .m{width:20px;height:32px;border:1.5px solid var(--border);border-radius:11px;position:relative}
+    .scrollcue .m::after{content:"";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:3px;height:6px;border-radius:2px;background:var(--accent);animation:scroller 1.8s ease-in-out infinite}
+
+    /* ---------- metric rail ---------- */
+    .rail{position:relative;z-index:3;padding:24px;background:color-mix(in srgb,var(--card) 55%,transparent);
+      border-top:1px solid var(--border-soft);border-bottom:1px solid var(--border-soft);backdrop-filter:blur(6px)}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;max-width:1040px;margin:0 auto}
+    .stat{text-align:center;padding:6px 14px;position:relative;min-width:0}
+    .stat+.stat::before{content:"";position:absolute;left:0;top:16%;height:68%;width:1px;background:var(--border)}
+    .stat .num{font-family:var(--serif);font-size:clamp(28px,4vw,42px);font-weight:600;color:var(--accent);letter-spacing:-.01em;line-height:1;font-variant-numeric:tabular-nums}
+    .stat .lbl{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-mute);margin-top:8px}
+
+    /* ---------- generic section ---------- */
+    section.band{padding:96px 24px;position:relative;z-index:3}
+    .inner{max-width:1120px;margin:0 auto}
+    .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);text-align:center}
+    .htitle{font-family:var(--serif);font-size:clamp(28px,4.2vw,44px);font-weight:600;letter-spacing:-.02em;color:var(--ink);text-align:center;margin:9px 0 8px;text-wrap:balance}
+    .hlead{font-size:15.5px;color:var(--text-mute);text-align:center;max-width:600px;margin:0 auto 46px;line-height:1.6;text-wrap:balance}
+
+    /* both directions */
+    .dirwrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;margin:0 auto}
+    @media(max-width:720px){.dirwrap{grid-template-columns:1fr}}
+    .dircard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;position:relative;overflow:hidden;min-width:0;
+      transform-style:preserve-3d;transition:transform .3s,box-shadow .3s,border-color .3s}
+    .dircard:hover{box-shadow:0 20px 44px rgba(var(--g-a),.14);border-color:color-mix(in srgb,var(--accent) 38%,var(--border))}
+    .dirflow{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .dtok{flex:0 1 auto;font-size:12px;font-weight:700;padding:7px 12px;border-radius:10px;background:var(--sunken);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .dtok.acc{background:linear-gradient(135deg,var(--accent),var(--accent-bright));color:#fff}
+    .dtok.gold{background:linear-gradient(135deg,var(--gold),var(--gold-bright));color:#04202a}
+    .darrow{flex:1 1 20px;min-width:16px;height:2px;position:relative;background:linear-gradient(90deg,rgba(var(--g-a),.3),rgba(var(--g-a),.3))}
+    .darrow::after{content:"";position:absolute;right:-1px;top:50%;transform:translateY(-50%);border-left:6px solid rgba(var(--g-a),.6);border-top:4px solid transparent;border-bottom:4px solid transparent}
+    .darrow .p{position:absolute;top:50%;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translateY(-50%);animation:flow 2s linear infinite}
+    .dircard h3{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:6px}
+    .dircard p{font-size:13.5px;color:var(--text-mute);line-height:1.6}
+    .dircard .go{margin-top:14px;font-size:13px;font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+    .dircard .go svg{width:15px;height:15px;flex:0 0 auto;transition:transform .2s}
+    .dircard:hover .go svg{transform:translateX(3px)}
+
+    /* modules grid */
+    .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:18px}
+    .mod{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;position:relative;overflow:hidden;min-width:0;
+      transform-style:preserve-3d;transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s,border-color .3s;text-decoration:none;display:block}
+    .mod::before{content:"";position:absolute;inset:0;background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%),rgba(var(--g-a),.09),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}
+    .mod:hover{box-shadow:0 24px 50px rgba(var(--g-a),.16);border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+    .mod:hover::before{opacity:1}
+    .mod .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+    .mod .ic{width:44px;height:44px;flex:0 0 auto;border-radius:12px;background:var(--sunken);color:var(--accent);display:flex;align-items:center;justify-content:center;transition:.3s}
+    .mod:hover .ic{background:linear-gradient(135deg,var(--accent),var(--accent-bright));color:#fff;transform:scale(1.06)}
+    .mod .ic svg{width:22px;height:22px}
+    .mod .tag{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--border);border-radius:99px;padding:3px 9px;white-space:nowrap}
+    .mod h3{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px}
+    .mod p{font-size:13px;color:var(--text-mute);line-height:1.6}
+
+    /* how it works timeline */
+    .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;max-width:1000px;margin:0 auto;position:relative}
+    @media(max-width:760px){.flow{grid-template-columns:1fr;gap:14px}}
+    .fstep{padding:22px 20px;position:relative;min-width:0}
+    .fstep .n{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.05em}
+    .fstep h4{font-size:15px;font-weight:700;color:var(--ink);margin:8px 0 6px}
+    .fstep p{font-size:12.5px;color:var(--text-mute);line-height:1.55}
+    .fstep::after{content:"";position:absolute;right:0;top:26px;bottom:26px;width:1px;background:var(--border)}
+    .fstep:last-child::after{display:none}
+    @media(max-width:760px){.fstep::after{display:none}}
+    .fdot{width:11px;height:11px;border-radius:50%;background:var(--card);border:2px solid var(--accent);margin-bottom:14px;box-shadow:0 0 0 4px rgba(var(--g-a),.1)}
+
+    /* science strip */
+    .sci{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+    .scard{background:linear-gradient(160deg,var(--card),var(--canvas-2));border:1px solid var(--border);border-radius:18px;padding:24px;min-width:0;
+      transform-style:preserve-3d;transition:transform .3s,box-shadow .3s}
+    .scard:hover{box-shadow:0 18px 40px rgba(15,30,61,.10)}
+    .scard .ic{width:42px;height:42px;flex:0 0 auto;border-radius:11px;background:rgba(var(--g-a),.1);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+    .scard .ic svg{width:22px;height:22px}
+    .scard h3{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px}
+    .scard p{font-size:12.5px;color:var(--text-mute);line-height:1.6}
+    .scard .meta{margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:500;overflow-wrap:break-word}
+
+    /* validation band */
+    .valband{background:linear-gradient(150deg,var(--accent-deep),var(--accent) 120%);position:relative;overflow:hidden}
+    :root[data-theme="dark"] .valband{background:linear-gradient(150deg,#0c1b3a,#123063 120%)}
+    .valband .inner{position:relative;z-index:2}
+    .valband .eyebrow{color:rgba(255,255,255,.72)}
+    .valband .htitle{color:#fff}
+    .valband .hlead{color:rgba(255,255,255,.84)}
+    .valgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+    .vitem{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:22px;backdrop-filter:blur(4px);min-width:0}
+    .vitem .big{font-family:var(--serif);font-size:30px;font-weight:600;color:#fff;line-height:1;font-variant-numeric:tabular-nums}
+    .vitem h4{font-size:13.5px;font-weight:700;color:#fff;margin:12px 0 5px}
+    .vitem p{font-size:12px;color:rgba(255,255,255,.78);line-height:1.55}
+    .valband .vmesh{position:absolute;inset:0;z-index:1;opacity:.5}
+
+    /* use cases */
+    .uc{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+    .ucard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;min-width:0;transition:transform .3s,box-shadow .3s}
+    .ucard:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(15,30,61,.08)}
+    .ucard .ic{width:40px;height:40px;flex:0 0 auto;border-radius:10px;background:rgba(var(--g-a),.1);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:13px}
+    .ucard .ic svg{width:21px;height:21px}
+    .ucard h3{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:7px}
+    .ucard p{font-size:13px;color:var(--text-mute);line-height:1.6}
+
+    /* closing */
+    .closing{text-align:center;padding:104px 24px 90px;position:relative;z-index:3;overflow:hidden}
+    .closing h2{font-family:var(--serif);font-size:clamp(30px,5vw,52px);font-weight:600;color:var(--ink);letter-spacing:-.025em;margin-bottom:12px;text-wrap:balance}
+    .closing p{font-size:16px;color:var(--text-mute);margin-bottom:30px}
+
+    footer{position:relative;z-index:3;border-top:1px solid var(--border);padding:30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+    footer .l{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-mute)}
+    footer .r{font-size:11px;color:var(--text-dim)}
+
+    @keyframes fadeIn{to{opacity:1}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+    @keyframes sheen{to{background-position:-240% center}}
+    @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(48px,40px)}}
+    @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-44px,-32px)}}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(var(--g-a),.5)}70%{box-shadow:0 0 0 9px rgba(var(--g-a),0)}100%{box-shadow:0 0 0 0 rgba(var(--g-a),0)}}
+    @keyframes scroller{0%{opacity:0;top:6px}40%{opacity:1}80%{opacity:0;top:16px}100%{opacity:0}}
+    @keyframes flow{0%{left:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+    @keyframes ltrflip{from{opacity:0;transform:rotateX(-92deg) translateY(16px)}to{opacity:1;transform:none}}
+    @keyframes wordup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+    @keyframes emsweep{to{background-position:-220% center}}
+    @keyframes dotpulse{0%{transform:scale(.4);box-shadow:0 0 0 0 rgba(var(--g-a),.5)}55%{transform:scale(1.35);box-shadow:0 0 0 8px rgba(var(--g-a),0)}100%{transform:scale(1);box-shadow:0 0 0 4px rgba(var(--g-a),.1)}}
+    @keyframes icpop{0%{opacity:0;transform:scale(.5) translateZ(0)}70%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+    .reveal{opacity:0;transform:perspective(1200px) translateY(30px) rotateX(9deg);transform-origin:center bottom;
+      transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+    .reveal.in{opacity:1;transform:perspective(1200px) translateY(0) rotateX(0)}
+    .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+    /* Bundle D: timeline self-draw + sequential dot pulse */
+    .flow::before{content:"";position:absolute;left:24px;right:24px;top:32px;height:2px;border-radius:2px;
+      background:linear-gradient(90deg,var(--accent),var(--gold));opacity:.5;transform:scaleX(0);transform-origin:left;transition:transform 1.3s ease .1s}
+    .flow.in::before{transform:scaleX(1)}
+    @media(max-width:760px){.flow::before{display:none}}
+    .flow.in .fstep:nth-child(1) .fdot{animation:dotpulse .7s ease .15s both}
+    .flow.in .fstep:nth-child(2) .fdot{animation:dotpulse .7s ease .40s both}
+    .flow.in .fstep:nth-child(3) .fdot{animation:dotpulse .7s ease .65s both}
+    .flow.in .fstep:nth-child(4) .fdot{animation:dotpulse .7s ease .90s both}
+    /* Bundle C: workspace icon Z-pop on reveal */
+    .mod .ic.pop{animation:icpop .6s cubic-bezier(.2,.9,.3,1.5) both}
+    @keyframes hopflow{0%{top:0;opacity:0}20%{opacity:1}80%{opacity:1}100%{top:100%;opacity:0}}
+
+    /* ============ Evidence-Graph Explorer ============ */
+    .exp-chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:0 auto 30px;max-width:820px}
+    .exp-chip{font-size:13px;font-weight:600;padding:9px 16px;border-radius:99px;border:1px solid var(--border);background:var(--card);color:var(--text-2);cursor:pointer;transition:.2s;white-space:nowrap}
+    .exp-chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+    .exp-chip.on{background:linear-gradient(135deg,var(--accent),var(--accent-bright));color:#fff;border-color:transparent;box-shadow:0 8px 20px rgba(var(--g-a),.3)}
+    .exp-stage{display:grid;grid-template-columns:1fr 210px;gap:30px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;box-shadow:0 18px 44px rgba(15,30,61,.06)}
+    @media(max-width:820px){.exp-stage{grid-template-columns:1fr}}
+    .exp-chain{display:flex;flex-direction:column;min-width:0}
+    .exp-hop{opacity:0;transform:translateX(-16px);transition:opacity .5s ease,transform .5s ease}
+    .exp-hop.show{opacity:1;transform:none}
+    .exp-node{background:var(--sunken);border:1px solid var(--border);border-radius:14px;padding:13px 16px;min-width:0}
+    .exp-node .k{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim)}
+    .exp-node .nm{font-size:15.5px;font-weight:700;color:var(--ink);margin-top:2px;overflow-wrap:break-word}
+    .exp-node .bd{font-size:11px;color:var(--accent);font-family:var(--mono);margin-top:6px;overflow-wrap:break-word}
+    .exp-node.drug{border-left:3px solid var(--gold)}
+    .exp-node.target,.exp-node.pathway{border-left:3px solid var(--accent)}
+    .exp-node.disease{border-left:3px solid var(--accent-deep)}
+    .exp-conn{height:22px;margin:2px 0 2px 26px;border-left:2px dashed var(--border);position:relative}
+    .exp-conn .tok{position:absolute;left:-5px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 9px rgba(var(--g-a),.7);animation:hopflow 1.3s ease-in-out infinite}
+    .exp-score{display:flex;flex-direction:column;align-items:center;text-align:center}
+    .exp-ring-wrap{position:relative;width:140px;height:140px}
+    .exp-ring{width:140px;height:140px;transform:rotate(-90deg)}
+    .exp-ring-bg{fill:none;stroke:var(--sunken);stroke-width:9}
+    .exp-ring-fg{fill:none;stroke:url(#expGrad);stroke-width:9;stroke-linecap:round;stroke-dasharray:326.7;stroke-dashoffset:326.7;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+    .exp-score-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+    .exp-score-val b{font-family:var(--serif);font-size:34px;color:var(--ink);line-height:1}
+    .exp-score-val small{font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-mute)}
+    .exp-verdict{margin-top:14px;font-size:12px;font-weight:600;color:var(--accent);background:rgba(var(--g-a),.1);border-radius:99px;padding:6px 14px}
+
+    /* ============ Try it search demo ============ */
+    .try-wrap{max-width:760px;margin:0 auto}
+    .try-bar{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(15,30,61,.06)}
+    .try-bar svg{width:20px;height:20px;color:var(--text-dim);flex:0 0 auto}
+    .try-bar input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--sans);font-size:15px;color:var(--ink)}
+    .try-bar input::placeholder{color:var(--text-dim)}
+    .try-suggest{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+    .try-sug{font-size:12px;font-weight:600;color:var(--text-2);background:var(--card);border:1px solid var(--border);border-radius:99px;padding:6px 13px;cursor:pointer;transition:.2s}
+    .try-sug:hover{border-color:var(--accent);color:var(--accent)}
+    .try-results{display:grid;gap:12px;margin-top:24px}
+    .try-card{display:grid;grid-template-columns:34px 1fr 140px;gap:14px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 18px;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+    .try-card.show{opacity:1;transform:none}
+    .try-rank{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--accent);text-align:center}
+    .try-main{min-width:0}
+    .try-main .nm{font-size:15px;font-weight:700;color:var(--ink)}
+    .try-main .rz{font-size:12.5px;color:var(--text-mute);margin-top:2px;line-height:1.5}
+    .try-score .sc{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink);text-align:right}
+    .try-bar-track{height:5px;border-radius:3px;background:var(--sunken);margin-top:6px;overflow:hidden}
+    .try-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--gold));width:0;transition:width 1s ease .1s}
+    .try-cta{display:inline-block;margin-top:22px;font-size:13.5px;font-weight:600;color:var(--accent);text-decoration:none}
+    .try-cta:hover{text-decoration:underline}
+    .try-note{text-align:center;font-size:11.5px;color:var(--text-dim);margin-top:14px}
+
+    /* ============ 3D molecule viewer ============ */
+    .mol-panel{display:grid;grid-template-columns:340px 1fr;gap:28px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:34px;box-shadow:0 14px 40px rgba(15,30,61,.05)}
+    @media(max-width:760px){.mol-panel{grid-template-columns:1fr}}
+    #molCanvas{width:100%;height:300px;border-radius:14px;background:radial-gradient(circle at 50% 38%,var(--canvas-2),var(--sunken));cursor:grab;touch-action:none;display:block}
+    #molCanvas:active{cursor:grabbing}
+    .mol-meta h3{font-size:19px;font-weight:700;color:var(--ink);margin:6px 0 8px}
+    .mol-meta p{font-size:14px;color:var(--text-mute);line-height:1.6}
+    .mol-switch{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .mol-btn{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--sunken);color:var(--text-2);cursor:pointer;transition:.2s}
+    .mol-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .mol-btn.on{background:linear-gradient(135deg,var(--accent),var(--accent-bright));color:#fff;border-color:transparent}
+
+    /* ============ Score-composition radial ============ */
+    .score-wrap{display:grid;grid-template-columns:300px 1fr;gap:40px;align-items:center;max-width:900px;margin:0 auto}
+    @media(max-width:760px){.score-wrap{grid-template-columns:1fr;justify-items:center}}
+    .score-radial-wrap{position:relative;width:290px;height:290px}
+    .score-radial{width:290px;height:290px;transform:rotate(-90deg)}
+    .score-radial circle{fill:none;stroke-width:11;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+    .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+    .score-center b{font-family:var(--serif);font-size:40px;color:var(--ink);line-height:1}
+    .score-center small{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mute)}
+    .score-legend{display:grid;gap:13px}
+    .score-leg{display:flex;align-items:center;gap:13px}
+    .score-leg .dot{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+    .score-leg .lb{flex:1;min-width:0}
+    .score-leg .lb b{font-size:13.5px;color:var(--ink);font-weight:700;display:block}
+    .score-leg .lb small{font-size:11.5px;color:var(--text-mute)}
+    .score-leg .vv{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:500}
+
+    /* ============ Case-study spotlight ============ */
+    .case-stage{max-width:820px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:34px 36px;box-shadow:0 18px 44px rgba(15,30,61,.06);position:relative;min-height:214px}
+    .case-slide{opacity:0;position:absolute;left:36px;right:36px;top:34px;transition:opacity .5s ease;pointer-events:none}
+    .case-slide.on{opacity:1;position:relative;left:auto;right:auto;top:auto;pointer-events:auto}
+    .case-flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .case-tok{font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:10px;background:var(--sunken);color:var(--ink)}
+    .case-tok.from{color:var(--text-mute);background:transparent;border:1px dashed var(--border)}
+    .case-arrow{color:var(--accent);font-weight:700;font-size:16px}
+    .case-drug{font-family:var(--serif);font-size:25px;font-weight:600;color:var(--ink);margin-bottom:7px}
+    .case-desc{font-size:14.5px;color:var(--text-secondary);line-height:1.65}
+    .case-year{position:absolute;top:30px;right:34px;font-family:var(--mono);font-size:12px;color:var(--accent)}
+    .case-dots{display:flex;gap:8px;justify-content:center;margin-top:26px}
+    .case-dot{width:8px;height:8px;border-radius:50%;background:var(--border);cursor:pointer;transition:.25s;border:none;padding:0}
+    .case-dot.on{background:var(--accent);width:24px;border-radius:99px}
+
+    @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}#graph{opacity:1}.exp-hop,.try-card{opacity:1;transform:none}.case-slide{transition:none}}
+  </style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <a class="brand" href="{{ url_for('landing') }}">
+    <span class="badge"><svg class="mk" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/></svg></span>
+    <span><b>RepurposeIQ</b><div class="pill">A Solix Technologies Platform</div></span>
+  </a>
+  <div class="nav">
+    <a class="lnk" href="#workspaces">Workspaces</a>
+    <a class="lnk" href="#how">How it works</a>
+    <a class="lnk" href="#science">The science</a>
+    <a class="lnk" href="#trust">Validation</a>
+    <button class="themebtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme"></button>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('discover') }}">Launch Platform</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="glow a"></div><div class="glow b"></div>
+  <canvas id="graph"></canvas>
+  <div class="hero-in">
+    <div class="kicker"><span class="dot"></span>Drug Repurposing You Can Trust</div>
+    <h1 id="hero-title">Repurpose<span class="grad">IQ</span></h1>
+    <p class="sub" id="hero-sub">Surface, score, and <span class="em">validate</span> repurposing candidates in
+      <span class="em">both directions</span>, over a living graph of drugs, diseases, and the genes that connect them.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary btn-lg" href="{{ url_for('discover') }}">
+        <svg class="mk" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Launch Platform</a>
+      <a class="btn btn-ghost btn-lg" href="{{ url_for('validation_page') }}">
+        <svg class="mk" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>
+        See How We Validate</a>
+    </div>
+    <div class="trustline">
+      <span id="trustBio">4.1M validated bioactivities</span><span class="d"></span>
+      <span>Benchmarked on an independent gold standard</span><span class="d"></span>
+      <span>Every score reproducible</span>
+    </div>
+    <div class="legend">
+      <span class="chip" data-hl="0"><span class="sw drug"></span>Drug</span>
+      <span class="chip" data-hl="1"><span class="sw dis"></span>Disease</span>
+      <span class="chip" data-hl="2"><span class="sw gene"></span>Gene or target</span>
+      <span class="chip draghint">Drag to rotate the graph</span>
+    </div>
+  </div>
+  <div class="scrollcue"><div class="m"></div>Scroll</div>
+</section>
+
+<!-- METRIC RAIL -->
+<div class="rail">
+  <div class="stats">
+    <div class="stat"><div class="num" data-key="bio" data-to="4.1" data-dec="1" data-suf="M">0</div><div class="lbl">Validated bioactivities</div></div>
+    <div class="stat"><div class="num" data-key="dis" data-to="32" data-dec="0" data-suf="k">0</div><div class="lbl">Diseases in the ontology</div></div>
+    <div class="stat"><div class="num" data-key="con" data-to="91" data-dec="0" data-suf="%">0</div><div class="lbl">External data concordance</div></div>
+    <div class="stat"><div class="num" data-key="auroc" data-to="0.73" data-dec="2" data-suf="">0</div><div class="lbl">Retrospective recovery (AUROC)</div></div>
+  </div>
+</div>
+
+<!-- BOTH DIRECTIONS -->
+<section class="band" id="directions">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">One engine, both directions</div>
+      <div class="htitle">Ask it either way</div>
+      <p class="hlead">The same scoring engine runs forward and backward, so a question about a disease and a question about a molecule are answered with one consistent chain of evidence.</p></div>
+    <div class="dirwrap">
+      <div class="dircard reveal d1">
+        <div class="dirflow"><span class="dtok acc">Disease</span><span class="darrow"><span class="p"></span></span><span class="dtok gold">Drug candidates</span></div>
+        <h3>Start from a disease</h3>
+        <p>Give it an indication and it ranks existing molecules by mechanism, pathway, network proximity, clinical signal, and probability of success.</p>
+        <a class="go" href="{{ url_for('discover') }}">Open Compound Discovery <svg class="mk" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></a>
+      </div>
+      <div class="dircard reveal d2">
+        <div class="dirflow"><span class="dtok gold">A molecule</span><span class="darrow"><span class="p"></span></span><span class="dtok acc">New indications</span></div>
+        <h3>Start from a molecule</h3>
+        <p>Give it a drug and it surfaces new indications, prior clinical art, and the 505(b)(2) paths worth a business conversation.</p>
+        <a class="go" href="{{ url_for('repurpose') }}">Open Repurpose a Molecule <svg class="mk" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVIDENCE-GRAPH EXPLORER -->
+<section class="band" id="explorer">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">See the reasoning</div>
+      <div class="htitle">Every candidate, traced hop by hop</div>
+      <p class="hlead">Pick a known repurposing case and watch RepurposeIQ rebuild the evidence chain across the knowledge graph, from the molecule to the disease, with the score assembled from real signals.</p></div>
+    <div class="exp-chips reveal" id="expChips"></div>
+    <div class="exp-stage reveal">
+      <div class="exp-chain" id="expChain"></div>
+      <div class="exp-score">
+        <div class="exp-ring-wrap">
+          <svg viewBox="0 0 120 120" class="exp-ring" aria-hidden="true">
+            <defs><linearGradient id="expGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e40af"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+            <circle cx="60" cy="60" r="52" class="exp-ring-bg"/>
+            <circle cx="60" cy="60" r="52" class="exp-ring-fg" id="expRingFg"/>
+          </svg>
+          <div class="exp-score-val"><b id="expScoreVal">0.00</b><small>Composite</small></div>
+        </div>
+        <div class="exp-verdict" id="expVerdict"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRY IT -->
+<section class="band" id="tryit" style="background:var(--canvas-2)">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Try it</div>
+      <div class="htitle">Type a disease. See ranked molecules.</div>
+      <p class="hlead">A live preview of Compound Discovery. Pick an indication and RepurposeIQ ranks existing drugs by mechanism, network proximity, and clinical signal.</p></div>
+    <div class="try-wrap reveal">
+      <div class="try-bar">
+        <svg class="mk" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="21" y2="21"/></svg>
+        <input id="tryInput" placeholder="Search a disease or condition..." autocomplete="off"/>
+        <button id="tryBtn" class="btn btn-primary btn-sm" type="button">Rank drugs</button>
+      </div>
+      <div class="try-suggest" id="trySuggest"></div>
+      <div class="try-results" id="tryResults"></div>
+      <div class="try-note" id="tryNote"></div>
+      <a class="try-cta" href="{{ url_for('discover') }}">Open the full run in Compound Discovery &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- WORKSPACES -->
+<section class="band" id="workspaces" style="background:var(--canvas-2)">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">The workspaces</div>
+      <div class="htitle">One platform, every move in the playbook</div>
+      <p class="hlead">Eight workspaces share one validated data layer and one scoring engine, so evidence carries cleanly from a first hypothesis to the deal narrative.</p></div>
+    <div class="grid3">
+      <a class="mod reveal d1" href="{{ url_for('discover') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16" y1="16" x2="21" y2="21"/></svg></div><span class="tag">Disease to drug</span></div>
+        <h3>Compound Discovery</h3><p>Start from a disease and rank drugs, or search any molecule to open its full profile.</p></a>
+      <a class="mod reveal d2" href="{{ url_for('repurpose') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div><span class="tag">Drug to disease</span></div>
+        <h3>Repurpose a Molecule</h3><p>Surface new indications, prior clinical art, and 505(b)(2) paths for a drug you already own.</p></a>
+      <a class="mod reveal d3" href="{{ url_for('pathways') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v6.5L5.2 18a1.5 1.5 0 0 0 1.3 2.3h11a1.5 1.5 0 0 0 1.3-2.3L14 9.5V3"/><path d="M7.5 15h9"/></svg></div><span class="tag">Both directions</span></div>
+        <h3>Pathway Screening</h3><p>Screen by biological pathway, from pathway to genes to drugs, with the direction of effect respected.</p></a>
+      <a class="mod reveal d1" href="{{ url_for('novel_targets_page') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M19.1 4.9l-2.8 2.8M7.7 16.3l-2.8 2.8"/></svg></div><span class="tag">Emerging biology</span></div>
+        <h3>Novel Targets</h3><p>Surface emerging targets for a disease from knowledge graph reasoning, ranked and explained.</p></a>
+      <a class="mod reveal d2" href="{{ url_for('biosimilars') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-5"/></svg></div><span class="tag">Biologics</span></div>
+        <h3>Biosimilar Radar</h3><p>Rank reference biologics as biosimilar opportunities on exclusivity cliff, whitespace, and franchise fit.</p></a>
+      <a class="mod reveal d3" href="{{ url_for('graph') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="M7.7 7.5 10.6 15M16.3 7.5 13.4 15M8 6h8"/></svg></div><span class="tag">Evidence chain</span></div>
+        <h3>Knowledge Graph</h3><p>Trace the exact path from a drug to the genes to a disease, node by node, no black boxes.</p></a>
+      <a class="mod reveal d1" href="{{ url_for('business_case') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M4 4v16h16"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg></div><span class="tag">Business</span></div>
+        <h3>Business Case</h3><p>Market size, probability of success, and the acquisition signal that carry a candidate into a deal.</p></a>
+      <a class="mod reveal d2" href="{{ url_for('analysis') }}"><div class="top"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M10 2v6l-4.5 8a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8V2"/><path d="M8.5 2h7M8 15h8"/></svg></div><span class="tag">Wet lab de risking</span></div>
+        <h3>Molecular Workshop</h3><p>Docking, exposure, and quantum chemistry with structure aware liability analysis before you spend lab budget.</p></a>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="band" id="how">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Architecture</div>
+      <div class="htitle">From raw evidence to a candidate you can defend</div>
+      <p class="hlead">A validated data layer feeds a transparent scoring engine. Every candidate traces back to its source, and every number can be run again.</p></div>
+    <div class="flow reveal">
+      <div class="fstep"><div class="fdot"></div><div class="n">01</div><h4>Evidence bases</h4><p>Eight authoritative sources across bioactivity, knowledge graph, trials, structures, and regulatory filings.</p></div>
+      <div class="fstep"><div class="fdot"></div><div class="n">02</div><h4>Validation layer</h4><p>Data held to ALCOA+ and GAMP 5 with 91 percent independent concordance. Predictions benchmarked live.</p></div>
+      <div class="fstep"><div class="fdot"></div><div class="n">03</div><h4>Scoring engine</h4><p>Six independent signals plus knowledge graph paths rank every candidate from 0 to 1.</p></div>
+      <div class="fstep"><div class="fdot"></div><div class="n">04</div><h4>Ranked candidates</h4><p>Explainable, fundable hypotheses with the evidence to defend every step of the reasoning.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SCORE COMPOSITION -->
+<section class="band" id="score" style="background:var(--canvas-2)">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Transparent by design</div>
+      <div class="htitle">One score, six signals you can inspect</div>
+      <p class="hlead">No black box. The composite is a weighted blend of six independent lines of evidence, each shown and defensible on its own.</p></div>
+    <div class="score-wrap reveal">
+      <div class="score-radial-wrap">
+        <svg viewBox="0 0 290 290" class="score-radial" id="scoreRadial" aria-hidden="true"></svg>
+        <div class="score-center"><b id="scoreComposite">0.00</b><small>Composite</small></div>
+      </div>
+      <div class="score-legend" id="scoreLegend"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CASE STUDIES -->
+<section class="band" id="cases">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Proof in the field</div>
+      <div class="htitle">Repurposing has rewritten medicine before</div>
+      <p class="hlead">The same reasoning RepurposeIQ automates has produced some of the largest wins in modern pharma. A few landmark examples.</p></div>
+    <div class="case-stage reveal">
+      <div class="case-year" id="caseYear"></div>
+      <div id="caseSlides"></div>
+      <div class="case-dots" id="caseDots"></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE SCIENCE -->
+<section class="band" id="science" style="background:var(--canvas-2)">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Under the hood</div>
+      <div class="htitle">Real computational chemistry, not guesswork</div>
+      <p class="hlead">The workshop runs the same physics a computational chemist would, then reports the numbers plainly so a reviewer can check the work.</p></div>
+    <div class="mol-panel reveal">
+      <canvas id="molCanvas"></canvas>
+      <div class="mol-meta">
+        <div class="eyebrow" style="text-align:left">Interactive structure</div>
+        <h3>Every molecule, in three dimensions</h3>
+        <p>Each candidate opens to its real 3D geometry. Drag to rotate it; the same coordinates feed the docking pose and the quantum engine downstream.</p>
+        <div class="mol-switch" id="molSwitch"></div>
+      </div>
+    </div>
+    <div class="sci">
+      <div class="scard reveal d1"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="m10.5 20.5-7-7a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7Z"/><path d="m8.5 8.5 7 7"/></svg></div>
+        <h3>Molecular docking</h3><p>Native AutoDock Vina poses a ligand into the correct pocket and reports binding affinity, with a pose compare view.</p><div class="meta">AutoDock Vina &middot; DiffDock</div></div>
+      <div class="scard reveal d2"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M8 2h8M9 2v6.5L4.6 17a2 2 0 0 0 1.8 3h11.2a2 2 0 0 0 1.8-3L15 8.5V2"/></svg></div>
+        <h3>Exposure simulation</h3><p>A perfusion limited PBPK model solves the real ODE system, then compares free drug occupancy against measured affinity.</p><div class="meta">Physiological PBPK &middot; SciPy LSODA</div></div>
+      <div class="scard reveal d3"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/></svg></div>
+        <h3>Quantum chemistry</h3><p>A real semi empirical quantum engine computes electronic structure to check that a proposed modification is physically plausible.</p><div class="meta">GFN2 xTB</div></div>
+      <div class="scard reveal d4"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+        <h3>Probability of success</h3><p>A phase transition model grounded in real clinical development rates credits assets that have already cleared risk.</p><div class="meta">Phase progression model</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- VALIDATION / TRUST -->
+<section class="band valband" id="trust">
+  <canvas class="vmesh" id="vmesh"></canvas>
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Why you can trust it</div>
+      <div class="htitle">Proof, published live</div>
+      <p class="hlead">Pharma teams do not trust a black box, so the data quality and the retrospective performance are open for inspection, not asserted.</p></div>
+    <div class="valgrid reveal">
+      <div class="vitem"><div class="big">91%</div><h4>Independent concordance</h4><p>Core facts agree with an external reference source, checked at the data layer.</p></div>
+      <div class="vitem"><div class="big">0.73</div><h4>Retrospective recovery</h4><p>Known repurposing successes recovered against an independent gold standard, reported as AUROC.</p></div>
+      <div class="vitem"><div class="big">ALCOA+</div><h4>Integrity standard</h4><p>Data governed to ALCOA+ and GAMP 5, the standards a regulated pharma team already works to.</p></div>
+      <div class="vitem"><div class="big">100%</div><h4>Traceable</h4><p>Every candidate opens to its source evidence, and every score can be run again.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="band">
+  <div class="inner">
+    <div class="reveal"><div class="eyebrow">Who it is for</div>
+      <div class="htitle">Built for the repurposing team</div></div>
+    <div class="uc">
+      <div class="ucard reveal d1"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>Discovery and research</h3><p>Find new indications for an existing drug, or new drugs for a disease, with mechanistic and clinical evidence attached.</p></div>
+      <div class="ucard reveal d2"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M10 2v6l-4.5 8a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8V2"/><path d="M8.5 2h7"/></svg></div>
+        <h3>Reduce risk in silico</h3><p>Confirm target engagement, exposure, and electronic plausibility before committing a single lab dollar.</p></div>
+      <div class="ucard reveal d3"><div class="ic"><svg class="mk" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-5"/></svg></div>
+        <h3>Business development</h3><p>Acquisition signal from Orange Book and Purple Book facts, plus a per region landscape, to support the deal.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSING -->
+<section class="closing">
+  <div class="glow a" style="opacity:.6"></div>
+  <h2>Put your next breakthrough back to work.</h2>
+  <p>From a disease to a validated, fundable repurposing hypothesis.</p>
+  <div class="cta-row" style="justify-content:center">
+    <a class="btn btn-primary btn-lg" href="{{ url_for('discover') }}">
+      <svg class="mk" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Launch Platform</a>
+    <a class="btn btn-ghost btn-lg" href="{{ url_for('database') }}">
+      <svg class="mk" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+      Explore the Data</a>
+  </div>
+</section>
+
+<footer>
+  <div class="l"><span style="text-transform:uppercase;letter-spacing:.14em;font-size:10px;font-weight:600;color:var(--text-dim)">Powered by</span><b style="font-family:var(--serif);color:var(--ink)">Solix Technologies</b></div>
+  <div class="r">&copy; 2026 Solix Technologies &middot; RepurposeIQ</div>
+</footer>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const b=document.getElementById('themeBtn');
+  const sun='<svg class="mk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const moon='<svg class="mk" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>';
+  function set(t){document.documentElement.setAttribute('data-theme',t);b.innerHTML=t==='dark'?sun:moon;try{localStorage.setItem('riq-theme',t);}catch(e){}}
+  let init;try{init=localStorage.getItem('riq-theme');}catch(e){}
+  set(init||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+  b.addEventListener('click',()=>set(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+})();
+
+/* ---------- topbar shadow on scroll ---------- */
+addEventListener('scroll',()=>{document.getElementById('topbar').classList.toggle('scrolled',scrollY>20);});
+
+/* ---------- 3D knowledge graph hero ---------- */
+(function(){
+  const c=document.getElementById('graph'), g=c.getContext('2d');
+  let COL={}; function readCol(){const s=getComputedStyle(document.documentElement);
+    COL={a:s.getPropertyValue('--g-a').trim(),gold:s.getPropertyValue('--g-gold').trim(),dim:s.getPropertyValue('--g-dim').trim(),line:s.getPropertyValue('--g-line').trim(),
+      txt:s.getPropertyValue('--text-2').trim(),ink:s.getPropertyValue('--ink').trim()};}
+  readCol(); new MutationObserver(readCol).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  let W,H,DPR,cx,cy,R;
+  const N=155, nodes=[], edges=[];
+  const story=[
+    {x:-.55,y:-.2,z:.15,type:0,hub:1,label:'Imatinib'},
+    {x:0,y:.05,z:.35,type:2,hub:1,label:'PDGFRA'},
+    {x:.55,y:.25,z:.1,type:1,hub:1,label:'Pulmonary fibrosis'}
+  ];
+  story.forEach(s=>nodes.push({...s,baseR:s.hub?4.8:2,sp:Math.random()*6.28}));
+  for(let i=story.length;i<N;i++){
+    const t=(i+.5)/N, phi=Math.acos(1-2*t), th=Math.PI*(1+Math.sqrt(5))*i, rr=0.52+Math.random()*0.5;
+    let type=2; const r=Math.random(); if(r<0.2)type=0; else if(r<0.46)type=1;
+    const hub=Math.random()<0.1;
+    nodes.push({x:Math.cos(th)*Math.sin(phi)*rr,y:Math.sin(th)*Math.sin(phi)*rr,z:Math.cos(phi)*rr,
+      type,hub,baseR:hub?4.4:(type===2?1.5:2.7),sp:Math.random()*6.28,label:null});
+  }
+  edges.push([0,1,.4,1],[1,2,.4,1]);
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+    if(i<story.length&&j<story.length)continue;
+    const a=nodes[i],b=nodes[j],d=Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+    if(d<0.5)edges.push([i,j,d,0]);
+  }
+  const pulses=edges.filter(e=>e[3]||Math.random()<0.34).map(e=>({e,t:Math.random(),sp:0.004+Math.random()*0.005,dir:Math.random()<.5?1:-1}));
+  const HERO=window.HERO||(window.HERO={scroll:0,hl:-1});
+  // Bundle B: far parallax starfield for real front-to-back depth
+  const stars=[];for(let i=0;i<90;i++){const t=(i+.5)/90,phi=Math.acos(1-2*t),th=Math.PI*(1+Math.sqrt(5))*i,rr=1.18+Math.random()*0.55;
+    stars.push({x:Math.cos(th)*Math.sin(phi)*rr,y:Math.sin(th)*Math.sin(phi)*rr,z:Math.cos(phi)*rr});}
+
+  let rotY=0.4, rotX=-0.3, velY=0, velX=0, drag=false, px=0,py=0, auto=0.0018;
+  let pointerX=0, pointerY=0; // parallax target (-1..1)
+  let labelBox=null; // canvas-local rect of the hero text; labels inside it are hidden
+  function resize(){DPR=Math.min(devicePixelRatio||1,2);W=c.clientWidth;H=c.clientHeight;c.width=W*DPR;c.height=H*DPR;
+    g.setTransform(DPR,0,0,DPR,0,0);cx=W/2;cy=H/2;R=Math.min(W,H)*0.38;
+    if(heroIn){const cr=c.getBoundingClientRect(),hr=heroIn.getBoundingClientRect();
+      // difference is scroll-invariant, so this stays valid as the page scrolls
+      labelBox={x0:hr.left-cr.left-14,y0:hr.top-cr.top-12,x1:hr.right-cr.left+14,y1:hr.bottom-cr.top+12};}}
+  addEventListener('resize',resize);
+  c.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;c.setPointerCapture(e.pointerId);});
+  c.addEventListener('pointermove',e=>{if(!drag)return;velY=(e.clientX-px)*0.005;velX=(e.clientY-py)*0.005;rotY+=velY;rotX+=velX;px=e.clientX;py=e.clientY;});
+  addEventListener('pointerup',()=>drag=false);
+  // hero parallax: pointer influences a gentle extra rotation + glow shift
+  const hero=document.querySelector('.hero'), heroIn=document.querySelector('.hero-in'),
+        glowA=document.querySelector('.glow.a'), glowB=document.querySelector('.glow.b');
+  hero.addEventListener('pointermove',e=>{const r=hero.getBoundingClientRect();
+    pointerX=((e.clientX-r.left)/r.width-0.5)*2; pointerY=((e.clientY-r.top)/r.height-0.5)*2;});
+  hero.addEventListener('pointerleave',()=>{pointerX=0;pointerY=0;});
+
+  let Reff=1, recRot=0; // Reff = dolly/recede-adjusted radius; recRot = extra tilt as hero scrolls away
+  function project(p,exY,exX){
+    const ay=rotY+exY,ax=rotX+exX+recRot;
+    let x1=p.x*Math.cos(ay)-p.z*Math.sin(ay), z1=p.x*Math.sin(ay)+p.z*Math.cos(ay);
+    let y1=p.y*Math.cos(ax)-z1*Math.sin(ax), z2=p.y*Math.sin(ax)+z1*Math.cos(ax);
+    const fov=2.7, sc=fov/(fov-z2); // tighter fov = stronger perspective
+    return {sx:cx+x1*Reff*sc,sy:cy+y1*Reff*sc,sc,depth:z2};
+  }
+  let exY=0,exX=0;
+  let t0=0;
+  function frame(ts){
+    if(!t0)t0=ts;
+    const rec=HERO.scroll||0;                          // 0 at top of hero, ->1 as it scrolls away
+    Reff=R*(1-0.32*rec)*(1+0.03*Math.sin(ts*0.0004));  // Bundle B: recede + slow dolly breathing
+    recRot=rec*0.55;
+    // ease parallax
+    exY+=(pointerX*0.22-exY)*0.06; exX+=(pointerY*0.14-exX)*0.06;
+    if(!drag){rotY+=auto+velY;rotX+=velX;velY*=0.94;velX*=0.94;if(Math.abs(velY)<0.0003)velY=0;if(Math.abs(velX)<0.0003)velX=0;}
+    rotX=Math.max(-1.1,Math.min(1.1,rotX));
+    c.style.opacity=(1-rec*0.92).toFixed(3);
+    if(heroIn){heroIn.style.transform=`perspective(900px) translateY(${(rec*46).toFixed(1)}px) scale(${(1-rec*0.06).toFixed(3)}) rotateY(${(-pointerX*1.6).toFixed(2)}deg) rotateX(${(pointerY*1.1).toFixed(2)}deg)`;
+      heroIn.style.opacity=(Math.max(0,1-rec*1.15)).toFixed(3);}
+    if(glowA)glowA.style.transform=`translate(${(pointerX*22).toFixed(1)}px,${(pointerY*16).toFixed(1)}px)`;
+    if(glowB)glowB.style.transform=`translate(${(-pointerX*26).toFixed(1)}px,${(-pointerY*18).toFixed(1)}px)`;
+    g.clearRect(0,0,W,H);
+    // Bundle B: starfield (rotates slower than the graph -> parallax depth)
+    const sAy=rotY*0.55+exY*0.5, sAx=rotX*0.55+exX*0.5+recRot;
+    g.fillStyle=`rgba(${COL.dim},1)`;
+    for(const s of stars){let x1=s.x*Math.cos(sAy)-s.z*Math.sin(sAy),z1=s.x*Math.sin(sAy)+s.z*Math.cos(sAy);
+      let y1=s.y*Math.cos(sAx)-z1*Math.sin(sAx),z2=s.y*Math.sin(sAx)+z1*Math.cos(sAx);
+      const sc=2.7/(2.7-z2),sx=cx+x1*Reff*sc,sy=cy+y1*Reff*sc,dep=(z2+1)/2;
+      g.globalAlpha=(0.08+0.26*dep)*(1-rec);g.beginPath();g.arc(sx,sy,(0.6+0.9*dep)*sc,0,7);g.fill();}
+    g.globalAlpha=1;
+    const P=nodes.map(n=>project(n,exY,exX));
+    for(const [i,j,d,st] of edges){const a=P[i],b=P[j],dep=(a.depth+b.depth)/2;
+      const al=(st?0.55:(1-d/0.5)*0.32)*(0.4+0.6*(dep+1)/2);
+      g.strokeStyle=`rgba(${st?COL.a:COL.line},${al.toFixed(3)})`;g.lineWidth=(st?1.4:0.6)+0.6*(dep+1)/2;
+      g.beginPath();g.moveTo(a.sx,a.sy);g.lineTo(b.sx,b.sy);g.stroke();}
+    g.globalCompositeOperation='lighter';
+    for(const pl of pulses){pl.t+=pl.sp;if(pl.t>1)pl.t-=1;const [i,j]=pl.e,a=P[i],b=P[j];
+      const tt=pl.dir>0?pl.t:1-pl.t,x=a.sx+(b.sx-a.sx)*tt,y=a.sy+(b.sy-a.sy)*tt;
+      const dep=(a.depth+b.depth)/2,sc=0.5+0.5*(dep+1)/2;
+      g.beginPath();g.arc(x,y,2.1*sc,0,7);g.fillStyle=`rgba(${COL.gold},${(0.85*sc).toFixed(3)})`;g.fill();}
+    g.globalCompositeOperation='source-over';
+    const order=P.map((p,i)=>i).sort((u,v)=>P[u].depth-P[v].depth);
+    for(const i of order){const p=P[i],n=nodes[i];const dep=(p.depth+1)/2;
+      const blur=Math.max(0,(0.58-dep))*2.8; // deeper depth of field
+      const rr=n.baseR*p.sc*(0.5+0.8*dep);
+      const beat=1+0.14*Math.sin(ts*0.002+n.sp);
+      const col=n.type===0?COL.gold:(n.type===1?COL.a:COL.dim);
+      const hl=HERO.hl;
+      let al=(n.type===2?0.42:0.92)*(0.3+0.7*dep);
+      if(hl>=0)al*=(n.type===hl?1:0.16);              // Bundle E: legend chip highlights its node type
+      if(((n.hub||n.type<2)&&dep>0.42)||(hl>=0&&n.type===hl&&dep>0.3)){g.globalCompositeOperation='lighter';
+        g.beginPath();g.arc(p.sx,p.sy,rr*(n.hub?3.6:2.5),0,7);g.fillStyle=`rgba(${col},${((n.type===hl?0.2:0.12)*dep).toFixed(3)})`;g.fill();
+        g.globalCompositeOperation='source-over';}
+      g.save();if(blur>0){g.shadowColor=`rgba(${col},${al})`;g.shadowBlur=blur*4;}
+      g.beginPath();g.arc(p.sx,p.sy,rr*beat,0,7);g.fillStyle=`rgba(${col},${al.toFixed(3)})`;g.fill();
+      g.restore();
+      if(n.hub&&n.type<2){g.lineWidth=1;g.strokeStyle=`rgba(${col},${(al*0.6).toFixed(3)})`;g.stroke();}
+      if(n.label&&dep>0.34){const lx=p.sx+rr+8,ly=p.sy+3;
+        g.font='600 12px Inter,system-ui,sans-serif';const tw=g.measureText(n.label).width;
+        // hide the label (pill + text) whenever it would cross the hero copy; keep the node dot
+        const over=labelBox&&(lx+tw+7)>labelBox.x0&&(lx-5)<labelBox.x1&&(ly+6)>labelBox.y0&&(ly-12)<labelBox.y1;
+        if(!over){
+          g.globalAlpha=Math.min(1,(dep-0.34)*3);
+          g.fillStyle=`rgb(${col})`;g.beginPath();g.arc(p.sx,p.sy,rr+2.5,0,7);g.fill();
+          g.fillStyle=`rgba(${col},.16)`;g.fillRect(lx-5,ly-12,tw+12,18);
+          g.fillStyle=COL.ink.startsWith('#')?COL.ink:('rgb('+COL.ink+')');
+          g.fillText(n.label,lx+1,ly+1);g.globalAlpha=1;
+        }}
+    }
+    requestAnimationFrame(frame);
+  }
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  resize();
+  if(reduce){auto=0;requestAnimationFrame(frame);}else requestAnimationFrame(frame);
+})();
+
+/* ---------- validation mesh ---------- */
+(function(){
+  const c=document.getElementById('vmesh');if(!c)return;const x=c.getContext('2d');let W,H,pts=[];
+  function rs(){W=c.width=c.clientWidth;H=c.height=c.clientHeight;const n=Math.floor(W/60);pts=Array.from({length:n},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2}));}
+  function t(){x.clearRect(0,0,W,H);for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;}
+    for(let i=0;i<pts.length;i++){for(let j=i+1;j<pts.length;j++){const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<130){x.strokeStyle=`rgba(255,255,255,${(1-d/130)*.14})`;x.lineWidth=1;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke();}}
+      x.beginPath();x.arc(pts[i].x,pts[i].y,1.4,0,7);x.fillStyle='rgba(255,255,255,.4)';x.fill();}
+    requestAnimationFrame(t);}
+  addEventListener('resize',rs);const io=new IntersectionObserver(e=>{if(e[0].isIntersecting){rs();t();io.disconnect();}});io.observe(c);
+})();
+
+/* ---------- reveals ---------- */
+(function(){const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+    if(e.target.classList.contains('mod')){const ic=e.target.querySelector('.ic');
+      if(ic){ic.classList.add('pop');ic.addEventListener('animationend',()=>ic.classList.remove('pop'),{once:true});}}
+    io.unobserve(e.target);}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));})();
+
+/* ---------- count-up ---------- */
+(function(){const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function up(el){const to=parseFloat(el.dataset.to),dec=+(el.dataset.dec||0),suf=el.dataset.suf||'',dur=1500,t0=performance.now();
+  el.style.display='inline-block';
+  (function s(t){let p=Math.min((t-t0)/dur,1);const e=1-Math.pow(1-p,3);
+    el.textContent=(to*e).toFixed(dec)+suf;
+    if(!reduce){el.style.transform='translateY('+((1-e)*14).toFixed(2)+'px)';   // Bundle D: odometer-style roll
+      el.style.filter='blur('+((1-e)*2.4).toFixed(2)+'px)';el.style.opacity=(0.3+0.7*e).toFixed(3);}
+    if(p<1)requestAnimationFrame(s);else{el.style.transform='';el.style.filter='';el.style.opacity='';}})(t0);}
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){up(e.target);io.unobserve(e.target);}}),{threshold:.6});
+  document.querySelectorAll('.num').forEach(el=>io.observe(el));})();
+
+/* ---------- 3D card tilt + spotlight ---------- */
+(function(){
+  const tiltSel='.mod,.dircard,.scard';
+  document.querySelectorAll(tiltSel).forEach(cd=>{
+    cd.addEventListener('mousemove',e=>{const r=cd.getBoundingClientRect();
+      const mx=e.clientX-r.left, my=e.clientY-r.top;
+      cd.style.setProperty('--mx',mx+'px');cd.style.setProperty('--my',my+'px');
+      const rx=((my/r.height)-0.5)*-6, ry=((mx/r.width)-0.5)*6;
+      cd.style.transform=`perspective(720px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-6px)`;});
+    cd.addEventListener('mouseleave',()=>{cd.style.transform='';});
+  });
+})();
+
+/* ---------- Bundle A/B/E: word motion, scroll recede, legend highlight, magnetic buttons ---------- */
+(function(){
+  window.HERO=window.HERO||{scroll:0,hl:-1};
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const hero=document.querySelector('.hero');
+
+  // A: split the headline into per-letter 3D flips (keeping the gradient on "IQ")
+  const h1=document.getElementById('hero-title');
+  if(h1&&!reduce){
+    const build=(txt,grad)=>{let out='';for(const ch of txt){
+      out+= ch===' ' ? '<span class="ltr sp"></span>' : `<span class="ltr${grad?' grad':''}">${ch}</span>`;}return out;};
+    h1.innerHTML=build('Repurpose',false)+build('IQ',true);
+    const ls=[...h1.querySelectorAll('.ltr')];
+    ls.forEach((l,i)=>{l.style.animation=`ltrflip .72s cubic-bezier(.2,.8,.25,1) ${(0.12+i*0.045).toFixed(3)}s both`;
+      l.addEventListener('animationend',()=>{l.classList.add('done');l.style.animation='none';},{once:true});});
+    // A: per-glyph cursor depth (only after each letter has landed)
+    if(hero)hero.addEventListener('pointermove',e=>{
+      for(const l of ls){if(!l.classList.contains('done'))continue;const lr=l.getBoundingClientRect();
+        const dx=((lr.left+lr.width/2)-e.clientX)/innerWidth;
+        l.style.transform=`translateZ(${(dx*26).toFixed(1)}px) translateY(${(dx*dx*-7).toFixed(1)}px)`;}});
+    if(hero)hero.addEventListener('pointerleave',()=>ls.forEach(l=>{if(l.classList.contains('done'))l.style.transform='';}));
+  }
+
+  // A: split the subtitle into words for a staggered rise (emphasis spans stay intact)
+  const sub=document.getElementById('hero-sub');
+  if(sub&&!reduce){
+    const parts=[];sub.childNodes.forEach(n=>{
+      if(n.nodeType===3)n.textContent.split(/(\s+)/).forEach(w=>parts.push({t:w,em:false}));
+      else if(n.nodeType===1)parts.push({t:n.textContent,em:true,cls:n.className});});
+    let html='',wi=0;
+    for(const p of parts){
+      if(/^\s*$/.test(p.t)&&!p.em){html+=p.t;continue;}
+      html+=`<span class="word" style="animation-delay:${(0.35+wi*0.05).toFixed(2)}s">`+
+            (p.em?`<span class="${p.cls}">${p.t}</span>`:p.t)+`</span>`;wi++;}
+    sub.innerHTML=html;
+  }
+
+  // B: feed normalized hero-scroll to the graph so it recedes as you move down
+  const gEl=document.getElementById('graph');
+  function onScroll(){const h=hero?hero.offsetHeight:innerHeight;
+    const s=Math.max(0,Math.min(1,scrollY/(h*0.85)));window.HERO.scroll=s;
+    if(gEl)gEl.style.opacity=(1-s*0.92).toFixed(3);}   // event-driven so opacity holds even if rAF throttles
+  onScroll();addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',onScroll);
+
+  // E: legend chips light up their matching node type in the live graph
+  document.querySelectorAll('.legend .chip[data-hl]').forEach(ch=>{
+    ch.style.cursor='pointer';const t=+ch.getAttribute('data-hl');
+    ch.addEventListener('pointerenter',()=>window.HERO.hl=t);
+    ch.addEventListener('pointerleave',()=>window.HERO.hl=-1);
+  });
+
+  // E: magnetic primary/secondary buttons
+  if(!reduce)document.querySelectorAll('.btn-lg').forEach(b=>{
+    b.addEventListener('pointermove',e=>{const r=b.getBoundingClientRect();
+      const mx=(e.clientX-r.left-r.width/2)/r.width, my=(e.clientY-r.top-r.height/2)/r.height;
+      b.style.transform=`translate(${(mx*10).toFixed(1)}px,${(my*8-2).toFixed(1)}px)`;});
+    b.addEventListener('pointerleave',()=>b.style.transform='');
+  });
+})();
+
+/* ---------- Live stat rail (real DB counts) ---------- */
+(function(){
+  function fmt(n){if(n>=1e6)return{to:+(n/1e6).toFixed(1),suf:'M',dec:1};
+    if(n>=1e3)return{to:+(n/1e3).toFixed(0),suf:'k',dec:0};return{to:n,suf:'',dec:0};}
+  function setNum(key,f){const el=document.querySelector(`.num[data-key="${key}"]`);
+    if(!el)return;el.dataset.to=f.to;el.dataset.suf=f.suf;el.dataset.dec=f.dec;}
+  fetch('/api/landing-stats').then(r=>r.json()).then(d=>{
+    if(d.bioactivities){const f=fmt(d.bioactivities);setNum('bio',f);
+      const tb=document.getElementById('trustBio');if(tb)tb.textContent=`${f.to}${f.suf} validated bioactivities`;}
+    if(d.diseases){setNum('dis',fmt(d.diseases));}
+    if(d.concordance!=null)setNum('con',{to:d.concordance,suf:'%',dec:0});
+    if(d.auroc!=null)setNum('auroc',{to:d.auroc,suf:'',dec:2});
+  }).catch(()=>{});
+})();
+
+/* ---------- Evidence-Graph Explorer ---------- */
+(function(){
+  const CASES=[
+    {id:'imatinib',label:'Imatinib',score:0.86,verdict:'Landmark repurposing',nodes:[
+      {kind:'Drug',name:'Imatinib',badge:'Tyrosine-kinase inhibitor'},
+      {kind:'Target',name:'KIT (CD117)',badge:'ChEMBL Ki approximately 12 nM'},
+      {kind:'Pathway',name:'KIT / PDGFR signaling',badge:'Reactome R-HSA-1433557'},
+      {kind:'Disease',name:'Gastrointestinal stromal tumor',badge:'KIT gain-of-function driver'}]},
+    {id:'sildenafil',label:'Sildenafil',score:0.81,verdict:'Approved new indication',nodes:[
+      {kind:'Drug',name:'Sildenafil',badge:'PDE5 inhibitor'},
+      {kind:'Target',name:'PDE5A',badge:'ChEMBL IC50 approximately 3.5 nM'},
+      {kind:'Pathway',name:'NO / cGMP vasodilation',badge:'Smooth-muscle relaxation'},
+      {kind:'Disease',name:'Pulmonary arterial hypertension',badge:'FDA approved 2005'}]},
+    {id:'thalidomide',label:'Thalidomide',score:0.78,verdict:'Frontline therapy',nodes:[
+      {kind:'Drug',name:'Thalidomide',badge:'Immunomodulatory agent'},
+      {kind:'Target',name:'Cereblon (CRBN)',badge:'E3-ligase substrate recruiter'},
+      {kind:'Pathway',name:'Anti-angiogenesis / TNF-alpha',badge:'Immune remodeling'},
+      {kind:'Disease',name:'Multiple myeloma',badge:'Approved combination therapy'}]},
+    {id:'metformin',label:'Metformin',score:0.61,verdict:'Emerging evidence',nodes:[
+      {kind:'Drug',name:'Metformin',badge:'Biguanide'},
+      {kind:'Target',name:'AMPK complex',badge:'Energy-sensor activation'},
+      {kind:'Pathway',name:'AMPK / mTOR signaling',badge:'Proliferation suppression'},
+      {kind:'Disease',name:'Breast cancer (under study)',badge:'Phase II trials ongoing'}]}
+  ];
+  const chips=document.getElementById('expChips'),chain=document.getElementById('expChain');
+  if(!chips||!chain)return;
+  const ring=document.getElementById('expRingFg'),scoreVal=document.getElementById('expScoreVal'),verdict=document.getElementById('expVerdict');
+  const C=326.7;let timers=[];
+  function clearTimers(){timers.forEach(t=>clearTimeout(t));timers=[];}
+  function render(cs,animate){
+    clearTimers();
+    let html='';
+    cs.nodes.forEach((n,i)=>{
+      html+=`<div class="exp-hop"><div class="exp-node ${n.kind.toLowerCase()}"><div class="k">${n.kind}</div><div class="nm">${n.name}</div><div class="bd">${n.badge}</div></div></div>`;
+      if(i<cs.nodes.length-1)html+=`<div class="exp-conn"><span class="tok"></span></div>`;
+    });
+    chain.innerHTML=html;
+    const hops=[...chain.querySelectorAll('.exp-hop')];
+    ring.style.strokeDashoffset=C;scoreVal.textContent='0.00';verdict.textContent='';
+    if(!animate){hops.forEach(h=>h.classList.add('show'));ring.style.strokeDashoffset=C*(1-cs.score);scoreVal.textContent=cs.score.toFixed(2);verdict.textContent=cs.verdict;return;}
+    hops.forEach((h,i)=>timers.push(setTimeout(()=>h.classList.add('show'),160+i*380)));
+    timers.push(setTimeout(()=>{
+      ring.style.strokeDashoffset=C*(1-cs.score);
+      const t0=performance.now();(function roll(t){const p=Math.min((t-t0)/1000,1);scoreVal.textContent=(cs.score*(1-Math.pow(1-p,3))).toFixed(2);if(p<1)requestAnimationFrame(roll);})(t0);
+      verdict.textContent=cs.verdict;
+    },160+hops.length*380));
+  }
+  CASES.forEach((cs,i)=>{const b=document.createElement('button');b.className='exp-chip'+(i===0?' on':'');b.type='button';b.textContent=cs.label;
+    b.addEventListener('click',()=>{chips.querySelectorAll('.exp-chip').forEach(c=>c.classList.remove('on'));b.classList.add('on');render(cs,true);});
+    chips.appendChild(b);});
+  // first render animates when the section scrolls into view
+  let played=false;
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!played){played=true;render(CASES[0],true);}}),{threshold:.3});
+  io.observe(chain);
+  render(CASES[0],false); // static fallback until in view
+})();
+
+/* ---------- Try it search demo ---------- */
+(function(){
+  const DATA={
+    'idiopathic pulmonary fibrosis':[
+      {drug:'Nintedanib',score:0.84,rz:'Multi-kinase (PDGFR/FGFR/VEGFR) antifibrotic; strong mechanistic and clinical fit.'},
+      {drug:'Pirfenidone',score:0.79,rz:'TGF-beta suppression with established antifibrotic trial support.'},
+      {drug:'Imatinib',score:0.58,rz:'PDGFR inhibition; mechanistically plausible, mixed clinical signal.'}],
+    'alzheimer disease':[
+      {drug:'Donepezil',score:0.71,rz:'Cholinesterase inhibition; symptomatic benefit, well characterised.'},
+      {drug:'Metformin',score:0.55,rz:'AMPK / insulin-signaling link to neurodegeneration; under study.'},
+      {drug:'Dasatinib',score:0.49,rz:'Senolytic hypothesis targeting senescent glia; early evidence.'}],
+    'rheumatoid arthritis':[
+      {drug:'Baricitinib',score:0.82,rz:'JAK1/2 inhibition; approved and mechanistically central.'},
+      {drug:'Tofacitinib',score:0.77,rz:'JAK inhibitor with strong disease-pathway proximity.'},
+      {drug:'Palbociclib',score:0.44,rz:'CDK4/6 blockade of synovial proliferation; exploratory.'}],
+    'pancreatic cancer':[
+      {drug:'Olaparib',score:0.68,rz:'PARP inhibition in BRCA-mutant disease; biomarker-defined fit.'},
+      {drug:'Metformin',score:0.5,rz:'Metabolic pathway modulation; adjunct hypothesis.'},
+      {drug:'Hydroxychloroquine',score:0.46,rz:'Autophagy inhibition; combination trials ongoing.'}]
+  };
+  const KEYS=Object.keys(DATA);
+  const input=document.getElementById('tryInput'),btn=document.getElementById('tryBtn'),
+        sug=document.getElementById('trySuggest'),res=document.getElementById('tryResults'),note=document.getElementById('tryNote');
+  if(!input)return;
+  const pretty=s=>s.replace(/\b\w/g,c=>c.toUpperCase());
+  KEYS.forEach(k=>{const s=document.createElement('span');s.className='try-sug';s.textContent=pretty(k);
+    s.addEventListener('click',()=>{input.value=pretty(k);run(k);});sug.appendChild(s);});
+  function match(q){q=q.trim().toLowerCase();if(!q)return null;
+    if(DATA[q])return q;for(const k of KEYS){if(k.includes(q)||q.includes(k.split(' ')[0]))return k;}return null;}
+  function run(key){
+    const rows=DATA[key];res.innerHTML='';note.textContent='';
+    rows.forEach((r,i)=>{const el=document.createElement('div');el.className='try-card';
+      el.innerHTML=`<div class="try-rank">${i+1}</div><div class="try-main"><div class="nm">${r.drug}</div><div class="rz">${r.rz}</div></div>`+
+        `<div class="try-score"><div class="sc">${r.score.toFixed(2)}</div><div class="try-bar-track"><div class="try-bar-fill"></div></div></div>`;
+      res.appendChild(el);
+      setTimeout(()=>{el.classList.add('show');el.querySelector('.try-bar-fill').style.width=(r.score*100).toFixed(0)+'%';},120+i*140);});
+    note.textContent='Preview on curated data. Run the full engine in Compound Discovery for live scoring and evidence dossiers.';
+  }
+  function submit(){const k=match(input.value);if(k)run(k);else{res.innerHTML='';note.textContent='Try one of the suggested indications above for a live preview.';}}
+  btn.addEventListener('click',submit);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+})();
+
+/* ---------- 3D molecule viewer ---------- */
+(function(){
+  const cv=document.getElementById('molCanvas');if(!cv)return;const g=cv.getContext('2d');
+  const EL={C:{c:'#64748b',r:.42},N:{c:'#3b82f6',r:.42},O:{c:'#ef4444',r:.45},H:{c:'#cbd5e1',r:.28}};
+  const MOLS={
+    aspirin:{name:'Aspirin',atoms:[['C',1.4,0,0],['C',.7,1.21,0],['C',-.7,1.21,0],['C',-1.4,0,0],['C',-.7,-1.21,0],['C',.7,-1.21,0],['C',2.8,-.2,.2],['O',3.5,.8,.3],['O',3.4,-1.3,.1],['O',1.4,2.4,.1],['C',2.6,3.0,-.2],['O',3.6,2.4,-.3],['C',2.6,4.4,-.3]],
+      bonds:[[0,1,2],[1,2,1],[2,3,2],[3,4,1],[4,5,2],[5,0,1],[0,6,1],[6,7,2],[6,8,1],[1,9,1],[9,10,1],[10,11,2],[10,12,1]]},
+    caffeine:{name:'Caffeine',atoms:[['N',0,1.4,0],['C',1.21,.7,0],['N',1.21,-.7,0],['C',0,-1.4,0],['C',-1.21,-.7,0],['C',-1.21,.7,0],['N',-.5,-2.75,0],['C',-1.9,-2.9,0],['N',-2.4,-1.55,0],['O',2.4,1.4,0],['O',-2.4,1.4,0],['C',0,2.8,0],['C',2.4,-1.4,0],['C',-3.8,-1.4,0]],
+      bonds:[[0,1,1],[1,2,1],[2,3,1],[3,4,2],[4,5,1],[5,0,1],[3,6,1],[6,7,1],[7,8,2],[8,4,1],[1,9,2],[5,10,2],[0,11,1],[2,12,1],[8,13,1]]},
+    paracetamol:{name:'Paracetamol',atoms:[['C',1.4,0,0],['C',.7,1.21,0],['C',-.7,1.21,0],['C',-1.4,0,0],['C',-.7,-1.21,0],['C',.7,-1.21,0],['O',2.6,0,.1],['N',-2.8,0,.1],['C',-4.0,.6,-.1],['O',-4.0,1.9,-.2],['C',-5.2,-.1,-.1]],
+      bonds:[[0,1,2],[1,2,1],[2,3,2],[3,4,1],[4,5,2],[5,0,1],[0,6,1],[3,7,1],[7,8,1],[8,9,2],[8,10,1]]}
+  };
+  // center + scale each molecule
+  for(const k in MOLS){const a=MOLS[k].atoms;let cx=0,cy=0,cz=0;a.forEach(p=>{cx+=p[1];cy+=p[2];cz+=p[3];});cx/=a.length;cy/=a.length;cz/=a.length;
+    let mx=0;a.forEach(p=>{p[1]-=cx;p[2]-=cy;p[3]-=cz;mx=Math.max(mx,Math.hypot(p[1],p[2],p[3]));});MOLS[k].scale=1/mx;}
+  let cur='caffeine',W,H,DPR,rotY=.5,rotX=-.3,velY=0,velX=0,drag=false,px,py;
+  function resize(){DPR=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);}
+  addEventListener('resize',resize);
+  cv.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{if(!drag)return;velY=(e.clientX-px)*.01;velX=(e.clientY-py)*.01;rotY+=velY;rotX+=velX;px=e.clientX;py=e.clientY;});
+  addEventListener('pointerup',()=>drag=false);
+  function proj(p,R){const ay=rotY,ax=rotX;let x1=p[1]*Math.cos(ay)-p[3]*Math.sin(ay),z1=p[1]*Math.sin(ay)+p[3]*Math.cos(ay);
+    let y1=p[2]*Math.cos(ax)-z1*Math.sin(ax),z2=p[2]*Math.sin(ax)+z1*Math.cos(ax);const fov=6,sc=fov/(fov-z2);
+    return {x:W/2+x1*R*sc,y:H/2+y1*R*sc,z:z2,sc};}
+  function frame(ts){
+    if(!drag){rotY+=.006+velY;rotX+=velX;velY*=.93;velX*=.93;}
+    const M=MOLS[cur],R=Math.min(W,H)*.42*M.scale;
+    g.clearRect(0,0,W,H);
+    const P=M.atoms.map(p=>proj(p,R));
+    // bonds
+    for(const [i,j,o] of M.bonds){const a=P[i],b=P[j],dep=(a.z+b.z)/2,al=(.35+.5*(dep+1)/2);
+      g.strokeStyle=`rgba(120,132,158,${al.toFixed(2)})`;g.lineWidth=(2.2+1.4*(dep+1)/2);
+      if(o===2){const dx=b.y-a.y,dy=a.x-b.x,d=Math.hypot(dx,dy)||1,ox=dx/d*2,oy=dy/d*2;
+        g.beginPath();g.moveTo(a.x+ox,a.y+oy);g.lineTo(b.x+ox,b.y+oy);g.stroke();
+        g.beginPath();g.moveTo(a.x-ox,a.y-oy);g.lineTo(b.x-ox,b.y-oy);g.stroke();}
+      else{g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}}
+    // atoms back-to-front
+    const order=P.map((p,i)=>i).sort((u,v)=>P[u].z-P[v].z);
+    for(const i of order){const p=P[i],el=EL[M.atoms[i][0]]||EL.C,rad=el.r*R*.5*p.sc,dep=(p.z+1)/2;
+      const grd=g.createRadialGradient(p.x-rad*.35,p.y-rad*.35,rad*.1,p.x,p.y,rad);
+      grd.addColorStop(0,'#ffffff');grd.addColorStop(.25,el.c);grd.addColorStop(1,el.c);
+      g.globalAlpha=.55+.45*dep;g.beginPath();g.arc(p.x,p.y,rad,0,7);g.fillStyle=grd;g.fill();
+      g.globalAlpha=1;g.lineWidth=.8;g.strokeStyle='rgba(15,30,61,.18)';g.stroke();}
+    requestAnimationFrame(frame);
+  }
+  const sw=document.getElementById('molSwitch');
+  Object.keys(MOLS).forEach(k=>{const b=document.createElement('button');b.className='mol-btn'+(k===cur?' on':'');b.type='button';b.textContent=MOLS[k].name;
+    b.addEventListener('click',()=>{cur=k;sw.querySelectorAll('.mol-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');});sw.appendChild(b);});
+  resize();requestAnimationFrame(frame);
+})();
+
+/* ---------- Score-composition radial ---------- */
+(function(){
+  const svg=document.getElementById('scoreRadial'),legend=document.getElementById('scoreLegend'),center=document.getElementById('scoreComposite');
+  if(!svg)return;
+  const SIG=[
+    {name:'Mechanism',desc:'Target relevance to disease biology',val:.88,color:'#1e40af'},
+    {name:'Pathway',desc:'Shared pathway involvement',val:.74,color:'#2563eb'},
+    {name:'Network proximity',desc:'Knowledge-graph path strength',val:.81,color:'#3b82f6'},
+    {name:'Clinical signal',desc:'Trial and real-world evidence',val:.66,color:'#0ea5e9'},
+    {name:'Safety fit',desc:'No disqualifying toxicity signal',val:.79,color:'#06b6d4'},
+    {name:'Probability of success',desc:'Phase-progression likelihood',val:.58,color:'#22d3ee'}
+  ];
+  const comp=SIG.reduce((s,x)=>s+x.val,0)/SIG.length;
+  const cx=145,cy=145,radii=[130,112,94,76,58,40];let arcs=[];
+  SIG.forEach((s,i)=>{const r=radii[i],C=2*Math.PI*r;
+    const track=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    track.setAttribute('cx',cx);track.setAttribute('cy',cy);track.setAttribute('r',r);
+    track.setAttribute('stroke','var(--sunken)');track.style.strokeDasharray=C;track.style.strokeDashoffset=0;svg.appendChild(track);
+    const arc=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    arc.setAttribute('cx',cx);arc.setAttribute('cy',cy);arc.setAttribute('r',r);
+    arc.setAttribute('stroke',s.color);arc.style.strokeDasharray=C;arc.style.strokeDashoffset=C;svg.appendChild(arc);
+    arcs.push({arc,C,val:s.val});
+    legend.insertAdjacentHTML('beforeend',
+      `<div class="score-leg"><span class="dot" style="background:${s.color}"></span><span class="lb"><b>${s.name}</b><small>${s.desc}</small></span><span class="vv">${s.val.toFixed(2)}</span></div>`);
+  });
+  let played=false;
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!played){played=true;
+    arcs.forEach(a=>a.arc.style.strokeDashoffset=a.C*(1-a.val));
+    const t0=performance.now();(function roll(t){const p=Math.min((t-t0)/1200,1);center.textContent=(comp*(1-Math.pow(1-p,3))).toFixed(2);if(p<1)requestAnimationFrame(roll);})(t0);
+  }}),{threshold:.4});
+  io.observe(svg);
+})();
+
+/* ---------- Case-study spotlight ---------- */
+(function(){
+  const CASES=[
+    {drug:'Sildenafil',from:'Angina',to:'Erectile dysfunction, then PAH',year:'1998 and 2005',desc:'A failed angina candidate whose PDE5 inhibition was repurposed twice, first for erectile dysfunction, then for pulmonary arterial hypertension.'},
+    {drug:'Thalidomide',from:'Morning sickness',to:'Multiple myeloma',year:'2006',desc:'Withdrawn after a birth-defect tragedy, its anti-angiogenic and immunomodulatory action was later repurposed into a frontline myeloma therapy.'},
+    {drug:'Imatinib',from:'Chronic myeloid leukemia',to:'Gastrointestinal stromal tumor',year:'2002',desc:'A BCR-ABL inhibitor for CML that also blocks KIT, opening a landmark new indication in gastrointestinal stromal tumors.'},
+    {drug:'Minoxidil',from:'Hypertension',to:'Hair loss',year:'1988',desc:'An antihypertensive whose vasodilatory effect on hair follicles became one of the best known repurposing successes.'},
+    {drug:'Aspirin',from:'Pain and fever',to:'Cardiovascular prevention',year:'1980s',desc:'A century-old analgesic repurposed as low-dose antiplatelet therapy for heart-attack and stroke prevention.'}
+  ];
+  const slides=document.getElementById('caseSlides'),dots=document.getElementById('caseDots'),yr=document.getElementById('caseYear');
+  if(!slides)return;
+  CASES.forEach((c,i)=>{
+    slides.insertAdjacentHTML('beforeend',
+      `<div class="case-slide${i===0?' on':''}"><div class="case-flow"><span class="case-tok from">${c.from}</span><span class="case-arrow">&rarr;</span><span class="case-tok">${c.to}</span></div>`+
+      `<div class="case-drug">${c.drug}</div><div class="case-desc">${c.desc}</div></div>`);
+    const d=document.createElement('button');d.className='case-dot'+(i===0?' on':'');d.type='button';d.setAttribute('aria-label','Case '+(i+1));
+    d.addEventListener('click',()=>go(i));dots.appendChild(d);
+  });
+  const S=[...slides.children],D=[...dots.children];let idx=0,timer;
+  yr.textContent=CASES[0].year;
+  function go(n){idx=n;S.forEach((s,i)=>s.classList.toggle('on',i===n));D.forEach((d,i)=>d.classList.toggle('on',i===n));yr.textContent=CASES[n].year;restart();}
+  function next(){go((idx+1)%CASES.length);}
+  function restart(){clearInterval(timer);timer=setInterval(next,5000);}
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)restart();else clearInterval(timer);}),{threshold:.3});
+  io.observe(slides);
+})();
+</script>
+
+</body></html>

@@ -37,6 +37,78 @@ OT_URL      = "https://api.platform.opentargets.org/api/v4/graphql"
 CHEMBL_BASE = "https://www.ebi.ac.uk/chembl/api/data"
 CT_BASE     = "https://clinicaltrials.gov/api/v2/studies"
 NCBI_BASE   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+FDA_LABEL_URL = "https://api.fda.gov/drug/label.json"
+
+_fda_label_cache: Dict[str, str] = {}
+
+
+def _fda_label_text(drug_name: str) -> str:
+    """The FDA-approved 'indications and usage' prose for a drug (openFDA label),
+    lowercased. This is the AUTHORITATIVE approval source — unlike ChEMBL
+    max_phase_for_ind (which is the max TRIAL phase, so an FDA-approved indication whose
+    pivotal trial was Phase 3 is wrongly read as 'studied, not approved'). Fail-soft → ''."""
+    key = (drug_name or "").strip().lower()
+    if not key:
+        return ""
+    if key in _fda_label_cache:
+        return _fda_label_cache[key]
+    text = ""
+    try:
+        for field in ("openfda.generic_name", "openfda.brand_name"):
+            r = http_client.get(FDA_LABEL_URL,
+                                params={"search": f'{field}:"{key}"', "limit": 1},
+                                timeout=10)
+            if r and r.ok:
+                results = r.json().get("results", [])
+                if results:
+                    iu = results[0].get("indications_and_usage") or []
+                    text = " ".join(iu).lower() if isinstance(iu, list) else str(iu).lower()
+                    if text:
+                        break
+    except Exception as e:
+        logger.debug(f"FDA label fetch failed for {drug_name}: {e}")
+    _fda_label_cache[key] = text
+    return text
+
+
+def _mark_fda_approved(drug_name: str, known_indications: List[Dict]) -> None:
+    """Upgrade an indication's phase to 4 (approved) when the FDA label names it — closes
+    the ChEMBL trial-phase gap that mislabels approved biologic indications (mepolizumab→
+    EGPA / nasal polyps) as 'studied'. Fail-soft (leaves ChEMBL phase if no label).
+
+    PRECISION (audited 2026-07): disease SYNONYMS (Churg-Strauss = eosinophilic
+    granulomatosis with polyangiitis = EGPA) are matched, and a QUALIFIER discriminator
+    prevents a false match of the distinct sibling — EGPA (eosinophilic GPA) must NOT
+    approve plain GPA/Wegener's just because 'granulomatosis with polyangiitis' is a
+    substring of the label's 'EOSINOPHILIC granulomatosis with polyangiitis'."""
+    label = _fda_label_text(drug_name)
+    if not label:
+        return
+    # indication name (lower) → extra approved-phrase synonyms to also look for
+    _SYN = {"churg-strauss syndrome": "eosinophilic granulomatosis with polyangiitis",
+            "churg strauss syndrome": "eosinophilic granulomatosis with polyangiitis"}
+    _stop = {"disease", "disorder", "syndrome", "the", "of", "and", "with", "chronic"}
+    def _toks(s):
+        return {w for w in re.split(r"[^a-z0-9]+", (s or "").lower())
+                if len(w) > 3 and w not in _stop}
+    ltoks = _toks(label)
+    for k in known_indications:
+        nm = (k.get("name") or "").lower()
+        nt = _toks(nm + " " + _SYN.get(nm, ""))
+        if not nt:
+            continue
+        # 'eosinophilic' qualifier discriminator: if the indication is granulomatosis+
+        # polyangiitis WITHOUT 'eosinophilic' (GPA/Wegener) and every 'granulomatosis' in
+        # the label is preceded by 'eosinophilic' (i.e. the label only approves EGPA),
+        # this is a different disease → do not approve it.
+        if ("granulomatosis" in nt and "eosinophilic" not in nt
+                and "eosinophilic granulomatosis" in label
+                and re.search(r"(?<!eosinophilic )granulomatosis", label) is None):
+            continue
+        if len(nt & ltoks) / len(nt) >= 0.6:             # indication named in the FDA label
+            if float(k.get("max_phase") or 0) < 4:
+                k["max_phase"] = 4.0
+                k["approval_source"] = "fda_label"
 CACHE_FILE  = Path(__file__).parent.parent / "data" / "reverse_cache.json"
 CACHE_TTL   = 21600  # 6 hours
 
@@ -384,10 +456,18 @@ def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
 
 
 def _trial_outcome_signal(e: Dict) -> float:
-    """Directional trial-outcome signal in [-1, 1]. POSTED RESULTS at a real phase are
-    the only strong positive — bare 'completed' just means the trial ran (its readout may
-    have been negative), so it counts near-neutral. Efficacy/safety failures are negative."""
-    pos = 0.10 * e.get("completed", 0) + 0.35 * e.get("with_results", 0) + 0.06 * e.get("ongoing", 0)
+    """Directional trial-outcome signal in [-1, 1].
+
+    HONESTY GUARD (audited 2026-07): 'has posted results' (ClinicalTrials.gov
+    hasResults) means the trial reported SOMETHING — the readout may have been
+    NEGATIVE. We do NOT yet parse primary-endpoint significance, so completed /
+    with-results / ongoing are credited ONLY as weak PROGRAM signal (a human thought
+    the pair worth running), hard-capped so they can never masquerade as a positive
+    EFFICACY readout. The only strong signals here are the NEGATIVES — a trial
+    stopped for efficacy/safety is real negative evidence."""
+    pos = min(0.20, 0.04 * e.get("completed", 0)
+                    + 0.05 * e.get("with_results", 0)
+                    + 0.03 * e.get("ongoing", 0))
     neg = 0.60 * e.get("failed_efficacy", 0) + 0.40 * e.get("failed_safety", 0)
     return round(max(-1.0, min(1.0, pos - neg)), 3)
 
@@ -466,12 +546,16 @@ def _evidence_tier(c: Dict) -> Dict:
     if fs > 0:
         return {"tier": "contradicted", "label": "Failed on safety",
                 "note": "a trial stopped for safety in this indication"}
-    if (osig >= 0.50 and ph >= 2) or (ph >= 3 and osig >= 0.30):
-        return {"tier": "trial-supported", "label": "Trial-supported",
-                "note": f"Phase {ph} trial(s) with positive posted results here"}
+    # HONESTY GUARD (audited 2026-07): we do NOT parse primary-endpoint significance, so
+    # we NEVER assert "positive results". A completed/with-results trial is prior clinical
+    # art (a human tested it), NOT proof of benefit — label it exactly that.
+    if ph >= 2 and tc > 0:
+        return {"tier": "tested-unverified", "label": "Clinically tested · unproven",
+                "note": (f"Phase {ph} trial(s) run in this indication, but the primary-endpoint "
+                         f"outcome is not verified in-platform — prior clinical art, not proof of benefit.")}
     if tc > 0 or ph >= 1:
-        return {"tier": "promising", "label": "Promising · unproven",
-                "note": f"{tc} trial(s) up to Phase {ph}, no positive readout yet — results-parsing pending"}
+        return {"tier": "promising", "label": "Early clinical · unproven",
+                "note": f"{tc} trial(s) up to Phase {ph}; no verified positive readout."}
     if lit >= 3:
         return {"tier": "literature", "label": "Literature signal",
                 "note": f"{lit} co-mentions, no clinical trial"}
@@ -881,6 +965,13 @@ def resolve_drug(drug: str) -> Dict:
                 pass
         known_indications = list(by_label.values())
 
+    # Correct approval status against the authoritative FDA label (ChEMBL per-indication
+    # phase is trial-phase, not approval — so it mislabels approved biologic indications).
+    try:
+        _mark_fda_approved(name, known_indications)
+    except Exception as e:
+        logger.debug(f"FDA approval mark skipped: {e}")
+
     return {
         "chembl_id":         parent_id,
         "name":              name,
@@ -889,6 +980,87 @@ def resolve_drug(drug: str) -> Dict:
         "targets":           targets,
         "known_indications": known_indications,
     }
+
+
+def indication_phase_for(disease: str, known_indications) -> Optional[int]:
+    """Development phase of the drug's known indication that BEST matches `disease`
+    (token overlap), or None if none matches. Used to PHASE-SCALE prior clinical art in
+    scoring so a merely-STUDIED indication (imatinib→pulmonary hypertension, Phase 2/3)
+    is not credited like an APPROVED one (imatinib→chronic myeloid leukemia, Phase 4).
+
+    Best-match (not max over all loose matches) so an approved form is not credited to a
+    merely-studied sibling: 'acute myeloid leukemia' matches its own ChEMBL entry, not the
+    Phase-4 'chronic myeloid leukemia'. 'chronic'/'acute'/'primary' are kept as tokens
+    precisely because they discriminate disease subtypes."""
+    _stop = {"disease", "disorder", "syndrome", "with", "associated", "the", "of", "and"}
+    def _tok(s):
+        # keep numeric tokens (len 1) so subtype discriminators survive: 'Type 2' vs
+        # 'Type 1' must NOT collapse (that gave T2D the Phase-3 Type-1 entry, breaking
+        # metformin→T2D's own-therapy suppression → false 'Contraindicated').
+        return {w for w in re.split(r"[^a-z0-9]+", (s or "").lower())
+                if (len(w) > 3 or w.isdigit()) and w not in _stop}
+    dt = _tok(disease)
+    if not dt:
+        return None
+    best_ph, best_ov = None, -1.0
+    for k in known_indications or []:
+        nm = k.get("name", "") if isinstance(k, dict) else str(k)
+        kt = _tok(nm)
+        if not kt:
+            continue
+        ov = len(dt & kt) / len(dt)          # fraction of disease tokens present in the indication
+        _ph = int(float(k.get("max_phase") or 0)) if isinstance(k, dict) else 0
+        # higher overlap wins; on a tie prefer the higher (more-approved) phase, so an
+        # approved form is never credited to a merely-studied same-name sibling.
+        if ov >= 0.5 and (ov > best_ov or (ov == best_ov and _ph > (best_ph or -1))):
+            best_ov, best_ph = ov, _ph
+    return best_ph
+
+
+def narrow_broad_disease(disease: str, drug_genes, _cache: Dict = {}) -> Optional[str]:
+    """If `disease` is a BROAD umbrella (vasculitis), return the single drug-RELEVANT
+    subtype — the one whose disease genes include a drug target (EGPA for an IL-5 drug) —
+    so a candidate names the EXACT disease, not the umbrella (mepolizumab does not treat
+    vasculitis broadly, only eosinophilic/EGPA). None if not broad or no target-linked
+    subtype. Memoized; fail-soft."""
+    dg = {g.upper() for g in (drug_genes or [])}
+    if not dg or not disease:
+        return None
+    ck = (disease.lower(), tuple(sorted(dg)))
+    if ck in _cache:
+        return _cache[ck]
+    res = None
+    try:
+        from services.disease_normalize import expand
+        from services.disease_ontology import resolve_disease as _rd
+        e = expand(disease)
+        if e.get("is_broad"):
+            best, best_n = None, 0
+            for sub in (e.get("indications") or [])[:6]:
+                lbl = sub.get("label", "")
+                if not lbl:
+                    continue
+                sg = {(t.get("gene_symbol") or "").upper()
+                      for t in (_rd(lbl) or {}).get("targets", [])[:40]}
+                n = len(dg & sg)
+                if n > best_n:
+                    best_n, best = n, lbl
+            res = best
+    except Exception as ex:
+        logger.debug(f"narrow_broad_disease({disease}) skipped: {ex}")
+    _cache[ck] = res
+    return res
+
+
+def _reverse_provenance() -> Dict:
+    """Data lineage for the drug→indications ranking: the sources that produced it, each
+    dated + Data-Age & Integrity scored. Fail-soft → {}."""
+    try:
+        from services.provenance import lineage
+        return lineage(["drugs_fda_label", "clinicaltrials", "open_targets",
+                        "chembl33", "drkg", "mondo"])
+    except Exception:
+        return {}
 
 
 # ── Canonical repurposing score (single source of truth for a drug–disease pair) ──
@@ -906,7 +1078,9 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
     when the very reason it surfaced IS a mechanism. Changes the cache key so a
     prior-boosted score never overwrites the plain direct-scoring value for the pair."""
     _pk = "" if mechanistic_prior is None else f"|m{round(float(mechanistic_prior), 2)}"
-    cache_key = f"pair:{(chembl_id or drug_name).lower()}|{disease.lower().strip()}{_pk}"
+    # v2: phase-scaled prior-art + mechanism-only renorm (2026-07 audit) — bump invalidates
+    # pre-fix cached pair scores so the confounding-inflated values are not served.
+    cache_key = f"pair:v2:{(chembl_id or drug_name).lower()}|{disease.lower().strip()}{_pk}"
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -949,10 +1123,18 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
     disease_weights = {t["gene_symbol"].upper():
                        (t.get("quality_score") or t.get("genetic_score") or t.get("score", 0.0))
                        for t in dinfo.get("targets", []) if t.get("gene_symbol")}
+    # per-indication phase (drug's development phase in THIS disease) → phase-scale prior art
+    _iphase = None
+    try:
+        _pinfo = resolve_drug(chembl_id or drug_name)
+        _iphase = indication_phase_for(disease, _pinfo.get("known_indications", []))
+    except Exception:
+        pass
     sr = score_compound_for_disease(compound, disease, disease_genes, disease_pathways, ppi,
                                     drug_genes, drug_actions=drug_actions,
                                     disease_gene_weights=disease_weights or None,
-                                    mechanistic_prior=mechanistic_prior)
+                                    mechanistic_prior=mechanistic_prior,
+                                    indication_phase=_iphase)
     out = {"score": sr["composite_score"], "composite_score": sr["composite_score"],
            "scores": sr["scores"], "safety": sr.get("safety", {}),
            "coverage": sr.get("coverage", {}),
@@ -1151,13 +1333,29 @@ def screen_indications_for_drug(
     if not chembl_id:
         return {"drug": drug, "error": "Could not resolve drug in ChEMBL", "candidates": []}
 
+    # F7 biologic-aware path (audited 2026-07): classify modality once. For an antibody /
+    # protein / peptide / oligo, the structure-based science stack (docking, PBPK, quantum,
+    # CNS-MPO, med-chem liability, potency lead-viability) does NOT apply — mark it as an
+    # explicit, first-class N/A rather than a silent null, and rank on the target/pathway
+    # + trial/biomarker axis the biologic actually acts through.
+    try:
+        from services.modality import classify as _classify_modality
+        _modality = _classify_modality(name=info.get("name", drug),
+                                       smiles=info.get("smiles", ""),
+                                       molecule_type=info.get("molecule_type", ""))
+    except Exception as e:
+        logger.debug(f"modality classify failed: {e}")
+        _modality = {"modality": "unknown", "is_small_molecule": bool(info.get("smiles")),
+                     "optimization": "smiles", "label": "unknown"}
+    _is_biologic = not _modality.get("is_small_molecule", True) and _modality.get("modality") != "unknown"
+
     # Drug-aware oncology default: only an oncology drug repurposes OUT of oncology.
     onc_drug = _is_oncology_drug(info)
     if exclude_oncology is None:
         exclude_oncology = onc_drug
 
     cache_key = (f"drug:{drug.lower().strip()}|area:{(area_filter or '').lower()}"
-                 f"|noonc:{int(exclude_oncology)}")
+                 f"|noonc:{int(exclude_oncology)}|v2")   # v2: subtype-expansion + excluded/studied split
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -1352,6 +1550,22 @@ def screen_indications_for_drug(
     # source proposed it — the genetic target→disease path can surface the same
     # symptom terms that the literature/trials paths do. Generic denylist, not a
     # per-drug list, so it stays consistent with the runtime-derived design.
+    # F4 (audited 2026-07): narrow BROAD umbrella candidates (vasculitis) to the drug-
+    # relevant subtype (EGPA for an IL-5 drug) BEFORE the approval filter — so a card names
+    # the EXACT disease, and an approved subtype is then correctly excluded. Bounded to the
+    # strongest few (each subtype resolve is a live lookup); memoized.
+    _narrowed = 0
+    for c in candidate_map.values():
+        if _narrowed >= 8:
+            break
+        if float(c.get("association_score") or 0) < 0.20:
+            continue
+        nb = narrow_broad_disease(c.get("disease", ""), drug_genes)
+        if nb and nb.lower() != (c.get("disease", "") or "").lower():
+            c["narrowed_from"] = c.get("disease")
+            c["disease"] = nb
+            c["efo_id"] = ""
+            _narrowed += 1
     candidates = [c for c in candidate_map.values()
                   if not _is_approved_here(c) and not _is_ae_symptom(c["disease"])]
 
@@ -1407,7 +1621,13 @@ def screen_indications_for_drug(
     # CNS-MPO (Wager 2010): can this molecule cross the blood-brain barrier? This
     # gates whether a CNS candidate indication is even physically plausible.
     from services.cns_mpo import cns_mpo as _cns_mpo
-    drug_mpo = _cns_mpo(props=info.get("properties") or {}, smiles=info.get("smiles") or "")
+    # CNS-MPO is a small-molecule (MW/TPSA/HBD/logP) property score — not applicable to a
+    # biologic. Mark it N/A explicitly instead of returning a null-filled shell.
+    if _is_biologic:
+        drug_mpo = {"applicable": False, "cns_druggable": None,
+                    "note": f"Not applicable — {_modality.get('label', 'biologic')} (CNS-MPO scores small-molecule properties)."}
+    else:
+        drug_mpo = _cns_mpo(props=info.get("properties") or {}, smiles=info.get("smiles") or "")
 
     def _is_cns_disease(areas, name):
         # Classify from the candidate's REAL Open Targets therapeutic areas (no
@@ -1450,6 +1670,13 @@ def screen_indications_for_drug(
         _blob = " ".join(_curated_actions.values()).lower()
         drug_action = ("inhibitor" if any(w in _blob for w in ("inhib", "antagon", "block"))
                        else "agonist" if "agonist" in _blob else "")
+    # F7: a monoclonal antibody / antisense oligo NEUTRALIZES its target by default
+    # (mepolizumab blocks IL-5, omalizumab blocks IgE), so the direction is antagonist
+    # even without a curated ChEMBL action — otherwise direction/appropriateness runs blind.
+    if not drug_action and _is_biologic and _modality.get("modality") in ("antibody", "oligonucleotide"):
+        drug_action = "inhibitor"
+        if not drug_action_map:
+            drug_action_map = {g: "inhibitor" for g in screen_genes}
     # C. The drug's serious FAERS reactions — to flag AE-not-target candidates.
     try:
         from services.safety_filter import _faers_serious_reactions
@@ -1459,6 +1686,12 @@ def screen_indications_for_drug(
     _faers_total = sum(cnt for _, cnt in _faers_rx)
 
     drug_gene_set = {g.upper() for g in drug_genes}
+    # per-indication development phase (drug's phase in THIS disease) → phase-scale prior
+    # clinical art in the scorer, so a merely-STUDIED indication is not credited like an
+    # APPROVED one (the confounding that ranked tried/failed indications at the top).
+    _known_inds = info.get("known_indications", [])
+    def _ind_phase_for(dis: str):
+        return indication_phase_for(dis, _known_inds)
     scored: List[Dict] = []
     for c in candidates:
         _attach_trials_by_name(c, trials)   # so a failed trial reaches a mechanism-only candidate
@@ -1475,6 +1708,7 @@ def screen_indications_for_drug(
             disease_gene_weights=disease_weights or None, drug_actions=drug_action_map or None,
             trial_count=c.get("trial_count", 0), max_trial_phase=c.get("max_trial_phase", 0),
             trial_outcome=c.get("trial_outcome_signal", 0.0),
+            indication_phase=_ind_phase_for(c["disease"]),
         )
         sc = sr["scores"]
 
@@ -1639,8 +1873,9 @@ def screen_indications_for_drug(
     # Real-world evidence tier nudges rank order: a trial-supported candidate outranks an
     # equal-scoring mechanism-only one, and a contradicted one sinks — without overwriting
     # the mechanistic composite (which stays the displayed score).
-    _TIER_RANK = {"trial-supported": 1.15, "promising": 1.03, "literature": 0.97,
-                  "preclinical": 0.95, "mechanistic": 0.95, "contradicted": 0.55}
+    _TIER_RANK = {"tested-unverified": 1.05, "trial-supported": 1.15, "promising": 1.03,
+                  "literature": 0.97, "preclinical": 0.95, "mechanistic": 0.95,
+                  "contradicted": 0.55}
     def _rank(x):
         dv = x.get("disease_value") or {}
         vw = dv.get("value_score", 0.5) if dv else 0.5
@@ -1648,6 +1883,20 @@ def screen_indications_for_drug(
         tier_f = _TIER_RANK.get((x.get("evidence_tier") or {}).get("tier", ""), 1.0)
         return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f * tier_f
     scored.sort(key=_rank, reverse=True)
+
+    # F8 (audited 2026-07): collapse duplicate candidates that resolve to the SAME disease
+    # under different EFO ids / name variants (e.g. two 'pulmonary hypertension, primary'
+    # rows from the OT and trial sources). The sort above put the best-ranked instance
+    # first, so keep first-seen per normalized disease key and drop the rest.
+    _seen_dis, _dedup = set(), []
+    for _c in scored:
+        _dn = (_c.get("disease") or "").lower()
+        _key = " ".join(sorted(w for w in re.split(r"[^a-z0-9]+", _dn) if len(w) > 3)) or _dn
+        if _key in _seen_dis:
+            continue
+        _seen_dis.add(_key)
+        _dedup.append(_c)
+    scored = _dedup
 
     # Positive-Pivot generation: for CCH-crushed candidates, turn the mismatch into a
     # discovery lead (severe/orphan variant, dose-sparing combination, or brain-
@@ -1669,11 +1918,29 @@ def screen_indications_for_drug(
     except Exception as e:
         logger.debug(f"pivot generation skipped: {e}")
 
+    # Flag candidates that are a KNOWN but sub-phase-4 (studied, not approved) indication —
+    # prior clinical art kept intentionally, NOT a novel discovery. This is why e.g.
+    # eosinophilic esophagitis (Phase 2 for mepolizumab) legitimately appears as a
+    # candidate; the card labels it so, and it is NOT listed as "excluded".
+    _studied = [(k["name"], float(k.get("max_phase") or 0)) for k in info["known_indications"]
+                if 0 < float(k.get("max_phase") or 0) < 4]
+    for _c in scored:
+        for _nm, _ph in _studied:
+            if _same_disease(_c.get("disease", ""), _nm):
+                _c["prior_studied_phase"] = _ph
+                break
+
     result = {
         "drug":              info["name"],
         "chembl_id":         chembl_id,
         "smiles":            info.get("smiles", ""),
         "drug_targets":      drug_genes[:20],
+        # Only APPROVED indications are actually excluded from results; studied (sub-
+        # phase-4) ones remain candidates (flagged prior_studied_phase), so split them.
+        "excluded_indications": [k["name"] for k in info["known_indications"]
+                                 if float(k.get("max_phase") or 0) >= 4],
+        "studied_indications":  [k["name"] for k in info["known_indications"]
+                                 if 0 < float(k.get("max_phase") or 0) < 4],
         "known_indications": [k["name"] for k in info["known_indications"]],
         "area_filter":       area_filter or "",
         "exclude_oncology":  exclude_oncology,
@@ -1682,6 +1949,25 @@ def screen_indications_for_drug(
         "candidate_count":   len(scored),
         "candidates":        scored,
         "cns_mpo":           drug_mpo,
+        # F7 biologic-aware: expose modality + an explicit list of the small-molecule-only
+        # modules that do NOT apply, so the UI shows first-class "N/A (biologic)" instead
+        # of blank/zero panels a pharma reviewer would read as a gap.
+        # Provenance + freshness: the data lineage behind these candidates, each source
+        # dated + integrity-scored so a reviewer sees exactly where the ranking came from
+        # (and that e.g. the ChEMBL bioactivity snapshot is aging while trials are live).
+        "provenance":        _reverse_provenance(),
+        "modality":          _modality,
+        "not_applicable":    ([
+            "Molecular docking (no small-molecule structure)",
+            "PBPK exposure (small-molecule perfusion model)",
+            "Quantum chemistry (small-molecule electronic structure)",
+            "CNS-MPO (small-molecule properties)",
+            "Structure-aware med-chem liability",
+            "Potency lead-viability (IC50/Ki funnel)",
+        ] if _is_biologic else []),
+        "modality_basis":    (f"{_modality.get('label', 'biologic')} — ranked on target/pathway "
+                              f"and clinical/biomarker evidence; small-molecule structure modules "
+                              f"are not applicable." if _is_biologic else ""),
         "_ts":               time.time(),
     }
     cache[cache_key] = result

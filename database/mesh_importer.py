@@ -170,15 +170,18 @@ def _batch_fetch_entry_terms(mesh_ids: List[str], batch_size: int = 30) -> Dict[
         batch  = mesh_ids[i : i + batch_size]
         values = " ".join(f"<{MESH_BASE}{mid}>" for mid in batch)
 
+        # MeSH descriptors expose their synonyms via (preferred|narrower) Concept →
+        # Term → (prefLabel|altLabel). The earlier `meshv:concept`/`rdfs:label` path
+        # returns nothing on the live NLM endpoint, which left entry_terms empty.
         query = f"""
         PREFIX meshv: <{VOCAB}>
         PREFIX rdfs:  <http://www.w3.org/2000/01/rdf-schema#>
 
         SELECT ?d ?term WHERE {{
           VALUES ?d {{ {values} }}
-          ?d meshv:concept ?concept .
+          ?d meshv:concept|meshv:preferredConcept ?concept .
           ?concept meshv:term ?t .
-          ?t rdfs:label ?term .
+          ?t meshv:prefLabel|meshv:altLabel ?term .
         }}
         """
 

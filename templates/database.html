@@ -22,37 +22,73 @@
   <div id="db-out" class="mt-1"></div>
 </div>
 
-<!-- Stats -->
+<!-- Data footprint -->
+{% if footprint %}
+{% macro statcard(title, source, badge, rows) %}
+<div class="card" style="margin:0">
+  <div class="flex items-center justify-between mb-1">
+    <div class="card-title" style="margin:0">{{ title }}</div>
+    {% if badge %}<span style="font-size:0.66rem;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--accent-soft,rgba(37, 99, 235,0.12));color:var(--accent,#2563eb)">{{ badge }}</span>{% endif %}
+  </div>
+  <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.6rem">{{ source }}</div>
+  <table class="data-table" style="font-size:0.82rem">
+    <tbody>
+      {% for label, val in rows %}
+      <tr><td>{{ label }}</td><td class="mono" style="text-align:right;color:var(--purple);font-weight:600">{{ "{:,}".format(val) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+<div class="section-head" style="margin:0.25rem 0 0.6rem"><span class="s-kicker">Data Footprint</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:1rem;margin-bottom:1.25rem">
+
+  {{ statcard(
+      "Bioactivity - Source Database",
+      footprint.chembl.version ~ " · released " ~ footprint.chembl.release,
+      "validated",
+      [("Molecules", footprint.chembl.molecules),
+       ("Bioactivities", footprint.chembl.activities),
+       ("Assays", footprint.chembl.assays),
+       ("Protein targets", footprint.chembl.targets)]) }}
+
+  {{ statcard(
+      "Knowledge Graph",
+      "Curated biomedical graph · " ~ footprint.graph.metaedge_types ~ " relationship types",
+      "real graph",
+      [("Edges (curated)", footprint.graph.edges_real),
+       ("Edges (internally-derived)", footprint.graph.edges_derived),
+       ("Total edges", footprint.graph.edges_total),
+       ("Nodes", footprint.graph.nodes)]) }}
+
+  {{ statcard(
+      "Neuro Working Set",
+      "Distilled subset used by the repurposing engine",
+      "",
+      [("Compounds", footprint.working_set.compounds),
+       ("Mechanisms", footprint.working_set.mechanisms),
+       ("Clinical indications", footprint.working_set.indications),
+       ("Indexed diseases", footprint.working_set.mesh_diseases),
+       ("Targets", footprint.working_set.targets)]) }}
+
+</div>
+<div class="text-sm text-text-muted" style="margin:-0.5rem 0 1.25rem">
+  Source-versioned and validated under ALCOA+ / GAMP 5.
+  <a href="/validation" class="text-cyan" style="font-weight:600;text-decoration:none">View data validation &rarr;</a>
+</div>
+{% elif stats %}
 <div class="card">
   <div class="card-title mb-1">Database Statistics</div>
-  {% if stats %}
-  <div class="overflow-x">
-    <table class="data-table">
-      <thead><tr><th>Table</th><th>Records</th></tr></thead>
-      <tbody>
-        {% set display_names = {
-          "compounds": "Compounds",
-          "targets": "Protein Targets",
-          "mechanisms": "Mechanism Records",
-          "indications": "Clinical Indications",
-          "hetionet_nodes": "Knowledge Graph Nodes",
-          "mesh_diseases": "Disease Classifications"
-        } %}
-        {% for key, val in stats.items() %}
-        <tr>
-          <td>{{ display_names.get(key, key.replace("_"," ").title()) }}</td>
-          <td class="mono" style="color:var(--purple)">{{ "{:,}".format(val) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">
-    <p>Database offline or no statistics available.</p>
-  </div>
-  {% endif %}
+  <div class="overflow-x"><table class="data-table"><tbody>
+    {% for key, val in stats.items() %}
+    <tr><td>{{ key.replace("_"," ").title() }}</td><td class="mono" style="color:var(--purple)">{{ "{:,}".format(val) }}</td></tr>
+    {% endfor %}
+  </tbody></table></div>
 </div>
+{% else %}
+<div class="card"><div class="empty-state"><p>Database offline or no statistics available.</p></div></div>
+{% endif %}
 
 <script>
 async function doSearch() {

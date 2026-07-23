@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set active_page = "discover" %}
-{% block title %}Compound Discovery · CipherQ{% endblock %}
+{% block title %}Compound Discovery · RepurposeIQ{% endblock %}
 
 {% block content %}
 <!-- Header / search -->
@@ -57,6 +57,9 @@
   <div id="top3-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem"></div>
 </div>
 
+<!-- Subtype-grouped results (broad diseases only) -->
+<div id="subtype-groups" style="display:none;margin-bottom:1.75rem"></div>
+
 <!-- Compound Grid -->
 <div class="compound-grid" id="compound-grid">
   <div style="grid-column:1/-1" class="empty-state" id="empty-default">
@@ -95,7 +98,7 @@ function buildWhy(c) {
   return parts.slice(0, 2).join(' · ') || 'Computational repurposing candidate';
 }
 
-// ── Score factor bars — uniform accent→gold gradient (one accent discipline) ──
+// ── Score factor bars - uniform accent→gold gradient (one accent discipline) ──
 function scoreBars(c) {
   const sc = c.score || 0, bd = c.score_breakdown || {}, sc5 = c.scores || {};
   const has5 = sc5 && Object.keys(sc5).length > 0;
@@ -117,6 +120,34 @@ function graphHref(chembl, disease) {
   return "/graph?disease=" + encodeURIComponent(disease) + (chembl ? "&compound=" + encodeURIComponent(chembl) : "");
 }
 
+// Flag the one genuine novelty disqualifier: already APPROVED for this indication.
+// Prior lower-phase development is not flagged - it is de-risking, not a blocker.
+function approvedBadge(c) {
+  if (!c.approved_here) return '';
+  return `<div style="background:#fce8e6;border:1px solid #f5b5ad;border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#7a1d12;line-height:1.4">Already approved for this indication - reference only, not a 505(b)(2) opportunity</div>`;
+}
+
+// Novel knowledge-graph-discovered candidate (not previously indicated): show the
+// connecting biology so the lead is explainable, not a black box.
+function novelBadge(c) {
+  if (!c.novelty) return '';
+  const bd = c.score_breakdown || {};
+  const genes = (bd.network_genes || []).slice(0, 5).join(', ');
+  const n = (c.shared_disease_genes != null) ? c.shared_disease_genes : (bd.network_genes || []).length;
+  return `<div style="background:rgba(37, 99, 235,0.10);border:1px solid rgba(37, 99, 235,0.30);border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#2563eb;line-height:1.4">Novel via knowledge graph - ${n} shared disease gene${n==1?'':'s'}${genes ? ' · ' + genes : ''}</div>`;
+}
+
+// Per-card data provenance: which sources the numbers came from + a link to the
+// live validation page. Trust shown where the decision is made.
+function provFooter(c) {
+  const bd = c.score_breakdown || {};
+  const src = ['Validated bioactivity DB'];
+  if ((bd.network_score || 0) > 0 || c.novelty) src.push('Knowledge Graph');
+  return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.6rem;color:var(--text-muted);border-top:1px solid rgba(0,0,0,0.06);padding-top:6px;margin-top:1px">
+    <span>Sources: ${src.join(' · ')}</span>
+    <a href="/validation" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-weight:600">Validated</a></div>`;
+}
+
 // ── Standard dossier card ─────────────────────────────────────────────────────
 function buildCard(c, disease) {
   const sc = c.score || 0;
@@ -135,8 +166,8 @@ function buildCard(c, disease) {
         <div class="seal-lbl" style="margin-top:3px">Confidence</div>
       </div>
     </div>
-    <div class="why-line"><span class="mk">▸</span><span>${buildWhy(c)}</span></div>
-    <div class="cc-bars">${scoreBars(c)}</div>
+    ${approvedBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
       <button onclick="event.stopPropagation();window.location.href=graphHref('${c.chembl_id || ''}','${dEsc}')" title="Knowledge Graph" class="btn btn-secondary" style="padding:0.45rem 0.6rem">
@@ -146,7 +177,7 @@ function buildCard(c, disease) {
   </div>`;
 }
 
-// ── Lead (top-3) card — same dossier, rank seal banner ────────────────────────
+// ── Lead (top-3) card - same dossier, rank seal banner ────────────────────────
 function buildTop3Card(c, disease, rank) {
   const sc = c.score || 0;
   const ph = Math.min(+(c.max_phase || 0), 4);
@@ -165,8 +196,8 @@ function buildTop3Card(c, disease, rank) {
       </div>
       ${window.scoreSeal(sc, 60)}
     </div>
-    <div class="why-line"><span class="mk">▸</span><span>${buildWhy(c)}</span></div>
-    <div class="cc-bars">${scoreBars(c)}</div>
+    ${approvedBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
       <button onclick="event.stopPropagation();window.location.href=graphHref('${c.chembl_id || ''}','${dEsc}')" title="Knowledge Graph" class="btn btn-secondary" style="padding:0.45rem 0.6rem">
@@ -176,15 +207,35 @@ function buildTop3Card(c, disease, rank) {
   </div>`;
 }
 
+// A lead needs real mechanistic support - target, pathway or network signal.
+// A drug that scores only on clinical co-mention (e.g. an antibiotic that merely
+// appears in the disease's trial literature) has target=pathway=0 and must not be
+// featured as a lead, however high its clinical bar.
+function _hasMechanism(c) {
+  const s = c.scores || {}, b = c.score_breakdown || {};
+  const t = (+s.target  || 0) || (+b.target_score  || 0);
+  const p = (+s.pathway || 0);
+  const n = (+s.ppi     || 0) || (+b.network_score || 0);
+  return t > 0.05 || p > 0.05 || n > 0.05;
+}
+
 function renderTop3(compounds, disease) {
   const sec = document.getElementById('top3-section');
   const grid = document.getElementById('top3-grid');
   const graphBtn = document.getElementById('graph-link-btn');
-  if (!compounds.length) { sec.style.display = 'none'; return; }
+  // Leads must be genuine repurposing opportunities - never feature a drug already
+  // approved for this indication (shown in the grid, flagged), nor a mechanism-less
+  // clinical co-mention. Fall back to all novel candidates only if NONE have a
+  // mechanistic signal, so diseases lacking target/pathway data still show leads.
+  const eligible = compounds.filter(c => !c.approved_here);
+  const mech = eligible.filter(_hasMechanism);
+  const novel = mech.length ? mech : eligible;
+  if (!novel.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
-  grid.innerHTML = compounds.slice(0, 3).map((c, i) => buildTop3Card(c, disease, i + 1)).join('');
+  grid.innerHTML = novel.slice(0, 3).map((c, i) => buildTop3Card(c, disease, i + 1)).join('');
+  filterCards();   // honour the active phase filter on (re)render
   if (graphBtn) {
-    const topId = (compounds[0] || {}).chembl_id || '';
+    const topId = (novel[0] || {}).chembl_id || '';
     graphBtn.onclick = () => window.location.href = graphHref(topId, disease);
   }
 }
@@ -200,6 +251,7 @@ function renderGrid(compounds, disease) {
     return;
   }
   grid.innerHTML = compounds.map(c => buildCard(c, disease)).join('');
+  filterCards();   // honour the active phase filter on (re)render
 }
 
 function doSearch() {
@@ -224,16 +276,80 @@ function doSearch() {
     _saveSession(data.compounds, disease);
     renderTop3(data.compounds, disease);
     history.pushState({}, '', '/discover?q=' + encodeURIComponent(q));
+    // Broad-category → subtype expansion: if the searched disease is an umbrella term,
+    // show its clinically-distinct subtypes so the user can refine to a precise indication.
+    let _sb = document.getElementById('disc-subtype-banner');
+    if (!_sb) {
+      _sb = document.createElement('div'); _sb.id = 'disc-subtype-banner';
+      _sb.style.margin = '0 0 14px'; _sb.style.display = 'none';
+      const st = document.getElementById('status-bar');
+      if (st && st.parentNode) st.parentNode.insertBefore(_sb, st.nextSibling);
+    }
+    if (window.renderDiseaseExpansion) {
+      window.renderDiseaseExpansion(disease, _sb, function (sub) {
+        document.getElementById('disc-q').value = sub; doSearch();
+      }).then(function (exp) {
+        // AUTO-RUN: broad term → score every subtype and show results grouped by subtype.
+        const _sg = document.getElementById('subtype-groups');
+        if (exp && exp.is_broad) { runSubtypeGroups(q); }
+        else if (_sg) { _sg.style.display = 'none'; _sg.innerHTML = ''; }
+      });
+    }
   })
   .catch(e => { toast('Search failed: ' + e.message, 'error'); document.getElementById('status-bar').innerHTML = ''; })
   .finally(() => { btn.innerHTML = origHTML; btn.disabled = false; });
 }
 
+async function runSubtypeGroups(q) {
+  const cont = document.getElementById('subtype-groups');
+  if (!cont) return;
+  cont.style.display = 'block';
+  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:0.82rem;color:#6b7690"><span class="spinner"></span> Running each subtype separately — grouping results…</div>';
+  try {
+    const data = await apiFetch('/api/search-subtypes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q })
+    });
+    if (!data || !data.is_broad || !(data.groups || []).length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+    const header = `<div class="section-head" style="margin-bottom:0.75rem">
+        <span class="s-kicker">Subtype breakdown</span>
+        <span class="section-title">${data.parent} — results by specific subtype</span><div class="rule"></div>
+      </div>`;
+    const sections = data.groups.map(function (g) {
+      const cards = (g.compounds || []).map(function (c) {
+        if (c.chembl_id) window._compounds[c.chembl_id] = c;
+        return buildCard(c, g.subtype);
+      }).join('');
+      return `<div style="margin-bottom:1.4rem">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:0.6rem">
+            <span style="font-weight:700;font-size:0.95rem;color:#0f1e3d">${g.subtype}</span>
+            <span class="chip cyan">${g.n} candidate${g.n === 1 ? '' : 's'}</span>
+          </div>
+          <div class="compound-grid">${cards}</div>
+        </div>`;
+    }).join('');
+    cont.innerHTML = header + sections;
+  } catch (e) { cont.style.display = 'none'; cont.innerHTML = ''; }
+}
+
 function filterCards() {
-  const ph = document.getElementById('filter-phase').value;
-  document.querySelectorAll('#compound-grid [data-chembl]').forEach(el => {
+  const ph = (document.getElementById('filter-phase') || {}).value || '';
+  // Apply to BOTH the lead strip and the full grid so the phase filter is honoured everywhere.
+  let leadVisible = 0;
+  document.querySelectorAll('#top3-grid [data-phase]').forEach(el => {
+    const show = (!ph || el.dataset.phase === ph);
+    el.style.display = show ? '' : 'none';
+    if (show) leadVisible++;
+  });
+  document.querySelectorAll('#compound-grid [data-phase]').forEach(el => {
     el.style.display = (!ph || el.dataset.phase === ph) ? '' : 'none';
   });
+  // Collapse the whole "Lead Candidates" section when the active filter hides every
+  // lead - avoids an orphan "Third candidate" card with no first or second.
+  const sec = document.getElementById('top3-section');
+  if (sec && document.querySelectorAll('#top3-grid [data-phase]').length) {
+    sec.style.display = leadVisible ? 'block' : 'none';
+  }
 }
 
 function openCompound(chemblId, disease) {
@@ -275,7 +391,7 @@ function _loadSession() {
   } catch(_) { return false; }
 }
 
-// Initial render — single JS path for both server results and session restore
+// Initial render - single JS path for both server results and session restore
 if (window._initialResults.length) {
   renderGrid(window._initialResults, window._currentDisease);
   _saveSession(window._initialResults, window._currentDisease);

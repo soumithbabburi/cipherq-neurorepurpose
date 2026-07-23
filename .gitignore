@@ -71,3 +71,21 @@ data/drkg/drkg_graph.npz
 data/drkg/unichem_chembl_drugbank.txt.gz
 data/drkg/embed/
 data/drkg/._*
+
+# ── Added 2026-07-22 (checkpoint hygiene) ────────────────────────────────
+# Conda / QC environment (gigabytes of packages — never versioned)
+.qc/
+# pytest cache
+.pytest_cache/
+# temp / backup / scratch artifacts
+*.tmp
+*.bak
+scratch_*.json
+data/reverse_cache.*.tmp
+# large regenerable data / model binaries (kept local, not in git)
+data/kg_embeddings.npz
+data/pos_model.pkl
+data/external/
+data/orange_book/
+# accidental path-named output dirs (misconfigured writer)
+C:Users*/

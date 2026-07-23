@@ -281,8 +281,12 @@ def _pocket_subset(P: dict, center: np.ndarray, radius: float = 14.0) -> dict:
 # ── Main entry ───────────────────────────────────────────────────────────────
 
 def dock_ligand(protein_pdb: str, ligand_smiles_or_sdf: str, drug_name: str = "ligand",
-                n_poses: int = 5, seed: int = 7) -> Dict:
-    """Dock a ligand into a protein pocket. Returns poses (SDF) + affinities (kcal/mol)."""
+                n_poses: int = 5, seed: int = 7, center=None) -> Dict:
+    """Dock a ligand into a protein pocket. Returns poses (SDF) + affinities (kcal/mol).
+
+    If `center` (x,y,z) is given, docking targets that site — pass a named pocket's
+    centre so the docked pose lands in the same pocket the UI labels/highlights.
+    """
     try:
         from rdkit import Chem
     except Exception:
@@ -297,9 +301,13 @@ def dock_ligand(protein_pdb: str, ligand_smiles_or_sdf: str, drug_name: str = "l
         return {"success": False, "error": "Could not build 3-D ligand", "poses": []}
     mol, cids, heavy_idx, lp, n_rot = prepared
 
-    center = _pocket_center(prot)
+    if center is not None:
+        center = np.asarray(center, dtype=float)
+        pocket_source = "named binding pocket"
+    else:
+        center = _pocket_center(prot)
+        pocket_source = "co-crystallised ligand" if prot.get("pocket_ligand") is not None else "largest buried cavity"
     Psub = _pocket_subset(prot, center)
-    pocket_source = "co-crystallised ligand" if prot.get("pocket_ligand") is not None else "largest buried cavity"
 
     rng = np.random.default_rng(seed)
     n_trials = 16            # random placements per conformer
@@ -375,7 +383,7 @@ def dock_ligand(protein_pdb: str, ligand_smiles_or_sdf: str, drug_name: str = "l
         "poses": poses,
         "binding_affinities": affs,
         "confidence_scores": confs,
-        "docking_method": "CipherQ Dock (Vina-style empirical scoring)",
+        "docking_method": "RepurposeIQ Dock (Vina-style empirical scoring)",
         "pocket_center": [round(float(v), 2) for v in center],
         "pocket_source": pocket_source,
         "note": ("Physics-based pocket docking (Vina-style empirical scoring): "

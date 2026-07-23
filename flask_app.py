@@ -156,6 +156,22 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "neurorepurpose-cipherq-2026")
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
+
+@app.after_request
+def _no_html_cache(resp):
+    # HTML pages carry inline JS AND the /api JSON responses both change with every
+    # deploy — never let the browser serve a stale copy (this is what made fixes "still
+    # show the old version": HTML was cached, and so were the JSON API responses).
+    try:
+        ct = resp.headers.get("Content-Type", "")
+        if ct.startswith("text/html") or ct.startswith("application/json"):
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+    except Exception:
+        pass
+    return resp
+
 # Shared HTTP session — connection pooling cuts per-request overhead
 _http = requests.Session()
 _http.headers.update({"User-Agent": "RepurposeIQ/1.0"})
@@ -918,6 +934,51 @@ def api_stats():
     return jsonify(get_stats() if DB_OK else {})
 
 
+@app.route("/provenance")
+def provenance_page():
+    return render_template("provenance.html")
+
+
+@app.route("/api/provenance")
+def api_provenance():
+    """Data lineage + freshness registry — every source with its Data-Age & Integrity tag."""
+    try:
+        from services.provenance import registry_snapshot
+        return jsonify(registry_snapshot())
+    except Exception as e:
+        logger.debug(f"provenance snapshot failed: {e}")
+        return jsonify({"sources": [], "error": str(e)})
+
+
+@app.route("/api/landing-stats")
+def api_landing_stats():
+    """Live counts for the marketing landing rail. Bioactivities + disease-ontology
+    size are DB-derived; concordance and AUROC are constants from the validation run.
+    Falls back to curated numbers if the DB is unavailable so the rail never breaks."""
+    out = {"bioactivities": None, "diseases": None, "concordance": 91, "auroc": 0.73}
+    try:
+        if DB_OK:
+            fp = get_data_footprint() or {}
+            acts = (fp.get("chembl") or {}).get("activities") or 0
+            if acts:
+                out["bioactivities"] = int(acts)
+    except Exception as e:
+        logger.debug(f"landing-stats chembl: {e}")
+    try:
+        import sqlite3
+        dbp = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "data", "disease_reference", "disease_value.db")
+        if os.path.exists(dbp):
+            con = sqlite3.connect(dbp)
+            n = con.execute("SELECT COUNT(*) FROM diseases").fetchone()[0]
+            con.close()
+            if n:
+                out["diseases"] = int(n)          # full MONDO ontology size
+    except Exception as e:
+        logger.debug(f"landing-stats mondo: {e}")
+    return jsonify(out)
+
+
 @app.route("/api/search", methods=["POST"])
 def api_search():
     data = request.get_json() or {}
@@ -925,7 +986,63 @@ def api_search():
     if not q: return jsonify({"error": "No query"}), 400
     resolved, expanded, comps = _resolve_fetch(q)
     disease_name = resolved[0]["heading"] if resolved else q
+    # If the disease search found nothing, the query may actually be a DRUG name
+    # (a biologic like 'mepolizumab' resolves to no disease compounds). Detect it and
+    # point the caller at the drug's repurposing view instead of a silent empty result.
+    if not comps:
+        try:
+            from services.reverse_repurposing import resolve_drug
+            di = resolve_drug(q)
+            if di and di.get("chembl_id") and (di.get("targets") or di.get("known_indications")):
+                return jsonify({
+                    "disease": disease_name, "mesh_ids": expanded, "compounds": [],
+                    "is_drug": True,
+                    "drug": {"name": di.get("name"), "chembl_id": di.get("chembl_id"),
+                             "targets": (di.get("targets") or [])[:12]},
+                    "redirect": f"/api/drug/{di.get('chembl_id')}/new-indications",
+                    "message": (f"'{di.get('name')}' is a drug — showing which new "
+                                f"indications it could be repurposed into.")})
+        except Exception as e:
+            logger.debug(f"drug-detect in search failed: {e}")
     return jsonify({"disease": disease_name, "mesh_ids": expanded, "compounds": comps})
+
+
+@app.route("/api/search-subtypes", methods=["POST"])
+def api_search_subtypes():
+    """Broad-disease auto-run: if the query is an umbrella term, run the repurposing
+    screen SEPARATELY for each specific subtype and return results GROUPED by subtype
+    (so a subtype-specific drug, e.g. Mepolizumab for EGPA, surfaces under its subtype
+    instead of being diluted across a generic 'vasculitis' search). Specific terms run
+    once. Subtypes are capped and run in parallel to bound latency."""
+    data = request.get_json() or {}
+    q = (data.get("query", "") or "").strip()
+    if not q:
+        return jsonify({"error": "No query"}), 400
+    try:
+        from services.disease_normalize import expand
+        exp = expand(q)
+    except Exception as e:
+        logger.debug(f"search-subtypes expand failed: {e}")
+        exp = {"is_broad": False, "parent_label": q, "indications": [{"label": q}]}
+
+    def _run(label):
+        try:
+            resolved, expanded, comps = _resolve_fetch(label)
+            heading = resolved[0]["heading"] if resolved else label
+            return {"subtype": heading, "n": len(comps), "compounds": comps[:8]}
+        except Exception as e:
+            logger.debug(f"subtype screen '{label}' failed: {e}")
+            return {"subtype": label, "n": 0, "compounds": []}
+
+    if not exp.get("is_broad"):
+        g = _run(q)
+        return jsonify({"parent": exp.get("parent_label", q), "is_broad": False, "groups": [g]})
+
+    subs = exp.get("indications", [])[:8]      # cap K=8 subtypes (bounded latency)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        groups = list(pool.map(lambda s: _run(s["label"]), subs))
+    groups = [g for g in groups if g["compounds"]]     # drop empty subtypes
+    return jsonify({"parent": exp.get("parent_label", q), "is_broad": True, "groups": groups})
 
 
 @app.route("/api/compound/<chembl_id>")
@@ -1340,15 +1457,69 @@ def api_graph():
         return jsonify({"elements": [], "legend": {}, "error": str(e)})
 
 
+def _filter_graph_confidence(elems):
+    """Drop low-relevance clutter so the picture shows only high-confidence structure:
+    weak generic association edges, low-value disease nodes, and any node left orphaned.
+    Mechanistic/clinical edges (treats, inhibits, binds, encodes…) and the drug + anchor
+    nodes are always kept."""
+    nodes = {e["data"]["id"]: e for e in elems if "source" not in e["data"]}
+    edges = [e for e in elems if "source" in e["data"]]
+
+    DRUG_TARGET_EDGES = {"BINDS_TO", "INHIBITS", "ACTIVATES", "targets"}
+    # which genes/proteins are actual DRUG TARGETS (connected to a Compound node)?
+    compound_ids = {nid for nid, e in nodes.items() if e["data"].get("kind") == "Compound"}
+    drug_target_ids = set()
+    for e in edges:
+        d = e["data"]
+        if d.get("label") in DRUG_TARGET_EDGES:
+            for a, b in ((d["source"], d["target"]), (d["target"], d["source"])):
+                if a in compound_ids:
+                    drug_target_ids.add(b)
+
+    # 1. drop clutter NODES: low-value diseases, and weakly-relevant genes/proteins/
+    #    pathways that are NOT a drug target, NOT a bridge, and NOT well disease-associated.
+    drop = set()
+    for nid, e in nodes.items():
+        d = e["data"]; kind = d.get("kind")
+        if kind == "Disease" and d.get("value_tier") == "Low value":
+            drop.add(nid)
+        elif kind in ("Gene", "Protein"):
+            is_target = nid in drug_target_ids
+            is_bridge = bool(d.get("bridge"))
+            assoc_ok  = (d.get("ot_score") or 0) >= 0.30
+            if not (is_target or is_bridge or assoc_ok):
+                drop.add(nid)
+        elif kind == "Pathway":
+            # keep a pathway only if it bridges to a disease (IMPLICATED_IN); pure
+            # participation-only pathways are mechanism detail, not high-confidence story.
+            if not any(ed["data"].get("label") == "IMPLICATED_IN" and
+                       (ed["data"]["source"] == nid or ed["data"]["target"] == nid) for ed in edges):
+                drop.add(nid)
+
+    kept_edges = [e for e in edges
+                  if e["data"]["source"] not in drop and e["data"]["target"] not in drop]
+    # 2. remove orphaned nodes, keeping the drugs + anchor disease
+    connected = set()
+    for e in kept_edges:
+        connected.add(e["data"]["source"]); connected.add(e["data"]["target"])
+    kept_nodes = [e for nid, e in nodes.items()
+                  if nid not in drop and
+                  (nid in connected or e["data"].get("focal") or e["data"].get("kind") in ("Compound", "Disease"))]
+    return kept_nodes + kept_edges
+
+
 @app.route("/api/repurpose-graph")
 def api_repurpose_graph():
     """
     Story graph: top-3 repurposing candidates from our DB for a disease,
     connected via shared gene targets to explain WHY each drug is a candidate.
+
+    conf=high (default) filters low-relevance clutter; conf=all shows everything.
     """
     disease     = request.args.get("disease", "").strip()
     top_n       = min(int(request.args.get("n", 3)), 5)
     compound_id = request.args.get("compound", "").strip()
+    high_conf   = request.args.get("conf", "high") != "all"
     # Molecule-first entry: a compound but no disease -> build a COMPOUND-CENTRIC
     # repurposing graph (molecule -> protein targets -> candidate diseases). Needs
     # no known indication — this is the graph a repurposing scientist actually wants.
@@ -1357,6 +1528,8 @@ def api_repurpose_graph():
             from services.biocypher_graph import build_compound_graph
             elems, legend = build_compound_graph(compound_id, top_n=14)
             if elems:
+                if high_conf:
+                    elems = _filter_graph_confidence(elems)
                 return jsonify({"elements": elems, "legend": legend,
                                 "compound": compound_id, "mode": "compound"})
         except Exception:
@@ -1369,6 +1542,8 @@ def api_repurpose_graph():
         from services.biocypher_graph import build_repurpose_story_graph
         elems, legend = build_repurpose_story_graph(
             disease, top_n=top_n, focal_compound=compound_id or None)
+        if high_conf:
+            elems = _filter_graph_confidence(elems)
         return jsonify({"elements": elems, "legend": legend, "disease": disease})
     except Exception as e:
         logger.exception("repurpose-graph error")
@@ -1474,89 +1649,100 @@ def api_graph_narrative():
     except Exception:
         pass
 
-    # Fallback: fetch mechanisms + gene symbols directly from ChEMBL if graph gave nothing
+    # Targets: prefer the story graph's compound-target edges (correct + already built).
+    # If the graph gave nothing, use the platform's LOCAL resolve_drug targets
+    # (deterministic, from chembl_33) — NOT a live ChEMBL call. The old live fallback
+    # returned WRONG genes non-deterministically (e.g. EGFR/ERBB2 for imatinib, whose
+    # real targets are BCR-ABL/KIT/PDGFR), which is exactly the imprecision to remove.
     mech_actions = []
     gene_names   = []
-    if not graph_genes:
-        try:
-            r = _http.get(
-                "https://www.ebi.ac.uk/chembl/api/data/mechanism.json",
-                params={"molecule_chembl_id": compound_id, "limit": 8, "format": "json"},
-                timeout=5)
-            if r.ok:
-                mdata  = r.json().get("mechanisms", [])
-                mech_actions = [m.get("mechanism_of_action", "") for m in mdata if m.get("mechanism_of_action")][:3]
-                tids   = [m.get("target_chembl_id") for m in mdata if m.get("target_chembl_id")][:4]
-                if tids:
-                    with ThreadPoolExecutor(max_workers=4) as pool:
-                        infos = list(pool.map(_chembl_target_info, tids))
-                    gene_names = [(g, p) for g, p in infos if g][:4]
-        except Exception:
-            pass
-    else:
+    if graph_genes:
         gene_names   = [(g[0], g[1]) for g in graph_genes[:4]]
         mech_actions = [g[2] for g in graph_genes if g[2] and g[2] not in ("BINDS_TO", "ASSOCIATED_WITH", "binds_to")][:3]
         if not mech_actions:
             mech_actions = [mechs.split(",")[0].strip()] if mechs else []
+    else:
+        try:
+            from services.reverse_repurposing import resolve_drug
+            info = resolve_drug(compound_id) or {}
+            gene_names = [(g, "") for g in (info.get("targets") or [])[:4]]
+        except Exception as e:
+            logger.debug(f"narrative local target lookup failed: {e}")
+        if mechs:
+            mech_actions = [mechs.split(",")[0].strip()]
 
     # Human-readable labels
     phase_labels = {0: "preclinical compound", 1: "Phase 1 compound", 2: "Phase 2 compound",
                     3: "Phase 3 compound",     4: "FDA-approved drug"}
     phase_str  = phase_labels.get(phase, "investigational compound")
     gene_str   = ", ".join([g for g, _ in gene_names[:3]]) if gene_names else "relevant molecular targets"
-    target_str = "; ".join([f"{g} ({p})" if p else g for g, p in gene_names[:3]]) if gene_names else gene_str
+    # dedupe redundant "(name)" when the name equals the gene symbol (e.g. "ERBB2 (ERBB2)")
+    target_str = "; ".join([f"{g} ({p})" if (p and p.strip().lower() != g.strip().lower()) else g
+                            for g, p in gene_names[:3]]) if gene_names else gene_str
     mech_prim  = mech_actions[0] if mech_actions else (mechs.split(",")[0].strip() if mechs else "modulating disease-relevant pathways")
     ind_list   = [i.strip() for i in inds.split(",") if i.strip()][:3]
     approved_str = f"It is already approved for {', '.join(ind_list[:2])}. " if ind_list else ""
 
-    # CNS penetration heuristic (simplified Lipinski / PSA rule)
-    bbb_ok  = logp > 0.5 and psa < 90 and mw < 500
-    bbb_txt = ""
-    if bbb_ok:
-        bbb_txt = (f"Its physicochemical profile (LogP {logp:.1f}, PSA {psa:.0f} Å², MW {mw:.0f} Da) "
-                   "is consistent with blood–brain barrier penetration — important for neurological targets.")
-    elif psa > 120:
-        bbb_txt = (f"Its high polar surface area ({psa:.0f} Å²) may limit brain penetration; "
-                   "formulation or prodrug strategies could be considered for CNS delivery.")
+    # Delivery note — ONLY for CNS indications, using the real CNS-MPO (not an ad-hoc
+    # rule), so a non-CNS disease never gets spurious "brain penetration" language.
+    disease_short = disease.split("(")[0].strip()
+    _cns_kw = ("alzheimer", "parkinson", "huntington", "neuro", "dementia", "epilep",
+               "seizure", "depress", "schizophren", "migraine", "multiple sclerosis",
+               "amyotrophic", "psych", "brain", "cns")
+    is_cns = any(k in disease.lower() for k in _cns_kw)
+    delivery_txt = ""
+    if is_cns:
+        try:
+            from services.cns_mpo import cns_mpo
+            _mpo = cns_mpo(smiles=c.get("smiles", ""))
+            if _mpo.get("score") is not None:
+                if _mpo.get("cns_druggable"):
+                    delivery_txt = (f"Its CNS-MPO score is {_mpo['score']}/6 ({_mpo['verdict']}), "
+                                    "consistent with brain exposure for this CNS indication.")
+                else:
+                    delivery_txt = (f"Its CNS-MPO score is {_mpo['score']}/6 ({_mpo['verdict']}); "
+                                    "brain penetration may be limiting here and would need confirmation.")
+        except Exception:
+            pass
 
     pathway_txt = ""
     if graph_pathways:
-        pathway_txt = (f"The knowledge graph links it to {', '.join(graph_pathways[:2])} — "
-                       f"pathways directly implicated in {disease} pathogenesis. ")
+        pathway_txt = (f"The graph links it to {', '.join(graph_pathways[:2])}, "
+                       f"pathway(s) implicated in {disease_short}. ")
 
-    # Build hypothesis paragraph
-    disease_short = disease.split("(")[0].strip()
+    # Build hypothesis paragraph — disease-agnostic and appropriately hedged (no
+    # hardcoded neuro claims, no "well-established driver" overreach).
+    driver_gene = gene_str.split(',')[0].strip() if gene_names else "these molecular pathways"
     parts = [
         f"{name} is a {phase_str} that acts by {mech_prim}.",
         f"Its primary molecular targets are {target_str}.",
         approved_str,
-        f"In {disease_short}, dysregulation of {gene_str.split(',')[0].strip() if gene_names else 'these molecular pathways'} "
-        f"is a well-established driver of disease onset and progression.",
+        f"In {disease_short}, {driver_gene} has been implicated in disease biology.",
         pathway_txt,
-        f"By blocking or modulating this axis, {name} has the potential to slow pathological signalling, "
-        f"reduce neuroinflammation or cellular stress, and preserve neuronal function in {disease_short} patients.",
-        bbb_txt,
+        f"Engaging {driver_gene} is therefore a plausible mechanistic route to affect {disease_short}. "
+        "This is a computational hypothesis, weighted by the repurposing score below.",
+        delivery_txt,
     ]
     hypothesis = " ".join(p for p in parts if p.strip())
 
-    # Evidence-chain bullets
+    # Evidence chain — typed category tags (no emoji), most-specific first.
     evidence_chain = []
     if gene_names:
-        evidence_chain.append({"icon": "🧬", "text": f"Targets {', '.join([g for g, _ in gene_names[:2]])} — validated in {disease_short} literature"})
+        evidence_chain.append({"tag": "Target", "text": f"Targets {', '.join([g for g, _ in gene_names[:2]])} — associated with {disease_short}"})
     if mech_actions:
-        evidence_chain.append({"icon": "⚗️", "text": f"Mechanism: {mech_actions[0]}"})
+        evidence_chain.append({"tag": "Mechanism", "text": mech_actions[0]})
     if phase >= 3:
-        evidence_chain.append({"icon": "🏥", "text": f"Phase {phase} clinical data — safety and efficacy signals established"})
+        evidence_chain.append({"tag": "Clinical", "text": f"Phase {phase} clinical data — safety and efficacy signals established"})
     elif phase >= 1:
-        evidence_chain.append({"icon": "🏥", "text": f"Phase {phase} data available — early human pharmacology known"})
+        evidence_chain.append({"tag": "Clinical", "text": f"Phase {phase} data — early human pharmacology known"})
     if graph_pathways:
-        evidence_chain.append({"icon": "🔗", "text": f"Graph connects drug via {graph_pathways[0]} — key disease pathway"})
+        evidence_chain.append({"tag": "Pathway", "text": f"Linked via {graph_pathways[0]} — a {disease_short} pathway"})
     if ind_list:
-        evidence_chain.append({"icon": "✅", "text": f"Approved in {ind_list[0]} — potential mechanism overlap with {disease_short}"})
+        evidence_chain.append({"tag": "Approved", "text": f"Approved in {ind_list[0]} — possible mechanism overlap"})
     if score:
-        evidence_chain.append({"icon": "📊", "text": f"Repurposing score {score*100:.0f}/100 — target overlap, clinical evidence & network analysis"})
-    if bbb_txt:
-        evidence_chain.append({"icon": "🧠", "text": bbb_txt})
+        evidence_chain.append({"tag": "Score", "text": f"Repurposing score {score*100:.0f}/100 — target overlap, clinical evidence and network analysis"})
+    if delivery_txt:
+        evidence_chain.append({"tag": "Delivery", "text": delivery_txt})
 
     return jsonify({
         "drug_name":      name,
@@ -1643,6 +1829,25 @@ def api_suggest_diseases():
         return jsonify(suggest_diseases(q, limit=8))
     except Exception:
         return jsonify([])
+
+
+@app.route("/api/disease-expand")
+def api_disease_expand():
+    """Normalize a disease term to the ontology and split a BROAD parent label into its
+    specific subtypes (vasculitis → EGPA/GPA/MPA/Behçet/…). Returns
+    {is_broad, parent_label, indications:[{label, mesh_id, is_subtype, value_score}]}.
+    Platform-wide: every surface that takes a disease can call this to avoid scoring or
+    reporting a broad umbrella term as one indication."""
+    disease = request.args.get("disease", "").strip()
+    if not disease:
+        return jsonify({"is_broad": False, "parent_label": "", "indications": []})
+    try:
+        from services.disease_normalize import expand
+        return jsonify(expand(disease))
+    except Exception as e:
+        logger.debug(f"disease-expand: {e}")
+        return jsonify({"is_broad": False, "parent_label": disease,
+                        "indications": [{"label": disease, "is_subtype": False}]})
 
 
 @app.route("/api/clinical")
@@ -2032,13 +2237,25 @@ def api_optimize(chembl_id):
     c = _get_compound(chembl_id)
     if not c: return jsonify({"error": f"Compound {chembl_id} not found"}), 404
     smiles = c.get("smiles", "")
+    # Modality-aware routing: SMILES optimization is for SMALL MOLECULES only. An
+    # antibody/peptide/protein/oligo is optimized in sequence + developability space —
+    # return that workflow instead of a "no SMILES" error (mepolizumab etc.).
+    try:
+        from services.modality import classify
+        mod = classify(name=c.get("name", ""), smiles=smiles,
+                       molecule_type=c.get("molecule_type", ""))
+    except Exception:
+        mod = {"is_small_molecule": bool(smiles), "modality": "small_molecule"}
+    if not mod.get("is_small_molecule"):
+        try:
+            from services.biologic_optimization import optimize as _bio_opt
+            bio = _bio_opt(c.get("name", chembl_id), mod.get("modality", "antibody"))
+        except Exception as _e:
+            logger.debug(f"biologic optimize failed: {_e}")
+            bio = {}
+        return jsonify({"name": c.get("name", "Drug"), "modality": mod,
+                        "biologic_optimization": bio, "smiles": smiles})
     if not smiles:
-        mtype = c.get("molecule_type", "")
-        if mtype and mtype.lower() not in ("small molecule", ""):
-            return jsonify({"error": (
-                f"{c.get('name', chembl_id)} is a {mtype} — SMILES-based optimization "
-                "applies only to small molecules."
-            )}), 400
         return jsonify({"error": "No SMILES available for this compound."}), 400
     try:
         from rdkit.Chem import rdMolDescriptors
@@ -2086,7 +2303,9 @@ def api_optimize(chembl_id):
             suggestions.append({"property": "PSA", "current": f"{psa:.1f} Å²",
                                  "target": f"< {psa_thr} Å²",
                                  "impact": "BBB penetration" if "CNS" in profile["area"] else "Membrane permeability",
-                                 "action": action})
+                                 "action": action,
+                                 # N-methylate a secondary amide N-H: drops PSA (~12 Å²) and one HBD
+                                 "rxn": "[NH1;$(N-C=O):1]>>[N:1]C"})
         if mw > mw_thr:
             suggestions.append({"property": "Mol. Weight", "current": f"{mw:.1f} Da",
                                  "target": f"< {mw_thr} Da",
@@ -2096,17 +2315,23 @@ def api_optimize(chembl_id):
             suggestions.append({"property": "LogP", "current": f"{logp:.2f}",
                                  "target": f"{logp_lo:.0f}–{logp_hi:.0f}",
                                  "impact": "Solubility & metabolic stability",
-                                 "action": "Add polar groups (OH, NH₂); reduce aromatic ring count"})
+                                 "action": "Add polar groups (OH, NH₂); reduce aromatic ring count",
+                                 # add a phenolic OH to an aromatic C-H: lowers cLogP
+                                 "rxn": "[cH:1]>>[c:1]O"})
         elif logp < logp_lo:
             suggestions.append({"property": "LogP", "current": f"{logp:.2f}",
                                  "target": f"{logp_lo:.0f}–{logp_hi:.0f}",
                                  "impact": "Membrane permeability",
-                                 "action": "Add methyl/ethyl groups; replace amines with lipophilic bioisosteres"})
+                                 "action": "Add methyl/ethyl groups; replace amines with lipophilic bioisosteres",
+                                 # add a methyl to an aromatic C-H: raises cLogP
+                                 "rxn": "[cH:1]>>[c:1]C"})
         if hbd > hbd_thr:
             suggestions.append({"property": "H-Bond Donors", "current": str(hbd),
                                  "target": f"≤ {hbd_thr}",
                                  "impact": "Membrane permeability & BBB" if "CNS" in profile["area"] else "Oral absorption",
-                                 "action": "Cap -OH/-NH with esters or amides; N-methylate NH groups"})
+                                 "action": "Cap -OH/-NH with esters or amides; N-methylate NH groups",
+                                 # N-methylate a secondary amide N-H: removes one HBD
+                                 "rxn": "[NH1;$(N-C=O):1]>>[N:1]C"})
         if rb > profile["rb_max"]:
             suggestions.append({"property": "Rotatable Bonds", "current": str(rb),
                                  "target": f"≤ {profile['rb_max']}",
@@ -2117,11 +2342,8 @@ def api_optimize(chembl_id):
                                  "target": "≤ 3",
                                  "impact": "Metabolic stability & hERG risk",
                                  "action": "Replace aromatic rings with saturated bioisosteres"})
-        if not suggestions:
-            suggestions.append({"property": "Drug-likeness", "current": "All parameters within range",
-                                 "target": "Maintain",
-                                 "impact": f"Favorable profile for {profile['area']}",
-                                 "action": "Focus on potency/selectivity optimization; physicochemical properties are already within target range"})
+        # No filler card when everything is in range — the UI shows a clean
+        # "properties within range" message instead of a fake actionable suggestion.
 
         # Radar — profile-aware labels and scoring
         area = profile["area"]
@@ -2181,6 +2403,17 @@ def api_optimize(chembl_id):
             "rb_max": profile["rb_max"],
             "accept_violations": profile["accept_violations"],
         }
+        # Deep, structure-aware liability analysis — reactive/metabolic substructures,
+        # PAINS/Brenk/NIH alerts, and the SPECIFIC limiting property (not just "reduce PSA
+        # for BBB"). This is the real "what to modify and why" layer.
+        advice = {}
+        try:
+            from services.med_chem_advisor import analyze as _mca
+            advice = _mca(smiles, area=profile.get("area", ""), disease=disease,
+                          therapeutic_areas=profile.get("therapeutic_areas") or [])
+        except Exception as _e:
+            logger.debug(f"med-chem advisor skipped: {_e}")
+
         return jsonify({
             "name":   c.get("name", "Drug"),
             "smiles": smiles,
@@ -2189,11 +2422,33 @@ def api_optimize(chembl_id):
             "lipinski": lipinski_rules,
             "lipinski_pass_all": lipinski_pass_all,
             "suggestions": suggestions,
+            "advisor": advice,          # deep liability analysis (structure-aware)
             "radar": radar,
             "targets": targets,
             "profile": profile_out,
         })
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/biologic/scan", methods=["POST"])
+def api_biologic_scan():
+    """Hands-on antibody/protein analysis: given a VH/VL (or protein) sequence, compute
+    real developability metrics (pI, net charge, GRAVY hydrophobicity, aromatic %) and
+    scan for chemical liabilities (deamidation, isomerization, oxidation, N-glycosylation,
+    free Cys, Asp-Pro). Returns the same shape as the optimize biologic block."""
+    data = request.get_json() or {}
+    import re as _re
+    name = (data.get("name") or "antibody").strip()
+    modality = (data.get("modality") or "antibody").strip()
+    sequence = (data.get("sequence") or "").strip()
+    if not sequence or len(_re.sub(r"[^A-Za-z]", "", sequence)) < 8:
+        return jsonify({"error": "Provide an amino-acid sequence (VH and/or VL)."}), 400
+    try:
+        from services.biologic_optimization import optimize as _bio_opt
+        return jsonify(_bio_opt(name, modality, sequence=sequence))
+    except Exception as e:
+        logger.exception("biologic scan error")
         return jsonify({"error": str(e)}), 500
 
 
@@ -2224,20 +2479,23 @@ def api_optimize_smiles():
         hba  = rdMolDescriptors.CalcNumHBA(mol)
         rb   = Descriptors.NumRotatableBonds(mol)
         qed  = round(Descriptors.qed(mol), 3)
-        bbb = 0
-        if psa < 60:   bbb += 30
-        elif psa < 90: bbb += 15
-        if mw < 400:   bbb += 25
-        elif mw < 500: bbb += 10
-        if 1 <= logp <= 3:     bbb += 25
-        elif 0 <= logp <= 4.5: bbb += 10
-        if hbd <= 2:   bbb += 20
-        elif hbd <= 3: bbb += 10
-        bbb_level = "High" if bbb >= 75 else "Moderate" if bbb >= 45 else "Low"
+        # Real CNS-MPO (Wager et al., 6-property desirability, 0–6) in place of the
+        # old ad-hoc additive BBB heuristic — consistent with the Liability Analysis.
+        mpo_score, mpo_level, mpo_verdict = None, "n/a", ""
+        try:
+            from services.cns_mpo import cns_mpo as _cns
+            _m = _cns(smiles=smi)
+            mpo_score = _m.get("score")
+            mpo_verdict = _m.get("verdict", "")
+            if mpo_score is not None:
+                mpo_level = ("High" if mpo_score >= 4.5 else
+                             "Moderate" if mpo_score >= 4.0 else "Low")
+        except Exception:
+            pass
         ro5 = sum([mw > 500, logp > 5, hbd > 5, hba > 10])
         return {"mw": mw, "logp": logp, "psa": psa, "hbd": hbd, "hba": hba,
-                "rb": rb, "qed": qed, "bbb_score": bbb, "bbb_level": bbb_level,
-                "ro5_violations": ro5}
+                "rb": rb, "qed": qed, "cns_mpo": mpo_score, "cns_mpo_level": mpo_level,
+                "cns_verdict": mpo_verdict, "ro5_violations": ro5}
 
     try:
         new_p = _props(new_smiles)
@@ -2251,8 +2509,9 @@ def api_optimize_smiles():
         except ValueError:
             pass
 
-    delta_keys = ["mw", "logp", "psa", "hbd", "hba", "rb", "qed", "bbb_score"]
-    deltas = {k: round(new_p[k] - orig_p[k], 3) for k in delta_keys if k in orig_p and k in new_p}
+    delta_keys = ["mw", "logp", "psa", "hbd", "hba", "rb", "qed", "cns_mpo"]
+    deltas = {k: round(new_p[k] - orig_p[k], 3) for k in delta_keys
+              if isinstance(orig_p.get(k), (int, float)) and isinstance(new_p.get(k), (int, float))}
 
     # Classify each delta as improvement, neutral, or regression
     improvements = []
@@ -2262,7 +2521,7 @@ def api_optimize_smiles():
         ("hbd",       "H-Bond Donors",       True,  ""),
         ("hba",       "H-Bond Acceptors",    True,  ""),
         ("rb",        "Rotatable Bonds",     True,  ""),
-        ("bbb_score", "BBB Score",           False, ""),
+        ("cns_mpo",   "CNS-MPO",             False, ""),
         ("qed",       "QED Drug-likeness",   False, ""),
         ("logp",      "LogP",                None,  ""),
     ]:
@@ -2282,8 +2541,10 @@ def api_optimize_smiles():
                     direction = "neutral"
             else:
                 direction = "neutral"
-        elif prop == "bbb_score" or prop == "qed":
-            direction = "better" if d > 2 else "worse" if d < -2 else "neutral"
+        elif prop == "cns_mpo":
+            direction = "better" if d > 0.3 else "worse" if d < -0.3 else "neutral"
+        elif prop == "qed":
+            direction = "better" if d > 0.05 else "worse" if d < -0.05 else "neutral"
         else:
             direction = "better" if d < 0 else "worse" if d > 0 else "neutral"
         if direction != "neutral":
@@ -2299,7 +2560,10 @@ def api_optimize_smiles():
 
     safety = [
         {"check": "Lipinski Ro5",    "pass": new_p["ro5_violations"] == 0, "detail": f"{new_p['ro5_violations']} violation(s)"},
-        {"check": "BBB Penetration", "pass": new_p["bbb_level"] != "Low",  "detail": new_p["bbb_level"]},
+        {"check": "CNS-MPO ≥ 4 (brain-penetrant)",
+         "pass": isinstance(new_p.get("cns_mpo"), (int, float)) and new_p["cns_mpo"] >= 4.0,
+         "detail": (f"{new_p['cns_mpo']}/6 · {new_p['cns_mpo_level']}"
+                    if isinstance(new_p.get("cns_mpo"), (int, float)) else "n/a")},
         {"check": "MW ≤ 500 Da",     "pass": new_p["mw"] <= 500,           "detail": f"{new_p['mw']} Da"},
         {"check": "LogP 0–5",        "pass": 0 <= new_p["logp"] <= 5,      "detail": str(new_p["logp"])},
         {"check": "HBD ≤ 5",         "pass": new_p["hbd"] <= 5,            "detail": str(new_p["hbd"])},
@@ -2316,12 +2580,12 @@ def api_optimize_smiles():
     if improved_labels:
         parts.append(f"key pharmacokinetic properties improved: {', '.join(improved_labels[:3])}")
     psa_d = deltas.get("psa", 0)
-    bbb_d = deltas.get("bbb_score", 0)
+    mpo_d = deltas.get("cns_mpo", 0)
     if psa_d < -5:
         parts.append(f"PSA reduced by {abs(psa_d):.1f} Å² — enhancing CNS membrane permeability")
-    if bbb_d > 5:
-        bbb_old = orig_p.get("bbb_level", "—")
-        parts.append(f"BBB score improved by {int(bbb_d)} points ({bbb_old} → {new_p['bbb_level']} penetration)")
+    if mpo_d > 0.3:
+        mpo_old = orig_p.get("cns_mpo_level", "—")
+        parts.append(f"CNS-MPO improved by {mpo_d:.1f} ({mpo_old} → {new_p['cns_mpo_level']} brain penetration)")
     if disease:
         dis_lo = disease.lower()
         if any(w in dis_lo for w in ("alzheimer", "parkinson", "huntington", "neuro", "depression", "schizo")):
@@ -2426,6 +2690,36 @@ def api_patents():
             exclusivities = ob.get("exclusivities", [])
         except Exception as e:
             logger.debug(f"orange book error: {e}")
+
+    # 0b. DrugPatentWatch (paid subscription) — only when credentials are configured;
+    # otherwise inert and the Orange Book above is the authoritative source.
+    if drug:
+        try:
+            from services.drug_patent_watch import patents_for_drug as _dpw
+            for p in _dpw(drug).get("patents", []):
+                if p["id"] in seen_ids:
+                    continue
+                seen_ids.add(p["id"])
+                patents.append({**p, "abstract": p.get("abstract", ""),
+                                "year": (p.get("expiry_iso") or p.get("expiry") or "")[:4]})
+        except Exception as e:
+            logger.debug(f"drugpatentwatch error: {e}")
+
+    # 0c. Biologics: the Orange Book only covers SMALL MOLECULES. A biologic
+    # (mepolizumab, adalimumab…) has NO Orange Book patents — its protection lives in
+    # the FDA Purple Book (reference-product exclusivity + biosimilar status). Detect
+    # the modality and, for a biologic, attach Purple Book status so the tab isn't empty.
+    biologic = None
+    if drug:
+        try:
+            from services.modality import classify as _classify
+            _mod = _classify(name=drug)
+            if not _mod.get("is_small_molecule"):
+                from services.purple_book import biologic_status as _bstatus
+                bs = _bstatus(drug)
+                biologic = {"modality": _mod, "purple_book": bs}
+        except Exception as e:
+            logger.debug(f"biologic patent status error: {e}")
 
     # 1. ChEMBL mechanism → patent refs (most reliable source for drug-specific patents)
     if chembl_id and not chembl_id.startswith("NR:"):
@@ -2580,8 +2874,35 @@ def api_patents():
     patents.sort(key=lambda p: (0 if p.get("authoritative") else 1,
                                 _order.get(p.get("status", "unknown"), 3),
                                 -(int(p["year"]) if str(p.get("year", "")).isdigit() else 0)))
+    # Patent cliff: the earliest date this drug loses protection (first ACTIVE patent
+    # or exclusivity to lapse) = the earliest generic-entry window, plus the last
+    # protection standing. This is the headline DrugPatentWatch metric, computed here
+    # from the authoritative FDA Orange Book dates we already hold.
+    from datetime import date as _date
+    _today = _date.today().isoformat()
+    active_exp = sorted({
+        d for d in (
+            [p.get("expiry_iso") for p in patents
+             if p.get("status") == "active" and p.get("expiry_iso")]
+            + [e.get("expiry_iso") for e in exclusivities
+               if e.get("status") == "active" and e.get("expiry_iso")]
+        ) if d and d >= _today
+    })
+    try:
+        from services.drug_patent_watch import status as _dpw_status
+        dpw_state = _dpw_status()
+    except Exception:
+        dpw_state = {"configured": False}
+
     return jsonify(_scrub_sources({
         "patents": patents, "exclusivities": exclusivities,
+        "biologic": biologic,          # Purple Book status for biologics (None for small molecules)
+        "cliff": {
+            "earliest_loss":   active_exp[0]  if active_exp else None,
+            "protected_until": active_exp[-1] if active_exp else None,
+            "n_active_protections": len(active_exp),
+        },
+        "dpw": dpw_state,
         "summary": {
             "total": len(patents),
             "active": sum(1 for p in patents if p.get("status") == "active"),
@@ -2766,6 +3087,74 @@ def api_new_indications(drug_id):
     try:
         result = screen_indications_for_drug(drug_id, area_filter=area,
                                              exclude_oncology=exclude_oncology)
+        # A BROAD candidate indication (e.g. "vasculitis") is REPLACED by its specific
+        # subtypes, each scored individually, so a subtype competes directly in the main
+        # ranking — a subtype can outrank (or sink) the umbrella, which is more honest
+        # than one score for the whole category. Existing indications stay excluded.
+        try:
+            from services.disease_normalize import expand as _dz_expand, normalize as _dn
+            from services.disease_value import value_for as _val
+            cands = result.get("candidates", [])
+            dname = result.get("drug", "") or drug_id
+            dchembl = result.get("chembl_id", "") or (drug_id if drug_id.upper().startswith("CHEMBL") else "")
+            existing = set()
+            try:
+                from services.reverse_repurposing import resolve_drug as _rd
+                for ki in (_rd(dname) or {}).get("known_indications", []):
+                    nm = (ki.get("name") if isinstance(ki, dict) else ki) or ""
+                    if nm:
+                        existing.add(nm.strip().lower())
+            except Exception:
+                pass
+            broad = [c for c in cands if _dn(c.get("disease", "")).get("is_broad")]
+            if broad:
+                jobs, seen = [], set()
+                for pc in broad:
+                    for ind in _dz_expand(pc.get("disease", "")).get("indications", [])[:6]:
+                        if not ind.get("is_subtype"):
+                            continue
+                        lab = ind["label"]; key = lab.lower()
+                        if key in seen or any(e and (e in key or key in e) for e in existing):
+                            continue
+                        seen.add(key)
+                        jobs.append((pc, lab, ind.get("mesh_id", "")))
+
+                def _score_sub(job):
+                    pc, lab, _mesh = job
+                    try:
+                        ps = canonical_pair_score(chembl_id=dchembl, disease=lab, drug_name=dname) or {}
+                    except Exception:
+                        ps = {}
+                    sc = round(float(ps.get("score") or 0.0), 4)
+                    return {
+                        "disease": lab, "efo_id": "", "score": sc, "composite_score": sc,
+                        "scores": ps.get("scores", {}), "calibration": ps.get("calibration", {}),
+                        "plausibility": ps.get("plausibility"), "disease_value": (_val(lab) or None),
+                        "evidence_tier": pc.get("evidence_tier"),
+                        "therapeutic_areas": pc.get("therapeutic_areas", []),
+                        "sources": pc.get("sources", []),
+                        "overlapping_targets": pc.get("overlapping_targets", []),
+                        "rationale": "Specific subtype of " + pc.get("disease", "") + ", scored on its own.",
+                        "is_subtype": True, "parent_indication": pc.get("disease", ""),
+                    }
+                with ThreadPoolExecutor(max_workers=6) as pool:
+                    subs = list(pool.map(_score_sub, jobs))
+                # Keep only the RELEVANT subtypes: the top 3 per parent by the drug's own
+                # score, so a broad category surfaces its best-fitting subtypes instead of
+                # flooding the list with every leaf term.
+                from collections import defaultdict as _dd
+                by_parent = _dd(list)
+                for s in subs:
+                    by_parent[s["parent_indication"]].append(s)
+                broad_ids = {id(c) for c in broad}
+                kept = [c for c in cands if id(c) not in broad_ids]
+                for grp in by_parent.values():
+                    grp.sort(key=lambda x: x["score"], reverse=True)
+                    kept.extend(grp[:3])
+                kept.sort(key=lambda c: (c.get("score") or c.get("composite_score") or 0), reverse=True)
+                result["candidates"] = kept
+        except Exception as _e:
+            logger.debug(f"broad→subtype expansion failed: {_e}")
         # Mark the source molecule's portfolio status for the 505(b)(2) framing
         if PORTFOLIO_OK:
             entry = _portfolio.match(chembl_id=result.get("chembl_id", ""),
@@ -2779,6 +3168,45 @@ def api_new_indications(drug_id):
     except Exception as e:
         logger.exception("new-indications error")
         return jsonify({"error": str(e), "candidates": []}), 500
+
+
+@app.route("/api/drug/<path:drug_id>/indication-subtypes")
+def api_indication_subtypes(drug_id):
+    """Split a BROAD candidate indication (e.g. 'vasculitis') into its specific subtypes
+    and RE-SCORE the drug against each — so a drug→indications result shows which precise
+    subtypes it actually fits (EGPA/GPA/MPA/…), not a single umbrella label.
+    ?disease=<broad indication>. Runs the canonical pair score per subtype (parallel)."""
+    if not REVERSE_OK:
+        return jsonify({"error": "engine unavailable", "subtypes": []}), 503
+    disease = request.args.get("disease", "").strip()
+    if not disease:
+        return jsonify({"error": "disease required", "subtypes": []}), 400
+    try:
+        from services.disease_normalize import expand
+        exp = expand(disease)
+    except Exception as e:
+        return jsonify({"error": str(e), "subtypes": []}), 500
+    if not exp.get("is_broad"):
+        return jsonify({"parent": disease, "is_broad": False, "subtypes": []})
+
+    subs = exp.get("indications", [])[:8]
+
+    def _score(sub):
+        label = sub["label"]
+        try:
+            ps = canonical_pair_score(chembl_id=drug_id if drug_id.upper().startswith("CHEMBL") else "",
+                                      disease=label, drug_name=drug_id) or {}
+            return {"label": label, "score": round(float(ps.get("score") or 0.0), 4),
+                    "value_score": sub.get("value_score")}
+        except Exception as e:
+            logger.debug(f"indication-subtype score {label} failed: {e}")
+            return {"label": label, "score": 0.0, "value_score": sub.get("value_score")}
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        scored = list(pool.map(_score, subs))
+    scored.sort(key=lambda s: s["score"], reverse=True)
+    return jsonify({"parent": exp.get("parent_label", disease), "is_broad": True,
+                    "subtypes": scored})
 
 
 @app.route("/repurpose")
@@ -2798,6 +3226,61 @@ def pathways():
     disease = request.args.get("disease", "").strip()
     return render_template("pathways.html", pathway=pathway, direction=direction,
                            disease=disease, pathway_ok=PATHWAY_OK, db_ok=DB_OK)
+
+
+@app.route("/biosimilars")
+def biosimilars():
+    """Biosimilar Opportunity Radar — reference biologics ranked as biosimilar targets."""
+    return render_template("biosimilars.html", db_ok=DB_OK)
+
+
+@app.route("/api/biosimilar-radar")
+def api_biosimilar_radar():
+    """Ranked reference biologics as biosimilar development targets (FDA Purple Book).
+
+    Query params:
+      q         — filter on molecule / brand name
+      only_open — "1" to show only reference products whose exclusivity has lifted
+      center    — regulatory center filter (default CDER; "all" for every center)
+      limit     — max rows (default 300)
+    """
+    try:
+        from services.purple_book import opportunity_radar
+    except Exception as e:
+        logger.error(f"purple_book import: {e}")
+        return jsonify({"available": False, "error": "module unavailable"})
+    q = request.args.get("q", "").strip()
+    only_open = request.args.get("only_open", "") in ("1", "true", "yes")
+    center = request.args.get("center", "CDER").strip()
+    if center.lower() == "all":
+        center = ""
+    sort = request.args.get("sort", "opportunity").strip()
+    if sort not in ("opportunity", "value", "combined", "activity"):
+        sort = "opportunity"
+    try:
+        limit = min(int(request.args.get("limit", 300)), 1000)
+    except ValueError:
+        limit = 300
+    try:
+        return jsonify(opportunity_radar(limit=limit, only_open=only_open,
+                                         query=q, center=center, sort=sort))
+    except Exception as e:
+        logger.error(f"biosimilar-radar: {e}")
+        return jsonify({"available": False, "error": str(e)})
+
+
+@app.route("/api/biosimilar-evidence")
+def api_biosimilar_evidence():
+    """Biosimilar clinical trials + literature for one reference biologic (lazy, live)."""
+    molecule = request.args.get("molecule", "").strip()
+    if not molecule:
+        return jsonify({"trials": [], "papers": []})
+    try:
+        from services.purple_book import biosimilar_evidence
+        return jsonify(biosimilar_evidence(molecule))
+    except Exception as e:
+        logger.error(f"biosimilar-evidence: {e}")
+        return jsonify({"trials": [], "papers": [], "error": str(e)})
 
 
 @app.route("/api/suggest-pathways")
@@ -2922,12 +3405,116 @@ def api_docking_poses(chembl_id):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/dock-compare", methods=["POST"])
+def api_dock_compare():
+    """Dock the ORIGINAL and MODIFIED molecule into the SAME target pocket (identical
+    settings) and compare — the missing 'did my modification keep the binding?' check.
+
+    Honest by construction: docking cannot precisely rank close analogs (Vina scoring
+    error ~1.5 kcal/mol), so the verdict reports regressions / pose failures and marks
+    small ΔΔG differences as within resolution rather than claiming a potency ranking.
+    """
+    if not DOCK_OK or _dock_svc is None:
+        return jsonify({"error": "Docking engine unavailable"}), 503
+    data = request.get_json() or {}
+    target      = (data.get("target") or "").strip()
+    orig_smiles = (data.get("original_smiles") or "").strip()
+    mod_smiles  = (data.get("modified_smiles") or "").strip()
+    drug_name   = data.get("drug_name") or "Drug"
+    method = data.get("method") if data.get("method") in ("diffdock", "boltz") else "fast"
+    if not (target and orig_smiles and mod_smiles):
+        return jsonify({"error": "target, original_smiles and modified_smiles are required"}), 400
+    if orig_smiles == mod_smiles:
+        return jsonify({"error": "Modified SMILES is identical to the original"}), 400
+
+    # Fetch the receptor once and dock BOTH ligands into it (same pocket → matched pair)
+    protein_pdb = _protein_pdb_cache.get(target)
+    if protein_pdb is None:
+        try:
+            from real_pdb_fetcher import RealPDBFetcher
+            protein_pdb = RealPDBFetcher().fetch_protein_structure(target) or ""
+        except Exception as e:
+            logger.debug(f"dock-compare protein fetch {target}: {e}")
+            protein_pdb = ""
+        _protein_pdb_cache[target] = protein_pdb
+
+    def _dock_one(smi, name):
+        res = _dock_svc.perform_docking(
+            drug_name=name, target_name=target, ligand_smiles=smi,
+            protein_pdb=protein_pdb or None, method=method)
+        affs  = res.get("binding_affinities") or []
+        valid = res.get("pose_valid") or []
+        poses = res.get("poses") or []
+        # pick the best (most negative) VALID pose, falling back to best of any
+        best_idx, best_val = None, None
+        for idx, a in enumerate(affs):
+            if not isinstance(a, (int, float)):
+                continue
+            if valid and idx < len(valid) and not valid[idx]:
+                continue
+            if best_val is None or a < best_val:
+                best_val, best_idx = a, idx
+        if best_idx is None:                      # no valid pose — take best of any
+            for idx, a in enumerate(affs):
+                if isinstance(a, (int, float)) and (best_val is None or a < best_val):
+                    best_val, best_idx = a, idx
+        best_pose = (poses[best_idx] if (best_idx is not None and best_idx < len(poses))
+                     else (poses[0] if poses else ""))
+        return {
+            "success": bool(res.get("success")),
+            "best_affinity": round(best_val, 2) if best_val is not None else None,
+            "any_valid_pose": (any(valid) if valid else bool(affs)),
+            "n_poses": len(poses),
+            "pose": best_pose,
+            "protein_pdb": res.get("protein_pdb") or protein_pdb or "",
+            "pockets": res.get("pockets", []),
+            "method": res.get("docking_method", method),
+        }
+
+    o = _dock_one(orig_smiles, drug_name)
+    m = _dock_one(mod_smiles, f"{drug_name} (modified)")
+
+    RES = 1.5   # Vina scoring resolution / noise floor (kcal/mol)
+    ddg = None
+    if o["best_affinity"] is not None and m["best_affinity"] is not None:
+        ddg = round(m["best_affinity"] - o["best_affinity"], 2)   # <0 = modified binds tighter
+
+    # Honest verdict — regressions & pose failures, not a precision ranking
+    if not o["success"] or o["best_affinity"] is None:
+        cat, verdict = "inconclusive", "Original molecule did not dock — comparison inconclusive."
+    elif o["any_valid_pose"] and not m["any_valid_pose"]:
+        cat, verdict = "broke", ("The modification broke the binding pose — the modified molecule no "
+                                 "longer fits the pocket. Likely a loss of a key interaction.")
+    elif m["best_affinity"] is None:
+        cat, verdict = "inconclusive", "Modified molecule did not dock — comparison inconclusive."
+    elif abs(ddg) < RES:
+        cat, verdict = "preserved", (f"Binding preserved (ΔΔG {ddg:+.2f} kcal/mol, within docking "
+                                     f"resolution of ±{RES}). The modification neither clearly helps "
+                                     "nor hurts binding at this target — safe to keep on ADME grounds.")
+    elif ddg <= -RES:
+        cat, verdict = "improved", (f"Modified docks tighter by {abs(ddg):.2f} kcal/mol (beyond docking "
+                                    "noise) — promising, but confirm with an assay or free-energy method.")
+    else:
+        cat, verdict = "degraded", (f"Modified docks weaker by {ddg:.2f} kcal/mol — the modification "
+                                    "likely reduces binding at this target; reconsider the vector.")
+
+    return jsonify({
+        "target": target, "original": o, "modified": m, "ddg": ddg,
+        "resolution": RES, "category": cat, "verdict": verdict,
+        "caveat": ("Docking compares binding modes into the same pocket under identical settings, so it "
+                   "reliably catches regressions and pose failures — but it cannot precisely rank close "
+                   "analogs. Treat small ΔΔG as directional only."),
+        "protein_available": bool(protein_pdb),
+    })
+
+
 @app.route("/api/transform-smiles", methods=["POST"])
 def api_transform_smiles():
     """Apply a named medicinal-chemistry transform to SMILES via RDKit SMARTS reactions."""
     data = request.get_json() or {}
     smiles = data.get("smiles", "").strip()
     action = data.get("action", "").lower()
+    rxn_direct = (data.get("rxn") or "").strip()   # explicit reaction SMARTS (from the advisor)
     if not smiles:
         return jsonify({"error": "No SMILES"}), 400
     if not RDKIT_OK:
@@ -2935,6 +3522,27 @@ def api_transform_smiles():
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return jsonify({"error": "Invalid SMILES"}), 400
+
+    # Advisor path: a specific liability fix carries its own reaction SMARTS — apply it
+    # directly (validate the product) rather than keyword-matching the action string.
+    if rxn_direct:
+        try:
+            from rdkit.Chem import AllChem
+            rxn = AllChem.ReactionFromSmarts(rxn_direct)
+            products = rxn.RunReactants((mol,))
+            if not products:
+                return jsonify({"smiles": smiles, "applied": False,
+                                "note": "This fix's substructure was not matched — edit manually."})
+            prod = products[0][0]
+            Chem.SanitizeMol(prod)
+            new_smi = Chem.MolToSmiles(prod)
+            if new_smi == Chem.MolToSmiles(mol):
+                return jsonify({"smiles": smiles, "applied": False,
+                                "note": "Transform left the molecule unchanged — edit manually."})
+            return jsonify({"smiles": new_smi, "applied": True,
+                            "description": data.get("description", "applied liability fix")})
+        except Exception as e:
+            return jsonify({"smiles": smiles, "applied": False, "note": f"Transform error: {e}"})
 
     # (keyword, SMARTS reaction, human description of what was done)
     TRANSFORMS = [

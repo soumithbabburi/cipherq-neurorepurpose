@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% set active_page = 'biosimilars' %}
+{% block title %}Biosimilar Radar · RepurposeIQ{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head" style="margin-bottom:4px"><span class="s-kicker">Biosimilar Opportunity Radar</span></div>
+  <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Which biologics are worth copying</h1>
+  <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px;max-width:60rem">
+    Every FDA-licensed reference biologic, ranked as a <strong>biosimilar development target</strong>. We combine the
+    <strong>reference-product exclusivity cliff</strong> (when competition can enter), the <strong>whitespace</strong>
+    (how few biosimilars have already launched), and the <strong>franchise size</strong> into an opportunity score.
+    A high score with an open cliff and zero entrants is open whitespace.
+  </p>
+</div>
+
+<!-- Controls -->
+<div class="card mb-2">
+  <div class="grid-form">
+    <div class="field" style="grid-column:span 2">
+      <label for="bs-q">Filter by molecule or brand</label>
+      <input id="bs-q" class="input" autocomplete="off"
+             placeholder="e.g. adalimumab, secukinumab, Humira" onkeydown="if(event.key==='Enter')load()"/>
+    </div>
+    <div class="field">
+      <label for="bs-center">Regulatory center</label>
+      <select id="bs-center" class="input" onchange="load()">
+        <option value="CDER" selected>CDER — therapeutic mAbs &amp; proteins</option>
+        <option value="all">All centers (incl. CBER)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="bs-open">Cliff status</label>
+      <select id="bs-open" class="input" onchange="load()">
+        <option value="">All reference products</option>
+        <option value="1">Exclusivity already open</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="bs-sort">Rank by</label>
+      <select id="bs-sort" class="input" onchange="load()">
+        <option value="opportunity" selected>Opportunity (cliff × whitespace)</option>
+        <option value="combined">Combined (opportunity × market value)</option>
+        <option value="value">Market value (indication)</option>
+        <option value="activity">Development activity (trials × literature)</option>
+      </select>
+    </div>
+  </div>
+  <p style="font-size:0.7rem;color:#98a1b6;margin-top:8px">
+    Source: <strong>FDA Purple Book</strong> (licensed biological products, biosimilar/interchangeable status,
+    reference-product exclusivity). Cliff = explicit reference-product exclusivity date where FDA provides one, otherwise the
+    <strong>12-year BPCIA exclusivity</strong> from first licensure. Interchangeable status from the FDA interchangeable-approval field.
+    <span id="bs-asof"></span>
+  </p>
+</div>
+
+<!-- Summary -->
+<div id="bs-summary" class="grid gap-3 mb-3" style="display:none;grid-template-columns:repeat(3,minmax(0,1fr))"></div>
+
+<!-- Results -->
+<div id="bs-status" style="font-size:0.8rem;color:#6b7690;margin-bottom:0.75rem">Loading Purple Book…</div>
+<div id="bs-results"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fmtDate(iso){
+  if(!iso) return '—';
+  try { var d=new Date(iso+'T00:00:00'); return d.toLocaleDateString(undefined,{year:'numeric',month:'short'}); }
+  catch(_){ return iso; }
+}
+
+function tierColor(tier){
+  if(tier==='High opportunity') return '#2563eb';
+  if(tier==='Attractive')       return '#4a6b7c';
+  if(tier==='Watch')            return '#0e7490';
+  return '#8a8f88';
+}
+
+function chip(txt,col){
+  return '<span class="chip" style="background:'+col+'18;color:'+col+';border:1px solid '+col+'40;font-weight:600">'+txt+'</span>';
+}
+
+function bsList(rows){
+  if(!rows||!rows.length) return '<span class="text-dim" style="font-size:0.74rem">No biosimilars licensed yet — open whitespace.</span>';
+  return rows.map(function(b){
+    var name = b.brand || b.name || '—';
+    var ix = b.interchangeable ? ' <span class="chip" style="font-size:9px;background:#2563eb18;color:#2563eb;border:1px solid #2563eb40">interchangeable</span>' : '';
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #f1efe7;font-size:0.73rem">'
+      + '<span style="color:#0f1e3d">'+name+ix+'</span>'
+      + '<span class="text-dim">'+(b.applicant||'')+'</span></div>';
+  }).join('');
+}
+
+function card(r){
+  var col = tierColor(r.tier);
+  var brand = (r.brands&&r.brands.length)?r.brands[0]:'';
+  var cliffChip = r.cliff_open
+    ? chip('cliff open · '+fmtDate(r.cliff), '#2563eb')
+    : chip('protected · '+fmtDate(r.cliff), '#0e7490');
+  var wsChip = (r.n_biosimilars===0)
+    ? chip('0 biosimilars · whitespace', '#2563eb')
+    : chip(r.n_biosimilars+' biosimilar'+(r.n_biosimilars>1?'s':'')+(r.n_interchangeable?(' · '+r.n_interchangeable+' interchangeable'):''), '#4a6b7c');
+  var patent = r.patent_list ? chip('patent list filed', '#8a5a2b') : '';
+  var valChip = '';
+  if(r.value){
+    var vcol = r.value.value_score>=0.6?'#2563eb':r.value.value_score>=0.45?'#4a6b7c':r.value.value_score>=0.30?'#0e7490':'#8a8f88';
+    valChip = chip('market value '+Math.round(r.value.value_score*100)+' · '+r.value.tier, vcol);
+  }
+  var actChip = '';
+  if(r.activity){
+    var a = r.activity;
+    if((a.n_trials||0)+(a.n_papers||0) === 0){
+      actChip = chip('no biosimilar activity found', '#8a8f88');
+    } else {
+      actChip = chip(a.n_trials+' trial'+(a.n_trials===1?'':'s')+' · '+a.n_papers+' paper'+(a.n_papers===1?'':'s'), '#5a5a8a');
+    }
+  }
+  var rid = 'bs-'+Math.abs((r.proper_name||'').split('').reduce(function(a,c){return (a*31+c.charCodeAt(0))|0;},7));
+  return ''
+  + '<div class="dossier" style="padding:15px 18px;margin-bottom:10px;display:flex;flex-direction:column;gap:9px">'
+  +   '<div class="flex justify-between items-center" style="gap:12px">'
+  +     '<div style="min-width:0">'
+  +       '<div class="cc-name" style="text-transform:capitalize">'+r.proper_name+'</div>'
+  +       '<div class="cc-id">'+(brand?('Reference brand: '+brand+' · '):'')+(r.applicants&&r.applicants.length?r.applicants[0]:'')+'</div>'
+  +     '</div>'
+  +     '<div style="text-align:center;flex-shrink:0">'
+  +       '<div class="mono" style="font-size:1.35rem;font-weight:800;line-height:1;color:'+col+'">'+Math.round(r.score)+'</div>'
+  +       '<div class="seal-lbl" style="margin-top:3px">'+r.tier+'</div>'
+  +     '</div>'
+  +   '</div>'
+  +   '<div class="cc-tags">'+cliffChip+wsChip+valChip+actChip+patent
+  +     '<span class="chip" style="background:#eef2f0;color:#47526b">'+r.timing_note+'</span></div>'
+  +   (r.value&&r.value.best_indication ? '<div style="font-size:0.68rem;color:#98a1b6">Most valuable indication: '+r.value.best_indication+'</div>' : '')
+  +   '<details style="margin-top:2px" ontoggle="loadEvidence(this,\''+(r.proper_name||'').replace(/\x27/g,\'&#39;\')+'\')">'
+  +     '<summary style="cursor:pointer;font-size:0.72rem;color:#5a5a8a;font-weight:600">Evidence &amp; activity — biosimilar trials &amp; literature</summary>'
+  +     '<div class="bs-evidence" style="margin-top:8px;font-size:0.73rem;color:#6b7690">Loading…</div>'
+  +   '</details>'
+  +   (r.biosimilars&&r.biosimilars.length
+        ? '<details style="margin-top:2px"><summary style="cursor:pointer;font-size:0.72rem;color:#4a6b7c;font-weight:600">Existing biosimilars ('+r.n_biosimilars+')</summary>'
+          + '<div style="margin-top:6px">'+bsList(r.biosimilars)+'</div></details>'
+        : '<div style="margin-top:2px">'+bsList(r.biosimilars)+'</div>')
+  + '</div>';
+}
+
+function evidenceList(ev){
+  var out = '';
+  var trials = ev.trials||[], papers = ev.papers||[];
+  out += '<div style="font-weight:600;color:#47526b;margin-bottom:3px">Clinical trials'
+       + (ev.n_trials!=null?(' ('+ev.n_trials+' total, "'+'biosimilar'+'" search)'):'')+'</div>';
+  if(!trials.length){ out += '<div class="text-dim" style="margin-bottom:8px">No biosimilar trials found.</div>'; }
+  else {
+    out += trials.map(function(t){
+      return '<div style="padding:2px 0;border-bottom:1px solid #f1efe7">'
+        + '<a href="'+t.url+'" target="_blank" rel="noopener" style="color:#4a6b7c">'+t.title+'</a>'
+        + ' <span class="text-dim">· '+(t.phase||'N/A')+' · '+(t.status||'')+'</span></div>';
+    }).join('') + '<div style="height:8px"></div>';
+  }
+  out += '<div style="font-weight:600;color:#47526b;margin-bottom:3px">Literature'
+       + (ev.n_papers!=null?(' ('+ev.n_papers+' total)'):'')+'</div>';
+  if(!papers.length){ out += '<div class="text-dim">No biosimilar literature found.</div>'; }
+  else {
+    out += papers.map(function(p){
+      return '<div style="padding:2px 0;border-bottom:1px solid #f1efe7">'
+        + '<a href="'+p.url+'" target="_blank" rel="noopener" style="color:#4a6b7c">'+p.title+'</a>'
+        + ' <span class="text-dim">· '+(p.journal||'')+' '+(p.year||'')+'</span></div>';
+    }).join('');
+  }
+  return out;
+}
+
+async function loadEvidence(details, molecule){
+  if(!details.open) return;
+  var box = details.querySelector('.bs-evidence');
+  if(!box || box.dataset.loaded) return;
+  box.dataset.loaded = '1';
+  box.textContent = 'Loading biosimilar trials & literature…';
+  try{
+    var ev = await window.apiFetch('/api/biosimilar-evidence?molecule='+encodeURIComponent(molecule));
+    box.innerHTML = evidenceList(ev||{});
+  }catch(e){
+    box.dataset.loaded = ''; // allow retry
+    box.textContent = 'Could not load evidence: '+e;
+  }
+}
+
+function statTile(label,val,sub,col){
+  return '<div class="card" style="padding:14px 16px">'
+    + '<div class="mono" style="font-size:1.5rem;font-weight:800;color:'+(col||'#0f1e3d')+'">'+val+'</div>'
+    + '<div style="font-size:0.72rem;color:#47526b;font-weight:600;margin-top:2px">'+label+'</div>'
+    + (sub?'<div style="font-size:0.66rem;color:#98a1b6;margin-top:1px">'+sub+'</div>':'')
+    + '</div>';
+}
+
+async function load(){
+  var q = document.getElementById('bs-q').value.trim();
+  var open = document.getElementById('bs-open').value;
+  var center = document.getElementById('bs-center').value;
+  var sort = document.getElementById('bs-sort').value;
+  var status = document.getElementById('bs-status');
+  var results = document.getElementById('bs-results');
+  var summary = document.getElementById('bs-summary');
+  status.style.display='block'; status.textContent='Loading Purple Book…';
+  results.innerHTML=''; summary.style.display='none';
+  try{
+    var url = '/api/biosimilar-radar?limit=300'
+      + (q?('&q='+encodeURIComponent(q)):'')
+      + (open?('&only_open=1'):'')
+      + (center?('&center='+encodeURIComponent(center)):'')
+      + (sort?('&sort='+encodeURIComponent(sort)):'');
+    var data = await window.apiFetch(url);
+    if(!data || !data.available){
+      status.textContent='Purple Book data unavailable. '+(data&&data.error?('('+data.error+')'):'');
+      return;
+    }
+    document.getElementById('bs-asof').textContent = data.as_of ? ('Data as of '+String(data.as_of).split(',')[0]+'.') : '';
+    var c = data.counts||{};
+    summary.innerHTML =
+        statTile('Reference biologics', c.reference_products||0, 'matching filter', '#0f1e3d')
+      + statTile('Exclusivity open', c.cliff_open||0, 'competition can enter now', '#2563eb')
+      + statTile('Open whitespace', c.whitespace_open||0, 'open cliff · zero biosimilars', '#2563eb');
+    summary.style.display='grid';
+    var rows = data.rows||[];
+    if(!rows.length){ status.textContent='No reference biologics match that filter.'; return; }
+    status.style.display='none';
+    results.innerHTML = rows.map(card).join('');
+  }catch(e){
+    status.textContent='Failed to load: '+e;
+  }
+}
+load();
+</script>
+{% endblock %}

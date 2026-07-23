@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% set active_page = "docs" %}
+{% block title %}Documentation · RepurposeIQ{% endblock %}
+
+{% block head %}
+<style>
+  .doc-wrap { display:grid; grid-template-columns:208px 1fr; gap:32px; align-items:start; }
+  .doc-nav { position:sticky; top:84px; }
+  .doc-nav a { display:block; padding:5px 10px; font-size:0.78rem; color:var(--text-muted); border-left:2px solid transparent; text-decoration:none; border-radius:0 6px 6px 0; transition:all .15s; }
+  .doc-nav a:hover { color:var(--text-primary); background:var(--bg-sunken); }
+  .doc-nav a.active { color:var(--accent); border-left-color:var(--accent); font-weight:600; }
+  .doc-sec { margin-bottom:40px; scroll-margin-top:84px; }
+  .doc-sec h2 { font-family:var(--font-serif); font-size:1.25rem; font-weight:500; color:var(--text-primary); margin-bottom:6px; }
+  .doc-sec h3 { font-size:0.82rem; font-weight:700; color:var(--text-primary); margin:18px 0 6px; letter-spacing:0.01em; }
+  .doc-sec p { font-size:0.85rem; color:var(--text-secondary); line-height:1.7; margin-bottom:10px; }
+  .doc-sec li { font-size:0.84rem; color:var(--text-secondary); line-height:1.7; }
+  .doc-lead { font-size:0.95rem; color:var(--text-secondary); line-height:1.75; }
+  .doc-table { width:100%; border-collapse:collapse; font-size:0.8rem; margin:8px 0 4px; }
+  .doc-table th { text-align:left; padding:7px 10px; background:var(--bg-sunken); color:var(--text-muted); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700; border-bottom:1px solid var(--border-default); }
+  .doc-table td { padding:7px 10px; border-bottom:1px solid var(--border-subtle); color:var(--text-secondary); vertical-align:top; }
+  .cite { font-size:0.74rem; color:var(--text-muted); font-style:italic; }
+  .pilltag { display:inline-block; padding:2px 9px; border-radius:9999px; font-size:0.68rem; font-weight:700; background:var(--accent-soft); color:var(--accent-deep); border:1px solid var(--accent-line); margin:2px 3px 2px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head"><span class="s-kicker">Reference</span><span class="rule"></span></div>
+  <h1 class="font-display" style="font-size:1.9rem;font-weight:600;letter-spacing:-0.01em;color:var(--text-primary);line-height:1.1">Platform Documentation</h1>
+  <p class="doc-lead" style="max-width:680px;margin-top:8px">RepurposeIQ is a drug-repurposing intelligence platform. It scores existing molecules for new indications, assembles the regulatory and IP evidence to support a 505(b)(2)-family filing, and validates candidates in silico. This page documents what each component does, the data it uses, and the methods behind every number.</p>
+</div>
+
+<div class="doc-wrap">
+  <nav class="doc-nav" id="docNav">
+    <a href="#overview">Overview</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#scoring">Asset scoring</a>
+    <a href="#ranking">Indication ranking</a>
+    <a href="#dossier">Evidence dossier</a>
+    <a href="#verdict">Regulatory verdict</a>
+    <a href="#acquisition">Acquisition signal</a>
+    <a href="#signature">Signature connectivity</a>
+    <a href="#insilico">In-silico validation</a>
+    <a href="#graph">Knowledge graph</a>
+    <a href="#data">Data sources</a>
+    <a href="#limits">Scope and limits</a>
+  </nav>
+
+  <div>
+    <section id="overview" class="doc-sec">
+      <h2>Overview</h2>
+      <p>Drugs developed for one therapeutic area frequently modulate pathways relevant to others. Repurposing an existing molecule reuses its known safety profile, established pharmacokinetics and proven manufacturing, so a new indication can reach market faster and at lower cost than a de-novo programme. The platform exists to identify which molecules carry the strongest new-indication potential and to assemble the evidence a regulatory and business-development team needs to act.</p>
+      <p>Two entry directions are supported: disease to compound (Compound Discovery) and compound to indication (Repurpose Molecule). Both converge on a single evidence dossier per drug-disease pair.</p>
+    </section>
+
+    <section id="workflow" class="doc-sec">
+      <h2>Workflow</h2>
+      <p>A typical analysis moves through four stages:</p>
+      <ol style="padding-left:18px">
+        <li><strong>Asset scoring</strong> - rank molecules by new-indication relevance and predicted probability of clinical success.</li>
+        <li><strong>Asset-indication ranking</strong> - for a given molecule, rank the most promising new indications by biological relevance and real-world clinical signal.</li>
+        <li><strong>Evidence dossier</strong> - consolidate mechanism, literature, trials, safety, IP, regulatory pathway and a global landscape for the selected pair.</li>
+        <li><strong>In-silico validation</strong> - confirm target engagement (docking), exposure (PBPK) and electronic plausibility (quantum) where a structure is available.</li>
+      </ol>
+    </section>
+
+    <section id="scoring" class="doc-sec">
+      <h2>Asset scoring</h2>
+      <p>Each candidate receives a relevance score in the range 0 to 1, combining four real signals drawn from the database:</p>
+      <table class="doc-table">
+        <thead><tr><th>Signal</th><th>Basis</th><th>Weight</th></tr></thead>
+        <tbody>
+          <tr><td>Indication evidence</td><td>Curated drug-indication phase for the disease</td><td>0.40</td></tr>
+          <tr><td>Target relevance</td><td>Overlap of the drug's targets with the disease target set</td><td>0.30</td></tr>
+          <tr><td>Activity strength</td><td>Measured potency at disease-relevant targets</td><td>0.20</td></tr>
+          <tr><td>Network evidence</td><td>Knowledge-graph compound-treats-disease and compound-binds-gene paths</td><td>0.10</td></tr>
+        </tbody>
+      </table>
+      <h3>Calibrated tier — reading a low score correctly</h3>
+      <p>A raw score is meaningless without a baseline. A genuinely strong lead for a <em>novel</em> indication legitimately scores low in absolute terms (little direct clinical evidence), so a 0.28 can <em>look</em> weak while being a top-few-percent signal. Each score is therefore <strong>calibrated against a null distribution of random drug-disease pairs</strong> and reported as a <strong>percentile and tier</strong> (Strong / Promising / Moderate / Weak) plus an enrichment (fold over the random-pair median). This is why a modest absolute score can still read as &ldquo;Strong &middot; top 3%&rdquo; &mdash; that is the honest, presentable signal. Until the null is built the platform falls back to the heuristic bands below.</p>
+      <h3>How to read the score — the raw bands</h3>
+      <p>The relevance score is a <strong>mechanistic-evidence rank</strong> (0 to 1, shown 0 to 100 on the cards), not a probability. It answers <em>how strong is the evidence that this drug is relevant to this disease</em>. The heuristic raw bands (used before calibration):</p>
+      <table class="doc-table">
+        <thead><tr><th>Score</th><th>Band</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>65–100</td><td>Strong</td><td>Prioritise / advance</td></tr>
+          <tr><td>40–64</td><td>Moderate</td><td>Watchlist — needs more evidence</td></tr>
+          <tr><td>20–39</td><td>Weak</td><td>Deprioritise</td></tr>
+          <tr><td>&lt;20</td><td>Negligible</td><td>Not a lead</td></tr>
+        </tbody>
+      </table>
+      <p>A candidate must also clear a minimum target-association floor to appear at all; below it, the indication is not surfaced (&ldquo;no new indications passed the evidence threshold&rdquo;).</p>
+      <h3>Probability of success</h3>
+      <p>This is a <strong>different number</strong> from the relevance score, and answers a different question: <em>if we develop this repurposing candidate, what is the probability it reaches regulatory approval</em>. It is a phase-transition survival model built on published clinical-development success rates, not a black box. The industry de-novo baseline is a ~9.6% Phase 1 likelihood of approval. Because an already-approved molecule has its Phase 1 safety largely cleared, a repurposing candidate&rsquo;s <strong>new</strong> indication is scored starting fresh at Phase 1 with that safety transition de-risked, and the relevance score modulates the efficacy-determining Phase 2 to Phase 3 transition.</p>
+      <table class="doc-table">
+        <thead><tr><th>Likelihood of approval</th><th>Band</th></tr></thead>
+        <tbody>
+          <tr><td>&ge; 30%</td><td>High (~3&times; the de-novo baseline)</td></tr>
+          <tr><td>12–30%</td><td>Moderate (beats the ~9.6% baseline)</td></tr>
+          <tr><td>&lt; 12%</td><td>Low</td></tr>
+        </tbody>
+      </table>
+      <p class="cite">Sources: Thomas et al., BIO / Biomedtracker, 2016; Wong, Siah and Lo, Biostatistics 20(2), 2019; Hay et al., Nature Biotechnology 32, 2014.</p>
+      <p>An optional fitted calibrator can refine the estimate, but it is only blended when the training step certifies it as non-circular; otherwise the analytic model stands alone.</p>
+      <h3>Safety / toxicity cross-filter</h3>
+      <p>A match is only credible if the drug is not actively dangerous to the organ the disease lives in. Every score is passed through a negative-safety filter that overlays the drug&rsquo;s real-world <strong>serious</strong> adverse-event profile (FDA FAERS) onto the disease&rsquo;s organ system. When a drug carries a genuine serious-toxicity signal for that organ, the match score is multiplied down &mdash; strongly when the disease is organ failure or structural damage (e.g. fibrosis), mildly otherwise.</p>
+      <p>To avoid the classic confounding-by-indication artefact (a cardiac drug&rsquo;s reports are full of cardiac events because cardiac patients take it), toxicity is measured by <strong>disproportionality</strong>: an organ only counts when the drug&rsquo;s share of serious reports there is over-represented versus the all-drug background (a proportional-reporting-ratio style lift). The filter is fail-soft &mdash; when no adverse-event data can be resolved for a drug, no penalty is applied rather than a fabricated one.</p>
+      <p class="cite">Example: an anti-angiogenic with a serious pulmonary-toxicity signal is automatically down-ranked for a pulmonary indication, while a drug with no such signal is untouched.</p>
+      <h3>Target-coverage / mandatory-intersection gate</h3>
+      <p>For a polygenic disease driven by several targets, a drug that hits only one of them is rarely a viable candidate. Each score is passed through a target-coverage gate that measures, per pair, the weighted fraction of the disease&rsquo;s <strong>driver</strong> target set (its genetically-associated genes) that the drug actually covers, and penalises incomplete coverage.</p>
+      <p>The gate is data-driven, not a hardcoded target list: driver genes come from Open Targets genetic-association weights, and the disease&rsquo;s <strong>polygenicity</strong> is the effective number of drivers (inverse-Simpson of those weights). A monogenic disease with one dominant driver applies no penalty &mdash; hitting that single target suffices. A polygenic disease penalises a drug in proportion to how much of the driver set it misses, so a multi-target drug ranks above a single-target one for the same complex indication. The gate is fail-soft (no penalty without genetic weights) and only applies to mechanistic candidates.</p>
+      <h3>Approved-indication exclusion</h3>
+      <p>A drug&rsquo;s <strong>own approved indications are removed</strong> before ranking &mdash; a repurposing list should never surface an on-label use. Approval is drawn from ChEMBL per-indication phase and, because ChEMBL lags recent approvals, supplemented with the current FDA label (openFDA). Matching is done through a single disease-identity layer that reconciles the different ontologies and name conventions each source uses (ChEMBL MeSH headings such as &ldquo;Arthritis, Rheumatoid&rdquo;, Open Targets MONDO/EFO names such as &ldquo;rheumatoid arthritis&rdquo;), so the same disease matches regardless of id space or word order.</p>
+      <h3>Positive pivots — from filter to discovery</h3>
+      <p>When the clinical constraint harmonizer crushes a biologically strong hit, the platform does not stop at &ldquo;won&rsquo;t work&rdquo; &mdash; it uses the same verdict to propose how the hypothesis <em>could</em> work: a <strong>precision pivot</strong> to a high-severity or orphan variant of the disease where the toxicity is justified; a <strong>dose-sparing combination</strong> with a low-toxicity co-drug on the same pathway; or a <strong>brain-penetrant analogue</strong> with the limiting physicochemical property identified for scaffold modification. Every pivot is explicitly a hypothesis to validate, not a de-risked asset &mdash; lead generation, not certification.</p>
+      <h3>Clinical-trial outcomes</h3>
+      <p>Clinical evidence is directional, not just a count. Trials of the drug in the candidate indication are classified by outcome: a completed trial (especially with posted results) is positive support, while a trial <strong>terminated for efficacy or safety</strong> is real negative evidence &mdash; the drug was tested there and did not work &mdash; and down-ranks the candidate. Terminations for recruitment or funding are treated as neutral (not the drug&rsquo;s fault). So a drug that failed a Phase&nbsp;3 for an indication is penalised, not credited for &ldquo;having a trial&rdquo;.</p>
+      <h3>Directional literature evidence</h3>
+      <p>Beyond keyword co-mention, the platform uses directional, literature-derived typed triples (a knowledge graph of drug&rarr;target and gene&rarr;disease relations) to check for a genuine mechanistic path &mdash; the drug modulates a gene that the literature links to the disease &mdash; or a direct curated drug&ndash;treats&ndash;disease edge. That is relational support, not two terms appearing in the same abstract. Coverage is strongest for neurological indications and is fail-soft elsewhere.</p>
+      <h3>Clinical constraint harmonizer</h3>
+      <p>A biologically plausible hit still has to survive clinical reality. The score is multiplied by how well the drug fits the disease&rsquo;s real-world constraints: a high-toxicity drug is penalised for a <strong>low-severity</strong> indication (unfavourable therapeutic window) and for a <strong>chronic / lifelong</strong> indication (long-term tolerability), while it is left untouched for a high-severity or acute one where that toxicity is justified &mdash; so, for example, a cytotoxic agent scores normally for leukaemia but is heavily down-ranked for a cosmetic condition. A hard blood-brain-barrier check applies for CNS indications. This reuses the existing FAERS toxicity and CNS-MPO signals rather than re-deriving them, is distinct from the organ-toxicity safety filter above, and is fail-soft (no penalty when severity or chronicity cannot be determined).</p>
+      <h3>Evidence-type-weighted, directional biology</h3>
+      <p>Not all gene-disease associations are equal. A target linked by causal human genetics is far stronger evidence than one linked only by literature co-mention or by the fact that a drug already hits it (which is circular for repurposing). Each association is therefore weighted by its <strong>evidence type</strong> &mdash; genetic and somatic evidence count fully, pathway and expression partially, literature weakly, and the known-drug channel is heavily discounted &mdash; so a genetically-supported target drives the score, not a circular one. Pathway scoring is also <strong>directional</strong>: using the drug&rsquo;s mechanism (inhibit vs activate) against the disease&rsquo;s dysregulated pathway genes, a drug that reverses the disease direction is favoured over one that mimics it.</p>
+      <h3>Cancer-predisposition awareness</h3>
+      <p>Hereditary cancer-predisposition syndromes (Cowden, Li-Fraumeni, Lynch, von Hippel-Lindau, neurofibromatosis and others) carry lifelong cancer risk, but a target-association resource files them under their organ system &mdash; so they would otherwise be judged as benign. The platform recognises them and treats them at <strong>oncology-grade severity</strong>, so the therapeutic-window balancing is correct: a toxic drug&rsquo;s risk is judged against the real severity of the condition rather than a benign-skin frame.</p>
+      <h3>Hub-degree normalization</h3>
+      <p>A network hub (EGFR, TP53) sits in dozens of pathways and interacts with hundreds of proteins, so it would trivially maximise the pathway and protein-interaction cohesion scores for <em>every</em> disease it touches &mdash; non-discriminating inflation, not evidence. Following the Rephetio degree-weighted path-count method, each target&rsquo;s pathway and PPI contribution is damped by its global connectivity (a hub counts for a fraction of a specific, low-degree target), so a well-connected target cannot ride cohesion to the top of the results.</p>
+      <h3>Mechanism scope</h3>
+      <p>The mechanistic score is target- and genetics-centric, so it is only meaningful for target-mediated diseases. A drug with no resolvable human protein target &mdash; an anti-infective (bacterial or viral target), a symptomatic or nutritional agent &mdash; is flagged as out of mechanistic scope and ranked on clinical and literature evidence instead of shown as a silent near-zero.</p>
+      <h3>Adaptive actionable cutoff</h3>
+      <p>The score band that marks a candidate &ldquo;actionable&rdquo; adapts to the evidence context. An active or historic clinical trial of the drug in that indication relaxes the bar (real-world human movement overrides a raw computational score); an orphan / rare disease relaxes it further (sparse data would otherwise blind the platform to genuine rare-disease leads). These exceptions apply only <em>after</em> approved indications are excluded, so a trial link can never re-admit an on-label use. The base band is currently heuristic and is being calibrated against a curated validation set (RepoDB: approved pairs as positives, clinical efficacy/safety failures as negatives).</p>
+    </section>
+
+    <section id="ranking" class="doc-sec">
+      <h2>Asset-indication ranking</h2>
+      <p>Given a molecule, candidate indications are derived at runtime from the molecule's own protein targets, then enriched with real-world repurposing signal:</p>
+      <ul style="padding-left:18px">
+        <li>Target genes from curated mechanisms, mapped to associated diseases via a target-association resource.</li>
+        <li>Existing clinical trials of the molecule in each candidate indication (ClinicalTrials.gov).</li>
+        <li>Literature co-mention (PubMed).</li>
+      </ul>
+      <p>The molecule's existing approved indications are subtracted, so only genuinely new opportunities are surfaced. Candidates are ranked by combined mechanistic and clinical evidence; the clinical signal carries the largest single weight.</p>
+    </section>
+
+    <section id="dossier" class="doc-sec">
+      <h2>Evidence dossier</h2>
+      <p>The dossier is the integrated artifact for one drug-disease pair. It assembles the composite score and its breakdown, the mechanistic rationale (shared targets and pathways), physicochemical and developability profile, literature and trials for the indication and across all indications, post-market safety signal, the regulatory verdict, the acquisition signal, the signature-connectivity result and the consolidated global landscape.</p>
+    </section>
+
+    <section id="verdict" class="doc-sec">
+      <h2>Regulatory verdict</h2>
+      <p>A single reconciled verdict governs both the novelty assessment and the regulatory pathway, so the dossier cannot contradict itself. Novelty is phase-aware and distinguishes three things that must not be conflated:</p>
+      <table class="doc-table">
+        <thead><tr><th>State</th><th>Meaning</th><th>Consequence</th></tr></thead>
+        <tbody>
+          <tr><td>Approved here</td><td>Molecule is approved for this indication (Phase 4)</td><td>Same-use claim blocked; differentiate or change indication</td></tr>
+          <tr><td>Investigated here</td><td>Studied at Phase 1 to 3, not approved</td><td>Novel for first approval; secure a method-of-use claim, address prior art</td></tr>
+          <tr><td>Prior signal</td><td>Early or pharmacokinetic co-mention only</td><td>Novel; confirm the signal is a genuine therapeutic investigation</td></tr>
+          <tr><td>Novel</td><td>No prior development on record</td><td>Clean repurposing hypothesis</td></tr>
+        </tbody>
+      </table>
+      <p>Whether the <em>molecule</em> is approved (its safety package can be cited) is kept strictly separate from whether it is approved <em>for this indication</em> (the novelty question). The regulatory pathway is mapped per jurisdiction: United States 505(b)(2), European Union hybrid application under Directive 2001/83 Article 10(3), and India CDSCO new-drug approved-abroad route.</p>
+    </section>
+
+    <section id="acquisition" class="doc-sec">
+      <h2>Acquisition signal</h2>
+      <p>The acquisition signal answers whether the rights to a molecule can realistically be obtained for repurposing, and how well-timed the opportunity is. It is grounded in FDA Orange Book facts:</p>
+      <ul style="padding-left:18px">
+        <li>Drug-substance patents protect the molecule; drug-product and method-of-use patents protect a specific formulation and are what a 505(b)(2) programme is designed to work around.</li>
+        <li>Generic (ANDA) sponsors on file confirm the substance is freely sourceable.</li>
+        <li>Discontinued marketing status indicates a shelved asset, a classic in-licensing target.</li>
+      </ul>
+      <p>The output is an acquirability score, a plain-language signal, the regulatory pathway and the facts behind it.</p>
+    </section>
+
+    <section id="signature" class="doc-sec">
+      <h2>Signature connectivity</h2>
+      <p>Connectivity scoring asks whether a drug's perturbation signature reverses the disease signature, the central idea of the Connectivity Map. A strongly negative connectivity score means the drug pushes genes in the opposite direction to the disease and is a repurposing candidate. The disease signature is built from disease-associated genes; the drug signature from its mechanistic target directions (inhibitor reduces, agonist increases). The same scoring function accepts richer transcriptional profiles without other changes.</p>
+      <p class="cite">Sources: Lamb et al., Science 313, 2006; Subramanian et al., Cell 171, 2017.</p>
+    </section>
+
+    <section id="insilico" class="doc-sec">
+      <h2>In-silico validation</h2>
+      <h3>Molecular docking</h3>
+      <p>Where a protein structure is available, the candidate is docked into the named binding pocket. Poses are scored with a Vina-style free-energy estimate and validated for geometric plausibility. The platform selects the structure by UniProt identity and converts to a workable format; if no suitable structure exists, it reports that honestly rather than fabricating a score.</p>
+      <h3>PBPK simulation</h3>
+      <p>A perfusion-limited physiologically based pharmacokinetic model (numerically integrated) estimates plasma and tissue exposure over time, and free-drug target occupancy against measured binding affinity.</p>
+      <h3>Quantum properties</h3>
+      <p>Electronic descriptors are computed with a real semi-empirical quantum method (GFN2-xTB) for the candidate where a structure can be generated.</p>
+    </section>
+
+    <section id="graph" class="doc-sec">
+      <h2>Knowledge graph</h2>
+      <p>The knowledge graph traces the evidence chain from a drug through its protein targets and pathways to a disease, making the mechanistic rationale explicit. Proteins and pathways are resolved dynamically rather than from a fixed map.</p>
+    </section>
+
+    <section id="data" class="doc-sec">
+      <h2>Data sources</h2>
+      <table class="doc-table">
+        <thead><tr><th>Source</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td>Bioactivity database</td><td>Compounds, mechanisms, activities, indications and phases</td></tr>
+          <tr><td>Target-association resource</td><td>Disease-associated genes, target scores, therapeutic areas, pathways</td></tr>
+          <tr><td>ClinicalTrials.gov</td><td>Trials per indication and live per-region counts</td></tr>
+          <tr><td>PubMed / NCBI</td><td>Literature evidence</td></tr>
+          <tr><td>FDA Orange Book</td><td>US patents, exclusivity and generic application records</td></tr>
+          <tr><td>openFDA FAERS</td><td>Post-market adverse-event signal</td></tr>
+          <tr><td>RCSB PDB</td><td>Protein structures for docking</td></tr>
+          <tr><td>Disease vocabulary</td><td>Disease ontology, synonyms and entry terms</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="limits" class="doc-sec">
+      <h2>Scope and limits</h2>
+      <p>The platform is decision support for a repurposing and differentiation argument. It is not a substitute for formal freedom-to-operate analysis, regulatory advice, or clinical judgement. Scores are evidence-weighted estimates, not guarantees. Where data for a market or a structure is unavailable, the platform marks the field as inferred or unavailable rather than presenting an estimate as fact. European Union and India approval and generic-availability status are inferred from global approval because those agencies provide no open data interface; United States data is drawn directly from authoritative sources.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  // In-page nav highlight
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('#docNav a'));
+    var secs = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+    function onScroll(){
+      var y = window.scrollY + 110, cur = 0;
+      for (var i=0;i<secs.length;i++){ if (secs[i] && secs[i].offsetTop <= y) cur = i; }
+      links.forEach(function(a,i){ a.classList.toggle('active', i===cur); });
+    }
+    window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  })();
+</script>
+{% endblock %}

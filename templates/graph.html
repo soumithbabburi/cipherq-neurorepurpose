@@ -1,700 +1,365 @@
 {% extends "base.html" %}
 {% set active_page = "graph" %}
-{% block title %}Biomedical Network · RepurposeIQ{% endblock %}
+{% block title %}Knowledge Graph · RepurposeIQ{% endblock %}
 
 {% block head %}
+<script src="https://unpkg.com/3d-force-graph"></script>
 <style>
-  #cy-container {
-    width: 100%;
-    height: 540px;
-    background:
-      radial-gradient(720px 440px at 28% 0%, rgba(47,111,91,0.07), transparent 60%),
-      radial-gradient(640px 440px at 100% 100%, rgba(184,134,11,0.06), transparent 55%),
-      #f3f1e8;
-    border-radius: 0 0 12px 12px;
-  }
-  #detail-panel {
-    position: absolute;
-    top: 0; right: 0;
-    width: 272px;
-    background: rgba(255,253,249,0.94);
-    backdrop-filter: blur(10px);
-    border-left: 1px solid var(--border-default);
-    border-radius: 0 0 12px 0;
-    height: 540px;
-    overflow-y: auto;
-    padding: 14px 16px;
-    display: none;
-    font-size: 0.78rem;
-    box-shadow: -8px 0 24px -16px rgba(31,42,36,0.3);
-  }
-  .detail-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-subtle); gap:8px; }
-  .detail-row:last-child { border-bottom:none; }
-  .detail-key { color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size:0.64rem; letter-spacing:0.06em; flex-shrink:0; }
-  .detail-val { color:var(--text-primary); font-weight:500; text-align:right; word-break:break-word; }
-  .evidence-badge {
-    display:inline-block; padding:2px 7px; border-radius:4px; font-size:0.65rem;
-    font-weight:700; letter-spacing:0.04em; white-space:nowrap;
-  }
-  .layer-header {
-    font-size:0.63rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
-    color:var(--text-dim); margin:10px 0 4px; padding-top:8px; border-top:1px solid var(--border-subtle);
-  }
-  .edge-legend { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-  .edge-pill {
-    display:flex; align-items:center; gap:4px; padding:3px 8px;
-    border-radius:20px; font-size:0.65rem; font-weight:600; background:var(--bg-inset);
-    color:var(--text-secondary); border:1px solid var(--border-default);
-  }
-  .edge-line { width:18px; height:2px; border-radius:1px; flex-shrink:0; }
-  .edge-line.dashed { background:none !important; border-top:2px dashed; }
+  #graph-wrap{position:relative;border-radius:0 0 14px 14px;overflow:hidden;
+    box-shadow:0 20px 60px -24px rgba(15,30,61,.45);border:1px solid var(--border-default)}
+  #graph3d{width:100%;height:620px;background:#0a1120;cursor:grab}
+  #graph3d:active{cursor:grabbing}
+  #graph3d canvas{outline:none}
+  /* floating node labels (HTML overlay tracked to 3D positions) */
+  #label-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .g3d-label{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;
+    font-family:var(--font-ui);font-size:11px;font-weight:600;color:#eaf1ff;
+    text-shadow:0 1px 4px rgba(0,0,0,.9),0 0 10px rgba(10,17,32,.9);will-change:transform;transition:opacity .2s}
+  .g3d-label .k{font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.7;display:block;line-height:1}
+  /* hover tooltip */
+  .g3d-tip{max-width:280px;font-family:var(--font-ui);background:rgba(10,17,32,.94);color:#eaf1ff;
+    border:1px solid rgba(120,150,220,.3);border-radius:10px;padding:9px 12px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .g3d-tip b{font-size:13px} .g3d-tip .t{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;display:block}
+  .g3d-tip .d{font-size:11px;color:#aebbd6;margin-top:5px;line-height:1.45;white-space:normal}
+  .g3d-tip .s{font-family:var(--font-mono);font-size:11px;color:#7ea9ff;margin-top:4px}
+  /* controls bar over the viewport */
+  #g3d-controls{position:absolute;top:12px;left:12px;z-index:5;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .g3d-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;cursor:pointer;
+    padding:5px 11px;border-radius:99px;background:rgba(17,28,48,.82);color:#c7d3ea;border:1px solid rgba(120,150,220,.22);
+    backdrop-filter:blur(6px);transition:.15s;user-select:none}
+  .g3d-chip:hover{border-color:rgba(120,150,220,.5)}
+  .g3d-chip.off{opacity:.4}
+  .g3d-chip .sw{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  #g3d-hint{position:absolute;bottom:12px;left:12px;z-index:5;font-size:10.5px;color:#8ea0c4;
+    background:rgba(10,17,32,.6);padding:5px 10px;border-radius:8px;backdrop-filter:blur(4px)}
+  #g3d-legend{position:absolute;bottom:12px;right:12px;z-index:5;display:flex;gap:12px;flex-wrap:wrap;
+    background:rgba(10,17,32,.6);padding:7px 12px;border-radius:10px;backdrop-filter:blur(4px)}
+  #g3d-legend .lg{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;color:#c7d3ea}
+  #g3d-legend .sw{width:10px;height:10px;border-radius:50%}
+  #g3d-tiers{position:absolute;left:14px;top:60px;bottom:46px;z-index:4;display:flex;flex-direction:column;
+    justify-content:space-between;pointer-events:none;transition:opacity .25s}
+  #g3d-tiers .tier{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:#7186a8}
+  #g3d-tiers .tier .bar{width:22px;height:2px;border-radius:2px}
+  #g3d-loading{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
+    background:#0a1120;color:#8ea0c4;font-size:13px;gap:10px}
+  .g3d-spin{width:16px;height:16px;border:2px solid rgba(120,150,220,.3);border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite}
+  #detail-panel{position:absolute;top:0;right:0;width:288px;background:rgba(10,17,32,.92);backdrop-filter:blur(12px);
+    border-left:1px solid rgba(120,150,220,.22);height:620px;overflow-y:auto;padding:16px 18px;display:none;
+    font-size:.78rem;color:#dbe4f5;z-index:7;box-shadow:-10px 0 30px -18px rgba(0,0,0,.7)}
+  #detail-panel .dp-close{position:absolute;top:10px;right:12px;cursor:pointer;color:#8ea0c4;font-size:18px}
+  #detail-panel h4{font-family:var(--font-serif);font-size:1.05rem;color:#fff;margin:0 26px 2px 0}
+  #detail-panel .dp-kind{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+  .detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(120,150,220,.12);gap:8px}
+  .detail-key{color:#8ea0c4;font-weight:600;text-transform:uppercase;font-size:.62rem;letter-spacing:.06em;flex-shrink:0}
+  .detail-val{color:#eaf1ff;font-weight:500;text-align:right;word-break:break-word}
+  .dp-desc{color:#aebbd6;font-size:.72rem;line-height:1.55;margin-top:10px}
+  .dp-neigh{margin-top:12px} .dp-neigh .nn{display:inline-block;font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;
+    background:rgba(120,150,220,.12);color:#c7d3ea;margin:0 5px 5px 0;cursor:pointer;border:1px solid rgba(120,150,220,.2)}
+  .dp-neigh .nn:hover{border-color:rgba(120,150,220,.5)}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
 <div class="flex flex-wrap items-center justify-between gap-md mb-xl">
   <div>
     <div class="section-head" style="margin-bottom:2px"><span class="s-kicker">Knowledge Graph</span></div>
-    <h2 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">Biomedical Network</h2>
-    <p class="text-sm text-text-muted" id="graph-subtitle" style="margin-top:2px">
-      Drug–disease–gene evidence explorer
-    </p>
-    <div id="graph-focal-crumb" style="display:none;margin-top:4px;padding:4px 10px;background:#fef9c3;border:1px solid #b8860b;border-radius:6px;font-size:12px;color:#854d0e;font-weight:600"></div>
+    <h2 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">3D Biomedical Network</h2>
+    <p class="text-sm text-text-muted" id="graph-subtitle" style="margin-top:2px">Drug · gene · pathway · disease evidence, in three dimensions — drag to orbit, click a node to trace it</p>
   </div>
   <div class="flex items-center gap-xs bg-white p-xs rounded-xl border border-border-default shadow-sm">
     <div class="relative flex items-center">
       <span class="material-symbols-outlined absolute left-sm text-text-dim pointer-events-none" style="font-size:18px;top:50%;transform:translateY(-50%)">search</span>
       <input id="graph-q" class="bg-transparent border-none pl-8 pr-sm py-xs text-sm focus:ring-0 w-52 outline-none"
              type="text" placeholder="Disease or molecule…"
-             onkeydown="if(event.key==='Enter')searchGraph()"
-             value="{{ disease }}"/>
+             onkeydown="if(event.key==='Enter')searchGraph()" value="{{ disease }}"/>
     </div>
     <div class="w-[1px] h-5 bg-border-default mx-xs self-stretch"></div>
-    <div class="flex items-center gap-xs px-sm py-xs border-r border-border-default">
-      <span class="text-caption font-caption text-text-dim uppercase">Layout</span>
-      <select id="layout-select" class="bg-transparent border-none text-sm focus:ring-0 cursor-pointer outline-none" onchange="setLayout(this.value)">
-        <option value="cose">Force</option>
-        <option value="circle">Circle</option>
-        <option value="grid">Grid</option>
-        <option value="breadthfirst">BFS</option>
-        <option value="concentric">Concentric</option>
-      </select>
-    </div>
+    <label class="flex items-center gap-xs px-sm py-xs border-r border-border-default cursor-pointer select-none" title="Show only high-confidence connections">
+      <input type="checkbox" id="conf-toggle" checked onchange="applyFilters()" style="width:13px;height:13px;accent-color:#2563eb"/>
+      <span class="text-caption font-caption text-text-dim uppercase">High-confidence</span>
+    </label>
     <button class="brand-gradient text-white px-md py-xs rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-xs"
             onclick="searchGraph()" id="graph-btn">
-      <span class="material-symbols-outlined" style="font-size:16px">hub</span>
-      Explore
+      <span class="material-symbols-outlined" style="font-size:16px">hub</span>Explore
     </button>
   </div>
 </div>
 
-<!-- DRKG status: silent (no banner) -->
-
-<!-- Evidence legend -->
-<div id="edge-legend-bar" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:10px;background:var(--bg-inset);border:1px solid var(--border-default);">
-  <div style="font-size:0.65rem;font-weight:700;color:#6b776e;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Evidence Layers</div>
-  <div class="edge-legend">
-    <div class="edge-pill"><div class="edge-line" style="background:#b3261e"></div>TREATS</div>
-    <div class="edge-pill"><div class="edge-line dashed" style="border-color:#2f6f5b"></div>REPURPOSE</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#b5552f"></div>INHIBITS</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#3f8f6f"></div>ACTIVATES</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#b8860b"></div>BINDS_TO</div>
-    <div class="edge-pill"><div class="edge-line dashed" style="border-color:#97751a"></div>ENCODES</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#7a5c43"></div>PARTICIPATES_IN</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#c2402f"></div>IMPLICATED_IN</div>
-    <div class="edge-pill"><div class="edge-line" style="background:#9aa39c"></div>ASSOCIATED_WITH</div>
+<div id="graph-wrap">
+  <div id="g3d-controls">
+    <span class="g3d-chip" data-kind="Compound"><span class="sw" style="background:#3b82f6"></span>Drugs</span>
+    <span class="g3d-chip" data-kind="Gene"><span class="sw" style="background:#22d3ee"></span>Genes</span>
+    <span class="g3d-chip" data-kind="Disease"><span class="sw" style="background:#f59e0b"></span>Diseases</span>
+    <span class="g3d-chip" data-kind="Pathway"><span class="sw" style="background:#a78bfa"></span>Pathways</span>
+    <span class="g3d-chip" id="layout-chip" title="Toggle hierarchical tiers (Disease → Gene → Pathway → Compound)"><span class="material-symbols-outlined" style="font-size:14px">stacks</span>Tiers</span>
+    <span class="g3d-chip" id="rotate-chip" title="Auto-rotate the camera"><span class="material-symbols-outlined" style="font-size:14px">360</span>Rotate</span>
+    <span class="g3d-chip" id="fit-chip" title="Reset the view"><span class="material-symbols-outlined" style="font-size:14px">fit_screen</span>Fit</span>
   </div>
+  <div id="g3d-tiers"></div>
+  <div id="graph3d"></div>
+  <div id="label-layer"></div>
+  <div id="g3d-hint">Drag to orbit · scroll to zoom · click a node to focus + trace neighbours</div>
+  <div id="g3d-legend"></div>
+  <div id="detail-panel"><span class="dp-close" onclick="clearHL()">×</span><div id="dp-body"></div></div>
+  <div id="g3d-loading"><span class="g3d-spin"></span>Building the network…</div>
 </div>
+{% endblock %}
 
-<!-- Graph Card -->
-<div class="bg-bg-card rounded-xl border border-border-default overflow-hidden shadow-sm">
-  <div class="px-card-padding-h py-card-padding-v border-b border-border-default flex items-center justify-between flex-wrap gap-sm">
-    <div id="legend" class="flex flex-wrap gap-md items-center"></div>
-    <div id="graph-stats" class="font-body-sm text-body-sm text-text-dim"></div>
-  </div>
-
-  <div style="position:relative">
-    <div id="cy-container"></div>
-    <div id="detail-panel">
-      <div class="flex items-center justify-between mb-sm">
-        <span style="font-size:12px;font-weight:700;color:#1f2a24" id="panel-title">Details</span>
-        <button onclick="document.getElementById('detail-panel').style.display='none'"
-                class="text-text-dim hover:text-text-primary transition-colors">
-          <span class="material-symbols-outlined" style="font-size:18px">close</span>
-        </button>
-      </div>
-      <div id="panel-content"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Treatment Hypothesis Narrative (shown only when a focal compound is set) -->
-<div id="graph-narrative-section" style="display:none;margin-top:1.5rem"></div>
-
+{% block scripts %}
 <script>
-let cy = null;
+const KIND_COLOR={Compound:'#3b82f6',Drug:'#3b82f6',Gene:'#22d3ee',Target:'#22d3ee',Disease:'#f59e0b',
+                  Pathway:'#a78bfa',Pathogen:'#f472b6',Anatomy:'#34d399',Symptom:'#fb7185'};
+const EDGE_COLOR={treats:'#22c55e',inhibit:'#f59e0b',antagon:'#f59e0b',agonist:'#38bdf8',
+                  bind:'#38bdf8',encode:'#94a3b8',target:'#38bdf8',associat:'#6b7a99',participat:'#a78bfa'};
+function kindColor(k){return KIND_COLOR[k]||'#94a3b8';}
+function edgeColor(l){l=(l||'').toLowerCase();for(const k in EDGE_COLOR){if(l.indexOf(k)>=0)return EDGE_COLOR[k];}return '#5b6a8c';}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-// ── Disease + focal compound persistence ──────────────────────────────────────
-const URL_DISEASE   = {{ ('"' ~ disease ~ '"')|safe }};
-const storedDisease = (() => { try { return sessionStorage.getItem('cq_last_disease') || ''; } catch(_) { return ''; } })();
-const FOCAL_ID      = new URLSearchParams(window.location.search).get('compound') || '';
-// A molecule in the URL takes precedence: a molecule-first graph must build FROM
-// the molecule (-> targets -> diseases) and never be hijacked by a previously
-// stored disease. The disease-first (disease -> drug) flow via ?disease= is unchanged.
-const INIT_DISEASE  = URL_DISEASE || (FOCAL_ID ? '' : storedDisease);
+let Graph=null, RAW={nodes:[],links:[]}, VIEW={nodes:[],links:[]};
+let HLN=new Set(), HLL=new Set(), LABELS=[], rotating=false, rafOn=false, hierarchy=true;
+// Biological tiers, top → bottom (Disease → Gene → Pathway → Compound). Each kind is
+// pinned to a vertical plane; the force spreads nodes WITHIN the plane, so mechanism
+// reads as a stack (disease at top, the drug at the bottom). Easily reordered.
+const LAYER_OF={Disease:0, Gene:1, Target:1, Pathway:2, Compound:3, Drug:3, Anatomy:0, Symptom:0, Pathogen:2};
+const LAYER_Y={0:210, 1:70, 2:-70, 3:-210};
+function applyLayout(){
+  for(var i=0;i<VIEW.nodes.length;i++){
+    var n=VIEW.nodes[i], L=LAYER_OF[n.kind];
+    if(hierarchy && L!==undefined){ n.fy=LAYER_Y[L]; }
+    else { n.fy=undefined; }
+  }
+  try{ Graph.d3ReheatSimulation(); }catch(e){}
+  setTimeout(function(){ try{ Graph.zoomToFit(700,110); }catch(e){} }, 1300);
+}
+const FILTER={Compound:true,Drug:true,Gene:true,Target:true,Disease:true,Pathway:true,Pathogen:true,Anatomy:true,Symptom:true};
 
-if (!URL_DISEASE && !FOCAL_ID && storedDisease) {
-  document.getElementById('graph-q').value = storedDisease;
+function tip(n){
+  var m=n.meta||{};
+  return '<div class="g3d-tip"><span class="t" style="color:'+n.color+'">'+esc(n.kind)+'</span>'
+    +'<b>'+esc(n.name)+'</b>'
+    +(m.ot_score!=null?'<div class="s">OT association '+(+m.ot_score).toFixed(2)+'</div>':'')
+    +(m.gene_name?'<div class="d">'+esc(m.gene_name)+'</div>':'')
+    +(m.description?'<div class="d">'+esc(String(m.description).slice(0,160))+'…</div>':'')
+    +'</div>';
 }
 
-// ── Node / edge color maps ─────────────────────────────────────────────────────
-// Distinct warm hues - color encodes node KIND, so each must stay separable
-const NODE_COLORS = {
-  'Disease':   '#b3261e',   // brick - the pathology
-  'Compound':  '#2f6f5b',   // botanical green - the drug
-  'Gene':      '#b8860b',   // gold
-  'Protein':   '#7a5c43',   // warm brown
-  'Pathway':   '#b5552f',   // terracotta
-};
-const EDGE_COLORS = {
-  'TREATS':              '#b3261e',
-  'REPURPOSE_CANDIDATE': '#2f6f5b',
-  'INHIBITS':            '#b5552f',
-  'ACTIVATES':           '#3f8f6f',
-  'BINDS_TO':            '#b8860b',
-  'ENCODES':             '#97751a',
-  'PARTICIPATES_IN':     '#7a5c43',
-  'ASSOCIATED_WITH':     '#9aa39c',
-  'IMPLICATED_IN':       '#c2402f',
-  // legacy lowercase labels (overview graph)
-  'treats':              '#b3261e',
-  'repurpose_candidate': '#2f6f5b',
-  'targets':             '#b8860b',
-  'associated_with':     '#9aa39c',
-  'interacts':           '#cbbfa6',
-};
+function initGraph(){
+  var el=document.getElementById('graph3d');
+  Graph=ForceGraph3D()(el)
+    .backgroundColor('#0a1120')
+    .showNavInfo(false)
+    .nodeRelSize(2.4)
+    .nodeVal(function(n){return n.val;})
+    .onEngineStop(function(){ try{ Graph.zoomToFit(500, 90); }catch(e){} })
+    .nodeColor(function(n){return HLN.size? (HLN.has(n.id)?n.color:'rgba(120,132,160,0.10)') : n.color;})
+    .nodeOpacity(0.95)
+    .nodeResolution(14)
+    .nodeLabel(tip)
+    .linkColor(function(l){var id=l.__id; return HLL.size? (HLL.has(id)?edgeColor(l.label):'rgba(90,102,132,0.05)') : edgeColor(l.label);})
+    .linkWidth(function(l){return 0.5+1.8*(l.weight||0.3);})
+    .linkOpacity(0.42)
+    .linkDirectionalParticles(function(l){return HLL.size? (HLL.has(l.__id)?4:0) : ((l.weight||0)>0.5?3:2);})
+    .linkDirectionalParticleSpeed(function(l){return 0.004+0.006*(l.weight||0.3);})
+    .linkDirectionalParticleWidth(2.0)
+    .onNodeClick(focusNode)
+    .onBackgroundClick(clearHL)
+    .width(el.clientWidth).height(el.clientHeight);
+  try{ Graph.d3Force('charge').strength(-260);
+        Graph.d3Force('link').distance(function(l){return 30+34*(1-(l.weight||0.3));}); }catch(e){}
+  window.addEventListener('resize',function(){Graph.width(el.clientWidth).height(el.clientHeight);});
+  startLabelLoop();
+}
 
-// ── Load graph ─────────────────────────────────────────────────────────────────
-async function loadGraph(disease) {
-  const btn = document.getElementById('graph-btn');
-  const origHTML = btn.innerHTML;
-  btn.innerHTML = '<span style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block"></span>';
-  btn.disabled = true;
-  document.getElementById('graph-stats').textContent = 'Loading…';
-
-  try {
-    const focalParam = FOCAL_ID ? `&compound=${encodeURIComponent(FOCAL_ID)}` : '';
-    // A focal molecule alone is enough - the server derives its disease.
-    const url = (disease || FOCAL_ID)
-      ? `/api/repurpose-graph?disease=${encodeURIComponent(disease)}&n=3${focalParam}`
-      : '/api/graph';
-    const data = await apiFetch(url);
-    const elems  = data.elements || [];
-    const legend = data.legend || {};
-    // Server may have derived the disease from the focal compound.
-    if (!disease && data.disease) {
-      disease = data.disease;
-      const qbox = document.getElementById('graph-q');
-      if (qbox && !qbox.value) qbox.value = disease;
-    }
-
-    if (!elems.length) {
-      document.getElementById('cy-container').innerHTML =
-        `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:#9aa39c">
-          <span class="material-symbols-outlined" style="font-size:40px;opacity:0.4">hub</span>
-          <p style="font-size:0.83rem">${disease ? 'No repurposing candidates found for "' + disease + '"' : 'No data'}</p>
-        </div>`;
-      document.getElementById('graph-stats').textContent = '0 nodes';
-      document.getElementById('edge-legend-bar').style.display = 'none';
-      return;
-    }
-
-    const nodes   = elems.filter(e => !e.data?.source);
-    const edges   = elems.filter(e =>  e.data?.source);
-    const drugs   = nodes.filter(n => n.data?.kind === 'Compound');
-    const genes   = nodes.filter(n => n.data?.kind === 'Gene');
-    const prots   = nodes.filter(n => n.data?.kind === 'Protein');
-    const paths   = nodes.filter(n => n.data?.kind === 'Pathway');
-
-    const diseaseNodes = nodes.filter(n => n.data?.kind === 'Disease');
-    document.getElementById('graph-stats').textContent =
-      `${nodes.length} nodes · ${edges.length} edges`;
-
-    if (data.mode === 'compound') {
-      // Molecule-centric repurposing map (no pre-selected disease needed)
-      const focalNode = nodes.find(n => n.data?.focal) || drugs[0];
-      const focalName = focalNode?.data?.full_label || focalNode?.data?.label || 'this molecule';
-      document.getElementById('graph-subtitle').textContent =
-        `Repurposing map for "${focalName}" - ${genes.length} target${genes.length !== 1 ? 's' : ''} · ${diseaseNodes.length} candidate disease${diseaseNodes.length !== 1 ? 's' : ''}`;
-      document.getElementById('edge-legend-bar').style.display = '';
-      const crumb = document.getElementById('graph-focal-crumb');
-      if (crumb) {
-        crumb.innerHTML = `<strong>${focalName}</strong> - molecule at centre; lines trace targets → candidate diseases`;
-        crumb.style.display = 'block';
-      }
-    } else if (disease) {
-      const protPart = prots.length ? ` · ${prots.length} proteins` : '';
-      document.getElementById('graph-subtitle').textContent =
-        `Top ${drugs.length} repurposing candidate${drugs.length !== 1 ? 's' : ''} for "${disease}" - ${genes.length} genes${protPart} · ${paths.length} pathways`;
-      document.getElementById('edge-legend-bar').style.display = '';
-      // Focal compound breadcrumb (with score from sessionStorage if available)
-      const crumb = document.getElementById('graph-focal-crumb');
-      if (FOCAL_ID) {
-        const focalNode = nodes.find(n => n.data?.chembl_id === FOCAL_ID);
-        const focalName = focalNode?.data?.label || FOCAL_ID;
-        let scoreChip = '';
-        try {
-          const stored = sessionStorage.getItem('compound_' + FOCAL_ID);
-          if (stored) {
-            const cdata = JSON.parse(stored);
-            const sc = cdata.score;
-            if (sc) {
-              const scPct = (sc * 100).toFixed(0);
-              const scCol = sc >= 0.65 ? '#2f6f5b' : sc >= 0.4 ? '#2f6f5b' : '#97751a';
-              scoreChip = ` <span style="padding:2px 8px;border-radius:999px;background:${scCol}18;color:${scCol};border:1px solid ${scCol}40;font-size:10px;font-weight:700">Score ${scPct}/100</span>`;
-            }
-          }
-        } catch(_) {}
-        crumb.innerHTML = `<strong>${focalName}</strong>${scoreChip} - highlighted in gold`;
-        crumb.style.display = 'block';
-        // Load narrative after graph renders
-        loadNarrative(FOCAL_ID, disease);
-      }
+function toGraphData(elements){
+  var nodes=[], links=[], i=0;
+  for(var k=0;k<elements.length;k++){
+    var e=elements[k], d=e.data||{};
+    if(d.source===undefined){
+      nodes.push({id:d.id, name:d.full_label||d.label||d.id, kind:d.kind||'',
+                  color:kindColor(d.kind), val:Math.max(1.2,(+d.size||20)/15), meta:d});
     } else {
-      document.getElementById('graph-subtitle').textContent =
-        `Disease landscape - ${nodes.length} nodes`;
-      document.getElementById('edge-legend-bar').style.display = 'none';
+      links.push({source:d.source, target:d.target, label:d.label||'', weight:+d.weight||0.4, __id:i++});
     }
+  }
+  return {nodes:nodes, links:links};
+}
 
-    renderLegend(legend);
-    renderCytoscape(elems, disease);
-  } catch(e) {
-    document.getElementById('cy-container').innerHTML =
-      `<div style="padding:2rem;color:#b3261e;font-size:0.82rem">Error: ${e.message}</div>`;
-    document.getElementById('graph-stats').textContent = '';
-  } finally {
-    btn.innerHTML = origHTML;
-    btn.disabled = false;
+function applyFilters(){
+  var conf=document.getElementById('conf-toggle').checked;
+  var okNode={};
+  var nodes=RAW.nodes.filter(function(n){ var ok=FILTER[n.kind]!==false; okNode[n.id]=ok; return ok; });
+  var links=RAW.links.filter(function(l){
+    var s=l.source.id||l.source, t=l.target.id||l.target;
+    if(!okNode[s]||!okNode[t]) return false;
+    if(conf && (l.weight||0)<0.3 && !/treat|inhibit|bind|target/i.test(l.label)) return false;
+    return true;
+  });
+  VIEW={nodes:nodes, links:links};
+  HLN=new Set(); HLL=new Set(); hideDetail();
+  Graph.graphData(VIEW);
+  applyLayout();
+  buildLabels();
+  buildLegend();
+  buildTiers();
+}
+
+function loadGraph(q){
+  var loading=document.getElementById('g3d-loading'); loading.style.display='flex';
+  var limit=90;
+  fetch('/api/graph?disease='+encodeURIComponent(q||'')+'&limit='+limit)
+    .then(function(r){return r.json();})
+    .then(function(res){
+      RAW=toGraphData(res.elements||[]);
+      applyFilters();
+      // gentle initial zoom-to-fit once the force settles
+      setTimeout(function(){ try{Graph.zoomToFit(700,60);}catch(e){} }, 900);
+      loading.style.display='none';
+      document.getElementById('graph-subtitle').textContent =
+        RAW.nodes.length+' nodes · '+RAW.links.length+' relationships'+(res.drkg?' · DRKG-backed':'');
+    })
+    .catch(function(e){ loading.innerHTML='Could not load the graph.'; });
+}
+
+function focusNode(node){
+  HLN=new Set([node.id]); HLL=new Set();
+  for(var i=0;i<VIEW.links.length;i++){
+    var l=VIEW.links[i], s=l.source.id||l.source, t=l.target.id||l.target;
+    if(s===node.id||t===node.id){ HLL.add(l.__id); HLN.add(s); HLN.add(t); }
+  }
+  Graph.nodeColor(Graph.nodeColor()).linkColor(Graph.linkColor())
+       .linkDirectionalParticles(Graph.linkDirectionalParticles());
+  var d=90, r=Math.hypot(node.x,node.y,node.z)||1, k=1+d/r;
+  Graph.cameraPosition({x:node.x*k,y:node.y*k,z:node.z*k}, node, 900);
+  showDetail(node);
+  updateLabelDim();
+}
+
+function clearHL(){
+  HLN=new Set(); HLL=new Set();
+  Graph.nodeColor(Graph.nodeColor()).linkColor(Graph.linkColor())
+       .linkDirectionalParticles(Graph.linkDirectionalParticles());
+  hideDetail(); updateLabelDim();
+}
+
+function showDetail(node){
+  var m=node.meta||{}, p=document.getElementById('detail-panel'), b=document.getElementById('dp-body');
+  var neigh=[];
+  for(var i=0;i<VIEW.links.length;i++){
+    var l=VIEW.links[i], s=l.source.id||l.source, t=l.target.id||l.target, o=null;
+    if(s===node.id) o=(l.target.id?l.target:byId(t));
+    else if(t===node.id) o=(l.source.id?l.source:byId(s));
+    if(o) neigh.push(o);
+  }
+  var seen={}, nh='';
+  for(var j=0;j<neigh.length && j<16;j++){ if(seen[neigh[j].id])continue; seen[neigh[j].id]=1;
+    nh+='<span class="nn" style="border-color:'+neigh[j].color+'55" onclick="focusById(\''+neigh[j].id.replace(/'/g,"")+'\')">'+esc(neigh[j].name)+'</span>'; }
+  b.innerHTML='<div class="dp-kind" style="color:'+node.color+'">'+esc(node.kind)+'</div>'
+    +'<h4>'+esc(node.name)+'</h4>'
+    +(m.gene_name?'<div class="detail-row"><span class="detail-key">Full name</span><span class="detail-val">'+esc(m.gene_name)+'</span></div>':'')
+    +(m.ot_score!=null?'<div class="detail-row"><span class="detail-key">OT association</span><span class="detail-val">'+(+m.ot_score).toFixed(3)+'</span></div>':'')
+    +(m.efo_id?'<div class="detail-row"><span class="detail-key">Ontology id</span><span class="detail-val">'+esc(m.efo_id)+'</span></div>':'')
+    +'<div class="detail-row"><span class="detail-key">Connections</span><span class="detail-val">'+neigh.length+'</span></div>'
+    +(m.description?'<div class="dp-desc">'+esc(String(m.description).slice(0,240))+'</div>':'')
+    +(nh?'<div class="dp-neigh"><div class="detail-key" style="margin-bottom:6px">Neighbours</div>'+nh+'</div>':'');
+  p.style.display='block';
+}
+function hideDetail(){document.getElementById('detail-panel').style.display='none';}
+function byId(id){for(var i=0;i<VIEW.nodes.length;i++){if(VIEW.nodes[i].id===id)return VIEW.nodes[i];}return null;}
+function focusById(id){var n=byId(id); if(n)focusNode(n);}
+
+/* ---- persistent HTML labels for the biggest nodes, tracked each frame ---- */
+function buildLabels(){
+  var layer=document.getElementById('label-layer'); layer.innerHTML=''; LABELS=[];
+  var top=VIEW.nodes.slice().sort(function(a,b){return b.val-a.val;}).slice(0,11);
+  for(var i=0;i<top.length;i++){
+    var n=top[i], el=document.createElement('div'); el.className='g3d-label';
+    el.innerHTML='<span class="k" style="color:'+n.color+'">'+esc(n.kind)+'</span>'+esc(n.name);
+    layer.appendChild(el); LABELS.push({node:n, el:el});
   }
 }
-
-// ── Legend ─────────────────────────────────────────────────────────────────────
-function renderLegend(legend) {
-  const shapes = { Compound:'3px', Pathway:'0', Protein:'2px' };
-  document.getElementById('legend').innerHTML = Object.entries(legend).map(([kind, color]) =>
-    `<div style="display:flex;align-items:center;gap:6px">
-      <span style="width:10px;height:10px;border-radius:${shapes[kind]||'50%'};background:${color};display:inline-block;flex-shrink:0${kind==='Pathway'?';transform:rotate(45deg)':''};"></span>
-      <span style="font-size:11px;color:#45524a;font-weight:500">${kind}</span>
-    </div>`
-  ).join('');
+function updateLabelDim(){
+  for(var i=0;i<LABELS.length;i++){
+    LABELS[i].el.style.opacity=(HLN.size && !HLN.has(LABELS[i].node.id))?0.12:1;
+  }
 }
-
-// ── Cytoscape render ───────────────────────────────────────────────────────────
-function renderCytoscape(elems, disease) {
-  if (cy) { cy.destroy(); cy = null; }
-
-  const edgeStyles = Object.entries(EDGE_COLORS).map(([lbl, color]) => ({
-    selector: `edge[label='${lbl}']`,
-    style: {
-      'line-color': color,
-      'target-arrow-color': color,
-      'width': ['TREATS','treats'].includes(lbl) ? 2.8 : ['INHIBITS','ACTIVATES','IMPLICATED_IN'].includes(lbl) ? 2.2 : 1.6,
-      'opacity': ['TREATS','treats'].includes(lbl) ? 0.9 : ['ENCODES'].includes(lbl) ? 0.55 : 0.65,
-      'line-style': ['REPURPOSE_CANDIDATE','repurpose_candidate','ENCODES'].includes(lbl) ? 'dashed' : 'solid',
+function startLabelLoop(){
+  if(rafOn)return; rafOn=true;
+  (function frame(){
+    if(Graph && LABELS.length){
+      for(var i=0;i<LABELS.length;i++){
+        var n=LABELS[i].node;
+        if(n.x==null){continue;}
+        var c=Graph.graph2ScreenCoords(n.x,n.y,n.z);
+        LABELS[i].el.style.transform='translate(-50%,-50%) translate('+c.x+'px,'+c.y+'px)';
+      }
     }
-  }));
+    requestAnimationFrame(frame);
+  })();
+}
 
-  // Molecule-first graphs must put the MOLECULE at the centre. With a force layout
-  // the high-degree target hub drifts to the middle and the molecule looks peripheral,
-  // so for a focal molecule use a concentric layout rooted on it:
-  //   molecule (centre) → targets (inner ring) → candidate diseases (outer ring).
-  const focalEl = elems.find(e => e.data && e.data.focal && !e.data.source);
-  const layoutCfg = focalEl ? {
-    name: 'concentric',
-    animate: false,
-    concentric: n => n.data('focal') ? 4
-                   : (n.data('kind') === 'Gene' || n.data('kind') === 'Protein') ? 3
-                   : (n.data('kind') === 'Pathway') ? 2 : 1,
-    levelWidth: () => 1,
-    minNodeSpacing: 32,
-    equidistant: false,
-  } : {
-    name: 'cose',
-    animate: false,
-    nodeRepulsion: 14000,
-    idealEdgeLength: 90,
-    gravity: 0.6,
-    numIter: 1000,
-  };
+function buildTiers(){
+  var el=document.getElementById('g3d-tiers');
+  if(!hierarchy){ el.style.opacity=0; return; }
+  el.style.opacity=1;
+  var names={0:'Disease',1:'Gene / target',2:'Pathway',3:'Compound'};
+  var present={};
+  for(var i=0;i<VIEW.nodes.length;i++){ var L=LAYER_OF[VIEW.nodes[i].kind]; if(L!==undefined)present[L]=1; }
+  var h='';
+  [0,1,2,3].forEach(function(L){ if(!present[L])return;
+    var col={0:'#f59e0b',1:'#22d3ee',2:'#a78bfa',3:'#3b82f6'}[L];
+    h+='<div class="tier"><span class="bar" style="background:'+col+'"></span>'+names[L]+'</div>'; });
+  el.innerHTML=h;
+}
+function buildLegend(){
+  var kinds={}, L=document.getElementById('g3d-legend');
+  for(var i=0;i<VIEW.nodes.length;i++){kinds[VIEW.nodes[i].kind]=1;}
+  var h='';
+  Object.keys(kinds).forEach(function(k){ if(!k)return;
+    h+='<span class="lg"><span class="sw" style="background:'+kindColor(k)+'"></span>'+esc(k)+'</span>'; });
+  L.innerHTML=h;
+}
 
-  cy = cytoscape({
-    container: document.getElementById('cy-container'),
-    elements: elems,
-    layout: layoutCfg,
-    style: [
-      {
-        selector: 'node',
-        style: {
-          'background-color': 'data(color)',
-          'label': 'data(label)',
-          'color': '#fffdf9',
-          'font-size': '9.5px',
-          'font-family': 'Inter, sans-serif',
-          'text-valign': 'center',
-          'text-halign': 'center',
-          'text-wrap': 'wrap',
-          'text-max-width': '68px',
-          'text-outline-width': 2,
-          'text-outline-color': 'data(color)',
-          'width': 'data(size)',
-          'height': 'data(size)',
-          'border-width': 1.5,
-          'border-color': 'rgba(31,42,36,0.16)',
-        }
-      },
-      { selector: "node[kind='Disease']",
-        style: { 'font-size': '11px', 'font-weight': 'bold', 'border-width': 3, 'border-color': 'rgba(255,255,255,0.45)' }
-      },
-      // Fuse the Repurposing Value Score into the graph: high-value indications pop
-      // with a green ring, low-value ones fade — so the picture itself communicates
-      // "which of these diseases is actually worth pursuing".
-      { selector: "node[kind='Disease'][value_tier='High priority']",
-        style: { 'border-width': 5, 'border-color': '#2f6f5b' } },
-      { selector: "node[kind='Disease'][value_tier='Attractive']",
-        style: { 'border-width': 4, 'border-color': '#3f7d68' } },
-      { selector: "node[kind='Disease'][value_tier='Low value']",
-        style: { 'border-color': 'rgba(179,38,30,0.6)', 'opacity': 0.55 } },
-      { selector: "node[kind='Compound']",
-        style: { 'shape': 'round-rectangle' }
-      },
-      { selector: "node[?focal]",
-        style: {
-          'border-width': 5,
-          'border-color': '#b8860b',
-          'border-opacity': 1,
-          'font-size': '12px',
-          'font-weight': 'bold',
-          'width': 'data(size)',
-          'height': 'data(size)',
-        }
-      },
-      { selector: "node[kind='Protein']",
-        style: { 'shape': 'hexagon', 'font-size': '8px', 'border-width': 1.5, 'border-color': 'rgba(255,255,255,0.35)' }
-      },
-      { selector: "node[kind='Pathway']",
-        style: { 'shape': 'diamond', 'font-size': '8.5px' }
-      },
-      { selector: "node[?bridge]",
-        style: { 'border-width': 3, 'border-color': '#facc15', 'border-opacity': 0.9 }
-      },
-      { selector: 'node:selected',
-        style: { 'border-width': 4, 'border-color': '#2f6f5b' }
-      },
-      {
-        selector: 'edge',
-        style: {
-          'curve-style': 'bezier',
-          'line-color': '#d8d4c8',
-          'target-arrow-color': '#9aa39c',
-          'target-arrow-shape': 'triangle',
-          'arrow-scale': 0.9,
-          'width': 1.4,
-          'opacity': 0.55,
-        }
-      },
-      ...edgeStyles,
-    ]
+function searchGraph(){ loadGraph(document.getElementById('graph-q').value.trim()); }
+
+/* controls */
+document.addEventListener('DOMContentLoaded', function(){
+  initGraph();
+  document.querySelectorAll('.g3d-chip[data-kind]').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var k=chip.getAttribute('data-kind'); FILTER[k]=!(FILTER[k]!==false);
+      // map the display kinds to their synonyms
+      if(k==='Compound'){FILTER.Drug=FILTER[k];}
+      if(k==='Gene'){FILTER.Target=FILTER[k];}
+      chip.classList.toggle('off', FILTER[k]===false);
+      applyFilters();
+    });
   });
-
-  // ── Node tap: show detail panel ──────────────────────────────────────────────
-  cy.on('tap', 'node', function(e) {
-    const d = e.target.data();
-    const kindColor = NODE_COLORS[d.kind] || '#3a463e';
-    const connEdges = e.target.connectedEdges();
-    const rows = [];
-
-    if (d.kind === 'Gene') {
-      rows.push(['Name', d.gene_name || d.full_label || d.label]);
-      rows.push(['Symbol', d.full_label || d.label]);
-      if (d.bridge) rows.push(['Role', '<span style="color:#97751a;font-weight:700">Bridge Gene</span> - links drug to disease']);
-      if (d.ot_score > 0) rows.push(['OT Evidence', scoreBar(d.ot_score) + ' ' + d.ot_score]);
-      if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
-      if (d.note) rows.push(['Note', d.note]);
-      const encEdges = connEdges.filter(e2 => e2.data('label') === 'ENCODES');
-      if (encEdges.length) {
-        rows.push(['__layer', 'Encodes Protein']);
-        encEdges.forEach(e2 => {
-          const prot = e2.target();
-          rows.push(['', `<span style="color:#8a6309;font-weight:600">${prot.data('full_label') || prot.data('label')}</span>`]);
-        });
-      }
-    } else if (d.kind === 'Protein') {
-      rows.push(['Protein', d.full_label || d.label]);
-      if (d.gene_symbol) rows.push(['Gene', `<span style="color:#2f6f5b;font-weight:600">${d.gene_symbol}</span>`]);
-      if (d.gene_name)   rows.push(['Gene Name', d.gene_name]);
-      if (d.ot_score > 0) rows.push(['OT Evidence', scoreBar(d.ot_score) + ' ' + d.ot_score]);
-      if (d.source_db)   rows.push(['Source', srcBadge(d.source_db)]);
-      const drugEdges = connEdges.filter(e2 => {
-        const other = e2.source().id() === d.id ? e2.target() : e2.source();
-        return other.data('kind') === 'Compound';
-      });
-      if (drugEdges.length) {
-        rows.push(['__layer', 'Targeted by Drugs']);
-        drugEdges.forEach(e2 => {
-          const drug = e2.source().id() === d.id ? e2.target() : e2.source();
-          rows.push(['', `<span style="color:#2f6f5b">${drug.data('label')}</span> - ${e2.data('mechanism') || e2.data('label')}`]);
-        });
-      }
-      const pwEdges = connEdges.filter(e2 => e2.data('label') === 'PARTICIPATES_IN');
-      if (pwEdges.length) {
-        rows.push(['__layer', 'Active in Pathway']);
-        pwEdges.forEach(e2 => {
-          const pw = e2.target();
-          rows.push(['', `<span style="color:#97751a">${pw.data('label')}</span>`]);
-        });
-      }
-    } else if (d.kind === 'Compound') {
-      rows.push(['Drug Name', d.full_label || d.label]);
-      rows.push(['Rank', `#${d.rank || '?'} repurposing candidate`]);
-      rows.push(['Score', scoreBar(d.score) + ' ' + (d.score ? (d.score*100).toFixed(1)+'%' : '-')]);
-      rows.push(['Clinical Stage', phaseLabel(d.phase)]);
-      if (d.approved_for) rows.push(['Approved For', d.approved_for.slice(0,60) + (d.approved_for.length>60?'…':'')]);
-      if (d.chembl_id) rows.push(['Compound ID',
-        `<a href="https://www.ebi.ac.uk/chembl/compound_report_card/${d.chembl_id}/" target="_blank" style="color:#2f6f5b">${d.chembl_id}</a>`]);
-      if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
-      // Protein/Gene targets
-      const targetEdges = connEdges.filter(e2 =>
-        ['BINDS_TO','INHIBITS','ACTIVATES','targets'].includes(e2.data('label'))
-      );
-      if (targetEdges.length) {
-        rows.push(['__layer', 'Molecular Targets']);
-        targetEdges.forEach(e2 => {
-          const g = e2.target();
-          const mech = e2.data('mechanism') || e2.data('label');
-          const isProtein = g.data('kind') === 'Protein';
-          const isBridge = g.data('bridge');
-          const col = isProtein ? '#8a6309' : (isBridge ? '#97751a' : '#2f6f5b');
-          const tag = isProtein ? ' (protein)' : (isBridge ? ' (bridge)' : '');
-          rows.push(['', `<span style="color:${col};font-weight:600">${g.data('label')}</span>${mech ? ' - '+mech : ''}${tag}`]);
-        });
-      }
-      rows.push(['__link', `/analysis?id=${d.chembl_id||''}&disease=${encodeURIComponent(INIT_DISEASE)}`]);
-    } else if (d.kind === 'Pathway') {
-      rows.push(['Pathway', d.full_label || d.label]);
-      if (d.reactome_id) rows.push(['Pathway ID',
-        `<a href="${d.reactome_url||'https://reactome.org'}" target="_blank" style="color:#97751a">${d.reactome_id}</a>`]);
-      if (d.source_db) rows.push(['Source', srcBadge(d.source_db)]);
-      // Proteins/Genes participating in this pathway
-      const partEdges = connEdges.filter(e2 => e2.data('label') === 'PARTICIPATES_IN');
-      if (partEdges.length) {
-        rows.push(['__layer', 'Participating Proteins / Genes']);
-        partEdges.forEach(e2 => {
-          const g = e2.source();
-          const isProtein = g.data('kind') === 'Protein';
-          const col = isProtein ? '#8a6309' : '#2f6f5b';
-          rows.push(['', `<span style="color:${col}">${g.data('label')}</span>${isProtein ? ' (protein)' : ''}`]);
-        });
-      }
-      // Disease implication
-      const impEdges = connEdges.filter(e2 => e2.data('label') === 'IMPLICATED_IN');
-      if (impEdges.length) {
-        rows.push(['__layer', 'Implicated in Disease']);
-        impEdges.forEach(e2 => {
-          const dis = e2.target();
-          rows.push(['', `<span style="color:#b3261e;font-weight:700">${dis.data('full_label') || dis.data('label')}</span>`]);
-        });
-      }
-    } else if (d.kind === 'Disease') {
-      rows.push(['Disease', d.full_label || d.label]);
-      if (d.efo_id) rows.push(['Ontology ID',
-        `<a href="https://platform.opentargets.org/disease/${d.efo_id}" target="_blank" style="color:#b3261e">${d.efo_id}</a>`]);
-      // Validated platform signals fused into the graph.
-      if (d.value_score != null) {
-        var vt = d.value_tier || '', vc = (vt==='High priority')?'#2f6f5b':(vt==='Attractive')?'#3f7d68':(vt==='Marginal')?'#a86b2d':'#b3261e';
-        rows.push(['Repurposing value', scoreBar(d.value_score) + ` <span style="color:${vc};font-weight:700">${Math.round(d.value_score*100)} · ${vt}</span>`]);
-        rows.push(['__sub', 'Burden × unmet-need × market — is this indication worth pursuing?']);
-      }
-      if (d.plausibility != null)
-        rows.push(['Plausibility P(treats)', scoreBar(d.plausibility) + ` ${(d.plausibility*100).toFixed(0)}% <span style="color:#9aa39c;font-size:10px">DWPC, AUC 0.98 vs random</span>`]);
-      if (d.description) rows.push(['Description', d.description.slice(0,120)+'…']);
-      rows.push(['Source', srcBadge('Curated')]);
-      rows.push(['__link_discover', d.full_label || d.label]);
-    }
-
-    showPanel(d.kind + ' - ' + (d.full_label || d.label), kindColor, rows);
+  document.getElementById('layout-chip').addEventListener('click', function(){
+    hierarchy=!hierarchy; this.classList.toggle('off', !hierarchy);
+    applyLayout(); buildTiers();
   });
-
-  // ── Edge tap: show provenance panel ─────────────────────────────────────────
-  cy.on('tap', 'edge', function(e) {
-    const d = e.target.data();
-    const src = cy.getElementById(d.source);
-    const tgt = cy.getElementById(d.target);
-    const color = EDGE_COLORS[d.label] || '#3a463e';
-
-    const rows = [
-      ['Relationship', `<span style="color:${color};font-weight:700">${d.label}</span>`],
-      ['From', src.data('label') || d.source],
-      ['To',   tgt.data('label') || d.target],
-    ];
-    if (d.source_db)      rows.push(['Source DB', srcBadge(d.source_db)]);
-    if (d.evidence_score) rows.push(['Evidence Score', scoreBar(d.evidence_score) + ' ' + (d.evidence_score*100).toFixed(0)+'%']);
-    if (d.evidence_type)  rows.push(['Evidence Type', d.evidence_type]);
-    if (d.mechanism)      rows.push(['Mechanism', d.mechanism]);
-    if (d.detail)         rows.push(['Detail', d.detail.slice(0,100)]);
-    if (d.max_phase != null && d.max_phase > 0) rows.push(['Clinical Phase', phaseLabel(d.max_phase)]);
-    if (d.approved_for)   rows.push(['Approved For', d.approved_for.slice(0,60)]);
-    if (d.pathway_id)     rows.push(['Pathway', `<a href="https://reactome.org/PathwayBrowser/#/${d.pathway_id}" target="_blank" style="color:#97751a">${d.pathway_id}</a>`]);
-    if (d.source_id)      rows.push(['Source ID', d.source_id]);
-    if (d.source_url)     rows.push(['Evidence Link', `<a href="${d.source_url}" target="_blank" style="color:#2f6f5b">Evidence</a>`]);
-
-    showPanel('Relationship Evidence', color, rows);
+  document.getElementById('rotate-chip').addEventListener('click', function(){
+    rotating=!rotating; this.classList.toggle('off', !rotating);
+    if(rotating) spin();
   });
-
-  cy.on('tap', function(e) {
-    if (e.target === cy) document.getElementById('detail-panel').style.display = 'none';
+  document.getElementById('fit-chip').addEventListener('click', function(){
+    clearHL(); try{Graph.zoomToFit(700,60);}catch(e){}
   });
+  var start='{{ disease }}'.trim() || 'idiopathic pulmonary fibrosis';
+  document.getElementById('graph-q').value='{{ disease }}'.trim();
+  loadGraph(start);
+});
+
+var _spinA=0;
+function spin(){
+  if(!rotating)return;
+  _spinA+=0.0016;
+  var dist=Graph.cameraPosition().z? 0 : 0; // keep current distance
+  var cp=Graph.cameraPosition();
+  var r=Math.hypot(cp.x,cp.z)||300;
+  Graph.cameraPosition({x:r*Math.sin(_spinA), z:r*Math.cos(_spinA)});
+  requestAnimationFrame(spin);
 }
-
-// ── Panel helpers ──────────────────────────────────────────────────────────────
-function showPanel(title, color, rows) {
-  document.getElementById('panel-title').textContent = title;
-  const c = document.getElementById('panel-content');
-  c.innerHTML = '';
-  rows.forEach(([k, v]) => {
-    if (k === '__layer') {
-      c.innerHTML += `<div class="layer-header">${v}</div>`;
-    } else if (k === '__link') {
-      c.innerHTML += `<div style="margin-top:10px"><a href="${v}" style="display:block;text-align:center;background:#2f6f5b;color:#fffdf9;padding:7px 12px;border-radius:8px;font-size:0.76rem;font-weight:600;text-decoration:none">Full Analysis →</a></div>`;
-    } else if (k === '__link_discover') {
-      c.innerHTML += `<div style="margin-top:10px"><a href="/discover?q=${encodeURIComponent(v)}" style="display:block;text-align:center;background:#b3261e;color:#fffdf9;padding:7px 12px;border-radius:8px;font-size:0.76rem;font-weight:600;text-decoration:none">Repurposing Screen →</a></div>`;
-    } else {
-      c.innerHTML += `<div class="detail-row"><span class="detail-key">${k}</span><span class="detail-val">${v}</span></div>`;
-    }
-  });
-  document.getElementById('detail-panel').style.display = 'block';
-}
-
-function scoreBar(val) {
-  const pct = Math.round((val||0)*100);
-  const col = pct >= 70 ? '#2f6f5b' : pct >= 40 ? '#97751a' : '#9aa39c';
-  return `<span style="display:inline-block;width:48px;height:6px;background:#ecebe3;border-radius:3px;vertical-align:middle;margin-right:4px"><span style="display:block;height:100%;width:${pct}%;background:${col};border-radius:3px"></span></span>`;
-}
-
-function phaseLabel(phase) {
-  const p = parseInt(phase) || 0;
-  if (p >= 4) return '<span class="evidence-badge" style="background:#d9e9df;color:#065f46">FDA Approved</span>';
-  if (p === 3) return '<span class="evidence-badge" style="background:#eff6ff;color:#1e40af">Phase 3</span>';
-  if (p === 2) return '<span class="evidence-badge" style="background:#fefce8;color:#713f12">Phase 2</span>';
-  if (p === 1) return '<span class="evidence-badge" style="background:#fff7ed;color:#5c3a1f">Phase 1</span>';
-  return '<span class="evidence-badge" style="background:#f6f5f0;color:#45524a">Preclinical</span>';
-}
-
-function srcBadge(src) {
-  // Generic, source-name-free display labels (database sources are not named in the UI).
-  const generic = {
-    'Open Targets': 'Genetic association', 'ChEMBL': 'Curated bioactivity',
-    'Reactome': 'Curated pathway', 'DrugBank': 'Drug reference',
-    'DRKG': 'Knowledge graph', 'Curated': 'Curated',
-  };
-  const label = generic[src] || (src && src.indexOf('://') < 0 ? 'Curated source' : src);
-  const col = '#45524a';
-  return `<span class="evidence-badge" style="background:${col}18;color:${col};border:1px solid ${col}40">${label}</span>`;
-}
-
-function setLayout(name) {
-  if (!cy) return;
-  cy.layout({ name, animate: true, animationDuration: 400,
-    ...(name === 'cose' ? { nodeRepulsion: 14000, idealEdgeLength: 90 } : {}),
-    ...(name === 'concentric' ? { concentric: n => n.data('kind') === 'Disease' ? 10 : n.data('kind') === 'Pathway' ? 8 : 5 } : {}),
-  }).run();
-}
-
-async function searchGraph() {
-  const q = document.getElementById('graph-q').value.trim();
-  if (!q) return;
-  document.getElementById('graph-stats').textContent = 'Resolving…';
-  // Molecule-aware: a DRUG query builds the molecule graph (drug -> targets ->
-  // diseases); a DISEASE query keeps the existing disease -> drug graph unchanged.
-  try {
-    const r = await apiFetch('/api/resolve-entity?q=' + encodeURIComponent(q));
-    if (r && r.type === 'drug' && r.chembl_id) {
-      try { sessionStorage.removeItem('cq_last_disease'); } catch(_) {}
-      window.location.href = '/graph?compound=' + encodeURIComponent(r.chembl_id);
-      return;
-    }
-  } catch(_) {}
-  // Disease path - unchanged
-  try { sessionStorage.setItem('cq_last_disease', q); } catch(_) {}
-  history.pushState({}, '', '/graph?disease=' + encodeURIComponent(q));
-  loadGraph(q);
-}
-
-// ── Treatment hypothesis narrative ────────────────────────────────────────────
-async function loadNarrative(compound, disease) {
-  const section = document.getElementById('graph-narrative-section');
-  if (!compound || !disease || !section) return;
-  section.style.display = '';
-  section.innerHTML = `<div style="padding:14px 18px;background:#f6f5f0;border:1px solid #e6e2d7;border-radius:12px;display:flex;align-items:center;gap:10px;font-size:0.8rem;color:#6b776e">
-    <span style="width:14px;height:14px;border:2px solid #e0ddd1;border-top-color:#2f6f5b;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;flex-shrink:0"></span>
-    Building treatment hypothesis…
-  </div>`;
-  try {
-    const res = await apiFetch(`/api/graph-narrative?compound=${encodeURIComponent(compound)}&disease=${encodeURIComponent(disease)}`);
-    if (res.error || !res.hypothesis) { section.style.display = 'none'; return; }
-
-    const phaseColors = {0:'#6b776e', 1:'#97751a', 2:'#2f6f5b', 3:'#8a6309', 4:'#2f6f5b'};
-    const phaseColor  = phaseColors[res.phase] || '#45524a';
-
-    const evidenceHTML = (res.evidence_chain || []).map(e =>
-      `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #ecebe3;last-child:border-none">
-        <span style="font-size:1rem;flex-shrink:0;line-height:1.4">${e.icon}</span>
-        <span style="font-size:0.78rem;color:#3a463e;line-height:1.7">${e.text}</span>
-      </div>`).join('');
-
-    const mechHTML = (res.mechanisms || []).map(m =>
-      `<span style="display:inline-block;padding:2px 9px;margin:2px 3px 2px 0;border-radius:4px;background:#fbf6ea;border:1px solid #e6cf95;color:#6d4e08;font-size:0.7rem;font-weight:600">${m}</span>`
-    ).join('');
-
-    const targetHTML = (res.targets || []).map(([g, p]) =>
-      `<span style="display:inline-block;padding:2px 9px;margin:2px 3px 2px 0;border-radius:4px;background:#eef3f0;border:1px solid #cfe0d8;color:#2f6f5b;font-size:0.7rem;font-weight:600">${g}${p ? ' · '+p : ''}</span>`
-    ).join('');
-
-    section.innerHTML = `
-      <div style="background:#fffdf9;border:1px solid #e0ddd1;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(31,42,36,0.05)">
-        <!-- Header -->
-        <div style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border-bottom:1px solid #cfe0d8;padding:16px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div style="width:36px;height:36px;flex-shrink:0;border-radius:9px;background:#2f6f5b;display:flex;align-items:center;justify-content:center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fffdf9" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2f6f5b;margin-bottom:2px">Treatment Hypothesis</div>
-            <div style="font-size:16px;font-weight:900;color:#1f2a24;letter-spacing:-0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${res.drug_name} → ${res.disease}</div>
-          </div>
-          <span style="flex-shrink:0;padding:4px 12px;border-radius:999px;background:${phaseColor}18;color:${phaseColor};border:1px solid ${phaseColor}40;font-size:11px;font-weight:700;text-transform:capitalize">${res.phase_label}</span>
-        </div>
-        <!-- Body -->
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:0">
-          <!-- Left: hypothesis -->
-          <div style="padding:22px;border-right:1px solid #ecebe3">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9aa39c;margin-bottom:10px">Mechanistic Rationale</div>
-            <p style="font-size:0.875rem;color:#2a352e;line-height:1.85;margin:0 0 16px">${res.hypothesis}</p>
-            ${mechHTML ? `<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:600;color:#9aa39c;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Mechanisms</div>${mechHTML}</div>` : ''}
-            ${targetHTML ? `<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:#9aa39c;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Molecular Targets</div>${targetHTML}</div>` : ''}
-            <div style="padding:10px 14px;background:#fafafa;border-radius:8px;border-left:3px solid #e0ddd1">
-              <span style="font-size:0.69rem;color:#9aa39c;font-style:italic">${res.caution}</span>
-            </div>
-          </div>
-          <!-- Right: evidence chain -->
-          <div style="padding:22px;background:#fafafa">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9aa39c;margin-bottom:8px">Evidence Chain</div>
-            ${evidenceHTML || '<p style="font-size:0.75rem;color:#9aa39c">No evidence data found.</p>'}
-          </div>
-        </div>
-      </div>`;
-  } catch(e) { section.style.display = 'none'; }
-}
-
-loadGraph(INIT_DISEASE);
 </script>
 {% endblock %}

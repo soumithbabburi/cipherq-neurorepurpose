@@ -706,7 +706,7 @@ def _indication_matches_disease(existing_ind: str, disease_name: str) -> bool:
 
 def _score_clinical(max_phase, existing_ind: str, disease_name: str,
                     trial_count: int = 0, max_trial_phase: int = 0,
-                    trial_outcome: float = 0.0) -> float:
+                    trial_outcome: float = 0.0, indication_phase=None) -> float:
     """Clinical evidence SPECIFIC to this drug-disease pair.
 
     A drug's global development phase is clinical evidence only for the indications
@@ -714,13 +714,21 @@ def _score_clinical(max_phase, existing_ind: str, disease_name: str,
     diabetic nephropathy — crediting its global Phase 4 there is reverse-causation).
     So global-phase credit is gated on the disease matching an existing indication.
 
-    BUT real trials of THIS drug in THIS indication ARE disease-specific clinical
-    evidence — a human decided it was worth testing — so they earn direct credit
-    (this is what lifts a genuinely trial-backed lead like palbociclib→Fragile X
-    above a purely-inferred association)."""
+    CONFOUNDING GUARD (audited 2026-07): when the disease matches an existing
+    indication, credit the PER-INDICATION development phase (`indication_phase`), NOT
+    the drug's global max phase. A globally-approved drug that only reached Phase 2 in
+    THIS disease (imatinib→pulmonary hypertension, mepolizumab→eosinophilic
+    esophagitis — studied, not approved) must NOT be credited a Phase-4 "established
+    therapy" clinical score. When per-indication phase is unknown we cap conservatively
+    at Phase 2 rather than assuming global approval applies here.
+
+    Real trials of THIS drug in THIS indication ARE disease-specific evidence — a human
+    decided it was worth testing — so they earn direct (phase-scaled) credit."""
     if _indication_matches_disease(existing_ind, disease_name):
+        eff_phase = (int(indication_phase) if indication_phase is not None
+                     else min(2, _to_phase(max_phase)))   # unknown → conservative Phase-2 cap
         phase_map = {4: 1.0, 3: 0.75, 2: 0.50, 1: 0.25}
-        return phase_map.get(_to_phase(max_phase), 0.05)
+        return phase_map.get(eff_phase, 0.05)
     if trial_count > 0 or max_trial_phase > 0:
         base = min(0.7, 0.25 + 0.12 * max_trial_phase + 0.05 * min(trial_count, 5))
         # Outcome direction (P3): a trial that FAILED for efficacy/safety here is
@@ -733,13 +741,25 @@ def _score_clinical(max_phase, existing_ind: str, disease_name: str,
     return 0.05                            # untested repurposing hypothesis
 
 
-def _score_indication(existing_ind: str, disease_name: str) -> float:
+def _score_indication(existing_ind: str, disease_name: str, indication_phase=None) -> float:
+    """Credit for the disease already being an indication of the drug. Phase-scaled
+    (audited 2026-07): full 'this IS an established use' credit only for an APPROVED
+    indication (Phase 4). A merely-STUDIED indication is prior clinical art, not an
+    established use, so its credit is scaled down by development phase — otherwise a
+    Phase-2 studied pair reads as an established therapy (the confounding that ranked
+    tried/failed indications at the top)."""
     stop = {"disease", "disorder", "syndrome", "with", "associated"}
     dw = {w.lower() for w in re.split(r'\W+', disease_name) if len(w) > 3 and w.lower() not in stop}
     iw = {w.lower() for w in re.split(r'\W+', existing_ind or "") if len(w) > 3 and w.lower() not in stop}
     if not dw:
         return 0.0
-    return min(1.0, len(dw & iw) / len(dw))
+    frac = min(1.0, len(dw & iw) / len(dw))
+    if frac <= 0:
+        return 0.0
+    ph = None if indication_phase is None else int(indication_phase)
+    # 4=approved→full; 3/2/1=studied→partial; unknown→0.5 (can't confirm approval here)
+    phase_factor = {4: 1.0, 3: 0.6, 2: 0.4, 1: 0.25}.get(ph, 0.5)
+    return round(frac * phase_factor, 4)
 
 
 def _score_regulatory(max_phase, disease_name: str, existing_ind: str) -> float:
@@ -776,6 +796,8 @@ def score_compound_for_disease(
     max_trial_phase: int = 0,
     trial_outcome: float = 0.0,
     mechanistic_prior: Optional[float] = None,
+    studied_for_disease: bool = False,
+    indication_phase: Optional[int] = None,
 ) -> Dict:
     existing_ind = compound.get("indications", "") or ""
     raw_phase    = compound.get("max_phase") or compound.get("max_phase_for_ind") or 0
@@ -819,8 +841,10 @@ def score_compound_for_disease(
                                              drug_signature=drug_sig, gene_damp=gene_damp),
         "ppi":        _score_ppi_network(drug_genes, ppi_adj, gene_damp=gene_damp),
         "clinical":   _score_clinical(max_phase, existing_ind, disease_name,
-                                       trial_count, max_trial_phase, trial_outcome),
-        "indication": _score_indication(existing_ind, disease_name),
+                                       trial_count, max_trial_phase, trial_outcome,
+                                       indication_phase=indication_phase),
+        "indication": _score_indication(existing_ind, disease_name,
+                                        indication_phase=indication_phase),
         "regulatory": _score_regulatory(max_phase, disease_name, existing_ind),
     }
 
@@ -907,19 +931,31 @@ def score_compound_for_disease(
     # eligible for amplification — otherwise an approved drug with zero mechanism for
     # the disease (reverse causation) would inflate. A pair with NO disease-specific
     # evidence therefore still scores low: this separates leads, it does not inflate.
-    _DISEASE_SPECIFIC = ("target", "pathway", "ppi", "clinical", "indication")
-    _DS_FLOOR = {"target": 1e-9, "pathway": 1e-9, "ppi": 1e-9,
-                 "clinical": 0.051, "indication": 1e-9}   # clinical 0.05 = "no info"
-    _DS_MASS = sum(WEIGHTS[k] for k in _DISEASE_SPECIFIC)          # 0.90
+    # Audited 2026-07: the previous version renormalized clinical+indication (prior
+    # clinical art) INTO the "mechanistic mass", so a ZERO-mechanism pair that had merely
+    # been trialed/approved here renormalized up to "Strong" (imatinib→pulmonary
+    # hypertension 0.66 with target=pathway=ppi=0). Prior clinical art is real evidence
+    # but it is NOT mechanism. So we (a) renormalize ONLY the mechanism dims
+    # (target/pathway/ppi) — a strong mechanism across few active dims still reads strong —
+    # and (b) add clinical+indication as a bounded ADDITIVE term at nominal weight, never
+    # amplified. _score_clinical / _score_indication already phase-scale that art, so an
+    # APPROVED own-indication keeps full credit while a merely-studied pair gets only
+    # partial. Net: mechanism separates leads; prior art can lift a score but can never
+    # manufacture a "Strong" out of no mechanism.
+    _MECH_DIMS = ("target", "pathway", "ppi")
+    _MECH_MASS = sum(WEIGHTS[k] for k in _MECH_DIMS)              # 0.65
     _DENOM_FLOOR = 0.45          # never divide the mechanistic mass by less than this
-    _active = [k for k in _DISEASE_SPECIFIC if scores[k] > _DS_FLOOR[k]]
+    _active = [k for k in _MECH_DIMS if scores[k] > 1e-9]
     if _active:
         _w_active = sum(WEIGHTS[k] for k in _active)
         _mech_raw = sum(scores[k] * WEIGHTS[k] for k in _active)
-        mech_component = (_mech_raw / max(_DENOM_FLOOR, _w_active)) * _DS_MASS
+        mech_component = (_mech_raw / max(_DENOM_FLOOR, _w_active)) * _MECH_MASS
     else:
-        mech_component = sum(scores[k] * WEIGHTS[k] for k in _DISEASE_SPECIFIC)  # ~0
-    composite = min(1.0, mech_component + scores["regulatory"] * WEIGHTS["regulatory"])
+        mech_component = 0.0
+    prior_art = (scores["clinical"] * WEIGHTS["clinical"]
+                 + scores["indication"] * WEIGHTS["indication"])
+    composite = min(1.0, mech_component + prior_art
+                    + scores["regulatory"] * WEIGHTS["regulatory"])
 
     # Real HetioNet network evidence (Compound→Gene←Disease path). Independent of
     # ChEMBL, so it can legitimately surface a candidate as a lead even when its
@@ -935,7 +971,22 @@ def score_compound_for_disease(
     except Exception as e:
         logger.debug(f"network evidence skipped: {e}")
     net_score = float(net.get("score") or 0.0)
-    composite = min(1.0, composite + 0.10 * net_score)
+    # Specificity damping (audited 2026-07): the HetioNet Compound→Gene←Disease signal
+    # is promiscuous — a single shared gene, or a "generic/weak" basis, lights up at
+    # 0.3–0.85 for pairs as unrelated as loratadine→Parkinson, so it cannot separate a
+    # plausible-wrong pair from a random one. A DIRECT "treats this disease" edge is
+    # kept at full credit; an indirect path is only credited in full when it rests on
+    # ≥2 shared disease genes, otherwise it is damped to a hint. Keeps the signal
+    # (it never breaks true-positive ranking) without letting one promiscuous gene inflate.
+    _net_basis = net.get("basis", "") or ""
+    _net_genes = net.get("genes", []) or []
+    if _net_basis.startswith("direct"):
+        net_eff = net_score
+    elif len(_net_genes) >= 2:
+        net_eff = net_score
+    else:
+        net_eff = net_score * 0.35          # single-gene / generic / weak: promiscuous → hint only
+    composite = min(1.0, composite + 0.10 * net_eff)
 
     # Target-driven proliferation bonus (bounded) — the mechanism is credited on top of
     # the renormalised pathway prior it already set, so a genuine proliferation-arrest
@@ -985,19 +1036,56 @@ def score_compound_for_disease(
     except Exception as e:
         logger.debug(f"learned composite skipped: {e}")
 
+    # ── Track 1 snapshot: MECHANISTIC PLAUSIBILITY ────────────────────────────────
+    # The composite at THIS point is pure "does the biology connect?" — mechanism +
+    # KG/network + directional + learned, before ANY clinical/feasibility penalty.
+    # Captured separately so a strong hypothesis is never dressed up as a ready lead
+    # (principle: separate mechanistic plausibility from clinically actionable repurposing).
+    mech_plausibility = round(min(1.0, composite), 4)
+
     # Negative-safety cross-filter (generalized): down-rank a match when the drug
     # carries a SERIOUS toxicity signal for the organ system the disease lives in
     # (e.g. a pulmonary-embolism-risk drug for a pulmonary indication). Applied as
     # a bounded multiplier on the composite. Fail-soft — multiplier 1.0 when no
     # adverse-event data is available, so we never invent a penalty.
+    # ── Confounding-by-indication guard (shared by the penalty blocks) ────────────
+    # A drug that is an ESTABLISHED/DEVELOPED therapy for THIS disease (approved, in
+    # trials, or with a matching indication record) has a real-world benefit/risk that
+    # is already settled by its development — so the class-heuristic penalties below do
+    # not apply to it. Worse, its adverse-event / organ-toxicity signals are CONFOUNDED
+    # by the indication itself (imatinib's haematologic AEs arise BECAUSE it treats a
+    # blood cancer; sildenafil is not "high-tox for a low-severity indication" — it is
+    # THE therapy). Audited 2026-07: without this guard the penalty stack halved the
+    # scores of drugs' own approved indications (imatinib→CML 0.85→0.42, sildenafil→ED
+    # 0.64→0.31). For a genuine NOVEL pair scores["indication"]≈0, so the guard is off
+    # and the constraints still apply — this fixes false penalties, it does not inflate.
+    # Confounding-by-indication guard — suppress the safety/clinical/coverage penalties
+    # ONLY for a genuinely APPROVED own-indication (Phase 4 in THIS disease). Audited
+    # 2026-07: the old trigger fired on ANY trialed pair (trial_count>0 / phase>=2 /
+    # name-match / indication>=0.20), so a merely-STUDIED or FAILED pair (imatinib→
+    # pulmonary hypertension, mepolizumab→eosinophilic esophagitis) had its guardrails
+    # switched off as if it were established therapy — inflating it. Now suppression
+    # requires real approval here; studied and novel pairs keep every gate.
+    _own_therapy = bool(
+        (indication_phase is not None and int(indication_phase) >= 4)
+        or studied_for_disease                          # forward screen asserts drug is used for disease
+        or (indication_phase is None
+            and _indication_matches_disease(existing_ind, disease_name)
+            and _to_phase(max_phase) >= 4)              # legacy fallback only when per-indication phase unknown
+    )
+
     safety = {"multiplier": 1.0, "penalized": False, "flags": []}
     try:
         from services.safety_filter import assess as _assess_safety
         cname = compound.get("name") or compound.get("pref_name") or ""
-        if cname and disease_name:
+        if cname and disease_name and not _own_therapy:
             safety = _assess_safety(cname, disease_name)
             # Recorded, not applied inline — soft penalties are consolidated below so
             # two moderate ones don't compound multiplicatively into annihilation.
+        elif _own_therapy:
+            safety = {"multiplier": 1.0, "penalized": False, "flags": [],
+                      "suppressed": "established therapy for this disease — organ-toxicity "
+                                    "overlap is confounded by the indication, not a contraindication"}
     except Exception as e:
         logger.debug(f"safety filter skipped: {e}")
 
@@ -1009,11 +1097,15 @@ def score_compound_for_disease(
     try:
         from services.clinical_constraints import harmonize as _harmonize
         cname = compound.get("name") or compound.get("pref_name") or ""
-        if cname and disease_name:
+        if cname and disease_name and not _own_therapy:
             clinical = _harmonize(cname, disease_name, smiles=compound.get("smiles", ""),
                                   has_trials=(trial_count > 0 or max_trial_phase > 0),
                                   indications=existing_ind)
             # Recorded, not applied inline (consolidated with the other soft penalties).
+        elif _own_therapy:
+            clinical = {"multiplier": 1.0, "penalized": False, "flags": [], "factors": {},
+                        "suppressed": "established therapy for this disease — the clinical "
+                                      "therapeutic window is set by its approval/development"}
     except Exception as e:
         logger.debug(f"clinical constraints skipped: {e}")
 
@@ -1035,12 +1127,66 @@ def score_compound_for_disease(
     # the genetic-association weights; fail-soft (multiplier 1.0) without them.
     coverage = {"multiplier": 1.0, "penalized": False, "coverage": None, "flags": []}
     try:
-        if disease_gene_weights:
+        if disease_gene_weights and not _own_therapy:
             from services.target_coverage import assess_coverage
             coverage = assess_coverage(drug_genes, disease_gene_weights)
             # Recorded, not applied inline (consolidated with the other soft penalties).
+        elif _own_therapy and disease_gene_weights:
+            # An established therapy for this disease has DEMONSTRATED sufficiency —
+            # "incomplete polygenic-driver coverage" is moot when the drug already works
+            # (sildenafil→ED via PDE5 alone, imatinib→CML via BCR-ABL alone). Guard off
+            # for genuine novel pairs, where partial coverage is a real concern.
+            coverage = {"multiplier": 1.0, "penalized": False, "coverage": None, "flags": [],
+                        "suppressed": "established therapy — demonstrated sufficiency overrides "
+                                      "the polygenic-coverage heuristic"}
     except Exception as e:
         logger.debug(f"target-coverage gate skipped: {e}")
+
+    # ── Appropriateness gate (adverse-event / phenotype-causation) — PLATFORM-WIDE ──
+    # A disease that is itself a SERIOUS FAERS reaction of the drug is a toxicity the
+    # drug CAUSES, not a target it can treat — adverse-event overlap is NEGATIVE
+    # evidence, never target engagement. Also catches inhibitor↔loss-of-function
+    # mismatch. Bounded factor (0.3–1.0), demote-not-drop. Applied in the reverse
+    # screen already; wired here so forward discovery inherits the same gate.
+    # CONFOUNDING-BY-INDICATION GUARD: a drug DEVELOPED for this disease (approved,
+    # in trials, or with a matching indication record) will list the disease among its
+    # FAERS reports — that is the indication co-reported, NOT a toxicity the drug causes.
+    # Feeding FAERS to the AE check for such a drug would flag its OWN therapy as harmful
+    # (e.g. methotrexate → RA). So we withhold FAERS from the gate when the drug is an
+    # established/developed therapy for the disease; the LoF/direction checks still run.
+    appropriate = {"factor": 1.0, "appropriate": True, "flags": [], "reasons": []}
+    try:
+        from services.disease_appropriateness import appropriateness as _appr, infer_drug_action
+        from services.safety_filter import _faers_serious_reactions
+        _cn = compound.get("name") or compound.get("pref_name") or ""
+        if _cn and disease_name:
+            # _own_therapy computed once above (confounding-by-indication guard)
+            _rx = [] if _own_therapy else (_faers_serious_reactions(_cn) or [])
+            _rx_total = sum(c for _, c in _rx)
+            _act = infer_drug_action(_cn, drug_genes)
+            appropriate = _appr(_cn, disease_name, existing_ind or [], _act,
+                                faers_reactions=_rx, faers_total=_rx_total)
+    except Exception as e:
+        logger.debug(f"appropriateness gate skipped: {e}")
+
+    # ── Delivery feasibility for LOCALIZED indications — PLATFORM-WIDE ─────────────
+    # For a compartmentalized disease (CNS / eye / skin / joint / local-airway) a
+    # mechanistically plausible pair is only ACTIONABLE if the drug can physically
+    # reach the tissue. Bounded multiplier, demote-not-drop; fail-soft (1.0) when the
+    # indication is systemic or delivery is unassessable.
+    delivery = {"localized": False, "compartment": "systemic", "deliverable": True,
+                "multiplier": 1.0, "flag": "", "assessed": False}
+    try:
+        from services.delivery_feasibility import assess_delivery
+        _cn = compound.get("name") or compound.get("pref_name") or ""
+        _ind_blob = (" ".join(existing_ind or [])).lower()
+        _cns_ind = any(k in _ind_blob for k in
+                       ("cns", "alzheimer", "parkinson", "epilep", "depress", "schizophren",
+                        "migraine", "neuropath", "dementia", "seizure", "psychos"))
+        delivery = assess_delivery(disease_name, smiles=compound.get("smiles", ""),
+                                   drug_name=_cn, cns_indicated=_cns_ind)
+    except Exception as e:
+        logger.debug(f"delivery feasibility skipped: {e}")
 
     # Mechanism scope (generalized): the composite is target/genetics-centric, so it
     # is only meaningful for target-mediated diseases. A drug with no resolvable
@@ -1106,9 +1252,12 @@ def score_compound_for_disease(
     # product. HARD, evidence-based gates (phantom off-target, a trial that actually
     # failed here, a dead registry program) remain multiplicative — each is a distinct
     # real-world kill signal that should stack.
+    # Delivery feasibility joins the SOFT group (environmental-fit, single worst wins) —
+    # it should not compound multiplicatively with organ-toxicity/coverage into annihilation.
     _soft_mult = min(float(safety.get("multiplier", 1.0)),
                      float(clinical.get("multiplier", 1.0)),
-                     float(coverage.get("multiplier", 1.0)))
+                     float(coverage.get("multiplier", 1.0)),
+                     float(delivery.get("multiplier", 1.0)))
     composite *= _soft_mult
     # A net-HARMFUL mechanism direction is a contraindication signal — down-rank the
     # whole pair (the drug would push the disease the wrong way), not just its target dim.
@@ -1116,6 +1265,10 @@ def score_compound_for_disease(
         composite *= float(direction.get("factor", 1.0))
     composite *= float(ctpa.get("multiplier", 1.0))
     composite *= float(trial_failure.get("multiplier", 1.0))
+    # Appropriateness is a HARD, evidence-based gate (the disease is a toxicity the drug
+    # CAUSES, or an inhibitor↔loss-of-function mismatch) — a distinct real-world kill
+    # signal, so it stacks with the other hard gates rather than joining the soft min.
+    composite *= float(appropriate.get("factor", 1.0))
     if registry.get("ghost"):
         composite *= float(registry.get("multiplier", 1.0))
 
@@ -1140,23 +1293,73 @@ def score_compound_for_disease(
     # touches — the very inflation that made a weak Cowden/Erlotinib hit read #1.
     # Real corroboration = breadth of target overlap, real clinical/trial evidence,
     # directional literature, or genuine driver coverage.
+    # Audited 2026-07: corroboration must be MECHANISTIC. The old set counted
+    # `clinical > 0.10` and `trial_count > 0`, so PRIOR CLINICAL ART alone (a drug merely
+    # trialed here) satisfied "corroboration" and could keep a Strong tier — the same
+    # confounding fixed in the composite. A "Strong" claim now requires real mechanism:
+    # breadth of target overlap, directional KG evidence, genuine driver coverage, a real
+    # network path, or pathway mechanism. Trial existence is prior art, not mechanism, so
+    # it no longer buys a tier.
     corroboration = sum([
-        _overlap_n >= 2,
-        scores["clinical"] > 0.10,
-        float(directional.get("signal", 0.0)) > 0,
-        trial_count > 0,
-        float(coverage.get("coverage") or 0.0) >= 0.5,
+        _overlap_n >= 2,                                    # breadth of target overlap
+        scores["target"] >= 0.40,                          # a genuine on-target hit (single strong target counts)
+        float(directional.get("signal", 0.0)) > 0,         # directional KG evidence
+        float(coverage.get("coverage") or 0.0) >= 0.5,     # genuine driver coverage
+        net_eff >= 0.30,                                    # real (non-promiscuous) network path
+        scores["pathway"] >= 0.30,                          # pathway mechanism
     ])
     if corroboration < 1 and calibration.get("tier") in ("Strong", "Promising"):
         calibration = dict(calibration, tier="Moderate", evidence_capped=True,
-                           evidence_note=("Single-association evidence with no "
-                                          "corroboration (no breadth, clinical, "
-                                          "directional or coverage support) - capped "
-                                          "below Strong. Hub-target pathway/PPI signals "
-                                          "are excluded as non-discriminating."))
+                           evidence_note=("No mechanistic corroboration (no target breadth, "
+                                          "directional, coverage, network-path or pathway "
+                                          "support) - capped below Strong. Prior clinical "
+                                          "art and hub-target PPI signals are excluded as "
+                                          "non-discriminating."))
+
+    # ── Two-track separation: mechanistic PLAUSIBILITY vs clinical ACTIONABILITY ──
+    # Rank a repurposing pair as ACTIONABLE only when mechanistic, clinical, and
+    # feasibility evidence ALIGN. Otherwise it stays a labelled hypothesis — demoted,
+    # never dropped — so a strong mechanism is never mistaken for a ready-to-trial lead.
+    mech_present = mech_plausibility >= 0.20 or corroboration >= 1
+    clinical_present = (scores["clinical"] > 0.10 or trial_count > 0
+                        or max_trial_phase >= 2 or bool(existing_ind))
+    feasible = bool(delivery.get("deliverable", True))
+    ae_caused = "reported adverse event" in appropriate.get("flags", [])
+    harmful = direction.get("net") == "harmful"
+
+    reasons: List[str] = []
+    if not mech_present:     reasons.append("no mechanistic linkage to the disease")
+    if not clinical_present: reasons.append("no clinical or trial support")
+    if not feasible:         reasons.append(delivery.get("flag") or "delivery-limited to the target tissue")
+    if ae_caused:            reasons.append("disease is a serious adverse event the drug causes")
+    if harmful:              reasons.append("mechanism direction would worsen the disease")
+
+    aligned = mech_present and clinical_present and feasible and not ae_caused and not harmful
+    if aligned:
+        act_tier = "Actionable"
+    elif ae_caused or harmful:
+        act_tier = "Contraindicated by evidence"
+    elif not feasible:
+        act_tier = "Delivery-limited"
+    elif mech_present and not clinical_present:
+        act_tier = "Mechanistic hypothesis"
+    else:
+        act_tier = "Insufficiently supported"
+
+    actionability = {
+        "aligned": bool(aligned), "tier": act_tier, "reasons": reasons,
+        "mechanistic_plausibility": mech_plausibility,
+        "clinical_present": bool(clinical_present), "feasible": feasible,
+        # ranking key — aligned leads sort above hypotheses of equal raw score.
+        "rank_score": round(final_score * (1.0 if aligned else 0.6), 4),
+    }
 
     return {
         "composite_score": final_score,
+        "mechanistic_plausibility": mech_plausibility,
+        "actionability":   actionability,
+        "appropriateness": appropriate,
+        "delivery":        delivery,
         "scores":          {k: round(v, 4) for k, v in scores.items()},
         "score_breakdown": {
             "network_score": round(net_score, 4),
@@ -1290,6 +1493,17 @@ def run_repurposing_screen(
                 if (c.get("chembl_id", "") or "").startswith("CHEMBL")]
     actions_map = _actions_for_molecules(all_cids) if all_cids else {}
 
+    # Confounding-by-indication set: molecules with ANY development record (phase >= 1)
+    # for THIS disease. A drug developed for the disease has it in its FAERS, so its
+    # adverse-event overlap must NOT be read as drug-caused toxicity. One batched query.
+    studied_set: set = set()
+    try:
+        from services.repurposing_scorer import approved_chembls_for_disease
+        if all_cids:
+            studied_set = approved_chembls_for_disease(all_cids, [], disease_name, min_phase=1)
+    except Exception as e:
+        logger.debug(f"studied-for-disease set skipped: {e}")
+
     # ── Score each candidate ──────────────────────────────────────────────────
     scored: List[Dict] = []
     for comp in candidates[:max_candidates]:
@@ -1310,6 +1524,7 @@ def run_repurposing_screen(
         sr = score_compound_for_disease(
             comp, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
             drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
+            studied_for_disease=(cid in studied_set),
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}
         # Same quality filters as every other surface (plausibility + lead-viability;
@@ -1322,7 +1537,14 @@ def run_repurposing_screen(
             logger.debug(f"discover overlay skipped: {e}")
         scored.append(sc)
 
-    scored.sort(key=lambda x: x.get("composite_score", 0), reverse=True)
+    # Rank by ACTIONABILITY: aligned (mechanistic + clinical + feasibility) leads first,
+    # then by the actionability-weighted score — so a labelled hypothesis or a delivery-
+    # limited pair sinks below a genuinely actionable one of equal raw mechanism. Nothing
+    # is dropped; the demoted candidates stay visible with their reason.
+    scored.sort(key=lambda x: (
+        1 if x.get("actionability", {}).get("aligned") else 0,
+        x.get("actionability", {}).get("rank_score", x.get("composite_score", 0)),
+    ), reverse=True)
 
     _dv = None
     try:

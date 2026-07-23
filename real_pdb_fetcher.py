@@ -66,7 +66,9 @@ class RealPDBFetcher:
 
     def __init__(self):
         self._cache: dict = {}                       # per-process memo
-        self._disk = DiskCache("protein_pdb", ttl=30 * 86400)  # 30-day disk cache
+        # v2: holo-preferring, fragment-rejecting selection (was picking isolated
+        # domains like the ABL SH3 instead of the drug-binding kinase domain).
+        self._disk = DiskCache("protein_pdb_v2", ttl=30 * 86400)  # 30-day disk cache
         # v2: schema now includes `ligands` (nonpolymer count) for holo preference.
         self._meta_cache = DiskCache("rcsb_meta_v2", ttl=30 * 86400)  # entry metadata
 
@@ -248,9 +250,12 @@ class RealPDBFetcher:
         if not ids:
             return None
 
-        # Pull lightweight metadata for the top candidates and score them.
+        # Pull lightweight metadata for the top candidates and score them. Pull a
+        # wider pool than before: sorting by resolution floats tiny high-res domain
+        # FRAGMENTS to the top (e.g. an isolated SH3/SH2 domain), so a holo catalytic-
+        # domain structure can sit lower in the list — we need it in the scored pool.
         cands = []
-        for pid in ids[:10]:
+        for pid in ids[:20]:
             meta = self._rcsb_entry_meta(pid)
             if meta:
                 cands.append((pid, meta))
@@ -258,20 +263,26 @@ class RealPDBFetcher:
             return ids[0]  # metadata unavailable — fall back to best-resolution hit
 
         def _score(meta: dict) -> float:
-            # Lower is better. Penalise many chains and very large atom counts; reward
-            # good resolution. Chains dominate (assemblies are the main pocket-hiding
-            # problem), resolution is a gentle tie-breaker.
+            # Lower is better. Priorities, in order:
+            #   1. HOLO — a bound non-polymer ligand marks the REAL druggable pocket
+            #      (dock box centred on it). This is what a small molecule actually
+            #      binds, so it dominates.
+            #   2. Not a FRAGMENT — reject tiny isolated domains (SH3/SH2/etc., a few
+            #      hundred atoms per chain) that lack the catalytic/orthosteric pocket.
+            #      This is the bug that put imatinib into the ABL SH3 domain (3EG3)
+            #      instead of the kinase domain (1IEP).
+            #   3. Sane assembly size — gently avoid giant multi-chain assemblies.
+            #   4. Resolution — a mild tie-breaker only.
             chains = meta.get("chains") or 1
-            atoms = meta.get("atoms") or 0
-            res = meta.get("resolution")
-            res = res if res is not None else 3.5
-            # HOLO preference: a structure with a bound non-polymer ligand gives a
-            # real, occupied binding site to dock into (box centred on that ligand),
-            # instead of an apo structure whose orthosteric pocket has to be guessed.
-            # A strong, resolution-scale bonus — enough to prefer a slightly lower-res
-            # holo entry over a pristine apo one, without overriding chain sanity.
-            holo_bonus = -2.5 if (meta.get("ligands") or 0) > 0 else 0.0
-            return chains * 3.0 + (atoms / 5000.0) + res + holo_bonus
+            atoms  = meta.get("atoms") or 0
+            res    = meta.get("resolution")
+            res    = res if res is not None else 3.5
+            has_ligand = (meta.get("ligands") or 0) > 0
+            holo_bonus = -5.0 if has_ligand else 0.0
+            per_chain  = atoms / max(1, chains)
+            frag_penalty = 5.0 if per_chain < 1200 else 0.0     # <~150 residues = fragment
+            size_penalty = atoms / 20000.0                       # gentle large-assembly penalty
+            return chains * 1.5 + size_penalty + res * 0.5 + holo_bonus + frag_penalty
 
         best = min(cands, key=lambda c: _score(c[1]))
         return best[0]

@@ -20,14 +20,7 @@ import psycopg2.pool
 
 logger = logging.getLogger(__name__)
 
-_DB_PARAMS = dict(
-    host=os.getenv("DB_HOST", os.getenv("CHEMBL_DB_HOST", "localhost")),
-    port=int(os.getenv("DB_PORT", os.getenv("CHEMBL_DB_PORT", "5433"))),
-    user=os.getenv("DB_USER", os.getenv("CHEMBL_DB_USER", "babburisoumith")),
-    password=os.getenv("DB_PASSWORD", os.getenv("CHEMBL_DB_PASSWORD", "")),
-    dbname=os.getenv("DB_NAME", "neurorepurpose"),
-    connect_timeout=3,
-)
+from config import db_params  # centralized DB config (no hardcoded credentials)
 
 _pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
 _db_available: Optional[bool] = None
@@ -44,7 +37,7 @@ def _get_pool() -> Optional[psycopg2.pool.ThreadedConnectionPool]:
     if _db_available is False:
         return None
     try:
-        _pool = psycopg2.pool.ThreadedConnectionPool(1, 10, **_DB_PARAMS)
+        _pool = psycopg2.pool.ThreadedConnectionPool(1, 10, **db_params())
         _db_available = True
         return _pool
     except Exception as e:
@@ -567,6 +560,101 @@ def get_stats() -> Dict:
     """)
     result = dict(rows[0]) if rows else {}
     _stats_cache["v"] = (result, time.time() + _STATS_TTL)
+    return result
+
+
+# ── Full data footprint (for the Data Explorer) ───────────────────────────────
+# Groups the real numbers across the whole stack: the ChEMBL 33 source DB, the
+# HetioNet knowledge graph (real v1.0 edges vs the legacy ChEMBL-derived ones),
+# and the neuro working set. ChEMBL-scale counts use pg_class.reltuples (instant,
+# accurate for the static ChEMBL DB) instead of COUNT(*) over 20M rows.
+
+_chembl_pool_nb: Optional[psycopg2.pool.ThreadedConnectionPool] = None
+_footprint_cache: Dict = {}
+
+
+def _get_chembl_pool_nb() -> Optional[psycopg2.pool.ThreadedConnectionPool]:
+    global _chembl_pool_nb
+    if _chembl_pool_nb is None:
+        try:
+            p = db_params()
+            p["dbname"] = "chembl_33"
+            _chembl_pool_nb = psycopg2.pool.ThreadedConnectionPool(1, 4, **p)
+        except Exception as e:
+            logger.warning(f"chembl_33 pool unavailable: {e}")
+    return _chembl_pool_nb
+
+
+def _query_chembl(sql: str, params=None) -> List[Dict]:
+    pool = _get_chembl_pool_nb()
+    if pool is None:
+        return []
+    conn = pool.getconn()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, params)
+            return [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        logger.debug(f"chembl_33 query error: {e}")
+        return []
+    finally:
+        pool.putconn(conn)
+
+
+def get_data_footprint() -> Dict:
+    cached = _footprint_cache.get("v")
+    if cached and time.time() < cached[1]:
+        return cached[0]
+
+    ws_rows = _query("""
+        SELECT
+            (SELECT COUNT(*) FROM compounds)       AS compounds,
+            (SELECT COUNT(*) FROM mechanisms)      AS mechanisms,
+            (SELECT COUNT(*) FROM indications)     AS indications,
+            (SELECT COUNT(*) FROM mesh_diseases)   AS mesh_diseases,
+            (SELECT COUNT(*) FROM targets)         AS targets,
+            (SELECT COUNT(*) FROM hetionet_nodes)  AS hetionet_nodes,
+            (SELECT COUNT(*) FROM hetionet_edges)  AS hetionet_edges,
+            (SELECT COUNT(*) FROM hetionet_edges WHERE source='hetionet_v1.0') AS hetionet_edges_real,
+            (SELECT COUNT(DISTINCT metaedge) FROM hetionet_edges) AS metaedge_types
+    """)
+    ws = ws_rows[0] if ws_rows else {}
+
+    rt = _query_chembl("""
+        SELECT relname, reltuples::bigint AS n FROM pg_class
+        WHERE relkind='r' AND relname IN
+              ('activities','molecule_dictionary','assays','target_dictionary')
+    """)
+    rtmap = {r["relname"]: int(r["n"]) for r in rt}
+    ver = _query_chembl("SELECT name, creation_date FROM version LIMIT 1")
+
+    total_edges = int(ws.get("hetionet_edges") or 0)
+    real_edges = int(ws.get("hetionet_edges_real") or 0)
+    result = {
+        "chembl": {
+            "version":    ver[0]["name"] if ver else "ChEMBL_33",
+            "release":    str(ver[0]["creation_date"])[:10] if ver else "2023-05-31",
+            "molecules":  rtmap.get("molecule_dictionary", 0),
+            "activities": rtmap.get("activities", 0),
+            "assays":     rtmap.get("assays", 0),
+            "targets":    rtmap.get("target_dictionary", 0),
+        },
+        "graph": {
+            "nodes":          int(ws.get("hetionet_nodes") or 0),
+            "edges_total":    total_edges,
+            "edges_real":     real_edges,
+            "edges_derived":  total_edges - real_edges,
+            "metaedge_types": int(ws.get("metaedge_types") or 0),
+        },
+        "working_set": {
+            "compounds":     int(ws.get("compounds") or 0),
+            "mechanisms":    int(ws.get("mechanisms") or 0),
+            "indications":   int(ws.get("indications") or 0),
+            "mesh_diseases": int(ws.get("mesh_diseases") or 0),
+            "targets":       int(ws.get("targets") or 0),
+        },
+    }
+    _footprint_cache["v"] = (result, time.time() + _STATS_TTL)
     return result
 
 

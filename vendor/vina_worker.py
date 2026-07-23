@@ -81,7 +81,14 @@ def _prepare_receptor(pdb_text: str, work: Path) -> Path:
     fixer.findNonstandardResidues()
     fixer.replaceNonstandardResidues()
     fixer.findMissingAtoms()
-    fixer.addMissingAtoms()
+    # Do NOT rebuild missing heavy atoms. OpenMM's addMissingAtoms() segfaults
+    # (native access violation, rc=0xC0000005) on some structures — e.g. the ABL1 and
+    # KIT kinase domains — which kills the whole worker and silently drops docking to a
+    # weak physics fallback (the "binding affinities not working" bug). Missing side-
+    # chain atoms are almost always surface, not pocket, so skipping the rebuild costs
+    # little for docking; the hydrogens that actually matter for scoring are still added.
+    fixer.missingAtoms = {}
+    fixer.missingTerminals = {}
     fixer.addMissingHydrogens(7.0)
 
     fixed = work / "receptor_fixed.pdb"

@@ -18,6 +18,20 @@ OT_URL     = "https://api.platform.opentargets.org/api/v4/graphql"
 NCBI_URL   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 STRING_URL = "https://string-db.org/api/json"
 
+# Evidence-TYPE weights for an Open Targets association (P5). Causal genetic /
+# somatic evidence counts fully; pathway/animal/expression partially; literature
+# co-mention weakly; known_drug is heavily discounted because it is CIRCULAR for
+# repurposing (a target is "associated" partly BECAUSE a drug already hits it).
+_DATATYPE_WEIGHT = {
+    "genetic_association": 1.00,
+    "somatic_mutation":    0.90,
+    "affected_pathway":    0.70,
+    "animal_model":        0.60,
+    "rna_expression":      0.50,
+    "literature":          0.30,
+    "known_drug":          0.20,
+}
+
 # Known neurological/CNS disease prevalence (US patients)
 # Used for orphan-drug threshold (< 200,000 = eligible)
 PREVALENCE = {
@@ -82,7 +96,9 @@ def _ot_graphql(query: str, variables: dict, timeout: int = 12) -> dict:
         r = requests.post(OT_URL, json={"query": query, "variables": variables},
                           timeout=timeout, headers={"Content-Type": "application/json"})
         if r.ok:
-            return r.json().get("data", {})
+            # GraphQL returns {"data": null} on query error → coerce to {} so
+            # callers can always .get() safely (this also protects live discovery).
+            return r.json().get("data") or {}
     except Exception as e:
         logger.debug(f"Open Targets GraphQL error: {e}")
     return {}
@@ -96,9 +112,20 @@ def resolve_disease(disease_name: str) -> dict:
     """
     key = disease_name.lower().strip()
     cache = _load_cache()
-    cache_key = f"resolve:{key}"
+    cache_key = f"resolve_v3:{key}"      # v3: targets carry evidence-quality-weighted score
     if cache_key in cache:
-        return cache[cache_key]
+        cached = cache[cache_key]
+        # Backfill the organ-specific vs multi-systemic classification for entries
+        # cached before it existed (avoids a full Open Targets re-fetch).
+        if cached and "classification" not in cached:
+            try:
+                from services.disease_resolver import classify_disease
+                cached["classification"] = classify_disease(disease_name)
+                cache[cache_key] = cached
+                _save_cache(cache)
+            except Exception as e:
+                logger.debug(f"classification backfill failed: {e}")
+        return cached
 
     # Try MONDO/EFO hint first (fast path for common diseases)
     efo_id = None
@@ -122,6 +149,21 @@ def resolve_disease(disease_name: str) -> dict:
     if not efo_id:
         efo_id = _search_ot(disease_name)
 
+    # Partial fit: a manifestation-qualified phrase (e.g. "systemic sclerosis with
+    # pulmonary manifestations") that Open Targets can't match as-is — fall back to
+    # the PRIMARY disorder and flag the record so scoring/UI can label it honestly.
+    partial = None
+    if not efo_id:
+        try:
+            from services.disease_resolver import parse_primary_disorder
+            pf = parse_primary_disorder(disease_name)
+        except Exception:
+            pf = None
+        if pf:
+            primary_id = _search_ot(pf[0])
+            if primary_id:
+                efo_id, partial = primary_id, pf
+
     if not efo_id:
         return {}
 
@@ -137,6 +179,7 @@ def resolve_disease(disease_name: str) -> dict:
               pathways { pathway pathwayId }
             }
             score
+            datatypeScores { id score }
           }
         }
       }
@@ -156,12 +199,34 @@ def resolve_disease(disease_name: str) -> dict:
 
     rows = disease.get("associatedTargets", {}).get("rows", [])
 
+    def _genetic(r):
+        for s in (r.get("datatypeScores") or []):
+            if s.get("id") == "genetic_association":
+                return round(float(s.get("score", 0) or 0), 4)
+        return 0.0
+
+    def _quality(r):
+        """Evidence-TYPE-weighted association: causal genetics/somatic count fully,
+        literature/expression partially, and known_drug is heavily discounted (it is
+        CIRCULAR for repurposing — a drug already used inflates the association). The
+        overall OT score blends all of these flatly; this weights by causal strength."""
+        ds = r.get("datatypeScores") or []
+        if not ds:
+            return round(float(r.get("score", 0) or 0) * 0.6, 4)
+        best = 0.0
+        for s in ds:
+            w = _DATATYPE_WEIGHT.get(s.get("id"), 0.4)
+            best = max(best, w * float(s.get("score", 0) or 0))
+        return round(best, 4)
+
     targets = [
         {
-            "gene_symbol": r["target"]["approvedSymbol"],
-            "gene_name":   r["target"]["approvedName"],
-            "ensembl_id":  r["target"]["id"],
-            "score":       round(r["score"], 4),
+            "gene_symbol":   r["target"]["approvedSymbol"],
+            "gene_name":     r["target"]["approvedName"],
+            "ensembl_id":    r["target"]["id"],
+            "score":         round(r["score"], 4),
+            "genetic_score": _genetic(r),
+            "quality_score": _quality(r),
         }
         for r in rows
         if r.get("score", 0) > 0.05
@@ -192,6 +257,20 @@ def resolve_disease(disease_name: str) -> dict:
         "targets":      targets[:40],
         "pathways":     pathways,
     }
+    if partial:
+        result["partial_fit"]      = True
+        result["primary_disorder"] = partial[0]
+        result["manifestation"]    = partial[1]
+        result["queried_as"]       = disease_name
+
+    # Differentiate primary organ-specific pathology vs multi-systemic / syndromic
+    # disorder with secondary organ manifestations (MeSH-tree driven).
+    try:
+        from services.disease_resolver import classify_disease
+        result["classification"] = classify_disease(disease_name)
+    except Exception as e:
+        logger.debug(f"disease classification failed: {e}")
+
     cache[cache_key] = result
     _save_cache(cache)
     return result
@@ -207,6 +286,32 @@ def get_disease_gene_set(disease_name: str, top_n: int = 30) -> list:
 def get_disease_pathways(disease_name: str) -> list:
     """Return Reactome pathways associated with disease."""
     return resolve_disease(disease_name).get("pathways", [])
+
+
+def get_disease_gene_weights(disease_name: str, top_n: int = 40) -> dict:
+    """{GENE_SYMBOL_UPPER: genetic_association_score} for a disease.
+
+    Weights disease genes by GENETIC evidence specifically (Nelson et al., Nat
+    Genet 2015 — genetically-supported targets ~2x more likely to succeed). Using
+    the genetics datatype (not the overall OT score, which blends in a known-drug
+    channel) also REDUCES leakage in retrospective benchmarking. Falls back to the
+    overall score for any target missing a genetics breakdown (e.g. legacy cache)."""
+    info = resolve_disease(disease_name)
+    weights: dict = {}
+    for t in info.get("targets", [])[:top_n]:
+        g = (t.get("gene_symbol") or "").strip().upper()
+        if not g:
+            continue
+        # Evidence-QUALITY-weighted score (genetics/somatic full, literature/known-
+        # drug discounted); fall back to genetic then overall for legacy cache.
+        w = t.get("quality_score")
+        if w is None:
+            w = t.get("genetic_score")
+        if w is None:
+            w = t.get("score", 0.0)
+        if w and w > 0:
+            weights[g] = float(w)
+    return weights
 
 
 def is_orphan_candidate(disease_name: str) -> bool:

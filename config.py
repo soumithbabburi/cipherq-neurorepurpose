@@ -2,11 +2,31 @@
 Configuration Management for CipherQ
 Handles environment variables and database connections
 """
+import getpass
 import os
 import logging
 from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def db_params(connect_timeout: int = 3) -> Dict:
+    """Single source of truth for PostgreSQL connection params (psycopg2 style).
+
+    Values come from the environment (.env is auto-loaded below). The user falls
+    back to the current OS account — never a hardcoded personal username — so no
+    developer identity leaks into source. Set DB_USER in .env for a specific role.
+    """
+    load_env_file()  # idempotent; only fills keys not already in the environment
+    user = (os.getenv("DB_USER") or os.getenv("CHEMBL_DB_USER") or getpass.getuser())
+    return dict(
+        host=os.getenv("DB_HOST", os.getenv("CHEMBL_DB_HOST", "localhost")),
+        port=int(os.getenv("DB_PORT", os.getenv("CHEMBL_DB_PORT", "5433"))),
+        user=user,
+        password=os.getenv("DB_PASSWORD", os.getenv("CHEMBL_DB_PASSWORD", "")),
+        dbname=os.getenv("DB_NAME", "neurorepurpose"),
+        connect_timeout=connect_timeout,
+    )
 
 class Config:
     """Configuration manager for CipherQ application"""
@@ -83,7 +103,7 @@ class Config:
         # NVIDIA API
         if validation["nvidia_api_configured"]:
             print("✅ NVIDIA API: Configured")
-            print(f"   Key: {cls.NVIDIA_API_KEY[:20]}...")
+            print("   Key: (set — hidden)")
         else:
             print("❌ NVIDIA API: Not Configured")
             print("   Set: NVIDIA_API_KEY")
@@ -163,8 +183,8 @@ def create_sample_env_file(filename: str = ".env.sample"):
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=cipherq_repurpose
-DB_USER=babburisoumith
+DB_NAME=neurorepurpose
+DB_USER=your_db_user
 DB_PASSWORD=
 
 # NVIDIA BioNeMo API

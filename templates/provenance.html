@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% set active_page = "provenance" %}
+{% block title %}Data Provenance &amp; Freshness · RepurposeIQ{% endblock %}
+
+{% block head %}
+<style>
+  .prov-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+  .prov-stat{background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:16px 18px}
+  .prov-stat .n{font-family:var(--font-serif);font-size:1.7rem;font-weight:600;color:var(--text-primary);line-height:1}
+  .prov-stat .l{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-top:6px}
+  .src-card{background:var(--bg-card);border:1px solid var(--border-default);border-radius:14px;padding:18px 20px;margin-bottom:12px;
+    display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;transition:box-shadow .18s,border-color .18s}
+  .src-card:hover{box-shadow:var(--shadow-md);border-color:var(--border-strong)}
+  .src-card.flag{border-left:3px solid #b5552f}
+  .src-name{font-size:15px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .src-kind{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .src-feeds{font-size:12.5px;color:var(--text-secondary);margin-top:9px;line-height:1.55}
+  .src-note{font-size:11px;color:var(--text-dim);margin-top:6px;font-style:italic}
+  .src-meta{text-align:right;min-width:150px}
+  .badge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:99px}
+  .b-primary{background:rgba(37,99,235,.12);color:#1e40af;border:1px solid rgba(37,99,235,.25)}
+  .b-secondary{background:rgba(100,116,139,.14);color:#475569;border:1px solid rgba(100,116,139,.28)}
+  .b-derived{background:rgba(167,139,250,.16);color:#6d28d9;border:1px solid rgba(167,139,250,.3)}
+  .fresh{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px}
+  .fresh .dot{width:8px;height:8px;border-radius:50%}
+  .f-fresh{background:rgba(34,197,94,.12);color:#15803d} .f-fresh .dot{background:#22c55e;box-shadow:0 0 7px #22c55e}
+  .f-current{background:rgba(37,99,235,.12);color:#1e40af} .f-current .dot{background:#2563eb}
+  .f-aging{background:rgba(217,119,6,.14);color:#b45309} .f-aging .dot{background:#d97706}
+  .f-stale{background:rgba(181,85,47,.14);color:#b5552f} .f-stale .dot{background:#b5552f}
+  .f-unknown{background:var(--bg-inset);color:var(--text-muted)} .f-unknown .dot{background:var(--text-dim)}
+  .int-bar{height:6px;border-radius:3px;background:var(--bg-inset);overflow:hidden;margin-top:9px;width:150px;margin-left:auto}
+  .int-fill{height:100%;border-radius:3px}
+  .int-lbl{font-size:11px;color:var(--text-muted);margin-top:5px}
+  .src-url{font-size:11px;color:var(--primary);text-decoration:none;margin-top:8px;display:inline-block}
+  .src-url:hover{text-decoration:underline}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-xl">
+  <div class="section-head" style="margin-bottom:2px"><span class="s-kicker">Trust layer</span></div>
+  <h2 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">Data Provenance &amp; Freshness</h2>
+  <p class="text-sm text-text-muted" style="margin-top:2px">Every source behind the intelligence, dated and integrity-scored — so you know exactly where a number came from and how fresh it is.</p>
+</div>
+
+<div class="prov-sum" id="prov-sum"></div>
+<div id="prov-list"></div>
+<div id="prov-loading" class="text-sm text-text-muted" style="padding:20px">Loading data lineage…</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
+function freshClass(c){return 'f-'+(c||'unknown');}
+function intColor(s){return s>=80?'#22c55e':s>=65?'#2563eb':s>=45?'#d97706':'#b5552f';}
+function authClass(a){return 'b-'+(a||'secondary');}
+
+fetch('/api/provenance').then(function(r){return r.json();}).then(function(d){
+  document.getElementById('prov-loading').style.display='none';
+  var srcs=d.sources||[];
+  var live=d.live||0, avg=srcs.length?Math.round(srcs.reduce(function(a,s){return a+s.score;},0)/srcs.length):0;
+  var flagged=srcs.filter(function(s){return s.flag;}).length;
+  document.getElementById('prov-sum').innerHTML=
+     stat(d.n||srcs.length,'Authoritative sources')
+    +stat(live,'Live / real-time feeds')
+    +stat(avg,'Mean integrity score')
+    +stat(flagged,'Flagged (stale / derived)');
+  var h='';
+  for(var i=0;i<srcs.length;i++){ var s=srcs[i], fr=s.freshness||{};
+    h+='<div class="src-card'+(s.flag?' flag':'')+'">'
+      +'<div><div class="src-name">'+esc(s.name)+' <span class="badge '+authClass(s.authority)+'">'+esc(s.authority)+'</span></div>'
+      +'<div class="src-kind">'+esc(s.kind)+' · refreshes '+esc(s.cadence||'—')+'</div>'
+      +'<div class="src-feeds">'+esc(s.feeds||'')+'</div>'
+      +'<div class="src-note">'+esc(s.integrity_note||'')+'</div>'
+      +'<a class="src-url" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.url)+' ↗</a></div>'
+      +'<div class="src-meta">'
+      +'<div class="fresh '+freshClass(fr['class'])+'"><span class="dot"></span>'+esc(fr.label||'—')
+        +(fr.live?' · real-time':(fr.as_of?' · '+esc(fr.as_of):''))+'</div>'
+      +'<div class="int-bar"><div class="int-fill" style="width:'+(s.score||0)+'%;background:'+intColor(s.score)+'"></div></div>'
+      +'<div class="int-lbl">Data-Age &amp; Integrity '+(s.score||0)+'/100'+(s.flag?' · needs refresh':'')+'</div>'
+      +'</div></div>';
+  }
+  document.getElementById('prov-list').innerHTML=h;
+}).catch(function(){ document.getElementById('prov-loading').textContent='Could not load provenance.'; });
+
+function stat(n,l){return '<div class="prov-stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>';}
+</script>
+{% endblock %}

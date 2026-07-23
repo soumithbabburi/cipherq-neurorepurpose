@@ -8,7 +8,9 @@ import logging
 import re
 from typing import Dict, List, Optional
 
-import requests
+import requests  # noqa: F401
+
+from services import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +30,14 @@ _505B2_LEVELS = {
 def _fetch_pubmed(drug: str, disease: str, n: int = 6) -> List[Dict]:
     papers = []
     try:
-        sr = requests.get(f"{NCBI_BASE}/esearch.fcgi",
+        sr = http_client.get(f"{NCBI_BASE}/esearch.fcgi",
             params={"db": "pubmed", "term": f"{drug}[tiab] AND {disease}[tiab]",
                     "retmax": n, "retmode": "json"}, timeout=8)
-        ids = sr.json().get("esearchresult", {}).get("idlist", [])
+        ids = (sr.json() if sr and sr.ok else {}).get("esearchresult", {}).get("idlist", [])
         if ids:
-            smr = requests.get(f"{NCBI_BASE}/esummary.fcgi",
+            smr = http_client.get(f"{NCBI_BASE}/esummary.fcgi",
                 params={"db": "pubmed", "id": ",".join(ids), "retmode": "json"}, timeout=8)
-            res = smr.json().get("result", {})
+            res = (smr.json() if smr and smr.ok else {}).get("result", {})
             for pid in ids:
                 if pid in res:
                     papers.append({
@@ -45,18 +47,18 @@ def _fetch_pubmed(drug: str, disease: str, n: int = 6) -> List[Dict]:
                         "year":    res[pid].get("pubdate", "")[:4],
                         "url":     f"https://pubmed.ncbi.nlm.nih.gov/{pid}/",
                     })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"PubMed fetch failed for {drug}/{disease}: {e}")
     return papers
 
 
 def _fetch_trials(drug: str, disease: str, n: int = 5) -> List[Dict]:
     trials = []
     try:
-        r = requests.get(CT_BASE,
+        r = http_client.get(CT_BASE,
             params={"query.cond": disease, "query.term": drug,
                     "pageSize": n, "format": "json"}, timeout=10)
-        if r.ok:
+        if r and r.ok:
             for s in r.json().get("studies", []):
                 pm  = s.get("protocolSection", {})
                 nct = pm.get("identificationModule", {}).get("nctId", "")
@@ -67,8 +69,8 @@ def _fetch_trials(drug: str, disease: str, n: int = 5) -> List[Dict]:
                     "phase":  ", ".join(pm.get("designModule", {}).get("phases", [])) or "N/A",
                     "url":    f"https://clinicaltrials.gov/study/{nct}",
                 })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"ClinicalTrials fetch failed for {drug}/{disease}: {e}")
     return trials
 
 
@@ -169,6 +171,147 @@ def _mechanistic_rationale(
     }
 
 
+OPENFDA_EVENT = "https://api.fda.gov/drug/event.json"
+
+
+def _fetch_trials_molecule(drug: str, max_pages: int = 3, cap: int = 25) -> Dict:
+    """ALL ClinicalTrials.gov trials for a drug across EVERY condition (not just the
+    selected indication) — the molecule-wide clinical picture."""
+    from collections import Counter
+    out = {"total": 0, "by_phase": {}, "by_status": {}, "top_conditions": [],
+           "top_sponsors": [], "trials": [], "registry": "ClinicalTrials.gov"}
+    cond_c, sp_c, ph_c, st_c = Counter(), Counter(), Counter(), Counter()
+    fetched, token = [], None
+    try:
+        for _ in range(max_pages):
+            params = {"query.term": drug, "pageSize": 100, "format": "json", "countTotal": "true"}
+            if token:
+                params["pageToken"] = token
+            r = http_client.get(CT_BASE, params=params, timeout=15)
+            if not (r and r.ok):
+                break
+            j = r.json()
+            out["total"] = j.get("totalCount", out["total"])
+            for s in j.get("studies", []):
+                pm = s.get("protocolSection", {})
+                idm = pm.get("identificationModule", {})
+                status = pm.get("statusModule", {}).get("overallStatus", "")
+                phases = pm.get("designModule", {}).get("phases", []) or ["N/A"]
+                conds = pm.get("conditionsModule", {}).get("conditions", []) or []
+                sponsor = (pm.get("sponsorCollaboratorsModule", {}).get("leadSponsor", {}) or {}).get("name", "")
+                st_c[status] += 1
+                for p in phases:
+                    ph_c[p] += 1
+                for cc in conds:
+                    cond_c[cc] += 1
+                if sponsor:
+                    sp_c[sponsor] += 1
+                fetched.append({"nct": idm.get("nctId", ""), "title": idm.get("briefTitle", "")[:90],
+                                "status": status, "phase": ", ".join(phases),
+                                "conditions": conds[:3], "sponsor": sponsor,
+                                "url": f"https://clinicaltrials.gov/study/{idm.get('nctId','')}"})
+            token = j.get("nextPageToken")
+            if not token:
+                break
+        out["by_phase"] = dict(ph_c.most_common())
+        out["by_status"] = dict(st_c.most_common())
+        out["top_conditions"] = [{"name": k, "count": v} for k, v in cond_c.most_common(10)]
+        out["top_sponsors"] = [{"name": k, "count": v} for k, v in sp_c.most_common(6)]
+        order = {"RECRUITING": 0, "ACTIVE_NOT_RECRUITING": 1, "ENROLLING_BY_INVITATION": 2,
+                 "NOT_YET_RECRUITING": 3, "COMPLETED": 4}
+        fetched.sort(key=lambda t: order.get(t["status"], 9))
+        out["trials"] = fetched[:cap]
+    except Exception as e:
+        logger.debug(f"molecule trials fetch failed for {drug}: {e}")
+    return out
+
+
+def _fetch_pubmed_molecule(drug: str, n: int = 12) -> Dict:
+    """All PubMed literature for a drug across indications (molecule-wide)."""
+    from collections import Counter
+    out = {"total": 0, "recent": [], "top_journals": []}
+    try:
+        sr = http_client.get(f"{NCBI_BASE}/esearch.fcgi",
+            params={"db": "pubmed", "term": f"{drug}[tiab]", "retmax": n,
+                    "retmode": "json", "sort": "relevance"}, timeout=10)
+        j = (sr.json() if sr and sr.ok else {}).get("esearchresult", {})
+        out["total"] = int(j.get("count", 0) or 0)
+        ids = j.get("idlist", [])
+        if ids:
+            smr = http_client.get(f"{NCBI_BASE}/esummary.fcgi",
+                params={"db": "pubmed", "id": ",".join(ids), "retmode": "json"}, timeout=10)
+            res = (smr.json() if smr and smr.ok else {}).get("result", {})
+            jc = Counter()
+            for pid in ids:
+                if pid in res:
+                    src = res[pid].get("source", "")
+                    jc[src] += 1
+                    out["recent"].append({"pmid": pid, "title": res[pid].get("title", "")[:110],
+                                           "journal": src, "year": res[pid].get("pubdate", "")[:4],
+                                           "url": f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"})
+            out["top_journals"] = [{"name": k, "count": v} for k, v in jc.most_common(5)]
+    except Exception as e:
+        logger.debug(f"molecule pubmed fetch failed for {drug}: {e}")
+    return out
+
+
+def _fetch_adverse_events(drug: str, n: int = 12) -> Dict:
+    """Top adverse reactions for a drug from FDA FAERS (openFDA). NOTE: US
+    spontaneous reports — reporting bias, counts are not incidence."""
+    out = {"total": 0, "serious": 0, "top_reactions": [],
+           "source": "FDA FAERS via openFDA", "caveat": "Spontaneous US reports — reporting bias; counts ≠ incidence."}
+    d = (drug or "").strip().lower()
+    if not d:
+        return out
+    search = (f'(patient.drug.openfda.generic_name:"{d}"'
+              f'+patient.drug.openfda.brand_name:"{d}"'
+              f'+patient.drug.medicinalproduct:"{d}")')
+    try:
+        r = http_client.get(OPENFDA_EVENT, params={
+            "search": search, "count": "patient.reaction.reactionmeddrapt.exact"}, timeout=12)
+        if r and r.ok:
+            out["top_reactions"] = [{"term": x["term"].title(), "count": x["count"]}
+                                    for x in r.json().get("results", [])[:n]]
+        rt = http_client.get(OPENFDA_EVENT, params={"search": search, "limit": 1}, timeout=10)
+        if rt and rt.ok:
+            out["total"] = rt.json().get("meta", {}).get("results", {}).get("total", 0)
+        rs = http_client.get(OPENFDA_EVENT, params={"search": search, "count": "serious"}, timeout=10)
+        if rs and rs.ok:
+            for x in rs.json().get("results", []):
+                if str(x.get("term")) == "1":   # 1 = serious, 2 = non-serious
+                    out["serious"] = x.get("count", 0)
+    except Exception as e:
+        logger.debug(f"FAERS fetch failed for {drug}: {e}")
+    return out
+
+
+def _registry_links(drug: str) -> List[Dict]:
+    """Multi-jurisdiction trial registries + regulators (deep-link searches — these
+    sources have no clean public API)."""
+    import urllib.parse as _up
+    q = _up.quote((drug or "").strip())
+    return [
+        {"name": "ClinicalTrials.gov", "region": "US / global", "kind": "Trials",
+         "url": f"https://clinicaltrials.gov/search?term={q}"},
+        {"name": "WHO ICTRP", "region": "Global", "kind": "Trials",
+         "desc": "Aggregates CTRI, EU-CTR, ISRCTN & more",
+         "url": f"https://trialsearch.who.int/Default.aspx?SearchTermStat={q}"},
+        {"name": "CTRI (India)", "region": "India", "kind": "Trials",
+         "desc": "Clinical Trials Registry – India",
+         "url": "https://ctri.nic.in/Clinicaltrials/advsearch.php"},
+        {"name": "Drugs@FDA", "region": "US", "kind": "Regulatory",
+         "url": f"https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm?event=BasicSearch.process&searchTerm={q}"},
+        {"name": "EMA", "region": "EU", "kind": "Regulatory",
+         "url": f"https://www.ema.europa.eu/en/search?search_api_fulltext={q}"},
+        {"name": "MHRA (UK)", "region": "UK", "kind": "Regulatory",
+         "desc": "UK products & Public Assessment Reports",
+         "url": f"https://products.mhra.gov.uk/search/?search={q}&page=1"},
+        {"name": "EudraGMDP", "region": "EU", "kind": "Manufacturing / GMP",
+         "desc": "GMP/GDP authorisations & inspections — CMC / supply-chain due-diligence",
+         "url": "https://eudragmdp.ema.europa.eu/inspections/displayWelcome.do"},
+    ]
+
+
 def generate_dossier(
     chembl_id: str,
     disease_name: str,
@@ -238,6 +381,11 @@ def generate_dossier(
     mechanistic   = _mechanistic_rationale(drug_genes, disease_genes, disease_pathways, drug_name, disease_name)
     literature    = _fetch_pubmed(drug_name, disease_name)
     trials        = _fetch_trials(drug_name, disease_name)
+    # ── Molecule-wide evidence (all indications) + safety + registries ─────────
+    molecule_trials     = _fetch_trials_molecule(drug_name)
+    molecule_literature = _fetch_pubmed_molecule(drug_name)
+    adverse_events      = _fetch_adverse_events(drug_name)
+    registry_links      = _registry_links(drug_name)
 
     # ── Physicochemical profile ───────────────────────────────────────────────
     physchem: Dict = {}
@@ -279,9 +427,9 @@ def generate_dossier(
             efo = disease_info.get("disease_id", "")
             if efo:
                 ta_q = """query($id:String!){ disease(efoId:$id){ therapeuticAreas { name } } }"""
-                ta_r = requests.post("https://api.platform.opentargets.org/api/v4/graphql",
+                ta_r = http_client.post("https://api.platform.opentargets.org/api/v4/graphql",
                                      json={"query": ta_q, "variables": {"id": efo}}, timeout=8)
-                if ta_r.ok:
+                if ta_r and ta_r.ok:
                     d = (ta_r.json().get("data") or {}).get("disease") or {}
                     therapeutic_areas = [t.get("name", "") for t in (d.get("therapeuticAreas") or [])]
             developability = _dev.score(smiles, therapeutic_areas=therapeutic_areas)
@@ -316,6 +464,10 @@ def generate_dossier(
         "developability":     developability,
         "literature":         literature,
         "clinical_trials":    trials,
+        "molecule_trials":      molecule_trials,
+        "molecule_literature":  molecule_literature,
+        "adverse_events":       adverse_events,
+        "registry_links":       registry_links,
         "max_phase":          max_phase,
         "existing_indications": existing_ind,
     }

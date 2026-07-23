@@ -19,7 +19,9 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import requests
+import requests  # noqa: F401  (kept for type/back-compat)
+
+from services import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +89,11 @@ def _save_resolved(data: dict):
 def _chembl_lookup(name: str) -> Optional[Dict]:
     """Resolve a molecule name → {chembl_id, pref_name, max_phase} via ChEMBL."""
     try:
-        r = requests.get(
+        r = http_client.get(
             f"{CHEMBL_BASE}/molecule/search.json",
             params={"q": name, "limit": 1}, timeout=10,
         )
-        if r.ok:
+        if r and r.ok:
             mols = r.json().get("molecules", [])
             if mols:
                 m = mols[0]

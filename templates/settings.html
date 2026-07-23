@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% set active_page = "settings" %}
+{% block title %}Settings · RepurposeIQ{% endblock %}
+
+{% block head %}
+<style>
+  .set-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  .stat-dot { display:inline-block; width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .stat-on  { background:var(--accent); }
+  .stat-off { background:var(--text-dim); }
+  .stat-warn{ background:var(--olive); }
+  .srow { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border-subtle); font-size:0.82rem; }
+  .srow:last-child { border-bottom:none; }
+  .srow .nm { color:var(--text-primary); font-weight:500; }
+  .srow .kd { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); margin-left:auto; }
+  .srow .st { font-size:0.72rem; font-weight:600; }
+  .wbar-track { height:6px; background:var(--bg-sunken); border-radius:3px; overflow:hidden; flex:1; }
+  .wbar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--gold)); border-radius:3px; }
+  .set-note { font-size:0.72rem; color:var(--text-muted); line-height:1.6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head"><span class="s-kicker">Configuration</span><span class="rule"></span></div>
+  <h1 class="font-display" style="font-size:1.9rem;font-weight:600;letter-spacing:-0.01em;color:var(--text-primary);line-height:1.1">Settings and System Status</h1>
+  <p class="set-note" style="max-width:640px;margin-top:8px;font-size:0.85rem">Live status of the platform's engines, compute services and data integrations, the active scoring configuration, and operational controls.</p>
+</div>
+
+<div id="loading" style="display:flex;align-items:center;gap:0.6rem;color:var(--text-muted);padding:1.2rem 0">
+  <span class="spinner"></span> Loading system status…
+</div>
+
+<div id="content" style="display:none">
+  <div class="set-grid">
+    <!-- Engines and compute -->
+    <div class="card">
+      <div class="card-title mb-1">Engines and compute services</div>
+      <div id="svc-list"></div>
+    </div>
+
+    <!-- Data integrations -->
+    <div class="card">
+      <div class="card-title mb-1">Data integrations</div>
+      <div id="data-list"></div>
+      <div id="ob-fresh" class="set-note" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="set-grid" style="margin-top:16px">
+    <!-- Scoring configuration -->
+    <div class="card">
+      <div class="card-title mb-1">Scoring configuration</div>
+      <div id="weights"></div>
+      <div id="pos-status" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Regulatory and operations -->
+    <div class="card">
+      <div class="card-title mb-1">Regulatory and operations</div>
+      <div class="kv"><span class="kv-k">Jurisdictions covered</span><span class="kv-v" id="juris">-</span></div>
+      <div class="kv"><span class="kv-k">Database records</span><span class="kv-v" id="dbstats">-</span></div>
+      <div class="kv"><span class="kv-k">Cached API responses</span><span class="kv-v" id="cache-n">-</span></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button class="btn btn-secondary" id="clear-cache">Clear API cache</button>
+        <button class="btn btn-secondary" id="refresh">Refresh status</button>
+      </div>
+      <p class="set-note" style="margin-top:12px">Clearing the cache forces the next analysis to re-fetch external data. Engine and integration availability is determined at startup; restart the application to pick up newly installed components.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function dot(ok){ return '<span class="stat-dot '+(ok?'stat-on':'stat-off')+'"></span>'; }
+function stTxt(ok){ return ok ? '<span class="st" style="color:var(--accent)">Available</span>' : '<span class="st" style="color:var(--text-dim)">Offline</span>'; }
+
+async function load(){
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('content').style.display='none';
+  try {
+    const d = await apiFetch('/api/system-status');
+
+    document.getElementById('svc-list').innerHTML = (d.services||[]).map(s=>
+      `<div class="srow">${dot(s.ok)}<span class="nm">${s.name}</span><span class="kd">${s.kind}</span>${stTxt(s.ok)}</div>`).join('');
+
+    document.getElementById('data-list').innerHTML = (d.data_sources||[]).map(s=>
+      `<div class="srow"><span class="stat-dot stat-on"></span><span class="nm">${s.name}</span><span style="font-size:0.72rem;color:var(--text-muted);margin-left:auto;text-align:right;max-width:60%">${s.use}</span></div>`).join('');
+
+    const ob = d.orange_book||{};
+    document.getElementById('ob-fresh').textContent = ob.available
+      ? ('Orange Book data updated '+ob.updated+' ('+ob.age_days+' days ago; refreshes monthly).')
+      : 'Orange Book data not yet downloaded.';
+
+    // weights
+    const w = d.weights||{};
+    let wHTML = '';
+    function weightBlock(title, obj){
+      if(!obj) return '';
+      const max = Math.max.apply(null, Object.values(obj));
+      let rows = Object.entries(obj).map(([k,v])=>
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+           <span style="width:88px;font-size:0.74rem;color:var(--text-secondary)">${k}</span>
+           <div class="wbar-track"><div class="wbar-fill" style="width:${Math.round(v/max*100)}%"></div></div>
+           <span class="mono" style="font-size:0.72rem;color:var(--text-muted);width:34px;text-align:right">${(+v).toFixed(2)}</span>
+         </div>`).join('');
+      return `<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin:6px 0 6px">${title}</div>${rows}`;
+    }
+    wHTML += weightBlock('Discovery (disease to compound)', w.discovery);
+    wHTML += weightBlock('Reverse (compound to indication)', w.reverse);
+    document.getElementById('weights').innerHTML = wHTML || '<span class="set-note">Scoring weights unavailable.</span>';
+
+    // PoS model
+    const p = d.pos_model||{};
+    let posLine;
+    if (p.calibrator && p.trustworthy) posLine = 'Phase-transition model with a certified fitted calibrator (cross-validated AUC '+(p.cv_auc!=null?(+p.cv_auc).toFixed(3):'n/a')+').';
+    else if (p.calibrator) posLine = 'Phase-transition survival model. A fitted calibrator exists but was flagged non-trustworthy (AUC '+(p.cv_auc!=null?(+p.cv_auc).toFixed(3):'n/a')+') and is not blended.';
+    else posLine = 'Phase-transition survival model (analytic; no fitted calibrator on disk).';
+    document.getElementById('pos-status').innerHTML =
+      '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px">Probability-of-success model</div>'+
+      '<p class="set-note">'+posLine+'</p>';
+
+    document.getElementById('juris').textContent = (d.jurisdictions||[]).join(', ') || '-';
+    const st = d.db_stats||{};
+    const parts = [];
+    if (st.compounds) parts.push((st.compounds).toLocaleString()+' compounds');
+    if (st.diseases)  parts.push((st.diseases).toLocaleString()+' diseases');
+    if (st.targets)   parts.push((st.targets).toLocaleString()+' targets');
+    document.getElementById('dbstats').textContent = parts.length ? parts.join(' · ') : (Object.keys(st).length? JSON.stringify(st): '-');
+    document.getElementById('cache-n').textContent = (d.cache_entries!=null? d.cache_entries : '-');
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+  } catch(e){
+    document.getElementById('loading').innerHTML = '<div class="alert alert-error">Could not load system status: '+e.message+'</div>';
+  }
+}
+
+document.addEventListener('click', async function(ev){
+  if (ev.target && ev.target.id === 'clear-cache'){
+    ev.target.disabled = true;
+    try { const r = await apiFetch('/api/cache/clear', {method:'POST'}); window.toast('Cleared '+(r.cleared||0)+' cached responses','success'); load(); }
+    catch(e){ window.toast('Clear failed: '+e.message,'error'); ev.target.disabled=false; }
+  }
+  if (ev.target && ev.target.id === 'refresh'){ load(); }
+});
+
+load();
+</script>
+{% endblock %}

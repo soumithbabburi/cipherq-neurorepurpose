@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from rdkit import Chem
-    from rdkit.Chem import InchiInfo, inchi
+    from rdkit.Chem import inchi
     RDKIT_OK = True
 except ImportError:
     RDKIT_OK = False

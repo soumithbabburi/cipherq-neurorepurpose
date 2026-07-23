@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% set active_page = 'pathways' %}
+{% block title %}Pathway Screen · RepurposeIQ{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+  <div class="section-head" style="margin-bottom:4px"><span class="s-kicker">Pathway-First Repurposing</span></div>
+  <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Screen Through a Pathway</h1>
+  <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px">
+    Enter a biological pathway. We resolve its member genes, find approved drugs that
+    <strong>modulate it in the direction you want</strong>, then infer the diseases the pathway drives and surface
+    <strong>existing drug → new indication</strong> pairs - the pathway is the mechanistic rationale, the repurposing claim is still a drug-indication pair.
+  </p>
+</div>
+
+<!-- Search controls -->
+<div class="card mb-2">
+  <div class="grid-form">
+    <div class="field" style="grid-column:span 2">
+      <label for="pw-input">Pathway (name or id)</label>
+      <input id="pw-input" class="input" list="pw-suggest" autocomplete="off"
+             placeholder="e.g. mTOR signaling, PI3K/AKT activation, Autophagy"
+             value="{{ pathway|e }}" onkeydown="if(event.key==='Enter')runScreen()"/>
+      <datalist id="pw-suggest"></datalist>
+    </div>
+    <div class="field">
+      <label for="dir-input">Desired effect on pathway</label>
+      <select id="dir-input" class="input">
+        <option value="either" {% if direction=='either' or not direction %}selected{% endif %}>Either (label each)</option>
+        <option value="suppress" {% if direction=='suppress' %}selected{% endif %}>Suppress / inhibit</option>
+        <option value="activate" {% if direction=='activate' %}selected{% endif %}>Activate / enhance</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="dis-input">Anchor disease (optional)</label>
+      <input id="dis-input" class="input" placeholder="leave blank to discover"
+             value="{{ disease|e }}"/>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" onclick="runScreen()" id="run-btn">
+        <span class="material-symbols-outlined" style="font-size:16px">account_tree</span>
+        Screen Pathway
+      </button>
+    </div>
+  </div>
+  <p style="font-size:0.7rem;color:#98a1b6;margin-top:8px">
+    Pathway membership from <strong>curated pathway data</strong>; drugs and mechanism direction from a <strong>validated bioactivity database</strong>;
+    inferred indications from <strong>curated gene→disease associations</strong>; each drug-indication pair scored by the
+    platform's <strong>canonical repurposing score</strong>. Leaving a disease blank runs <strong>discovery mode</strong> (pathway infers the indications);
+    supplying one runs <strong>disease-anchored mode</strong> (pathway ranks candidates for that disease).
+  </p>
+</div>
+
+<!-- Pathway summary -->
+<div id="pw-summary" class="card mb-2" style="display:none"></div>
+
+<!-- Results -->
+<div id="status-line" style="font-size:0.8rem;color:#6b7690;margin-bottom:0.75rem;display:none"></div>
+<div id="results"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Autocomplete ───────────────────────────────────────────────────────────
+var _sugTimer = null;
+document.getElementById('pw-input').addEventListener('input', function(){
+  var q = this.value.trim();
+  if (_sugTimer) clearTimeout(_sugTimer);
+  if (q.length < 3) return;
+  _sugTimer = setTimeout(async function(){
+    try {
+      var rows = await window.apiFetch('/api/suggest-pathways?q='+encodeURIComponent(q));
+      var dl = document.getElementById('pw-suggest');
+      dl.innerHTML = (rows||[]).map(function(r){
+        return '<option value="'+r.name.replace(/"/g,'&quot;')+'">'+r.n_genes+' genes</option>';
+      }).join('');
+    } catch(_){}
+  }, 220);
+});
+
+// ── Rendering helpers ──────────────────────────────────────────────────────
+function dirIcon(kind){
+  // line-icon only (no decorative glyphs)
+  var ic = kind==='down'?'south':kind==='up'?'north':'remove';
+  return '<span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px">'+ic+'</span>';
+}
+
+function dirBadge(net){
+  if (net==='suppresses') return '<span class="chip green">'+dirIcon('down')+' suppresses pathway</span>';
+  if (net==='activates')  return '<span class="chip cyan">'+dirIcon('up')+' activates pathway</span>';
+  return '<span class="chip amber">mixed effect</span>';
+}
+
+function nodeChips(nodes){
+  return (nodes||[]).slice(0,8).map(function(n){
+    var cls = n.direction==='down'?'green':n.direction==='up'?'cyan':'purple';
+    return '<span class="chip '+cls+'" title="'+(n.mechanism||n.action)+'">'+dirIcon(n.direction)+' '+n.gene+'</span>';
+  }).join(' ');
+}
+
+function indList(inds){
+  if (!inds || !inds.length) return '<span class="text-dim">no indication passed scoring</span>';
+  return inds.map(function(i){
+    var pct = Math.round((i.repurposing_score||0)*100);
+    var nov = i.is_novel
+      ? '<span class="chip green" style="font-size:10px">novel</span>'
+      : '<span class="chip amber" style="font-size:10px">known · confirmatory</span>';
+    return '<div class="flex justify-between items-center" style="gap:8px;padding:3px 0;border-bottom:1px solid #f1efe7">'
+      + '<span style="font-size:0.74rem;color:#0f1e3d">'+i.disease+' '+nov+'</span>'
+      + '<span class="mono" style="font-size:11px;font-weight:700;color:'+window.scoreColor(i.repurposing_score||0)+'">'+pct+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+function posBadge(pos){
+  if (!pos || pos.loa_pct==null) return '';
+  var col = pos.band==='High'?'#2563eb':pos.band==='Moderate'?'#0e7490':'#b3261e';
+  return '<span class="chip" style="background:'+col+'18;color:'+col+';border:1px solid '+col+'40;font-weight:700" '
+    + 'title="Probability of clearing remaining development phases for the new indication">PoS '+pos.loa_pct+'% · '+pos.band+'</span>';
+}
+
+function candidateCard(c){
+  var mod = c.modulation_score || 0;
+  var best = c.best_indication || '';
+  var rep = c.repurposing_score;
+  var dossierUrl = best ? ('/analysis?id='+encodeURIComponent(c.chembl_id)+'&disease='+encodeURIComponent(best)) : '';
+  var phaseTxt = c.max_phase>=4 ? 'Approved' : (c.max_phase>=1 ? ('Phase '+Math.round(c.max_phase)) : 'Preclinical');
+  return ''
+  + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
+  +   '<div class="flex justify-between items-center" style="gap:12px">'
+  +     '<div style="min-width:0"><div class="cc-name">'+c.name+'</div>'
+  +       '<div class="cc-id">'+(c.chembl_id||'')+' · '+phaseTxt+'</div></div>'
+  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(mod,52)+'<div class="seal-lbl" style="margin-top:3px">Modulation</div></div>'
+  +   '</div>'
+  +   '<div class="cc-tags">'+dirBadge(c.net_direction)
+  +     '<span class="chip" style="background:#eef2f0;color:#47526b">'+c.n_nodes_hit+' node'+(c.n_nodes_hit>1?'s':'')+' hit</span>'
+  +     posBadge(c.pos)+'</div>'
+  +   '<div><div class="cc-bar-lbl" style="margin-bottom:4px">Pathway nodes modulated</div><div class="cc-tags">'+nodeChips(c.nodes_hit)+'</div></div>'
+  +   '<div style="background:var(--bg-sunken);border-radius:8px;padding:8px 10px">'
+  +     '<div class="flex justify-between items-center" style="margin-bottom:4px">'
+  +       '<span class="cc-bar-lbl">Repurposing claim'+(c.best_is_novel?' · new indication':'')+'</span>'
+  +       (rep!=null?'<span class="mono" style="font-size:11px;font-weight:700;color:'+window.scoreColor(rep)+'">'+Math.round(rep*100)+'</span>':'')
+  +     '</div>'
+  +     (best
+          ? '<div style="font-size:0.82rem;font-weight:600;color:#0f1e3d">'+best+'</div>'
+          : '<div class="text-dim" style="font-size:0.74rem">below enrichment cut-off</div>')
+  +   '</div>'
+  +   ((c.candidate_indications&&c.candidate_indications.length)
+          ? '<div><div class="cc-bar-lbl" style="margin-bottom:2px">Candidate indications</div>'+indList(c.candidate_indications)+'</div>'
+          : '')
+  +   (dossierUrl
+          ? '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
+  +         '<span class="material-symbols-outlined" style="font-size:15px">description</span>505(b)(2) Dossier</a>'
+          : '')
+  + '</div>';
+}
+
+function pwSummaryHtml(res){
+  var pw = res.pathway || {};
+  var ar = res.anchor_resolution || {};
+  var anchorTxt = (res.anchor_disease||'');
+  if (ar.partial_fit){
+    anchorTxt = '<strong>'+(ar.resolved_name||ar.primary_disorder||'')+'</strong>'
+      + ' <span class="chip amber" style="font-size:10px" title="Your query &quot;'+(ar.queried_as||'')
+      + '&quot; is a systemic disorder qualified by '+(ar.manifestation||'')+' manifestations; scored against the primary disorder">'
+      + 'partial fit · via primary disorder</span>';
+  } else {
+    anchorTxt = '<strong>'+anchorTxt+'</strong>';
+  }
+  var modeTxt = res.mode==='A'
+    ? 'Disease-anchored mode · ranking candidates for '+anchorTxt
+    : 'Discovery mode · indications inferred from the pathway';
+  // Primary organ-specific vs multi-systemic / syndromic classification
+  var clsHtml = '';
+  var cls = ar.classification || {};
+  if (cls.category && cls.category!=='indeterminate'){
+    var isOrgan = cls.category==='primary_organ_specific';
+    var chipCls = isOrgan ? 'green' : 'purple';
+    var detail = isOrgan
+      ? ('target organ: '+(cls.target_organ||'—'))
+      : ('secondary manifestations across '+((cls.affected_systems||[]).join(', ')||'multiple systems'));
+    clsHtml = '<div style="margin-top:10px;padding:9px 11px;background:var(--bg-sunken);border-radius:8px">'
+      + '<span class="chip '+chipCls+'" style="font-size:10px">'+cls.label+'</span> '
+      + '<span style="font-size:0.72rem;color:#47526b">'+detail
+      + ' · <span style="color:#6b7690">'+(cls.confidence||'')+' confidence</span></span>'
+      + '<div style="font-size:0.68rem;color:#6b7690;margin-top:4px">'+(cls.rationale||'')+'</div>'
+      + '</div>';
+  }
+  var dirTxt = {suppress:'suppress / inhibit', activate:'activate / enhance', either:'either direction'}[res.direction]||res.direction;
+  var inferred = '';
+  if (res.mode==='B' && (res.inferred_diseases||[]).length){
+    inferred = '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">Diseases this pathway drives (inferred)</div>'
+      + (res.inferred_diseases||[]).map(function(d){
+          return '<span class="chip cyan" title="'+d.n_pathway_genes+' pathway genes associated">'+d.name+'</span>';
+        }).join(' ') + '</div>';
+  }
+  return ''
+    + '<div class="flex justify-between items-center" style="flex-wrap:wrap;gap:8px">'
+    +   '<div><span class="drug-name" style="font-size:1.3rem">'+pw.name+'</span> '
+    +     '<span class="drug-chembl">'+(pw.id||'')+'</span></div>'
+    +   '<span class="chip green">'+pw.n_genes+' member genes</span>'
+    + '</div>'
+    + '<div style="font-size:0.74rem;color:#47526b;margin-top:6px">'+modeTxt+' · desired effect: <strong>'+dirTxt+'</strong></div>'
+    + clsHtml
+    + inferred;
+}
+
+// ── Run ────────────────────────────────────────────────────────────────────
+async function runScreen(){
+  var pw = document.getElementById('pw-input').value.trim();
+  var dir = document.getElementById('dir-input').value;
+  var dis = document.getElementById('dis-input').value.trim();
+  if (!pw){ window.toast('Enter a pathway name', 'warning'); return; }
+
+  var btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  var status = document.getElementById('status-line');
+  status.style.display = 'block';
+  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Resolving pathway, mapping drugs and inferring indications… (first run can take ~30s)';
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('pw-summary').style.display = 'none';
+  // Broad anchor-disease → subtype refinement (same platform-wide helper)
+  var _pwsb = document.getElementById('pw-subtype-banner');
+  if (!_pwsb) {
+    _pwsb = document.createElement('div'); _pwsb.id = 'pw-subtype-banner';
+    _pwsb.style.margin = '0 0 12px'; _pwsb.style.display = 'none';
+    var _pr = document.getElementById('results'); _pr.parentNode.insertBefore(_pwsb, _pr);
+  }
+  if (dis && window.renderDiseaseExpansion) {
+    window.renderDiseaseExpansion(dis, _pwsb, function (sub) {
+      document.getElementById('dis-input').value = sub; runScreen();
+    });
+  } else { _pwsb.style.display = 'none'; _pwsb.innerHTML = ''; }
+
+  try {
+    var qs = 'pathway='+encodeURIComponent(pw)+'&direction='+encodeURIComponent(dir);
+    if (dis) qs += '&disease='+encodeURIComponent(dis);
+    var res = await window.apiFetch('/api/pathway-screen?'+qs);
+    if (res.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+res.error+'</span>'; btn.disabled=false; return; }
+
+    var sum = document.getElementById('pw-summary');
+    sum.innerHTML = pwSummaryHtml(res);
+    sum.style.display = 'block';
+
+    var cands = res.candidates || [];
+    if (!cands.length){
+      status.innerHTML = 'No drugs with curated mechanisms modulate this pathway in the requested direction.';
+      btn.disabled = false; return;
+    }
+    status.innerHTML = 'Found <strong>'+res.n_candidates+'</strong> drug'+(res.n_candidates>1?'s':'')+' modulating <strong>'+res.pathway.name+'</strong>'
+      + (res.mode==='B'?' · top candidates carry an inferred new-indication claim.':'.');
+    document.getElementById('results').innerHTML =
+      '<div class="compound-grid">' + cands.map(candidateCard).join('') + '</div>';
+  } catch(e){
+    status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';
+  }
+  btn.disabled = false;
+}
+
+// Auto-run if a pathway was passed in the URL
+if ("{{ pathway|e }}".trim()) runScreen();
+</script>
+{% endblock %}

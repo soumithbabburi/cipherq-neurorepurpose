@@ -83,7 +83,7 @@ class Data40kLoader:
                     'target': target_str,  # REAL targets
                     'mechanism': row.get('mechanism_of_action') or 'Under investigation',
                     'smiles': row.get('smiles', ''),
-                    'source': 'CipherQ Database',
+                    'source': 'RepurposeIQ Database',
                     'status': row.get('fda_status', 'Unknown'),
                     'qed_score': row.get('qed_score'),
                     'target_count': len(targets),
