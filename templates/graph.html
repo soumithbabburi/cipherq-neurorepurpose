@@ -56,7 +56,7 @@
       <span class="material-symbols-outlined absolute left-sm text-text-dim pointer-events-none" style="font-size:18px;top:50%;transform:translateY(-50%)">search</span>
       <input id="graph-q" class="bg-transparent border-none pl-8 pr-sm py-xs text-sm focus:ring-0 w-56 outline-none"
              type="text" placeholder="Drug, gene, pathway or disease…"
-             onkeydown="if(event.key==='Enter')searchGraph()" value="{{ disease }}"/>
+             onkeydown="if(event.key==='Enter')searchGraph()" value="{{ anchor }}"/>
     </div>
     <button class="brand-gradient text-white px-md py-xs rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-xs"
             onclick="searchGraph()" id="graph-btn">
@@ -79,6 +79,20 @@
   <div id="g-legend"></div>
   <div id="detail-panel"><span class="dp-close" onclick="clearHL()">×</span><div id="dp-body"></div></div>
   <div id="g-loading"><span class="g-spin"></span>Building the network…</div>
+</div>
+
+<div id="connection-panel" style="display:none;margin-top:16px;background:#fff;border:1px solid var(--border-default);
+     border-radius:14px;padding:18px 20px;box-shadow:0 12px 34px -26px rgba(15,30,61,.4)">
+  <div class="section-head" style="margin-bottom:6px"><span class="s-kicker">Connection rationale</span></div>
+  <h3 id="cp-title" style="font-family:var(--font-serif);font-size:1.15rem;color:var(--text-primary);margin:0 0 4px"></h3>
+  <p id="cp-rationale" style="font-size:0.9rem;color:var(--text-secondary);margin:0 0 12px;line-height:1.5"></p>
+  <div id="cp-targets" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+  <div id="cp-pathways" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px"></div>
+  <div style="border-top:1px solid var(--border-subtle);padding-top:12px">
+    <div class="detail-key" style="margin-bottom:5px">Description</div>
+    <p id="cp-desc" style="font-size:0.88rem;color:var(--text-primary);margin:0;line-height:1.55"></p>
+    <div id="cp-desc-src" style="font-size:0.68rem;color:var(--text-dim);margin-top:8px"></div>
+  </div>
 </div>
 {% endblock %}
 
@@ -283,9 +297,60 @@ document.addEventListener('DOMContentLoaded',function(){
       chip.classList.toggle('off',FILTER[k]===false); applyFilters();});
   });
   document.getElementById('fit-chip').addEventListener('click',function(){clearHL();try{Graph.zoomToFit(600,60);}catch(e){}});
-  var start='{{ disease }}'.trim() || 'imatinib';
-  document.getElementById('graph-q').value='{{ disease }}'.trim();
-  loadGraph(start);
+  var qDrug='{{ drug }}'.trim(), qDisease='{{ disease }}'.trim(), anchor='{{ anchor }}'.trim();
+  document.getElementById('graph-q').value=anchor;
+  if(qDrug && qDisease){
+    // Came from a candidate (drug + indication): show HOW they connect, not a generic
+    // neighbourhood — draw the drug -> shared target -> disease path and the rationale.
+    loadConnection(qDrug, qDisease);
+  } else if(anchor){
+    loadGraph(anchor);
+  } else {
+    document.getElementById('g-loading').innerHTML='Search a drug, gene, pathway or disease to build its network.';
+  }
 });
+
+function loadConnection(drug, disease){
+  document.getElementById('g-loading').style.display='flex';
+  document.getElementById('g-loading').innerHTML='<span class="g-spin"></span>Tracing how '+esc(drug)+' connects to '+esc(disease)+'…';
+  HLN=new Set();HLL=new Set();hideDetail();
+  fetch('/api/graph/connection?drug='+encodeURIComponent(drug)+'&disease='+encodeURIComponent(disease))
+   .then(function(r){return r.json();}).then(function(res){
+     RAW=toGraphData(res.elements||[]);
+     applyFilters();
+     setTimeout(function(){try{Graph.zoomToFit(600,80);}catch(e){}},700);
+     document.getElementById('g-loading').style.display='none';
+     document.getElementById('graph-subtitle').textContent=
+       (res.connected?('Shared target path · '+drug+' → '+disease):('No direct shared target · '+drug+' → '+disease))
+       +' · '+RAW.nodes.length+' nodes · '+RAW.links.length+' relationships';
+     renderConnectionPanel(res);
+   }).catch(function(){document.getElementById('g-loading').innerHTML='Could not trace the connection.';});
+}
+
+function renderConnectionPanel(res){
+  var p=document.getElementById('connection-panel');
+  document.getElementById('cp-title').textContent='How '+(res.drug||'')+' connects to '+(res.disease||'');
+  document.getElementById('cp-rationale').textContent=res.rationale||'';
+  var tw=document.getElementById('cp-targets'); tw.innerHTML='';
+  (res.shared_targets||[]).slice(0,12).forEach(function(s){
+    var chip=document.createElement('span');
+    chip.style.cssText='display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;'
+      +'padding:4px 10px;border-radius:99px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;cursor:pointer';
+    chip.textContent=s.gene+(s.weight?(' · '+s.weight):'');
+    chip.title='Shared target — the drug acts on it and disease genetics implicate it'
+      +(s.weight?(' (association weight '+s.weight+')'):'');
+    chip.onclick=function(){if(byId['gene::'+s.gene])focusNode(byId['gene::'+s.gene]);};
+    tw.appendChild(chip);
+  });
+  if(!(res.shared_targets||[]).length){
+    tw.innerHTML='<span style="font-size:0.74rem;color:#922019">No shared protein target in the current evidence — any link would be indirect.</span>';
+  }
+  var pw=document.getElementById('cp-pathways');
+  var pws=(res.pathways||[]).map(function(x){return x.name;}).filter(Boolean);
+  pw.innerHTML=pws.length?('<strong>Pathways:</strong> '+pws.slice(0,5).map(esc).join(' · ')):'';
+  document.getElementById('cp-desc').textContent=res.description||'';
+  document.getElementById('cp-desc-src').textContent='Grounded on the shared targets and pathways above.';
+  p.style.display='block';
+}
 </script>
 {% endblock %}

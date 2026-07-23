@@ -691,8 +691,26 @@ def _no_html_cache(resp):
 
 @app.route("/graph")
 def graph():
-    disease = request.args.get("disease", "")
-    return render_template("graph.html", disease=disease, db_ok=DB_OK)
+    # Accept a drug (name or ChEMBL id via ?compound=/?drug=), a disease, and/or a free
+    # query. When a molecule is passed we resolve it to its canonical name so the graph
+    # anchors on the ACTUAL queried entity (previously the page fell back to a hardcoded
+    # default when only ?compound= was supplied, so a mepolizumab query showed imatinib).
+    disease = (request.args.get("disease", "") or "").strip()
+    drug_q = (request.args.get("compound", "") or request.args.get("drug", "") or "").strip()
+    q = (request.args.get("q", "") or "").strip()
+    drug_name = ""
+    if drug_q:
+        try:
+            from services.reverse_repurposing import resolve_drug
+            info = resolve_drug(drug_q) or {}
+            nm = info.get("name") or drug_q
+            drug_name = " ".join(w if (w.isupper() and len(w) <= 5) else w.capitalize()
+                                 for w in str(nm).split())
+        except Exception:
+            drug_name = drug_q
+    anchor = q or drug_name or disease
+    return render_template("graph.html", disease=disease, drug=drug_name,
+                           anchor=anchor, db_ok=DB_OK)
 
 
 @app.route("/database")
@@ -1467,6 +1485,25 @@ def api_graph():
         return jsonify({"elements": elems, "legend": legend, "drkg": drkg_ok, "hetionet": False})
     except Exception as e:
         return jsonify({"elements": [], "legend": {}, "error": str(e)})
+
+
+@app.route("/api/graph/connection")
+def api_graph_connection():
+    """How a drug and a candidate indication are connected: the shared-target mechanistic
+    bridge (drug -> shared gene -> disease), the pathways it sits in, and a grounded
+    rationale + description (llama3.1:8b phrasing over the computed facts). Returns a
+    small cytoscape subgraph so the UI can draw the exact path."""
+    drug = (request.args.get("drug") or "").strip()
+    disease = (request.args.get("disease") or "").strip()
+    if not drug or not disease:
+        return jsonify({"error": "drug and disease are both required", "connected": False})
+    use_llm = (request.args.get("llm", "1").strip().lower() not in ("0", "false", "no"))
+    try:
+        from services.graph_connection import connect
+        return jsonify(connect(drug, disease, use_llm=use_llm))
+    except Exception as e:
+        logger.exception("graph connection error")
+        return jsonify({"error": str(e), "connected": False})
 
 
 @app.route("/api/graph/expand")
