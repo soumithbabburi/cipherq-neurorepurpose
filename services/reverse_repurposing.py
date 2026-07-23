@@ -1736,6 +1736,14 @@ def screen_indications_for_drug(
     # APPROVED indications (Phase 4) — drives Layer-2 off-label cannibalization: a candidate
     # in the same organ as one of these is already prescribable off-label.
     _approved_inds = [k.get("name", "") for k in _known_inds if float(k.get("max_phase") or 0) >= 4]
+    # Layer 4 — base-compound exclusivity profile (drug-level, computed once): Orange Book
+    # patents (small molecule) or Purple Book cliff (biologic).
+    try:
+        from services.regulatory_505b2 import exclusivity_profile as _excl_profile
+        _excl_505b2 = _excl_profile(info.get("name", drug), _is_biologic)
+    except Exception as _ee:
+        logger.debug(f"exclusivity profile skipped: {_ee}")
+        _excl_505b2 = {}
     def _ind_phase_for(dis: str):
         return indication_phase_for(dis, _known_inds)
     scored: List[Dict] = []
@@ -1915,6 +1923,15 @@ def screen_indications_for_drug(
         except Exception as _ce:
             logger.debug(f"commercial friction skipped: {_ce}")
             entry["commercial_friction"] = {}
+        # Layer 4 — 505(b)(2) feasibility & exclusivity (route + runway + formulation whitespace)
+        try:
+            from services.regulatory_505b2 import feasibility as _reg_feas
+            entry["regulatory_505b2"] = _reg_feas(
+                c["disease"], info.get("name", drug), _excl_505b2, _is_biologic,
+                smiles=info.get("smiles", ""), disease_value=entry.get("disease_value"))
+        except Exception as _re:
+            logger.debug(f"505b2 feasibility skipped: {_re}")
+            entry["regulatory_505b2"] = {}
         entry["why_not"] = _why_not(entry)
         scored.append(entry)
 
