@@ -546,6 +546,9 @@ def _why_not(e: Dict) -> List[str]:
     cc = e.get("clinical_constraints") or {}
     if cc.get("penalized") and cc.get("flags"):
         out.append("Clinical mismatch — " + "; ".join(cc["flags"][:1]))
+    cf = e.get("commercial_friction") or {}
+    if cf.get("penalized") and cf.get("flags"):
+        out.append("Commercial friction — " + cf["flags"][0])
     if (e.get("ctpa") or {}).get("phantom"):
         out.append("No functional cohesion — off-target match")
     if not e.get("actionable") and not out:
@@ -1730,6 +1733,9 @@ def screen_indications_for_drug(
     # clinical art in the scorer, so a merely-STUDIED indication is not credited like an
     # APPROVED one (the confounding that ranked tried/failed indications at the top).
     _known_inds = info.get("known_indications", [])
+    # APPROVED indications (Phase 4) — drives Layer-2 off-label cannibalization: a candidate
+    # in the same organ as one of these is already prescribable off-label.
+    _approved_inds = [k.get("name", "") for k in _known_inds if float(k.get("max_phase") or 0) >= 4]
     def _ind_phase_for(dis: str):
         return indication_phase_for(dis, _known_inds)
     scored: List[Dict] = []
@@ -1901,6 +1907,14 @@ def screen_indications_for_drug(
             # Would a pharma company pursue THIS disease? (burden × unmet-need × market)
             "disease_value":        _disease_value_for(c["disease"], c.get("efo_id", "")),
         }
+        # Layer 2 — commercial & off-label friction (bounded ranking adjustment + flags)
+        try:
+            from services.commercial_friction import assess as _comm_assess
+            entry["commercial_friction"] = _comm_assess(
+                c["disease"], _approved_inds, disease_value=entry.get("disease_value"))
+        except Exception as _ce:
+            logger.debug(f"commercial friction skipped: {_ce}")
+            entry["commercial_friction"] = {}
         entry["why_not"] = _why_not(entry)
         scored.append(entry)
 
@@ -1921,7 +1935,8 @@ def screen_indications_for_drug(
         vw = dv.get("value_score", 0.5) if dv else 0.5
         appr_f = (x.get("appropriateness") or {}).get("factor", 1.0)
         tier_f = _TIER_RANK.get((x.get("evidence_tier") or {}).get("tier", ""), 1.0)
-        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f * tier_f
+        comm_f = float((x.get("commercial_friction") or {}).get("multiplier", 1.0))  # Layer 2
+        return float(x.get("composite_score", 0.0)) * (0.4 + 0.6 * vw) * appr_f * tier_f * comm_f
     scored.sort(key=_rank, reverse=True)
 
     # F8 (audited 2026-07): collapse duplicate candidates that resolve to the SAME disease
