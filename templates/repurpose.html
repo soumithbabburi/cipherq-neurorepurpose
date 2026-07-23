@@ -221,9 +221,9 @@ function candidateCard(c, chembl){
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-start" style="gap:12px">'
   +     '<div style="min-width:0;flex:1"><div class="cc-name">'+tcase(c.disease)+(c.narrowed_from?' <span class="text-dim" style="font-weight:400;font-size:11px">(narrowed from '+tcase(c.narrowed_from)+')</span>':'')+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
-  +     '<div style="text-align:center;flex-shrink:0">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div>'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+'</div>'
+  +     '<div style="width:56px;flex-shrink:0;text-align:center">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div></div>'
   +   '</div>'
-  +   '<div style="display:flex;flex-wrap:wrap;gap:5px">'+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
+  +   '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
   +   (c.is_subtype
         ? '<span class="chip" style="align-self:flex-start;background:#eef3f0;color:#2563eb;border:1px solid #cfe0d8;font-size:0.66rem;font-weight:600" title="Scored individually as a specific subtype rather than as the broad umbrella indication.">Subtype of '+(c.parent_indication||'')+'</span>'
         : '')
@@ -412,9 +412,8 @@ function plausibilityBadge(pl){
   var tip = 'DWPC metapath model, validated AUC 0.98 vs random pairs (0.978 on unseen '
     + 'drugs). Mechanistic PLAUSIBILITY / triage - not a probability of clinical '
     + 'success (AUC 0.42 vs real trial failures). Actionable cutoff P>=0.15.';
-  return '<div title="'+tip+'" style="margin-top:4px;font-size:0.56rem;font-weight:700;'
-    + 'color:'+col+'">PLAUSIBILITY '+pct+'%'
-    + '<div style="font-size:0.5rem;font-weight:600;color:#98a1b6">DWPC · AUC 0.98 vs random</div></div>';
+  return '<span title="'+tip+'" class="chip" style="background:'+col+'14;color:'+col
+    + ';border:1px solid '+col+'33;font-weight:700;font-size:0.6rem">Plausibility '+pct+'%</span>';
 }
 
 // Lead-viability funnel: plausibility → potency (IC50) → window (Cmax/IC50) → verdict.
@@ -476,16 +475,16 @@ function tierBadge(cal){
   // we show the ENRICHMENT (fold over the null median), which discriminates leads —
   // the percentile saturates near 100% once the signal separates cleanly from noise.
   var sub = (cal.basis==='calibrated' && cal.enrichment!=null)
-    ? cal.enrichment+'x vs random'
-    : 'evidence band';
+    ? ' · '+cal.enrichment+'x vs random'
+    : '';
   var tip = (cal.basis==='calibrated')
     ? 'Tier from the evidence-score bands; '
        + (cal.enrichment!=null ? cal.enrichment+'x the random-pair background median' : 'calibrated')
        + (cal.percentile!=null ? ' (>'+Math.round(cal.percentile*100)+'% of random pairs)':'')+'.'
     : 'Evidence band (score null not yet built).';
-  return '<div title="'+tip+'" style="margin-top:4px;font-size:0.58rem;font-weight:700;'
-    + 'text-transform:uppercase;letter-spacing:0.04em;color:'+col+'">'+cal.tier
-    + '<div style="font-size:0.54rem;font-weight:600;color:#98a1b6;letter-spacing:0">'+sub+'</div></div>';
+  return '<span title="'+tip+'" class="chip" style="background:'+col+'14;color:'+col
+    + ';border:1px solid '+col+'33;font-weight:700;font-size:0.6rem;text-transform:uppercase;'
+    + 'letter-spacing:0.03em">'+cal.tier+sub+'</span>';
 }
 
 // Score legend — makes the confidence cutoff explicit so it never has to be asked.
@@ -520,9 +519,30 @@ async function runScreen(){
   btn.disabled = true;
   var status = document.getElementById('status-line');
   status.style.display = 'block';
-  status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> Resolving targets and scanning target associations…';
   document.getElementById('results').innerHTML = '';
   document.getElementById('drug-summary').style.display = 'none';
+
+  // Staged progress — the reverse search hits live sources (Open Targets, ClinicalTrials.gov,
+  // PubMed) and can take up to a minute for a molecule we have not cached, so we surface the
+  // real pipeline stages instead of one static spinner that reads as "nothing happening".
+  var _stages = [
+    'Resolving molecule and its protein targets…',
+    'Scanning target–disease associations (Open Targets)…',
+    'Pulling clinical trials and literature evidence…',
+    'Scoring candidate indications and 505(b)(2) feasibility…',
+    'Finalising the ranking…'
+  ];
+  var _si = 0, _t0 = Date.now();
+  function _renderStage(){
+    var secs = Math.round((Date.now() - _t0) / 1000);
+    status.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle"></span> '
+      + _stages[Math.min(_si, _stages.length - 1)]
+      + ' <span style="color:#98a1b6;font-size:0.72rem">(' + secs + 's — first-time molecules can take up to a minute)</span>';
+  }
+  _renderStage();
+  var _stageTimer = setInterval(function(){ if (_si < _stages.length - 1) _si++; _renderStage(); }, 7000);
+  var _clockTimer = setInterval(_renderStage, 1000);
+  function _stopProgress(){ clearInterval(_stageTimer); clearInterval(_clockTimer); }
 
   try {
     var qs = [];
@@ -530,6 +550,7 @@ async function runScreen(){
     if (inclOnc) qs.push('oncology=1');
     var url = '/api/drug/'+encodeURIComponent(drug)+'/new-indications'+(qs.length?('?'+qs.join('&')):'');
     var d = await window.apiFetch(url);
+    _stopProgress();
     if (d.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+d.error+'</span>'; btn.disabled=false; return; }
 
     var sum = document.getElementById('drug-summary');
@@ -546,6 +567,7 @@ async function runScreen(){
       scoreLegendHtml() +
       '<div class="compound-grid">' + cands.map(function(c){return candidateCard(c, d.chembl_id);}).join('') + '</div>';
   } catch(e){
+    _stopProgress();
     status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';
   }
   btn.disabled = false;
