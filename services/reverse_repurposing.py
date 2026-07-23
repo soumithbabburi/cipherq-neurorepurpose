@@ -434,8 +434,9 @@ def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
                     e = out.setdefault(k, {"name": cond.strip(), "count": 0, "max_phase": 0,
                                            "completed": 0, "with_results": 0,
                                            "failed_efficacy": 0, "failed_safety": 0,
-                                           "ongoing": 0})
+                                           "ongoing": 0, "_studies": []})
                     e["count"] += 1
+                    e["_studies"].append(s)          # kept for Layer-1 endpoint parsing
                     e["max_phase"] = max(e["max_phase"], ph)
                     if status == "COMPLETED":
                         e["completed"] += 1
@@ -448,8 +449,27 @@ def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
                         e["failed_efficacy"] += 1
                     elif fail == "safety":
                         e["failed_safety"] += 1
+            # Layer 1 — Clinical Endpoint Parsing ("did it work?"): classify each
+            # condition's trials by their PRIMARY-endpoint outcome (met / biomarker-only /
+            # failed / terminated) and let THAT drive the outcome signal — not a raw trial
+            # count. Falls back to the honest count-based signal when results aren't parseable.
+            try:
+                from services.endpoint_parser import aggregate as _ep_agg
+            except Exception:
+                _ep_agg = None
             for e in out.values():
-                e["outcome_signal"] = _trial_outcome_signal(e)
+                studies = e.pop("_studies", [])
+                agg = _ep_agg(studies) if (_ep_agg and studies) else None
+                if agg and agg.get("verdict") not in (None, "unknown"):
+                    e["outcome_signal"] = agg["outcome_signal"]
+                    e["endpoint_verdict"] = agg["verdict"]
+                    e["endpoint_note"] = agg.get("note", "")
+                    e["endpoint_primary"] = agg.get("primary_endpoint")
+                    e["endpoint_p"] = agg.get("p")
+                    if agg["verdict"] == "terminated_efficacy":
+                        e["failed_efficacy"] = max(e.get("failed_efficacy", 0), 1)
+                else:
+                    e["outcome_signal"] = _trial_outcome_signal(e)
     except Exception as ex:
         logger.debug(f"trials fetch failed: {ex}")
     return out
@@ -497,6 +517,10 @@ def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
         c["trial_outcome_signal"] = best.get("outcome_signal", 0.0)
         c["failed_efficacy"] = best.get("failed_efficacy", 0)
         c["failed_safety"] = best.get("failed_safety", 0)
+        # Layer 1: carry the parsed primary-endpoint verdict onto the candidate
+        for _k in ("endpoint_verdict", "endpoint_note", "endpoint_primary", "endpoint_p"):
+            if best.get(_k) is not None:
+                c[_k] = best.get(_k)
         c["sources"] = set(c.get("sources", set())) | {"clinical_trial"}
 
 
@@ -540,15 +564,31 @@ def _evidence_tier(c: Dict) -> Dict:
     tc = c.get("trial_count", 0) or 0
     lit = c.get("lit_count", 0) or 0
     osig = float(c.get("trial_outcome_signal", 0.0) or 0.0)
+    # Layer 1 — parsed PRIMARY-endpoint verdict (highest precision, grounded in the posted
+    # p-value / status). When present it decides the tier; else fall through to the
+    # honest count-based logic below.
+    ev = c.get("endpoint_verdict")
+    epn = c.get("endpoint_note", "")
+    if ev == "met_primary":
+        return {"tier": "trial-supported", "label": "Met primary endpoint",
+                "note": epn or "Primary endpoint met in a posted trial."}
+    if ev == "terminated_efficacy":
+        return {"tier": "contradicted", "label": "Terminated for efficacy",
+                "note": epn or "A trial was stopped for lack of efficacy here."}
+    if ev == "failed_primary":
+        return {"tier": "failed-endpoint", "label": "Failed primary endpoint",
+                "note": epn or "The primary clinical endpoint was missed here."}
+    if ev == "biomarker_only":
+        return {"tier": "biomarker-only", "label": "Biomarker-positive · clinically unproven",
+                "note": epn or "A biomarker moved but the primary clinical endpoint was missed."}
     if fe > 0 or osig <= -0.30:
         return {"tier": "contradicted", "label": "Contradicted here",
                 "note": "a trial failed for efficacy in this indication"}
     if fs > 0:
         return {"tier": "contradicted", "label": "Failed on safety",
                 "note": "a trial stopped for safety in this indication"}
-    # HONESTY GUARD (audited 2026-07): we do NOT parse primary-endpoint significance, so
-    # we NEVER assert "positive results". A completed/with-results trial is prior clinical
-    # art (a human tested it), NOT proof of benefit — label it exactly that.
+    # A completed/with-results trial we could NOT parse is prior clinical art (a human
+    # tested it), NOT proof of benefit — label it exactly that.
     if ph >= 2 and tc > 0:
         return {"tier": "tested-unverified", "label": "Clinically tested · unproven",
                 "note": (f"Phase {ph} trial(s) run in this indication, but the primary-endpoint "
@@ -1873,9 +1913,9 @@ def screen_indications_for_drug(
     # Real-world evidence tier nudges rank order: a trial-supported candidate outranks an
     # equal-scoring mechanism-only one, and a contradicted one sinks — without overwriting
     # the mechanistic composite (which stays the displayed score).
-    _TIER_RANK = {"tested-unverified": 1.05, "trial-supported": 1.15, "promising": 1.03,
+    _TIER_RANK = {"trial-supported": 1.15, "tested-unverified": 1.05, "promising": 1.03,
                   "literature": 0.97, "preclinical": 0.95, "mechanistic": 0.95,
-                  "contradicted": 0.55}
+                  "biomarker-only": 0.80, "failed-endpoint": 0.60, "contradicted": 0.55}
     def _rank(x):
         dv = x.get("disease_value") or {}
         vw = dv.get("value_score", 0.5) if dv else 0.5
