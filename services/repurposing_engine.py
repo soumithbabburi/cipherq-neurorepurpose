@@ -1076,10 +1076,18 @@ def score_compound_for_disease(
 
     safety = {"multiplier": 1.0, "penalized": False, "flags": []}
     try:
-        from services.safety_filter import assess as _assess_safety
+        from services.safety_filter import assess as _assess_safety, therapeutic_organs as _ther_organs
         cname = compound.get("name") or compound.get("pref_name") or ""
         if cname and disease_name and not _own_therapy:
-            safety = _assess_safety(cname, disease_name)
+            # Layer 3 — pass the organs the drug is DEVELOPED to act on, so a toxicity
+            # signal in one of them (a lung drug's respiratory FAERS) is treated as
+            # therapeutic-organ overlap, not a false contraindication (mepolizumab→ABPA).
+            _tho = None
+            try:
+                _tho = _ther_organs(existing_ind)
+            except Exception:
+                _tho = None
+            safety = _assess_safety(cname, disease_name, therapeutic_organs=_tho)
             # Recorded, not applied inline — soft penalties are consolidated below so
             # two moderate ones don't compound multiplicatively into annihilation.
         elif _own_therapy:

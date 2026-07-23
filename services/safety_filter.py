@@ -32,6 +32,7 @@ data, and never block scoring on a network hiccup.
 """
 from __future__ import annotations
 
+import re
 import logging
 from typing import Dict, List, Tuple
 
@@ -134,6 +135,20 @@ def disease_organ_profile(disease_name: str) -> Dict[str, str]:
         if any(s in d for s in stems):
             out[organ] = "critical" if is_critical else "involved"
     return out
+
+
+def therapeutic_organs(indications_text: str) -> set:
+    """Organ systems a drug is THERAPEUTICALLY developed against, read from its
+    indications text. Layer 3 (Safety Contextualization): a serious-AE signal in one of
+    THESE organs is confounded by the therapeutic context — the drug is MEANT to act
+    there, and its FAERS reports in that organ come from the treated disease population,
+    not from off-target damage. So a respiratory drug should NOT be safety-penalised for a
+    respiratory disease (mepolizumab→ABPA). Distinct from true off-therapeutic toxicity
+    (a hepatotoxic drug NOT developed for any liver disease, used in a liver disease)."""
+    organs = set()
+    for chunk in re.split(r"[;,/|]| and ", indications_text or ""):
+        organs |= set(disease_organ_profile(chunk).keys())
+    return organs
 
 
 # ── Drug → toxicity organ profile (SERIOUS FAERS reactions) ───────────────────
@@ -287,10 +302,16 @@ _INVOLVED_FLOOR = 0.55      # milder knock-down for a non-critical clash
 _MULTIPLIER_FLOOR = 0.10    # never zero a score out entirely
 
 
-def assess(drug_name: str, disease_name: str) -> Dict:
+def assess(drug_name: str, disease_name: str, therapeutic_organs=None) -> Dict:
     """Cross a drug's serious-toxicity organ profile against a disease's organ
     pathology. Returns a bounded penalty multiplier, human-readable flags, and the
     underlying profiles for display. Fail-soft: multiplier 1.0 when data is absent.
+
+    Layer 3 — Safety Contextualization: `therapeutic_organs` is the set of organ systems
+    the drug is DEVELOPED to act on (from its indications). A toxicity signal in one of
+    those organs is confounded by the therapeutic context (a lung drug's respiratory FAERS
+    events come from its asthma population, not lung damage), so it is NOT penalised —
+    only a toxicity in an organ the drug is NOT therapeutic for is a real contraindication.
     """
     result = {"multiplier": 1.0, "penalized": False, "flags": [],
               "drug_toxicity": {}, "disease_organs": {}}
@@ -304,11 +325,20 @@ def assess(drug_name: str, disease_name: str) -> Dict:
 
     result["drug_toxicity"] = tox
     result["disease_organs"] = disease_organs
+    therapeutic = set(therapeutic_organs or [])
 
     multiplier = 1.0
     for organ, severity in disease_organs.items():
         w = tox.get(organ, 0.0)
         if not w:
+            continue
+        if organ in therapeutic:
+            # therapeutic-organ overlap — the drug is developed to act here; its FAERS
+            # signal in this organ is the treated-disease context, not a contraindication.
+            result.setdefault("suppressed_organs", []).append(organ)
+            result["flags"].append(
+                f"{organ.replace('_','/')} signal is therapeutic-organ overlap "
+                f"(drug is developed to act on this organ) — not a contraindication, no penalty.")
             continue
         if severity == "critical":
             factor = 1.0 - (1.0 - _CRITICAL_FLOOR) * w
