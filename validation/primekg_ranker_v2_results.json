@@ -1,0 +1,36 @@
+{
+  "auc_ind_vs_contra_v2": 0.9114,
+  "auc_ind_vs_contra_shipped": 0.9839,
+  "baseline_cascade": {
+    "recall@10": 0.2756,
+    "recall@20": 0.3775,
+    "recall@50": 0.5843,
+    "recall@100": 0.7537,
+    "mrr": 0.1237,
+    "median_rank": 36,
+    "mean_rank": 89.7,
+    "n_pairs": 1571
+  },
+  "v2_cascade": {
+    "recall@10": 0.021,
+    "recall@20": 0.042,
+    "recall@50": 0.112,
+    "recall@100": 0.2139,
+    "mrr": 0.0143,
+    "median_rank": 231,
+    "mean_rank": 227.9,
+    "n_pairs": 1571
+  },
+  "v2_treats_full": {
+    "recall@10": 0.0006,
+    "recall@20": 0.0006,
+    "recall@50": 0.0013,
+    "recall@100": 0.0032,
+    "mrr": 0.0005,
+    "median_rank": 11528,
+    "mean_rank": 10495.2,
+    "n_pairs": 1571
+  },
+  "train_rows": 210053,
+  "elapsed_s": 40.6
+}
