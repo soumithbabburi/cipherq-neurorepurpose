@@ -39,23 +39,81 @@ def _drug_effect(action: str) -> int:
     return 0
 
 
+# ── Curated, cited disease-direction knowledge ────────────────────────────────
+# HetioNet's expression edges cover only ~137 diseases, so most queried indications get no
+# direction and the check stays blind. This is a small, CITED table of diseases whose
+# pathogenic direction is ESTABLISHED pharmacology: the standard of care is defined by
+# pushing these genes one way, so the OPPOSITE action is a genuine contraindication.
+# Curated and extensible (the same pattern as the prevalence / market-status tables), NOT
+# an automated dataset. Gene symbols are HGNC. up = over-active/over-expressed in disease
+# (inhibiting treats, activating HARMS); down = deficient/under-active (activating treats,
+# inhibiting HARMS). Keyed by a lower-case disease-name substring.
+_CURATED_DIRECTION: Dict[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
+    # Schizophrenia: mesolimbic dopamine D2 hyperactivity; every antipsychotic is a D2
+    # antagonist, so a D2/D3 agonist would worsen psychosis (Seeman 1987; Howes 2009).
+    "schizophrenia":    (("DRD2", "DRD3", "HTR2A"), ()),
+    # Parkinson disease: nigrostriatal dopamine DEFICIENCY, treated by dopamine agonists /
+    # levodopa. Same gene as schizophrenia, OPPOSITE direction (down, not up).
+    "parkinson":        ((), ("DRD2", "DRD3", "DRD1")),
+    # Major depression: low synaptic serotonin/noradrenaline; SSRIs/SNRIs INHIBIT the
+    # transporters to raise it, so the transporters are the over-active driver (Hirschfeld 2000).
+    "depress":          (("SLC6A4", "SLC6A2"), ()),
+    # Hypertension: renin-angiotensin overactivity; ACE inhibitors, ARBs (AGTR1) and
+    # beta-blockers (ADRB1) treat by inhibition (JNC / ESC guidelines).
+    "hypertension":     (("ACE", "AGTR1", "ADRB1", "REN"), ()),
+    # Hypothyroidism: thyroid hormone deficiency (replacement treats).
+    "hypothyroid":      ((), ("THRA", "THRB")),
+    # Hyperthyroidism / Graves: thyroid-stimulating axis overactivity.
+    "hyperthyroid":     (("TSHR",), ()),
+    # Type 2 diabetes: treated by RAISING incretin/insulin signalling (GLP1R agonists;
+    # DPP4 inhibition raises GLP-1), so GLP1R/INSR are activate-to-treat (down).
+    "type 2 diabetes":  ((), ("GLP1R", "INSR")),
+    "type ii diabetes": ((), ("GLP1R", "INSR")),
+    # Asthma: leukotriene axis over-active (CYSLTR1 antagonists treat); bronchial beta-2
+    # tone is boosted therapeutically (ADRB2 agonists treat), so ADRB2 is down/activate.
+    "asthma":           (("CYSLTR1",), ("ADRB2",)),
+}
+
+
+def _curated_direction(disease_name: str) -> Tuple[frozenset, frozenset]:
+    """(up, down) gene sets from the curated established-pharmacology table."""
+    d = (disease_name or "").lower()
+    up, dn = set(), set()
+    for key, (u, v) in _CURATED_DIRECTION.items():
+        if key in d:
+            up |= set(u)
+            dn |= set(v)
+    return frozenset(up), frozenset(dn)
+
+
 @lru_cache(maxsize=512)
 def _disease_direction(disease_key: str) -> Tuple[frozenset, frozenset]:
-    """(up_genes, down_genes) for a disease from HetioNet DuG/DdG. Cached per disease."""
-    from services.repurposing_scorer import _resolve_hetionet_diseases, _q
-    dids = _resolve_hetionet_diseases([disease_key])
-    if not dids:
-        return frozenset(), frozenset()
-    up = _q("SELECT DISTINCT hn.name AS g FROM hetionet_edges e "
-            "JOIN hetionet_nodes hn ON hn.id=e.target_id "
-            "WHERE e.metaedge='DuG' AND e.source='hetionet_v1.0' AND e.source_id = ANY(%s)",
-            (dids,))
-    dn = _q("SELECT DISTINCT hn.name AS g FROM hetionet_edges e "
-            "JOIN hetionet_nodes hn ON hn.id=e.target_id "
-            "WHERE e.metaedge='DdG' AND e.source='hetionet_v1.0' AND e.source_id = ANY(%s)",
-            (dids,))
-    return (frozenset(r["g"].upper() for r in up if r.get("g")),
-            frozenset(r["g"].upper() for r in dn if r.get("g")))
+    """(up_genes, down_genes) for a disease. Unions the curated established-pharmacology
+    directions with HetioNet DuG/DdG expression edges, so the check works for common
+    indications HetioNet does not cover. Cached per disease. Fail-soft on the DB."""
+    c_up, c_dn = _curated_direction(disease_key)
+    h_up = h_dn = frozenset()
+    try:
+        from services.repurposing_scorer import _resolve_hetionet_diseases, _q
+        dids = _resolve_hetionet_diseases([disease_key])
+        if dids:
+            up = _q("SELECT DISTINCT hn.name AS g FROM hetionet_edges e "
+                    "JOIN hetionet_nodes hn ON hn.id=e.target_id "
+                    "WHERE e.metaedge='DuG' AND e.source='hetionet_v1.0' AND e.source_id = ANY(%s)",
+                    (dids,))
+            dn = _q("SELECT DISTINCT hn.name AS g FROM hetionet_edges e "
+                    "JOIN hetionet_nodes hn ON hn.id=e.target_id "
+                    "WHERE e.metaedge='DdG' AND e.source='hetionet_v1.0' AND e.source_id = ANY(%s)",
+                    (dids,))
+            h_up = frozenset(r["g"].upper() for r in up if r.get("g"))
+            h_dn = frozenset(r["g"].upper() for r in dn if r.get("g"))
+    except Exception as e:
+        logger.debug(f"hetionet direction lookup failed: {e}")
+    # Curated genes take precedence: drop any curated-up gene from the Hetionet-down set
+    # (and vice-versa) so an established direction is never contradicted by a noisy edge.
+    up_all = c_up | (h_up - c_dn)
+    dn_all = c_dn | (h_dn - c_up)
+    return (frozenset(up_all), frozenset(dn_all))
 
 
 def mechanism_direction(drug_genes: List[str], drug_actions: Optional[Dict[str, str]],
