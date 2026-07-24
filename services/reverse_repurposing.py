@@ -535,6 +535,10 @@ def _why_not(e: Dict) -> List[str]:
     """Concise reasons a candidate is down-ranked or non-actionable — the 'why not' view,
     assembled from the gates/penalties already computed for the card."""
     out: List[str] = []
+    pkg = e.get("primekg") or {}
+    if pkg.get("relation") == "contraindication":
+        out.append("Contraindicated — " + (pkg.get("flag")
+                   or "PrimeKG labels this an established contraindication for the disease (expert ground truth)."))
     et = e.get("evidence_tier") or {}
     if et.get("tier") == "contradicted":
         out.append("Contradicted — " + (et.get("note") or "a trial failed for efficacy here"))
@@ -1197,6 +1201,7 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
            "signature_reversal": sr.get("signature_reversal", {}),
            "direction": sr.get("direction", {}),
            "calibration": sr.get("calibration", {}),
+           "primekg": sr.get("primekg", {}),   # ground-truth relation + P(treats) cross-check
            "drug_genes": drug_genes[:20], "_ts": time.time()}
 
     # Validated mechanistic-plausibility probability (DWPC/metapath model; held-out
@@ -1876,6 +1881,11 @@ def screen_indications_for_drug(
         # them; here we just read the verdicts for the card chips.
         ctpa = sr.get("ctpa", {"phantom": False, "multiplier": 1.0})
         ctpa_registry = sr.get("registry", {"ghost": False, "multiplier": 1.0})
+        # PrimeKG ground-truth cross-check: the x0.15 kill multiplier is already folded into
+        # the composite by the canonical scorer; here we read the verdict so a labeled
+        # contraindication can force the candidate non-actionable and be explained in why_not.
+        pkg = sr.get("primekg", {}) or {}
+        pkg_contra = pkg.get("relation") == "contraindication"
 
         try:
             _orphan = bool(is_orphan_candidate(c["disease"], c.get("efo_id", "")))
@@ -1922,13 +1932,14 @@ def screen_indications_for_drug(
             "registry":             ctpa_registry,                        # CTPA Rule 2 ghost audit verdict
             "mechanism_scope":      sr.get("mechanism_scope", {}),  # target-mediated? (else score N/A)
             "calibration":          sr.get("calibration", {}),      # percentile/tier vs null background
+            "primekg":              pkg,   # ground-truth relation + direction-aware P(treats) cross-check
             "plausibility":         _plausibility_for(info.get("name", drug), c["disease"]),  # validated DWPC P(treats), where covered
             "lead_viability":       _lead_viability_for(c.get("chembl_id", ""), info.get("name", drug),
                                                         c["disease"], overlap[:10] or drug_genes,
                                                         smiles=info.get("smiles", "")),  # potency funnel (window deferred to dossier)
             "effective_cutoff":     eff_cutoff,
             "cutoff_kind":          cutoff_kind,
-            "actionable":           bool(actionable and appr["appropriate"]),
+            "actionable":           bool(actionable and appr["appropriate"] and not pkg_contra),
             "appropriateness":      appr,   # B/C: would the drug worsen or cause this disease?
             "evidence_tier":        _evidence_tier(c),   # real-world strength: supported / promising / contradicted
             "scores":               sc,
