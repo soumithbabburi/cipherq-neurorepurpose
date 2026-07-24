@@ -8,7 +8,7 @@
   <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Repurpose a Molecule</h1>
   <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px">
     Enter a molecule you already hold approval for. We derive its protein targets, then surface
-    <strong>new candidate indications</strong> ranked by mechanistic and clinical evidence - the 505(b)(2) reverse search.
+    <strong>new candidate indications</strong> ranked by mechanistic and clinical evidence, the 505(b)(2) reverse search.
   </p>
 </div>
 
@@ -48,7 +48,7 @@
     </div>
   </div>
   <p style="font-size:0.7rem;color:#98a1b6;margin-top:8px">
-    Candidates are drawn from three sources - <strong>genetic associations</strong> (a target association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co mention</strong> (PubMed) - and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
+    Candidates are drawn from three sources: <strong>genetic associations</strong> (a target association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co mention</strong> (PubMed), then ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
   </p>
 </div>
 
@@ -237,7 +237,7 @@ function candidateCard(c, chembl){
   +   '</div>'
   +   '<div class="cc-tags">'+srcBadges+' '+kdBadge+'</div>'
   +   funnelHtml(c.lead_viability)
-  +   (c.bbb_caution?'<div class="chip amber" style="align-self:flex-start" title="CNS indication, but the molecule\'s CNS-MPO is below 4 - blood-brain-barrier penetration is uncertain">BBB risk · brain penetration uncertain</div>':'')
+  +   (c.bbb_caution?'<div class="chip amber" style="align-self:flex-start" title="CNS indication, but the molecule\'s CNS-MPO is below 4, so blood brain barrier penetration is uncertain">BBB risk · brain penetration uncertain</div>':'')
   +   ((c.safety && c.safety.penalized && (c.safety.flags||[]).length)
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.safety.flags.join(' ')).replace(/"/g,'')+'">Safety penalty · '+Math.round((1-c.safety.multiplier)*100)+'% score reduction</div>'
         : '')
@@ -259,7 +259,7 @@ function candidateCard(c, chembl){
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.trial_failure.flag||'')).replace(/"/g,'')+'">Trial failed here · '+Math.round((1-c.trial_failure.multiplier)*100)+'% penalty</div>'
         : '')
   +   ((c.clinical_constraints && c.clinical_constraints.cancer_predisposition)
-        ? '<div class="chip" style="align-self:flex-start;background:#f4f0f6;color:#5b3b6b;border:1px solid #ddd0e4;font-weight:600" title="Hereditary cancer-predisposition syndrome - judged at oncology-grade severity, not benign.">Cancer-predisposition · oncology-grade</div>'
+        ? '<div class="chip" style="align-self:flex-start;background:#f4f0f6;color:#5b3b6b;border:1px solid #ddd0e4;font-weight:600" title="Hereditary cancer predisposition syndrome, judged at oncology grade severity, not benign.">Cancer predisposition · oncology grade</div>'
         : '')
   +   ((c.clinical_constraints && c.clinical_constraints.penalized && (c.clinical_constraints.flags||[]).length)
         ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+(c.clinical_constraints.flags.join(' ')).replace(/"/g,'')+'">Clinical mismatch · '+Math.round((1-c.clinical_constraints.multiplier)*100)+'% penalty</div>'
@@ -272,7 +272,7 @@ function candidateCard(c, chembl){
         ? '<div class="chip" style="align-self:flex-start;background:#eef1f4;color:#41566b;border:1px solid #d5dde6" title="'+((c.mechanism_scope.note||'')).replace(/"/g,'')+'">Mechanism not target-mediated · ranked on clinical evidence</div>'
         : '')
   +   ((c.actionable===false)
-        ? '<div class="chip" style="align-self:flex-start;background:#f4f2ec;color:#8a7a52;border:1px solid #e2dcc9" title="Below the adaptive actionable threshold for this indication - triage/watchlist, not yet an actionable lead.">Below actionable bar'
+        ? '<div class="chip" style="align-self:flex-start;background:#f4f2ec;color:#8a7a52;border:1px solid #e2dcc9" title="Below the adaptive actionable threshold for this indication, a triage watchlist entry, not yet an actionable lead.">Below actionable bar'
           + (c.cutoff_kind==='percentile' ? ' (needs top '+Math.round((1-c.effective_cutoff)*100)+'%)' : (c.effective_cutoff!=null?' ('+c.effective_cutoff.toFixed(2)+')':''))+'</div>'
         : '')
   +   (areas?'<div class="cc-tags">'+areas+'</div>':'')
@@ -410,7 +410,7 @@ function plausibilityBadge(pl){
   var pct = Math.round(pl.probability*100);
   var col = pl.actionable ? '#2563eb' : '#98a1b6';
   var tip = 'DWPC metapath model, validated AUC 0.98 vs random pairs (0.978 on unseen '
-    + 'drugs). Mechanistic PLAUSIBILITY / triage - not a probability of clinical '
+    + 'drugs). Mechanistic PLAUSIBILITY / triage, not a probability of clinical '
     + 'success (AUC 0.42 vs real trial failures). Actionable cutoff P>=0.15.';
   return '<span title="'+tip+'" class="chip" style="background:'+col+'14;color:'+col
     + ';border:1px solid '+col+'33;font-weight:700;font-size:0.6rem">Plausibility '+pct+'%</span>';

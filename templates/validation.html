@@ -7,7 +7,7 @@
   <div class="section-head" style="margin-bottom:2px"><span class="s-kicker">Trust & Provenance</span></div>
   <h1 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">Data Validation</h1>
   <p class="text-sm text-text-muted" style="margin-top:2px">
-    How the underlying data is validated - measured, not asserted. Read-only protocol, re-runnable on every data refresh.
+    How the underlying data is validated, measured, not asserted. Read-only protocol, re-runnable on every data refresh.
   </p>
 </div>
 
@@ -20,8 +20,8 @@
     <strong>ALCOA+</strong> (FDA / MHRA / WHO) and <strong>GAMP 5</strong> (ISPE). The validation is
     read-only, re-runnable on every data refresh, and published live here. RepurposeIQ reasons over
     a <strong>validated data layer</strong> (so the raw facts are traceable and consistent), with
-    <strong>graph-topology reasoning</strong> over a curated biomedical knowledge graph on top. Findings - including
-    weaknesses - are openly disclosed below.
+    <strong>graph-topology reasoning</strong> over a curated biomedical knowledge graph on top. Findings, including
+    weaknesses, are openly disclosed below.
   </p>
 </div>
 
@@ -97,14 +97,14 @@
 <p class="text-sm text-text-muted" style="margin:-0.5rem 0 1.25rem">
   <strong>On the release pin:</strong> we deliberately certify against the frozen, fully-mapped bioactivity-database
   release to keep absolute schema alignment between the bioactivity data and the knowledge-graph ontology network.
-  Newer data deltas are staged and re-validated in the development pipeline before promotion - versioning
+  Newer data deltas are staged and re-validated in the development pipeline before promotion, versioning
   is a controlled step, not a lag. (The reference release dates to mid-2023.
   )
 </p>
 {% endif %}
 
 <!-- Quality scorecard -->
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Quality Scorecard - bioactivity data</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Quality Scorecard, bioactivity data</span></div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.85rem;margin-bottom:1.5rem">
   {% for dim, d in v.scorecard.items() %}
   <div class="card" style="margin:0">
@@ -122,7 +122,7 @@
 
 <!-- Cross-database concordance (external accuracy) -->
 {% if conc and conc.pairs_compared %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">External Accuracy - vs an independent authority</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">External Accuracy, vs an independent authority</span></div>
 <div class="card mb-2">
   <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-bottom:0.85rem">
     <div style="min-width:150px">
@@ -133,7 +133,7 @@
       Of <strong>{{ "{:,}".format(conc.pairs_compared) }}</strong> compound, target affinity pairs present in
       <strong>both</strong> our data and an independently-curated authority, this fraction agree within one
       log unit (median absolute difference <strong>{{ conc.overall_median_abs_diff_log }} log</strong>). This is
-      our data measured against a <strong>second, independent authority</strong> - not itself.
+      our data measured against a <strong>second, independent authority</strong>, not itself.
     </div>
   </div>
   <div class="overflow-x"><table class="data-table" style="font-size:0.85rem">
@@ -155,10 +155,10 @@
 
 <!-- Measured noise (the headline exhibit) -->
 {% if v.checks.reproducibility %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Measured Affinity Noise - reproducibility</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Measured Affinity Noise, reproducibility</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.75rem">
-    We do not claim the data is noise-free - we measure it. For each compound, target pair with repeated
+    We do not claim the data is noise-free, we measure it. For each compound, target pair with repeated
     high-confidence measurements, the spread in potency (log units). Compared against the published
     experimental floor of ~{{ v.reference_noise_floor_log }} log (Kramer et al. 2012).
   </p>
@@ -189,7 +189,7 @@
 
 <!-- Validity: native quality flags -->
 {% if v.checks.validity %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Validity - source quality flags applied</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Validity, source quality flags applied</span></div>
 <div class="card mb-2">
   <div class="overflow-x"><table class="data-table" style="font-size:0.85rem">
     <thead><tr>
@@ -211,21 +211,21 @@
     </tbody>
   </table></div>
   <p class="text-sm text-text-muted" style="margin:0.75rem 0 0">
-    Flagged / censored / duplicate rows are excluded from certified values but never deleted - raw rows are retained.
+    Flagged / censored / duplicate rows are excluded from certified values but never deleted, raw rows are retained.
   </p>
 </div>
 {% endif %}
 
 <!-- Disease entity-resolution audit -->
 {% if res and res.sample_size %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Entity Resolution - disease → ontology mapping</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Entity Resolution, disease → ontology mapping</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.85rem">
     The highest-risk silent error is a disease name mapping to the wrong descriptor. We measure two distinct
     things: <strong>consistency</strong> (round-trip identity over a {{ res.sample_size }}-descriptor sample of
-    {{ "{:,}".format(res.mesh_total) }} indexed diseases - proves the resolver is stable) and <strong>clinical
+    {{ "{:,}".format(res.mesh_total) }} indexed diseases, proves the resolver is stable) and <strong>clinical
     correctness</strong> (a hand-curated golden set of {{ res.golden_set_size }} tricky synonyms with
-    externally-known ground truth - proves the mapping is actually right, not just consistently wrong).
+    externally-known ground truth, proves the mapping is actually right, not just consistently wrong).
   </p>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.85rem">
     {% set rmetrics = [
@@ -246,7 +246,7 @@
 
 <!-- Knowledge-graph integrity & provenance -->
 {% if kg and kg.edges %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Knowledge-Graph Integrity - the reasoning layer</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Knowledge-Graph Integrity, the reasoning layer</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.85rem">
     The engine reasons over a knowledge graph (Compound-Gene-Disease paths). We certify it as a data asset:
@@ -275,7 +275,7 @@
 
 <!-- Mechanism-direction concordance (validates the directional input) -->
 {% if mech and mech.pairs_compared %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Mechanism Direction - vs an independent authority</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Mechanism Direction, vs an independent authority</span></div>
 <div class="card mb-2" style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center">
   <div style="min-width:150px">
     <div style="font-size:2.4rem;font-weight:800;color:var(--accent,#2563eb);line-height:1">{{ mech.direction_agreement_pct }}%</div>
@@ -295,14 +295,14 @@
 {% set em = pred.metrics.engine_mechanistic %}
 {% set bl = pred.metrics.baselines %}
 {% set ab = pred.metrics.ablation_pathway_term %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Predictive Performance - retrospective recovery vs an external gold standard</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Predictive Performance, retrospective recovery vs an external gold standard</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.85rem">
     The data checks above prove the <em>inputs</em> are trustworthy. This proves the <em>engine</em> works:
     on an <strong>external, independently-curated</strong> repurposing gold standard we test whether the engine's
     <strong>mechanism-only</strong> score separates <strong>approved</strong> repurposings from ones that
     reached trials and <strong>failed</strong>. Clinical-trial and literature features are
-    <strong>removed</strong> here - in a retrospective test those would be the answer (leakage). So this is
+    <strong>removed</strong> here, in a retrospective test those would be the answer (leakage). So this is
     biology alone: target overlap + direction-aware pathway + PPI proximity.
   </p>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.85rem;margin-bottom:0.85rem">
@@ -333,9 +333,9 @@
     <strong>{{ pred.drug_mapping_coverage_pct }}%</strong> of drugs carry a scorable target set (a salt→parent +
     bioactivity gap-fill coverage fix lifted this from 46%){% endif %}.
     The score cleanly beats random and a drug-popularity baseline, and the label-shuffle control collapses to
-    chance - the signal is real, not an evaluation artefact. <strong>Honest finding:</strong> target overlap
+    chance, the signal is real, not an evaluation artefact. <strong>Honest finding:</strong> target overlap
     carries most of the mechanistic signal; the pathway term (aware {{ ab.direction_aware }} / blind
-    {{ ab.direction_blind }} / excluded {{ ab.pathway_excluded }}) is near-neutral for ranking - it is kept as
+    {{ ab.direction_blind }} / excluded {{ ab.pathway_excluded }}) is near-neutral for ranking, it is kept as
     a correctness and explainability feature, not a recovery booster.
   </p>
 </div>
@@ -344,11 +344,11 @@
 <!-- KG-embedding link prediction -->
 {% if kgm and kgm.metrics %}
 {% set km = kgm.metrics %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Knowledge-Graph Embedding - link prediction</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Knowledge-Graph Embedding, link prediction</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.85rem">
     Beyond direct target overlap, we learn vector <strong>embeddings</strong> of the whole knowledge graph
-    (DistMult) and test whether they predict <strong>treatment edges held out of training</strong> - capturing
+    (DistMult) and test whether they predict <strong>treatment edges held out of training</strong>, capturing
     indirect, multi-hop biology. The held-out {{ kgm.treat_edges.held_out_test }} treat edges are absent from
     the training graph (no leakage).
   </p>
@@ -377,25 +377,25 @@
   <p class="text-sm text-text-muted" style="margin:0 0 0.6rem">
     <strong>How to read this vs the 0.73 above.</strong> The predictive-recovery score uses <em>no</em> treatment
     data (pure biology). This KG model is a <em>transductive</em> link predictor that learns from biology plus 80%
-    of known treatments and predicts the rest - a different, complementary question. Both are leakage-controlled
+    of known treatments and predicts the rest, a different, complementary question. Both are leakage-controlled
     (held-out edges, passing negative control).
   </p>
   {% set kre = pred.metrics.kg_ensemble_on_repodb if pred and pred.metrics else None %}
   <div style="background:var(--bg-sunken);border-radius:8px;padding:10px 12px">
-    <div class="cc-bar-lbl" style="margin-bottom:5px">Should it go into the engine? Two benchmarks, opposite answers - we trust the external one</div>
+    <div class="cc-bar-lbl" style="margin-bottom:5px">Should it go into the engine? Two benchmarks, opposite answers, we trust the external one</div>
     <div class="text-sm" style="color:#0f1e3d;line-height:1.6">
       {% if kge and kge.auroc %}
       <strong>In-graph (knowledge-graph held-out treatments):</strong> gene-overlap {{ kge.auroc.gene_overlap }},
       KG {{ kge.auroc.kg_embedding }}, ensemble <strong>{{ kge.auroc.ensemble }}</strong>
-      ({{ "%+.3f"|format(kge.ensemble_lift_over_best_single) }}) - looks complementary.<br/>
+      ({{ "%+.3f"|format(kge.ensemble_lift_over_best_single) }}), looks complementary.<br/>
       {% endif %}
       {% if kre %}
       <strong>External (gold-standard approved-vs-failed):</strong> mechanistic {{ kre.mechanistic_auroc }},
       KG alone {{ kre.kg_only_auroc }} (≈ chance), ensemble {{ kre.ensemble_auroc }}
-      (<strong style="color:#b5552f">{{ "%+.3f"|format(kre.ensemble_lift_over_mechanistic) }}</strong>) - it <strong>hurts</strong>.<br/>
+      (<strong style="color:#b5552f">{{ "%+.3f"|format(kre.ensemble_lift_over_mechanistic) }}</strong>), it <strong>hurts</strong>.<br/>
       {% endif %}
       <strong>Decision:</strong> the in-graph gain did <em>not</em> generalise to real world approved-vs-failed
-      discrimination, so the KG embedding is <strong>not wired into the engine</strong> - it would be a regression.
+      discrimination, so the KG embedding is <strong>not wired into the engine</strong>, it would be a regression.
       The mechanistic score stands. This is the two-benchmark check doing its job (finding KGE-04).
     </div>
   </div>
@@ -404,7 +404,7 @@
 
 <!-- Calibration -->
 {% if cal and cal.n_pairs %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Score Calibration - is a number a probability?</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Score Calibration, is a number a probability?</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.75rem">
     A ranking score is not automatically a probability. We measure it honestly: the <strong>raw</strong> score is
@@ -418,10 +418,10 @@
 </div>
 {% endif %}
 
-<!-- Findings (CAPA) - combined across all validation modules -->
+<!-- Findings (CAPA), combined across all validation modules -->
 {% set all_findings = (v.findings or []) + (conc.findings or []) + (res.findings or []) + (kg.findings or []) + (mech.findings or []) + (pred.findings or []) + (kgm.findings or []) + (kge.findings or []) + (mpv.findings or []) + (cal.findings or []) %}
 {% if all_findings %}
-<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Findings - openly disclosed (CAPA)</span></div>
+<div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Findings, openly disclosed (CAPA)</span></div>
 <div class="card">
   {% for f in all_findings %}
   <div style="padding:0.75rem 0;{% if not loop.last %}border-bottom:1px solid var(--border,rgba(0,0,0,0.08)){% endif %}">
@@ -436,7 +436,7 @@
   </div>
   {% endfor %}
   <p class="text-sm text-text-muted" style="margin:0.75rem 0 0;font-style:italic">
-    Finding an error is not a failure - hiding one is. A measured, disclosed error rate is the evidence of a validated system.
+    Finding an error is not a failure, hiding one is. A measured, disclosed error rate is the evidence of a validated system.
   </p>
 </div>
 {% endif %}
@@ -464,12 +464,12 @@
     <div>
       <div class="card-title" style="margin:0 0 6px">Standards we built to</div>
       <ul class="text-sm text-text-muted" style="margin:0;padding-left:1.1rem;line-height:1.7">
-        <li>FDA - Data Integrity and Compliance With Drug CGMP (2018)</li>
-        <li>MHRA - 'GXP' Data Integrity Guidance (2018)</li>
-        <li>WHO TRS 996, Annex 5 (2016) - defines ALCOA+</li>
-        <li>EU GMP Annex 11 - Computerised Systems</li>
-        <li>ISPE - GAMP 5, 2nd ed. (2022)</li>
-        <li>DAMA-DMBOK, 2nd ed. (2017) - data-quality dimensions</li>
+        <li>FDA, Data Integrity and Compliance With Drug CGMP (2018)</li>
+        <li>MHRA, 'GXP' Data Integrity Guidance (2018)</li>
+        <li>WHO TRS 996, Annex 5 (2016), defines ALCOA+</li>
+        <li>EU GMP Annex 11, Computerised Systems</li>
+        <li>ISPE, GAMP 5, 2nd ed. (2022)</li>
+        <li>DAMA-DMBOK, 2nd ed. (2017), data-quality dimensions</li>
       </ul>
     </div>
     <div>
@@ -478,16 +478,16 @@
         <li>Curated bioactivity database (industry-standard reference)</li>
         <li>Independent expert-curated pharmacology authority</li>
         <li>Standard controlled medical/disease vocabulary</li>
-        <li>Kramer et al., <em>J Med Chem</em> 2012 - Ki noise floor (~0.5 log)</li>
-        <li>Kalliokoski et al., <em>PLoS ONE</em> 2013 - mixed IC50 data</li>
+        <li>Kramer et al., <em>J Med Chem</em> 2012, Ki noise floor (~0.5 log)</li>
+        <li>Kalliokoski et al., <em>PLoS ONE</em> 2013, mixed IC50 data</li>
       </ul>
     </div>
   </div>
   <p class="text-sm text-text-muted" style="margin:1rem 0 0;padding-top:0.75rem;border-top:1px solid rgba(0,0,0,0.06)">
-    <strong>Scope.</strong> Two layers are validated. The <strong>data</strong> - integrity, accuracy,
-    provenance - is built to the same standards used for GxP data integrity and computerized-system validation
-    (ALCOA+, GAMP 5), without claiming a formal GxP certification. The <strong>results</strong> - whether the
-    engine recovers real repurposing - are validated retrospectively against an external repurposing gold standard with
+    <strong>Scope.</strong> Two layers are validated. The <strong>data</strong>, integrity, accuracy,
+    provenance, is built to the same standards used for GxP data integrity and computerized-system validation
+    (ALCOA+, GAMP 5), without claiming a formal GxP certification. The <strong>results</strong>, whether the
+    engine recovers real repurposing, are validated retrospectively against an external repurposing gold standard with
     clinical/literature leakage removed (above). A retrospective benchmark proves <em>historical recovery</em>,
     measured on a fixed snapshot; it is not a guarantee of prospective performance, which is tracked as the data
     refreshes.

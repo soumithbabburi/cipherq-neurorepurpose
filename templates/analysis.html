@@ -898,7 +898,7 @@ async function runPBPK() {
         <div style="font-size:0.72rem;color:#47526b;line-height:1.55">${eng.interpretation||''}</div>
       </div>` : `
       <div class="card mb-1" style="border-left:3px solid #e0ddd1">
-        <div style="font-size:0.72rem;color:#6b7690">Target occupancy not computed - no measured potency or docking affinity available. Free fraction f<sub>u</sub> = ${adme.fu!=null?adme.fu:'-'}, target tissue: ${tgt}.</div>
+        <div style="font-size:0.72rem;color:#6b7690">Target occupancy not computed, no measured potency or docking affinity available. Free fraction f<sub>u</sub> = ${adme.fu!=null?adme.fu:'-'}, target tissue: ${tgt}.</div>
       </div>`;
     const provHtml = `<div style="font-size:0.63rem;color:#98a1b6;margin-top:8px;line-height:1.45"><strong>${res.model_type||''}</strong> · ${res.provenance||''}</div>`;
 
@@ -1130,7 +1130,7 @@ async function renderDocking(el) {
           </label>` : ''}
           <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#47526b;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
             <input type="checkbox" id="dock-boltz" style="margin-top:1px"/>
-            <span>Predict affinity with <strong>Boltz-2</strong> <span style="color:#98a1b6">(co-folds protein+ligand, predicts binding affinity - requires GPU install; falls back to physics if absent)</span></span>
+            <span>Predict affinity with <strong>Boltz-2</strong> <span style="color:#98a1b6">(co-folds protein+ligand, predicts binding affinity, requires GPU install; falls back to physics if absent)</span></span>
           </label>
           <button class="btn btn-primary" onclick="runDocking()" id="dock-btn" style="width:100%;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:15px">play_arrow</span>
@@ -1387,7 +1387,7 @@ body{background:${bg};overflow:hidden;font-family:system-ui,sans-serif}
 </head><body>
 <div id="v"></div>
 <div id="legend">
-  <div><span style="display:inline-block;width:9px;height:9px;background:#7dd33f;border-radius:2px;vertical-align:middle"></span> Ligand (${opts.drug||'Drug'}) - bound inside</div>
+  <div><span style="display:inline-block;width:9px;height:9px;background:#7dd33f;border-radius:2px;vertical-align:middle"></span> Ligand (${opts.drug||'Drug'}), bound inside</div>
   <div><span style="display:inline-block;width:9px;height:9px;background:#d7dde3;border-radius:2px;vertical-align:middle"></span> Protein surface (${opts.target||'Target'})</div>
   <div><span style="display:inline-block;width:3px;height:10px;background:#5fd3e0;border-radius:1px;vertical-align:middle"></span> Pocket residues (≤5&Aring;)</div>
   <div id="pocket-legend"></div>
@@ -1812,7 +1812,7 @@ async function runDocking() {
     }
   } catch(e) {
     const msg = e.name === 'AbortError'
-      ? `Docking timed out (>${Math.round(_dockTimeout/1000)}s). ${useDiffDock ? 'DiffDock on CPU is slow - try the fast engine (uncheck DiffDock)' : 'Try again or pick a different target'}.`
+      ? `Docking timed out (>${Math.round(_dockTimeout/1000)}s). ${useDiffDock ? 'DiffDock on CPU is slow, try the fast engine (uncheck DiffDock)' : 'Try again or pick a different target'}.`
       : e.message;
     document.getElementById('dock-out').innerHTML = `<div class="alert alert-error">${msg}</div>`;
   } finally {
@@ -2175,7 +2175,7 @@ async function loadOptimization(el) {
       <div class="card" id="mol-workshop">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          <span style="font-weight:700;font-size:0.9rem;color:#0f1e3d">Molecular Workshop - Test a Modification</span>
+          <span style="font-weight:700;font-size:0.9rem;color:#0f1e3d">Molecular Workshop · Test a Modification</span>
         </div>
         <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.65">
           Edit the SMILES below to apply a structural change (e.g., remove a polar group, add a methyl),
@@ -2353,7 +2353,7 @@ async function openWorkshop(property, action) {
   if (descEl) descEl.value = action.slice(0, 120);
 
   if (!origSmiles) {
-    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES loaded - open the compound from a disease search first.</div>';
+    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original SMILES loaded, open the compound from a disease search first.</div>';
     return;
   }
 
@@ -2702,7 +2702,7 @@ async function loadPatents(el) {
         <p>No patent documents found via the source database or USPTO for <strong>${gName}</strong>.</p>
         <p style="font-size:0.75rem;color:var(--dim);line-height:1.6">
           This may be a generic / off-patent compound, or the drug name may not match patent records directly.
-          Expired patents still prove safety history - search below to find them.
+          Expired patents still prove safety history, search below to find them.
         </p>
         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;margin-top:0.5rem">
           ${drug ? `<a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" class="btn btn-secondary" style="font-size:0.75rem">Google Patents: ${drug}</a>` : ''}
@@ -2787,7 +2787,7 @@ async function loadPatents(el) {
 
 async function loadDossier(el) {
   if (!DISEASE) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><p>No disease context - open this compound from a disease search to generate a dossier.</p></div></div>`;
+    el.innerHTML = `<div class="card"><div class="empty-state"><p>No disease context, open this compound from a disease search to generate a dossier.</p></div></div>`;
     return;
   }
   el.innerHTML = `<div style="display:flex;align-items:center;gap:0.65rem;padding:1.2rem 0;color:var(--muted)"><span class="spinner"></span> Generating evidence dossier…</div>`;
@@ -2836,12 +2836,12 @@ async function loadDossier(el) {
     function screenInterpret(key, val) {
       const pct = Math.round(val * 100);
       const interp = {
-        target:     pct >= 30 ? `${pct}% overlap - drug directly modulates disease-relevant genes` : pct > 0 ? `${pct}% overlap - indirect mechanism likely` : 'No direct gene overlap - indirect pathway evidence needed',
-        pathway:    pct >= 25 ? `${pct}% shared pathways - strong mechanistic rationale` : pct > 0 ? `${pct}% - some pathway convergence` : 'No shared curated pathways identified',
-        ppi:        pct >= 30 ? `${pct}% - drug targets are proximal to disease proteins in PPI network` : pct > 0 ? `${pct}% - some network proximity` : 'No PPI network proximity detected',
-        clinical:   pct >= 70 ? `${pct}% - approved drug, low development risk` : pct >= 40 ? `${pct}% - Phase 2/3 clinical data available` : `${pct}% - limited clinical history`,
-        indication: pct >= 70 ? `${pct}% - closely related indication, 505(b)(2) path supported` : pct >= 30 ? `${pct}% - partial indication overlap` : `${pct}% - indication is distinct, bridging evidence required`,
-        regulatory: pct >= 60 ? `${pct}% - strong regulatory feasibility for 505(b)(2)` : `${pct}% - regulatory path requires additional data`,
+        target:     pct >= 30 ? `${pct}% overlap, drug directly modulates disease relevant genes` : pct > 0 ? `${pct}% overlap, indirect mechanism likely` : 'No direct gene overlap, indirect pathway evidence needed',
+        pathway:    pct >= 25 ? `${pct}% shared pathways, strong mechanistic rationale` : pct > 0 ? `${pct}% shared, some pathway convergence` : 'No shared curated pathways identified',
+        ppi:        pct >= 30 ? `${pct}% proximity, drug targets are close to disease proteins in the PPI network` : pct > 0 ? `${pct}% proximity, some network proximity` : 'No PPI network proximity detected',
+        clinical:   pct >= 70 ? `${pct}%, approved drug, low development risk` : pct >= 40 ? `${pct}%, Phase 2/3 clinical data available` : `${pct}%, limited clinical history`,
+        indication: pct >= 70 ? `${pct}%, closely related indication, 505(b)(2) path supported` : pct >= 30 ? `${pct}%, partial indication overlap` : `${pct}%, indication is distinct, bridging evidence required`,
+        regulatory: pct >= 60 ? `${pct}%, strong regulatory feasibility for 505(b)(2)` : `${pct}%, regulatory path requires additional data`,
       };
       return interp[key] || `${pct}%`;
     }
@@ -2878,14 +2878,14 @@ async function loadDossier(el) {
     if ((scores.indication || 0) >= 0.5) strengths.push('Related existing indication enables 505(b)(2) regulatory path');
     if ((scores.pathway || 0) >= 0.2)  strengths.push('Shared disease pathways provide biological plausibility');
     if (reg.orphan_drug)                strengths.push('Orphan drug eligibility - 7-year exclusivity available');
-    if ((scores.target || 0) < 0.1)    gaps.push('No direct target overlap - need transcriptomic or pathway bridging evidence');
-    if ((scores.ppi || 0) < 0.1)       gaps.push('Limited PPI network proximity - consider network medicine analysis');
-    if ((scores.clinical || 0) < 0.3)  gaps.push('Early-stage clinical history - full development program may be needed');
-    if ((scores.indication || 0) < 0.3) gaps.push('Indication distance - will require bridging studies for new indication');
-    if (!strengths.length) strengths.push('Exploratory candidate - further investigation warranted');
+    if ((scores.target || 0) < 0.1)    gaps.push('No direct target overlap, need transcriptomic or pathway bridging evidence');
+    if ((scores.ppi || 0) < 0.1)       gaps.push('Limited PPI network proximity, consider network medicine analysis');
+    if ((scores.clinical || 0) < 0.3)  gaps.push('Early stage clinical history, full development program may be needed');
+    if ((scores.indication || 0) < 0.3) gaps.push('Indication distance, will require bridging studies for the new indication');
+    if (!strengths.length) strengths.push('Exploratory candidate, further investigation warranted');
     if (!gaps.length) gaps.push('No major gaps identified at screening stage');
 
-    const nextStep = reg.level === 'strong' ? '505(b)(2) NDA filing - cite existing approval data' :
+    const nextStep = reg.level === 'strong' ? '505(b)(2) NDA filing, cite existing approval data' :
                      reg.level === 'moderate' ? 'IND filing with Phase 2 bridging study for new indication' :
                      reg.level === 'possible' ? 'Preclinical validation of target overlap, then Phase 1/2 IND' :
                      'Exploratory biomarker & mechanism studies before IND';
@@ -2899,7 +2899,7 @@ async function loadDossier(el) {
           ${d.drug_name||'This drug'} scores <strong>${(sc*100).toFixed(1)}/100</strong> for repurposing toward
           <strong>${d.disease_name||DISEASE}</strong>.
           ${(scores.clinical||0) >= 0.7 ? 'The strong clinical signal (approved or Phase 3) substantially reduces development risk. ' : ''}
-          ${(scores.target||0) >= 0.25 ? 'Direct target gene overlap provides mechanistic justification. ' : 'No direct gene target overlap was detected - the case relies on pathway and clinical evidence. '}
+          ${(scores.target||0) >= 0.25 ? 'Direct target gene overlap provides mechanistic justification. ' : 'No direct gene target overlap was detected, the case relies on pathway and clinical evidence. '}
           ${(scores.indication||0) >= 0.6 ? 'The related existing indication supports a streamlined 505(b)(2) regulatory path.' : ''}
         </p>
       </div>
@@ -3039,7 +3039,7 @@ async function loadDossier(el) {
     const [novLabel, novCol, novBg] = _novMeta[nv.state] || _novMeta.unknown;
     // The old 505(b)(2) card label must not contradict the verdict.
     const regLabelText = nv.is_known_indication
-      ? '505(b)(2) for THIS indication: blocked - molecule already approved here (see verdict)'
+      ? '505(b)(2) for THIS indication: blocked, molecule already approved here (see verdict)'
       : (reg.label || '-');
     const pathRows = (verdict.pathways||[]).map(p=>`
       <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e8edf6;font-size:0.76rem">
@@ -3173,7 +3173,7 @@ async function loadDossier(el) {
             <div class="kv"><span class="kv-k">Regulatory Pathway</span><span class="kv-v" style="font-weight:700">${reg.pathway||'-'}</span></div>
             <div class="kv"><span class="kv-k">Estimated Timeline</span><span class="kv-v">${reg.timeline||'-'}</span></div>
             <div class="kv"><span class="kv-k">Current Phase</span><span class="kv-v">Phase ${reg.phase||0}${reg.is_approved?' (Approved)':''}</span></div>
-            <div class="kv"><span class="kv-k">Orphan Drug</span><span class="kv-v" style="color:${reg.orphan_drug?'#2563eb':'#98a1b6'}">${reg.orphan_drug?'Yes - eligible (< 200k patients)':'No'}</span></div>
+            <div class="kv"><span class="kv-k">Orphan Drug</span><span class="kv-v" style="color:${reg.orphan_drug?'#2563eb':'#98a1b6'}">${reg.orphan_drug?'Yes, eligible (< 200k patients)':'No'}</span></div>
           </div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;color:#47526b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Exclusivity Benefits</div>
@@ -3225,7 +3225,7 @@ async function loadDossier(el) {
       ${glHTML}
       <div class="card" style="margin-top:1rem">
         <div class="card-title mb-1">Additional registries
-          <span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(authoritative deep-search - provenance)</span></div>
+          <span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(authoritative deep search, provenance)</span></div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${registries.map(r=>`<a href="${r.url}" target="_blank" title="${r.region} · ${r.kind}" style="font-size:0.7rem;color:#2563eb;border:1px solid #e3e8f0;border-radius:6px;padding:3px 9px;text-decoration:none;background:#fbfaf6">${r.name}</a>`).join('')}</div>
       </div>
       <div id="class-comparison" class="card" style="margin-top:1rem"><div style="display:flex;align-items:center;gap:0.6rem;color:var(--muted)"><span class="spinner"></span> Building within-class / out-of-class differentiation…</div></div>`;

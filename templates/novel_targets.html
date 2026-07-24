@@ -7,11 +7,11 @@
   <div class="section-head" style="margin-bottom:4px"><span class="s-kicker">Discovery · Network Inference</span></div>
   <h1 class="text-text-primary" style="font-size:1.7rem;font-weight:600;letter-spacing:-0.015em">Novel Target Discovery</h1>
   <p class="text-text-muted" style="font-size:0.82rem;margin-top:4px;max-width:60rem">
-    Enter a disease. We take its known genetically-associated genes as seeds, expand through the
-    protein-protein interaction network, and surface <strong>targets NOT yet annotated to the disease</strong>
-    - candidate novel targets one hop off the known disease module - then the drugs reachable
+    Enter a disease. We take its known genetically associated genes as seeds, expand through the
+    protein interaction network, and surface <strong>targets NOT yet annotated to the disease</strong>
+    (candidate novel targets one hop off the known disease module), then the drugs reachable
     <strong>only through those inferred targets</strong>. Everything here is
-    <strong>inferred (network-based)</strong>, a hypothesis to validate, not a known association.
+    <strong>inferred (network based)</strong>, a hypothesis to validate, not a known association.
   </p>
 </div>
 
@@ -108,7 +108,7 @@ function drugsCard(drugs){
   }).join('');
   return '<div class="card">'
     + '<div class="card-title mb-1">Drugs reachable via novel targets '
-    + '<span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(repurposing hypotheses through an inferred target - validate before acting)</span></div>'
+    + '<span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(repurposing hypotheses through an inferred target, validate before acting)</span></div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">'+cards+'</div></div>';
 }
 

@@ -128,7 +128,7 @@ function graphHref(chembl, disease) {
 // Prior lower-phase development is not flagged - it is derisking, not a blocker.
 function approvedBadge(c) {
   if (!c.approved_here) return '';
-  return `<div style="background:#fce8e6;border:1px solid #f5b5ad;border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#7a1d12;line-height:1.4">Already approved for this indication - reference only, not a 505(b)(2) opportunity</div>`;
+  return `<div style="background:#fce8e6;border:1px solid #f5b5ad;border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#7a1d12;line-height:1.4">Already approved for this indication; reference only, not a 505(b)(2) opportunity</div>`;
 }
 
 // Novel knowledge-graph-discovered candidate (not previously indicated): show the
