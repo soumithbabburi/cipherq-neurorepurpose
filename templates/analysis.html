@@ -282,7 +282,7 @@ function renderBiologicProperties(el, c, mod) {
         <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label}</span>
       </div>
       <p style="font-size:0.76rem;color:#47526b;line-height:1.6">
-        <strong>${c.name || CHEMBL_ID}</strong> is a ${mod.label}. Small-molecule descriptors — <strong>CNS-MPO, Rule-of-Five, LogP, PSA, BBB penetration</strong> — do not apply to biologics and are intentionally not shown (a CNS-MPO of 0/6 for an antibody would be meaningless, not a real signal).
+        <strong>${c.name || CHEMBL_ID}</strong> is a ${mod.label}. Small-molecule descriptors, <strong>CNS-MPO, Rule-of-Five, LogP, PSA, BBB penetration</strong>, do not apply to biologics and are intentionally not shown (a CNS-MPO of 0/6 for an antibody would be meaningless, not a real signal).
       </p>
       <div style="margin-top:10px">
         <div class="kv"><span class="kv-k">Modality</span><span class="kv-v" style="text-transform:capitalize">${mod.label} (${mod.modality})</span></div>
@@ -294,7 +294,7 @@ function renderBiologicProperties(el, c, mod) {
     </div>
     <div class="card">
       <div class="card-title mb-1">Biologics developability</div>
-      <p style="font-size:0.75rem;color:#47526b;line-height:1.6">This asset is evaluated on <strong>biologic developability</strong> — affinity, specificity, thermostability, solubility, aggregation, viscosity, immunogenicity — not small-molecule ADMET.</p>
+      <p style="font-size:0.75rem;color:#47526b;line-height:1.6">This asset is evaluated on <strong>biologic developability</strong>, affinity, specificity, thermostability, solubility, aggregation, viscosity, immunogenicity, not small-molecule ADMET.</p>
       <a class="btn btn-secondary" style="margin-top:10px;justify-content:center" onclick="switchTab('optimization')">
         <span class="material-symbols-outlined" style="font-size:15px">tune</span>Open Biologics Optimization →</a>
     </div>`;
@@ -336,7 +336,7 @@ async function renderProperties(el) {
   const cnsRules = [
     ['PSA < 60 Å²', (p.psa||999) < 60],
     ['MW < 400 Da',  (p.mw||999)  < 400],
-    ['LogP 1 – 3',  (p.alogp||0) >= 1 && (p.alogp||0) <= 3],
+    ['LogP 1 to 3',  (p.alogp||0) >= 1 && (p.alogp||0) <= 3],
     ['HBD ≤ 2',     (p.hbd||0)  <= 2],
   ];
 
@@ -939,12 +939,12 @@ async function runPBPK() {
               ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#065f46;font-size:9px;font-weight:700;letter-spacing:0.04em">MEASURED PK</span>'
               : '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#e8edf6;color:#6b7690;font-size:9px;font-weight:700;letter-spacing:0.04em">ESTIMATED</span>'}
           </div>
-          ${[['Cmax (plasma)',cmax],['Tmax',tmax],['AUC (0–t)',auc],['Half-life (t½)',thalf],['Brain/Plasma Ratio',bpr]]
+          ${[['Cmax (plasma)',cmax],['Tmax',tmax],['AUC (0, t)',auc],['Half-life (t½)',thalf],['Brain/Plasma Ratio',bpr]]
             .map(([k,v])=>`<div class="kv"><span class="kv-k">${k}</span><span class="kv-v">${v}</span></div>`).join('')}
         </div>
       </div>
       ${engHtml}
-      <div class="card mb-1"><div class="card-title mb-1">Concentration–Time Profile</div><div id="pbpk-chart"></div></div>
+      <div class="card mb-1"><div class="card-title mb-1">Concentration, Time Profile</div><div id="pbpk-chart"></div></div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" class="mb-1">${admeCards}</div>
       ${provHtml}`;
 
@@ -1126,7 +1126,7 @@ async function renderDocking(el) {
           ${LOCAL_DIFFDOCK || DOCK_OK ? `
           <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#47526b;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
             <input type="checkbox" id="dock-diffdock" style="margin-top:1px"/>
-            <span>Refine with <strong>DiffDock</strong> <span style="color:#98a1b6">(deep-learning, higher accuracy - ~3–5&nbsp;min on CPU)</span></span>
+            <span>Refine with <strong>DiffDock</strong> <span style="color:#98a1b6">(deep-learning, higher accuracy - ~3 to 5&nbsp;min on CPU)</span></span>
           </label>` : ''}
           <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#47526b;margin-bottom:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
             <input type="checkbox" id="dock-boltz" style="margin-top:1px"/>
@@ -1181,16 +1181,16 @@ async function renderDocking(el) {
 
     <div id="dock-out"></div>
 
-    <!-- ── Validate a Modification — Original vs Modified ─────────────── -->
+    <!-- ── Validate a Modification, Original vs Modified ─────────────── -->
     <div class="card" id="dock-compare-card" style="margin-top:1.25rem">
       <div class="card-title mb-1" style="display:flex;align-items:center;gap:0.5rem">
         <span class="material-symbols-outlined" style="font-size:17px;color:#2563eb">compare_arrows</span>
-        <span>Validate a Modification — Original vs Modified</span>
+        <span>Validate a Modification, Original vs Modified</span>
       </div>
       <p style="font-size:0.75rem;color:var(--muted);line-height:1.65;margin-bottom:0.9rem">
         A property win is worthless if the change kills target binding. This docks <strong>both</strong> molecules
         into the <strong>same pocket</strong> (identical settings) so you can see whether the modification kept the binding.
-        Docking catches regressions and broken poses — it can't precisely rank close analogs, so small differences are flagged as within resolution.
+        Docking catches regressions and broken poses, it can't precisely rank close analogs, so small differences are flagged as within resolution.
       </p>
       <div style="display:grid;grid-template-columns:1fr auto;gap:0.75rem;align-items:end">
         <div class="field">
@@ -1204,17 +1204,17 @@ async function renderDocking(el) {
       ${LOCAL_DIFFDOCK || DOCK_OK ? `
       <label style="display:flex;align-items:flex-start;gap:7px;font-size:0.68rem;color:#47526b;margin-top:0.6rem;cursor:pointer;user-select:none;line-height:1.4">
         <input type="checkbox" id="dcmp-diffdock" style="margin-top:1px"/>
-        <span>Refine with <strong>DiffDock</strong> <span style="color:#98a1b6">(deep-learning, higher accuracy — runs BOTH molecules, ~6–10&nbsp;min on CPU)</span></span>
+        <span>Refine with <strong>DiffDock</strong> <span style="color:#98a1b6">(deep-learning, higher accuracy, runs BOTH molecules, ~6 to 10&nbsp;min on CPU)</span></span>
       </label>` : ''}
       <p style="font-size:0.66rem;color:#98a1b6;margin-top:0.5rem">Original ligand = the <strong>Ligand SMILES</strong> in Docking Setup above · docked into the selected <strong>target</strong>.</p>
       <div id="dcmp-result" style="margin-top:0.9rem"></div>
       <div id="dcmp-viewers" style="display:none;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.9rem">
         <div>
-          <div style="font-size:0.72rem;font-weight:700;color:#2563eb;margin-bottom:5px">Original — bound pose</div>
+          <div style="font-size:0.72rem;font-weight:700;color:#2563eb;margin-bottom:5px">Original, bound pose</div>
           <iframe id="dcmp-orig-frame" style="width:100%;height:340px;border:none;border-radius:10px;background:#0f1e3d"></iframe>
         </div>
         <div>
-          <div style="font-size:0.72rem;font-weight:700;color:#0e7490;margin-bottom:5px">Modified — bound pose</div>
+          <div style="font-size:0.72rem;font-weight:700;color:#0e7490;margin-bottom:5px">Modified, bound pose</div>
           <iframe id="dcmp-mod-frame" style="width:100%;height:340px;border:none;border-radius:10px;background:#0f1e3d"></iframe>
         </div>
       </div>
@@ -1239,8 +1239,7 @@ async function renderDocking(el) {
     }, 150);
   }
 
-  // Build the docking target list. The DRUG's OWN binding targets come first —
-  // docking a ligand into a protein it actually binds is what yields a meaningful
+  // Build the docking target list. The DRUG's OWN binding targets come first, // docking a ligand into a protein it actually binds is what yields a meaningful
   // ΔG. Disease-associated proteins are offered below as explicit repurposing
   // hypotheses: docking e.g. a JAK inhibitor into tyrosinase is expected to score
   // weakly and is NOT the sensible default.
@@ -1596,7 +1595,7 @@ function _fmtNm(nM) {
   return (nM/1e6).toFixed(1) + ' mM';
 }
 // Best MEASURED potency (ChEMBL activities) of this compound against a target gene.
-// This is the authoritative, experimental affinity — used to distinguish the drug's
+// This is the authoritative, experimental affinity, used to distinguish the drug's
 // real on-mechanism targets from repurposing hypotheses, and to keep the honest
 // (conservative) geometric docking ΔG in context.
 let _activitiesData = null;
@@ -1635,7 +1634,7 @@ async function runDocking() {
   if (useBoltz) {
     btn.innerHTML = '<span class="spinner"></span> Running Boltz-2 affinity prediction…';
   } else if (useDiffDock) {
-    btn.innerHTML = '<span class="spinner"></span> Running DiffDock (~3–5 min)…';
+    btn.innerHTML = '<span class="spinner"></span> Running DiffDock (~3 to 5 min)…';
   }
   try {
     const _dockCtrl = new AbortController();
@@ -1666,7 +1665,7 @@ async function runDocking() {
     const affs  = res.binding_affinities || [];
     // "Confidence" is an independent pose-quality metric ONLY for a deep-learning
     // engine (DiffDock). For the empirical engine it is just a monotonic remap of
-    // the ΔG, so showing it as a separate number is redundant — hide it there.
+    // the ΔG, so showing it as a separate number is redundant, hide it there.
     const isDL = /diffdock/i.test(res.method || '');
     const validPoses = _dockPoses.filter(p => p && p.length > 20);
     const has3D = validPoses.length > 0;
@@ -1800,7 +1799,7 @@ async function runDocking() {
         <div class="kv"><span class="kv-k">Pose confidence</span><span class="kv-v mono">${confs[0]!=null?confs[0].toFixed(3):'-'}</span></div>` : '';
       metricsInner.innerHTML = `
         ${measuredHtml}
-        <div class="kv" title="${isReal?'AutoDock Vina binding free energy (kcal/mol) for the top pose. A predicted ΔG for triage — where a measured potency exists, that is authoritative.':'Structural pose score for ranking poses and pockets — not an absolute affinity. Where a measured potency exists, that is authoritative.'}"><span class="kv-k">${dgLbl}</span><span class="kv-v mono">${aff0!=null?aff0.toFixed(2)+' kcal/mol':'-'} ${badgeHtml}</span></div>
+        <div class="kv" title="${isReal?'AutoDock Vina binding free energy (kcal/mol) for the top pose. A predicted ΔG for triage, where a measured potency exists, that is authoritative.':'Structural pose score for ranking poses and pockets, not an absolute affinity. Where a measured potency exists, that is authoritative.'}"><span class="kv-k">${dgLbl}</span><span class="kv-v mono">${aff0!=null?aff0.toFixed(2)+' kcal/mol':'-'} ${badgeHtml}</span></div>
         ${kiHtml}
         ${confHtml}
         <div class="kv"><span class="kv-k">Protein target</span><span class="kv-v">${res.target||'-'}</span></div>
@@ -1840,13 +1839,13 @@ function renderBiologicOptimization(res) {
         <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${m.label || m.modality || 'biologic'}</span>
       </div>
       <p style="font-size:0.79rem;color:#47526b;line-height:1.65;margin-bottom:5px">${bio.headline || ''}</p>
-      <p style="font-size:0.66rem;color:#98a1b6">Modality auto-detected — ${m.basis || ''}. SMILES/atom-level optimization is for small molecules; this antibody is optimized in sequence + developability space.</p>
+      <p style="font-size:0.66rem;color:#98a1b6">Modality auto-detected, ${m.basis || ''}. SMILES/atom-level optimization is for small molecules; this antibody is optimized in sequence + developability space.</p>
     </div>
 
     <!-- HERO: hands-on, paste the variable-region sequence → real computed analysis -->
     <div class="card" style="margin-bottom:1rem;border:2px solid #2563eb">
-      <div style="font-weight:800;font-size:0.9rem;color:#0f1e3d;margin-bottom:4px">Analyze this antibody — paste its sequence</div>
-      <p style="font-size:0.71rem;color:#6b7690;line-height:1.55;margin-bottom:8px">Paste ${nm}'s variable region (VH and/or VL, one-letter amino acids — from your records or Thera-SAbDab). The platform computes its real pI, net charge, hydrophobicity and aromatic content, and scans for chemical liabilities (deamidation, isomerization, oxidation, N-glycosylation, free Cys). This is computed from the sequence you paste — nothing is pre-filled.</p>
+      <div style="font-weight:800;font-size:0.9rem;color:#0f1e3d;margin-bottom:4px">Analyze this antibody, paste its sequence</div>
+      <p style="font-size:0.71rem;color:#6b7690;line-height:1.55;margin-bottom:8px">Paste ${nm}'s variable region (VH and/or VL, one-letter amino acids, from your records or Thera-SAbDab). The platform computes its real pI, net charge, hydrophobicity and aromatic content, and scans for chemical liabilities (deamidation, isomerization, oxidation, N-glycosylation, free Cys). This is computed from the sequence you paste, nothing is pre-filled.</p>
       <textarea id="bio-seq" rows="4" class="input" style="font-family:monospace;font-size:0.72rem;line-height:1.5;resize:vertical" placeholder="EVQLVESGGGLVQPGG...   (VH)&#10;DIQMTQSPSSLSASVGDRV...   (VL)"></textarea>
       <button class="btn btn-primary" onclick="scanBiologicSequence(this,'${nm}','${modality}')" id="bio-scan-btn" style="margin-top:8px;padding:0.55rem 1.2rem">
         <span class="material-symbols-outlined" style="font-size:15px">biotech</span> Analyze sequence
@@ -1876,7 +1875,7 @@ async function scanBiologicSequence(btn, name, modality) {
     const liabHtml = liabs.length
       ? `<div style="font-weight:700;font-size:0.78rem;color:#8a5a2b;margin:12px 0 6px">Sequence liabilities (${liabs.length})</div>`
         + liabs.map(function (l) {
-            return `<div style="font-size:0.72rem;color:#47526b;padding:3px 0;border-bottom:1px solid #f1efe7"><strong>${l.liability}</strong> <span class="mono" style="color:#8a5a2b">${l.motif}</span> @ ${l.position} — <span style="color:#6b7690">${l.note}</span></div>`;
+            return `<div style="font-size:0.72rem;color:#47526b;padding:3px 0;border-bottom:1px solid #f1efe7"><strong>${l.liability}</strong> <span class="mono" style="color:#8a5a2b">${l.motif}</span> @ ${l.position}, <span style="color:#6b7690">${l.note}</span></div>`;
           }).join('')
       : '<div style="font-size:0.74rem;color:#5b7a52;margin-top:10px">No standard chemical-liability motifs detected in this sequence.</div>';
     out.innerHTML = `<div style="font-size:0.68rem;color:#6b7690;margin-bottom:6px">Length ${mt.length} aa · ~${(mt.mw_da / 1000).toFixed(1)} kDa (variable region)</div>
@@ -1896,7 +1895,7 @@ async function loadOptimization(el) {
     if (res.error) { el.innerHTML = `<div class="alert alert-error">${res.error}</div>`; return; }
 
     // Modality-aware: an antibody/peptide/protein is optimized in sequence +
-    // developability space, not by SMILES edits — render the biologics workflow.
+    // developability space, not by SMILES edits, render the biologics workflow.
     if (res.modality && res.modality.is_small_molecule === false) {
       el.innerHTML = renderBiologicOptimization(res);
       return;
@@ -1953,7 +1952,7 @@ async function loadOptimization(el) {
     window._optSuggestions = res.suggestions || [];
     const sugHTML = (!res.suggestions || !res.suggestions.length) ? `
       <div style="font-size:0.76rem;color:#5b7a52;line-height:1.6;padding:6px 0">
-        All physicochemical properties are within the target range for this profile — no structural
+        All physicochemical properties are within the target range for this profile, no structural
         changes recommended. Optimize on potency/selectivity, and see the Liability Analysis below for
         any structural or metabolic flags.
       </div>` : `
@@ -1990,7 +1989,7 @@ async function loadOptimization(el) {
                 onmouseout="this.style.background='transparent';this.style.color='${accent}'"
                 title="Apply this modification and load it into the Workshop">
                 Apply Solo →
-              </button>` : `<div style="font-size:0.66rem;color:#98a1b6;font-style:italic">Contextual change — apply by editing the SMILES in the Workshop below.</div>`}
+              </button>` : `<div style="font-size:0.66rem;color:#98a1b6;font-style:italic">Contextual change, apply by editing the SMILES in the Workshop below.</div>`}
             </div>
           </div>
         </div>`;
@@ -2012,7 +2011,7 @@ async function loadOptimization(el) {
           onmouseout="this.style.background='transparent';this.style.color='${col}'"
           title="Apply this modification to the molecule and load it into the Workshop">
           Apply this fix →
-        </button>` : `<div style="margin-top:6px;font-size:0.66rem;color:#98a1b6;font-style:italic">Contextual fix — apply by editing the SMILES in the Workshop below.</div>`;
+        </button>` : `<div style="margin-top:6px;font-size:0.66rem;color:#98a1b6;font-style:italic">Contextual fix, apply by editing the SMILES in the Workshop below.</div>`;
       return `<div style="padding:11px 13px;border-radius:9px;background:${bg};border-left:3px solid ${col};margin-bottom:8px">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:wrap">
           <span style="font-size:0.78rem;font-weight:700;color:#0f1e3d">${l.title}</span>
@@ -2028,11 +2027,11 @@ async function loadOptimization(el) {
       <div class="card" style="margin-bottom:1rem">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;flex-wrap:wrap">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b3261e" stroke-width="2"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-          <span style="font-weight:700;font-size:0.9rem;color:#0f1e3d">Liability Analysis — what actually needs to change</span>
+          <span style="font-weight:700;font-size:0.9rem;color:#0f1e3d">Liability Analysis, what actually needs to change</span>
           ${_adv.n_high?`<span style="font-size:0.62rem;font-weight:700;background:#faece9;color:#b3261e;padding:2px 9px;border-radius:999px">${_adv.n_high} high-severity</span>`:''}
         </div>
         <p style="font-size:0.74rem;color:#47526b;line-height:1.6;margin-bottom:0.75rem">${_adv.summary||''}</p>
-        ${_liabs.length ? liabCards : '<div style="font-size:0.75rem;color:#5b7a52;padding:6px 0">No reactive, metabolic, or structural-alert liabilities detected — a clean scaffold. Optimize on potency/selectivity rather than ADME-Tox.</div>'}
+        ${_liabs.length ? liabCards : '<div style="font-size:0.75rem;color:#5b7a52;padding:6px 0">No reactive, metabolic, or structural-alert liabilities detected, a clean scaffold. Optimize on potency/selectivity rather than ADME-Tox.</div>'}
         <p style="font-size:0.66rem;color:#98a1b6;margin-top:6px;line-height:1.5">Substructure liabilities from curated ADME-Tox SMARTS · structural alerts from RDKit PAINS/Brenk/NIH · property limits from CNS-MPO &amp; area-aware developability. This reads the real structure, not just BBB thresholds.</p>
       </div>`;
 
@@ -2216,7 +2215,7 @@ async function loadOptimization(el) {
           </p>
           <button class="btn btn-secondary" onclick="sendModifiedToDocking()" id="ws-to-dock-btn"
             style="padding:0.5rem 1rem;border:1.5px solid #2563eb;background:transparent;color:#2563eb;font-weight:700;border-radius:7px;cursor:pointer">
-            Validate in Docking — original vs modified →
+            Validate in Docking, original vs modified →
           </button>
         </div>
       </div>`;
@@ -2272,7 +2271,7 @@ async function renderQuantumPanel() {
       </div>`;
     const f = (v, d=2) => (v==null ? '-' : (+v).toFixed(d));
     const tiles = [
-      tile('HOMO–LUMO gap', f(qp.gap_ev), 'eV', 'kinetic stability'),
+      tile('HOMO, LUMO gap', f(qp.gap_ev), 'eV', 'kinetic stability'),
       tile('HOMO', f(qp.homo_ev), 'eV', 'ionization / donor'),
       tile('LUMO', f(qp.lumo_ev), 'eV', 'affinity / acceptor'),
       tile('Dipole', f(qp.dipole_debye), 'D', 'polarity'),
@@ -2321,7 +2320,7 @@ async function _applyWorkshopRxn(rxn, label, actionText) {
       }
       if (wsResult) wsResult.innerHTML = `
         <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
-          <strong>Applied:</strong> ${label}. The Modified SMILES above now carries the change — click
+          <strong>Applied:</strong> ${label}. The Modified SMILES above now carries the change, click
           <strong>Analyze Modification</strong> to see the property &amp; safety impact.
         </div>`;
     } else {
@@ -2329,7 +2328,7 @@ async function _applyWorkshopRxn(rxn, label, actionText) {
       if (wsResult) wsResult.innerHTML = `<div class="alert alert-warning" style="font-size:0.77rem">Could not auto-apply this change${res.note ? ': ' + res.note : '.'} Edit the Modified SMILES manually, then Analyze.</div>`;
     }
   } catch(_e) {
-    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Transform failed — edit the Modified SMILES manually, then Analyze.</div>';
+    if (wsResult) wsResult.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Transform failed, edit the Modified SMILES manually, then Analyze.</div>';
   }
 }
 
@@ -2402,7 +2401,7 @@ function sendModifiedToDocking() {
   const mod  = document.getElementById('ws-new-smiles')?.value  || '';
   if (!mod.trim() || mod.trim() === orig.trim()) {
     const r = document.getElementById('ws-result');
-    if (r) r.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Apply a fix or enter a modified SMILES first — it must differ from the original.</div>';
+    if (r) r.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Apply a fix or enter a modified SMILES first, it must differ from the original.</div>';
     return;
   }
   window._pendingCompareSmiles = mod.trim();
@@ -2417,11 +2416,11 @@ async function runDockCompare() {
   const out    = document.getElementById('dcmp-result');
   const viewers= document.getElementById('dcmp-viewers');
   if (!target) { out.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Pick a target above first.</div>'; return; }
-  if (!orig)   { out.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original ligand SMILES — set it in the Docking Setup above.</div>'; return; }
+  if (!orig)   { out.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">No original ligand SMILES, set it in the Docking Setup above.</div>'; return; }
   if (!mod || mod === orig) { out.innerHTML = '<div class="alert alert-warning" style="font-size:0.77rem">Enter a modified SMILES (must differ from the original). Tip: build one in the Optimization tab and click “Validate in Docking”.</div>'; return; }
   const btn = document.getElementById('dcmp-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Docking both…';
-  const eta = useDD ? '~6–10 min (DiffDock, both molecules)' : '~30–60s';
+  const eta = useDD ? '~6 to 10 min (DiffDock, both molecules)' : '~30 to 60s';
   out.innerHTML = '<div style="font-size:0.78rem;color:#47526b;display:flex;align-items:center;gap:6px"><span class="spinner"></span> Docking original and modified into ' + target + ' (' + eta + ')…</div>';
   if (viewers) viewers.style.display = 'none';
   try {
@@ -2439,14 +2438,14 @@ async function runDockCompare() {
                       degraded:['#b3261e','#faece9'], broke:['#b3261e','#faece9'],
                       inconclusive:['#0e7490','#f8f2df']};
     const [vc, vbg] = catColor[res.category] || ['#47526b','#f7f9fc'];
-    const fmtG = v => (v === null || v === undefined) ? '—' : v.toFixed(2) + ' kcal/mol';
+    const fmtG = v => (v === null || v === undefined) ? ', ' : v.toFixed(2) + ' kcal/mol';
     const cell = (lbl, o) => `
       <div style="flex:1;min-width:150px;background:#f7f9fc;border-radius:9px;padding:11px 13px">
         <div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#98a1b6">${lbl}</div>
         <div style="font-size:1.15rem;font-weight:800;color:#0f1e3d;font-family:monospace">${fmtG(o.best_affinity)}</div>
         <div style="font-size:0.66rem;color:${o.any_valid_pose?'#2563eb':'#b3261e'};margin-top:2px">${o.any_valid_pose?'valid pose in pocket':'no valid pose'}</div>
       </div>`;
-    const ddgTxt = res.ddg === null ? '—' : `${res.ddg>0?'+':''}${res.ddg.toFixed(2)} kcal/mol`;
+    const ddgTxt = res.ddg === null ? ', ' : `${res.ddg>0?'+':''}${res.ddg.toFixed(2)} kcal/mol`;
     out.innerHTML = `
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
         ${cell('Original', res.original)}
@@ -2463,7 +2462,7 @@ async function runDockCompare() {
       </div>
       <div style="font-size:0.64rem;color:#98a1b6;margin-top:5px">Target: ${res.target} · engine: ${res.original.method||(useDD?'DiffDock':'fast')} · matched-pair docking (same pocket, same settings)</div>`;
 
-    // 3D pose viewers — original vs modified, side by side
+    // 3D pose viewers, original vs modified, side by side
     if (viewers) {
       const drug = (compoundData || {}).name || 'Drug';
       const of = document.getElementById('dcmp-orig-frame');
@@ -2523,7 +2522,7 @@ async function runMolWorkshop() {
     const deltas = res.deltas || {};
     const propLabels = {mw:'Mol. Weight',logp:'LogP',psa:'PSA',hbd:'HBD',hba:'HBA',rb:'Rot. Bonds',qed:'QED',cns_mpo:'CNS-MPO'};
     const propUnits  = {mw:' Da',logp:'',psa:' Å²',hbd:'',hba:'',rb:'',qed:'',cns_mpo:' /6'};
-    // properties where a HIGHER value is better — color a positive delta green, not red
+    // properties where a HIGHER value is better, color a positive delta green, not red
     const higherBetter = {qed:true, cns_mpo:true};
 
     const tableRows = Object.entries(propLabels).map(([k,lbl]) => {
@@ -2669,24 +2668,24 @@ async function loadPatents(el) {
       return `<div class="card mb-1" style="border-left:3px solid #8a5a2b;padding:1.1rem 1.4rem">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
           <span class="material-symbols-outlined" style="color:#8a5a2b;font-size:17px">biotech</span>
-          <span style="font-weight:700;font-size:0.85rem;color:#0f1e3d">Biologic — Purple Book Status</span>
+          <span style="font-weight:700;font-size:0.85rem;color:#0f1e3d">Biologic, Purple Book Status</span>
           <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label || mod.modality || 'biologic'}</span>
         </div>
         <p style="font-size:0.75rem;color:#47526b;line-height:1.6;margin-bottom:8px">
-          <strong>${drug}</strong> is a biologic, so it has no FDA Orange Book (small-molecule) patents. Biologic protection is tracked in the <strong>FDA Purple Book</strong> — reference-product exclusivity and biosimilar competition.
+          <strong>${drug}</strong> is a biologic, so it has no FDA Orange Book (small-molecule) patents. Biologic protection is tracked in the <strong>FDA Purple Book</strong>, reference-product exclusivity and biosimilar competition.
         </p>
         ${pb.found ? `<div style="display:flex;gap:1.8rem;flex-wrap:wrap">
-          <div><div style="font-size:0.61rem;text-transform:uppercase;color:#98a1b6;font-weight:700">Reference exclusivity</div><div style="font-size:1.1rem;font-weight:800;color:${pb.cliff_open ? '#b3261e' : '#2563eb'};font-family:monospace">${(pb.cliff || '—').slice(0, 7)}</div><div style="font-size:0.62rem;color:#98a1b6">${pb.cliff_open ? 'expired — biosimilars can enter' : 'protected'}</div></div>
+          <div><div style="font-size:0.61rem;text-transform:uppercase;color:#98a1b6;font-weight:700">Reference exclusivity</div><div style="font-size:1.1rem;font-weight:800;color:${pb.cliff_open ? '#b3261e' : '#2563eb'};font-family:monospace">${(pb.cliff || ', ').slice(0, 7)}</div><div style="font-size:0.62rem;color:#98a1b6">${pb.cliff_open ? 'expired, biosimilars can enter' : 'protected'}</div></div>
           <div><div style="font-size:0.61rem;text-transform:uppercase;color:#98a1b6;font-weight:700">Licensed biosimilars</div><div style="font-size:1.1rem;font-weight:800;color:#0f1e3d;font-family:monospace">${pb.n_biosimilars || 0}</div><div style="font-size:0.62rem;color:#98a1b6">${pb.n_interchangeable || 0} interchangeable</div></div>
         </div>` : `<div style="font-size:0.73rem;color:#98a1b6">Not found in the current Purple Book extract (may be a very new or non-CDER biologic).</div>`}
       </div>`;
     })() : '';
-    const _fmtCliff = iso => { if(!iso) return '—'; try { return new Date(iso+'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short'}); } catch(_) { return iso; } };
+    const _fmtCliff = iso => { if(!iso) return ', '; try { return new Date(iso+'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short'}); } catch(_) { return iso; } };
     const cliffCard = (cliff.earliest_loss || cliff.protected_until) ? `
       <div class="card mb-1" style="border-left:3px solid #b3261e;padding:1rem 1.3rem">
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
           <span class="material-symbols-outlined" style="font-size:17px;color:#b3261e">event_busy</span>
-          <span style="font-size:0.83rem;font-weight:700;color:#0f1e3d">Patent Cliff — Earliest Generic Entry</span>
+          <span style="font-size:0.83rem;font-weight:700;color:#0f1e3d">Patent Cliff, Earliest Generic Entry</span>
         </div>
         <div style="display:flex;gap:1.8rem;flex-wrap:wrap">
           <div><div style="font-size:0.61rem;text-transform:uppercase;letter-spacing:0.05em;color:#98a1b6;font-weight:700">Earliest protection lost</div><div style="font-size:1.2rem;font-weight:800;color:#b3261e;font-family:monospace">${_fmtCliff(cliff.earliest_loss)}</div></div>
@@ -2850,7 +2849,7 @@ async function loadDossier(el) {
     const screenDefs = [
       ['target',     'Target Overlap',    '#2563eb', 'Drug targets ∩ disease gene set'],
       ['pathway',    'Pathway Overlap',   '#0e7490', 'Shared curated pathways'],
-      ['ppi',        'PPI Network',       '#2563eb', 'STRING protein–protein interaction proximity'],
+      ['ppi',        'PPI Network',       '#2563eb', 'STRING protein, protein interaction proximity'],
       ['clinical',   'Clinical Signal',   '#0e7490', 'Phase/approval evidence'],
       ['indication', 'Indication Match',  '#b3261e', 'Existing indication semantic similarity'],
       ['regulatory', '505(b)(2)',         '#2563eb', 'Regulatory feasibility score'],
@@ -2946,7 +2945,7 @@ async function loadDossier(el) {
           <a href="${p.url}" target="_blank" style="font-size:0.78rem;font-weight:600;color:#0e7490;text-decoration:none;line-height:1.4">${p.title||'View paper'}</a>
           <div style="font-size:0.68rem;color:#98a1b6;margin-top:2px">${p.journal||''} ${p.year?'· '+p.year:''} · PMID ${p.pmid}</div>
         </div>`).join('')
-      : '<p style="color:#98a1b6;font-size:0.78rem">No PubMed results for this drug–disease pair.</p>';
+      : '<p style="color:#98a1b6;font-size:0.78rem">No PubMed results for this drug, disease pair.</p>';
 
     // Clinical trials
     const trialHTML = trials.length

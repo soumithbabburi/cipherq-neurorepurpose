@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('graph-q').value=anchor;
   if(qDrug && qDisease){
     // Came from a candidate (drug + indication): show HOW they connect, not a generic
-    // neighbourhood — draw the drug -> shared target -> disease path and the rationale.
+    // neighbourhood, draw the drug -> shared target -> disease path and the rationale.
     loadConnection(qDrug, qDisease);
   } else if(anchor){
     loadGraph(anchor);
@@ -337,13 +337,13 @@ function renderConnectionPanel(res){
     chip.style.cssText='display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;'
       +'padding:4px 10px;border-radius:99px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;cursor:pointer';
     chip.textContent=s.gene+(s.weight?(' · '+s.weight):'');
-    chip.title='Shared target — the drug acts on it and disease genetics implicate it'
+    chip.title='Shared target, the drug acts on it and disease genetics implicate it'
       +(s.weight?(' (association weight '+s.weight+')'):'');
     chip.onclick=function(){if(byId['gene::'+s.gene])focusNode(byId['gene::'+s.gene]);};
     tw.appendChild(chip);
   });
   if(!(res.shared_targets||[]).length){
-    tw.innerHTML='<span style="font-size:0.74rem;color:#922019">No shared protein target in the current evidence — any link would be indirect.</span>';
+    tw.innerHTML='<span style="font-size:0.74rem;color:#922019">No shared protein target in the current evidence, any link would be indirect.</span>';
   }
   var pw=document.getElementById('cp-pathways');
   var pws=(res.pathways||[]).map(function(x){return x.name;}).filter(Boolean);

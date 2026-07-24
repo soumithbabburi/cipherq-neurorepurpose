@@ -286,7 +286,7 @@ function renderGrid(compounds, disease) {
 
 // Molecules the development-reality guardrails removed from the lead list: drugs already
 // approved for this indication (not a repurposing opportunity) and drugs withdrawn for
-// safety. Shown as honest context — a saturated indication SHOULD surface few novel
+// safety. Shown as honest context, a saturated indication SHOULD surface few novel
 // leads and many already-approved drugs, and hiding that would overstate the whitespace.
 function renderExcluded(excluded, disease) {
   const box = document.getElementById('excluded-context');
@@ -298,11 +298,11 @@ function renderExcluded(excluded, disease) {
   const chip = (e) => `<span title="${((e.market_status||{}).reason || e.reason || '').replace(/"/g,'')}" style="display:inline-block;font-size:0.7rem;font-weight:500;padding:3px 10px;border-radius:99px;background:#fff;color:#6b7280;border:1px solid #e5e7eb;margin:0 5px 5px 0">${e.name}</span>`;
   let html = `<div style="background:#fafafa;border:1px solid #ececec;border-radius:12px;padding:14px 16px">`;
   if (approved.length) {
-    html += `<div style="font-size:0.8rem;color:#374151;font-weight:600;margin-bottom:8px">${approved.length} drug${approved.length==1?'':'s'} already approved for ${disease} — excluded from leads (reference, not a repurposing opportunity)</div>
+    html += `<div style="font-size:0.8rem;color:#374151;font-weight:600;margin-bottom:8px">${approved.length} drug${approved.length==1?'':'s'} already approved for ${disease}, excluded from leads (reference, not a repurposing opportunity)</div>
       <div style="line-height:1.9">${approved.map(chip).join('')}</div>`;
   }
   if (notViable.length) {
-    html += `<div style="font-size:0.8rem;color:#7a1d12;font-weight:600;margin:${approved.length?'12px':'0'} 0 8px">${notViable.length} withdrawn / not a viable asset — excluded</div>
+    html += `<div style="font-size:0.8rem;color:#7a1d12;font-weight:600;margin:${approved.length?'12px':'0'} 0 8px">${notViable.length} withdrawn / not a viable asset, excluded</div>
       <div style="line-height:1.9">${notViable.map(chip).join('')}</div>`;
   }
   html += `</div>`;
@@ -374,7 +374,7 @@ async function runSubtypeGroups(q) {
   const cont = document.getElementById('subtype-groups');
   if (!cont) return;
   cont.style.display = 'block';
-  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:0.82rem;color:#6b7690"><span class="spinner"></span> Running each subtype separately — grouping results…</div>';
+  cont.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:0.82rem;color:#6b7690"><span class="spinner"></span> Running each subtype separately, grouping results…</div>';
   try {
     const data = await apiFetch('/api/search-subtypes', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -383,7 +383,7 @@ async function runSubtypeGroups(q) {
     if (!data || !data.is_broad || !(data.groups || []).length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
     const header = `<div class="section-head" style="margin-bottom:0.75rem">
         <span class="s-kicker">Subtype breakdown</span>
-        <span class="section-title">${data.parent} — results by specific subtype</span><div class="rule"></div>
+        <span class="section-title">${data.parent}, results by specific subtype</span><div class="rule"></div>
       </div>`;
     const sections = data.groups.map(function (g) {
       const cards = (g.compounds || []).map(function (c) {

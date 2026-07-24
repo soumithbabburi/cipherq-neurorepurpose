@@ -178,7 +178,7 @@ function pwSummaryHtml(res){
     var isOrgan = cls.category==='primary_organ_specific';
     var chipCls = isOrgan ? 'green' : 'purple';
     var detail = isOrgan
-      ? ('target organ: '+(cls.target_organ||'—'))
+      ? ('target organ: '+(cls.target_organ||', '))
       : ('secondary manifestations across '+((cls.affected_systems||[]).join(', ')||'multiple systems'));
     clsHtml = '<div style="margin-top:10px;padding:9px 11px;background:var(--bg-sunken);border-radius:8px">'
       + '<span class="chip '+chipCls+'" style="font-size:10px">'+cls.label+'</span> '

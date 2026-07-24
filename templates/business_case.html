@@ -246,14 +246,14 @@ function renderEcon() {
   Plotly.newPlot('cost-chart', [{
     type:'bar', x:['De novo','Repurposing'], y:[2.6, 0.65],
     marker:{color:['#98a1b6','#2563eb']},
-    text:['$2.6B','$0.3–1B'], textposition:'outside',
+    text:['$2.6B','$0.3 to 1B'], textposition:'outside',
     hovertemplate:'%{x}: %{text}<extra></extra>'
   }], Object.assign({yaxis:{title:'USD billion',range:[0,3.1],gridcolor:'#e3e8f0',linecolor:'#e3e8f0'},xaxis:{linecolor:'#e3e8f0'}}, common), {displayModeBar:false, responsive:true});
 
   Plotly.newPlot('time-chart', [{
     type:'bar', x:['De novo','Repurposing'], y:[12.5, 5],
     marker:{color:['#98a1b6','#2563eb']},
-    text:['10–15 yr','3–7 yr'], textposition:'outside',
+    text:['10 to 15 yr','3 to 7 yr'], textposition:'outside',
     hovertemplate:'%{x}: %{text}<extra></extra>'
   }], Object.assign({yaxis:{title:'Years',range:[0,16],gridcolor:'#e3e8f0',linecolor:'#e3e8f0'},xaxis:{linecolor:'#e3e8f0'}}, common), {displayModeBar:false, responsive:true});
 }

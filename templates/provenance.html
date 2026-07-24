@@ -40,7 +40,7 @@
 <div class="mb-xl">
   <div class="section-head" style="margin-bottom:2px"><span class="s-kicker">Trust layer</span></div>
   <h2 class="font-display text-text-primary" style="font-size:1.6rem;font-weight:600;letter-spacing:-0.015em">Data Provenance &amp; Freshness</h2>
-  <p class="text-sm text-text-muted" style="margin-top:2px">Every source behind the intelligence, dated and integrity-scored — so you know exactly where a number came from and how fresh it is.</p>
+  <p class="text-sm text-text-muted" style="margin-top:2px">Every source behind the intelligence, dated and integrity-scored, so you know exactly where a number came from and how fresh it is.</p>
 </div>
 
 <div class="prov-sum" id="prov-sum"></div>
@@ -69,12 +69,12 @@ fetch('/api/provenance').then(function(r){return r.json();}).then(function(d){
   for(var i=0;i<srcs.length;i++){ var s=srcs[i], fr=s.freshness||{};
     h+='<div class="src-card'+(s.flag?' flag':'')+'">'
       +'<div><div class="src-name">'+esc(s.name)+' <span class="badge '+authClass(s.authority)+'">'+esc(s.authority)+'</span></div>'
-      +'<div class="src-kind">'+esc(s.kind)+' · refreshes '+esc(s.cadence||'—')+'</div>'
+      +'<div class="src-kind">'+esc(s.kind)+' · refreshes '+esc(s.cadence||', ')+'</div>'
       +'<div class="src-feeds">'+esc(s.feeds||'')+'</div>'
       +'<div class="src-note">'+esc(s.integrity_note||'')+'</div>'
       +'<a class="src-url" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.url)+' ↗</a></div>'
       +'<div class="src-meta">'
-      +'<div class="fresh '+freshClass(fr['class'])+'"><span class="dot"></span>'+esc(fr.label||'—')
+      +'<div class="fresh '+freshClass(fr['class'])+'"><span class="dot"></span>'+esc(fr.label||', ')
         +(fr.live?' · real-time':(fr.as_of?' · '+esc(fr.as_of):''))+'</div>'
       +'<div class="int-bar"><div class="int-fill" style="width:'+(s.score||0)+'%;background:'+intColor(s.score)+'"></div></div>'
       +'<div class="int-lbl">Data-Age &amp; Integrity '+(s.score||0)+'/100'+(s.flag?' · needs refresh':'')+'</div>'

@@ -34,7 +34,7 @@
 <!-- At-a-glance: two tiers -->
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1.25rem">
   <div class="card" style="margin:0;border-top:3px solid var(--accent,#2563eb)">
-    <div class="card-title" style="margin:0 0 8px">Tier 1 — the data is trustworthy</div>
+    <div class="card-title" style="margin:0 0 8px">Tier 1, the data is trustworthy</div>
     <div class="cc-tags">
       {% if conc and conc.overall_concordance_pct %}<span class="chip green">{{ conc.overall_concordance_pct }}% concordant vs an independent authority</span>{% endif %}
       {% if mech and mech.direction_agreement_pct %}<span class="chip green">{{ mech.direction_agreement_pct }}% mechanism direction</span>{% endif %}
@@ -45,7 +45,7 @@
     <div class="text-sm text-text-muted" style="margin-top:8px">Independent references, re-runnable scripts, ALCOA+ / GAMP 5 discipline.</div>
   </div>
   <div class="card" style="margin:0;border-top:3px solid var(--purple,#6b5b9a)">
-    <div class="card-title" style="margin:0 0 8px">Tier 2 — the results recover reality</div>
+    <div class="card-title" style="margin:0 0 8px">Tier 2, the results recover reality</div>
     <div class="cc-tags">
       {% if pred and pred.metrics %}<span class="chip green">AUROC {{ pred.metrics.engine_mechanistic.auroc }} vs an external gold standard</span>
       <span class="chip cyan">per-disease {{ pred.per_disease_mean_auroc }}</span>{% endif %}
@@ -54,14 +54,14 @@
     </div>
     <div class="text-sm text-text-muted" style="margin-top:8px">
       Mechanistic score, clinical/literature features removed so it can't cheat. And we
-      <strong>tested and rejected</strong> what didn't generalise — KG-embedding and metapath/DWPC both failed
+      <strong>tested and rejected</strong> what didn't generalise, KG-embedding and metapath/DWPC both failed
       the external benchmark (below). Killing our own features when the data says so is what makes the rest credible.
     </div>
   </div>
 </div>
 <p class="text-sm text-text-muted" style="margin:-0.4rem 0 1.4rem">
   <strong>The honest boundary:</strong> this validates the data and the <em>retrospective</em> recovery of known
-  repurposing. It is not prospective or clinical validation, and not a formal regulatory certification — it is
+  repurposing. It is not prospective or clinical validation, and not a formal regulatory certification, it is
   built to those standards and measured in the open.
 </p>
 {% endif %}
@@ -130,7 +130,7 @@
       <div class="text-sm text-text-muted">concordant within {{ conc.tolerance_log|int }} log</div>
     </div>
     <div class="text-sm text-text-muted" style="flex:1;min-width:240px">
-      Of <strong>{{ "{:,}".format(conc.pairs_compared) }}</strong> compound–target affinity pairs present in
+      Of <strong>{{ "{:,}".format(conc.pairs_compared) }}</strong> compound, target affinity pairs present in
       <strong>both</strong> our data and an independently-curated authority, this fraction agree within one
       log unit (median absolute difference <strong>{{ conc.overall_median_abs_diff_log }} log</strong>). This is
       our data measured against a <strong>second, independent authority</strong> - not itself.
@@ -158,7 +158,7 @@
 <div class="section-head" style="margin:0.5rem 0 0.6rem"><span class="s-kicker">Measured Affinity Noise - reproducibility</span></div>
 <div class="card mb-2">
   <p class="text-sm text-text-muted" style="margin:0 0 0.75rem">
-    We do not claim the data is noise-free - we measure it. For each compound–target pair with repeated
+    We do not claim the data is noise-free - we measure it. For each compound, target pair with repeated
     high-confidence measurements, the spread in potency (log units). Compared against the published
     experimental floor of ~{{ v.reference_noise_floor_log }} log (Kramer et al. 2012).
   </p>

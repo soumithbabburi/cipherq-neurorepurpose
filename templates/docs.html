@@ -76,16 +76,16 @@
           <tr><td>Network evidence</td><td>Knowledge-graph compound-treats-disease and compound-binds-gene paths</td><td>0.10</td></tr>
         </tbody>
       </table>
-      <h3>Calibrated tier — reading a low score correctly</h3>
+      <h3>Calibrated tier, reading a low score correctly</h3>
       <p>A raw score is meaningless without a baseline. A genuinely strong lead for a <em>novel</em> indication legitimately scores low in absolute terms (little direct clinical evidence), so a 0.28 can <em>look</em> weak while being a top-few-percent signal. Each score is therefore <strong>calibrated against a null distribution of random drug-disease pairs</strong> and reported as a <strong>percentile and tier</strong> (Strong / Promising / Moderate / Weak) plus an enrichment (fold over the random-pair median). This is why a modest absolute score can still read as &ldquo;Strong &middot; top 3%&rdquo; &mdash; that is the honest, presentable signal. Until the null is built the platform falls back to the heuristic bands below.</p>
-      <h3>How to read the score — the raw bands</h3>
+      <h3>How to read the score, the raw bands</h3>
       <p>The relevance score is a <strong>mechanistic-evidence rank</strong> (0 to 1, shown 0 to 100 on the cards), not a probability. It answers <em>how strong is the evidence that this drug is relevant to this disease</em>. The heuristic raw bands (used before calibration):</p>
       <table class="doc-table">
         <thead><tr><th>Score</th><th>Band</th><th>Action</th></tr></thead>
         <tbody>
-          <tr><td>65–100</td><td>Strong</td><td>Prioritise / advance</td></tr>
-          <tr><td>40–64</td><td>Moderate</td><td>Watchlist — needs more evidence</td></tr>
-          <tr><td>20–39</td><td>Weak</td><td>Deprioritise</td></tr>
+          <tr><td>65 to 100</td><td>Strong</td><td>Prioritise / advance</td></tr>
+          <tr><td>40 to 64</td><td>Moderate</td><td>Watchlist, needs more evidence</td></tr>
+          <tr><td>20 to 39</td><td>Weak</td><td>Deprioritise</td></tr>
           <tr><td>&lt;20</td><td>Negligible</td><td>Not a lead</td></tr>
         </tbody>
       </table>
@@ -96,7 +96,7 @@
         <thead><tr><th>Likelihood of approval</th><th>Band</th></tr></thead>
         <tbody>
           <tr><td>&ge; 30%</td><td>High (~3&times; the de-novo baseline)</td></tr>
-          <tr><td>12–30%</td><td>Moderate (beats the ~9.6% baseline)</td></tr>
+          <tr><td>12 to 30%</td><td>Moderate (beats the ~9.6% baseline)</td></tr>
           <tr><td>&lt; 12%</td><td>Low</td></tr>
         </tbody>
       </table>
@@ -111,7 +111,7 @@
       <p>The gate is data-driven, not a hardcoded target list: driver genes come from Open Targets genetic-association weights, and the disease&rsquo;s <strong>polygenicity</strong> is the effective number of drivers (inverse-Simpson of those weights). A monogenic disease with one dominant driver applies no penalty &mdash; hitting that single target suffices. A polygenic disease penalises a drug in proportion to how much of the driver set it misses, so a multi-target drug ranks above a single-target one for the same complex indication. The gate is fail-soft (no penalty without genetic weights) and only applies to mechanistic candidates.</p>
       <h3>Approved-indication exclusion</h3>
       <p>A drug&rsquo;s <strong>own approved indications are removed</strong> before ranking &mdash; a repurposing list should never surface an on-label use. Approval is drawn from ChEMBL per-indication phase and, because ChEMBL lags recent approvals, supplemented with the current FDA label (openFDA). Matching is done through a single disease-identity layer that reconciles the different ontologies and name conventions each source uses (ChEMBL MeSH headings such as &ldquo;Arthritis, Rheumatoid&rdquo;, Open Targets MONDO/EFO names such as &ldquo;rheumatoid arthritis&rdquo;), so the same disease matches regardless of id space or word order.</p>
-      <h3>Positive pivots — from filter to discovery</h3>
+      <h3>Positive pivots, from filter to discovery</h3>
       <p>When the clinical constraint harmonizer crushes a biologically strong hit, the platform does not stop at &ldquo;won&rsquo;t work&rdquo; &mdash; it uses the same verdict to propose how the hypothesis <em>could</em> work: a <strong>precision pivot</strong> to a high-severity or orphan variant of the disease where the toxicity is justified; a <strong>dose-sparing combination</strong> with a low-toxicity co-drug on the same pathway; or a <strong>brain-penetrant analogue</strong> with the limiting physicochemical property identified for scaffold modification. Every pivot is explicitly a hypothesis to validate, not a de-risked asset &mdash; lead generation, not certification.</p>
       <h3>Clinical-trial outcomes</h3>
       <p>Clinical evidence is directional, not just a count. Trials of the drug in the candidate indication are classified by outcome: a completed trial (especially with posted results) is positive support, while a trial <strong>terminated for efficacy or safety</strong> is real negative evidence &mdash; the drug was tested there and did not work &mdash; and down-ranks the candidate. Terminations for recruitment or funding are treated as neutral (not the drug&rsquo;s fault). So a drug that failed a Phase&nbsp;3 for an indication is penalised, not credited for &ldquo;having a trial&rdquo;.</p>

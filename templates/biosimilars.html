@@ -25,7 +25,7 @@
     <div class="field">
       <label for="bs-center">Regulatory center</label>
       <select id="bs-center" class="input" onchange="load()">
-        <option value="CDER" selected>CDER — therapeutic mAbs &amp; proteins</option>
+        <option value="CDER" selected>CDER, therapeutic mAbs &amp; proteins</option>
         <option value="all">All centers (incl. CBER)</option>
       </select>
     </div>
@@ -65,7 +65,7 @@
 {% block scripts %}
 <script>
 function fmtDate(iso){
-  if(!iso) return '—';
+  if(!iso) return ', ';
   try { var d=new Date(iso+'T00:00:00'); return d.toLocaleDateString(undefined,{year:'numeric',month:'short'}); }
   catch(_){ return iso; }
 }
@@ -82,9 +82,9 @@ function chip(txt,col){
 }
 
 function bsList(rows){
-  if(!rows||!rows.length) return '<span class="text-dim" style="font-size:0.74rem">No biosimilars licensed yet — open whitespace.</span>';
+  if(!rows||!rows.length) return '<span class="text-dim" style="font-size:0.74rem">No biosimilars licensed yet, open whitespace.</span>';
   return rows.map(function(b){
-    var name = b.brand || b.name || '—';
+    var name = b.brand || b.name || ', ';
     var ix = b.interchangeable ? ' <span class="chip" style="font-size:9px;background:#2563eb18;color:#2563eb;border:1px solid #2563eb40">interchangeable</span>' : '';
     return '<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #f1efe7;font-size:0.73rem">'
       + '<span style="color:#0f1e3d">'+name+ix+'</span>'
@@ -133,7 +133,7 @@ function card(r){
   +     '<span class="chip" style="background:#eef2f0;color:#47526b">'+r.timing_note+'</span></div>'
   +   (r.value&&r.value.best_indication ? '<div style="font-size:0.68rem;color:#98a1b6">Most valuable indication: '+r.value.best_indication+'</div>' : '')
   +   '<details style="margin-top:2px" ontoggle="loadEvidence(this,\''+(r.proper_name||'').replace(/\x27/g,\'&#39;\')+'\')">'
-  +     '<summary style="cursor:pointer;font-size:0.72rem;color:#5a5a8a;font-weight:600">Evidence &amp; activity — biosimilar trials &amp; literature</summary>'
+  +     '<summary style="cursor:pointer;font-size:0.72rem;color:#5a5a8a;font-weight:600">Evidence &amp; activity, biosimilar trials &amp; literature</summary>'
   +     '<div class="bs-evidence" style="margin-top:8px;font-size:0.73rem;color:#6b7690">Loading…</div>'
   +   '</details>'
   +   (r.biosimilars&&r.biosimilars.length
