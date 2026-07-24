@@ -54,7 +54,8 @@ _DISEASE_ORGAN_STEMS: Dict[str, Tuple[str, ...]] = {
                          "pericard", "valv", "ejection fraction"),
     "vascular":         ("vascular", "thrombos", "thromboembol", "embolism",
                          "atheroscler", "aneurysm", "ischemic", "ischaemic",
-                         "stroke", "peripheral arter", "venous"),
+                         "stroke", "peripheral arter", "venous", "vasculit",
+                         "hypertension", "raynaud"),
     "hepatic":          ("hepat", "liver", "cirrhos", "cholestas", "biliary"),
     "renal":            ("renal", "kidney", "nephro", "nephrit", "glomerul"),
     "hematologic":      ("anemia", "anaemia", "neutropen", "thrombocytopen",
@@ -64,12 +65,27 @@ _DISEASE_ORGAN_STEMS: Dict[str, Tuple[str, ...]] = {
                          "cognit", "dementia", "parkinson", "multiple sclerosis",
                          "neurodegener", "meningit", "alzheimer"),
     "gastrointestinal": ("colitis", "pancreatit", "gastrointestinal", "bowel",
-                         "crohn", "enterocolitis", "gastric", "intestinal"),
+                         "crohn", "enterocolitis", "gastric", "intestinal",
+                         "esophag", "oesophag", "gastritis", "ulcerative",
+                         "coeliac", "celiac", "diverticul", "eosinophilic gastro"),
     "dermatologic":     ("psorias", "dermat", "cutaneous", "epidermal",
-                         "skin", "vitiligo"),
+                         "skin", "vitiligo", "eczema", "urticaria", "acne",
+                         "pemphig", "ichthyos"),
     "ocular":           ("retinopath", "macular", "ocular", "retinal", "glaucoma",
-                         "uveitis", "optic"),
-    "endocrine":        ("thyroid", "adrenal", "endocrin", "pituitary", "diabet"),
+                         "uveitis", "optic", "keratit", "conjunctiv"),
+    "endocrine":        ("thyroid", "adrenal", "endocrin", "pituitary", "diabet",
+                         "metabolic syndrome", "obesity", "dyslipid", "hyperlipid",
+                         "hypercholester", "acromegaly", "cushing"),
+    # Musculoskeletal / connective tissue — previously unmapped, so rheumatoid
+    # arthritis, myopathies, and myositis fell through with no organ and the
+    # organ-toxicity check silently skipped (a myotoxic drug went unpenalised).
+    "musculoskeletal":  ("arthritis", "arthropath", "arthr", "synovial", "spondyl",
+                         "myopath", "myositis", "myasthen", "muscular dystrophy",
+                         "rhabdomyol", "osteoarthr", "osteoporos", "gout",
+                         "tendin", "fibromyalg", "polymyalg", "sarcopeni",
+                         "rheumatoid", "connective tissue", "lupus", "scleroderma",
+                         "sjogren", "sjögren", "sarcoid", "polymyositis",
+                         "dermatomyositis", "still's disease", "still disease"),
 }
 
 # ── DRUG-TOXICITY → organ taxonomy (STRICT) ───────────────────────────────────
@@ -112,6 +128,10 @@ _TOX_ORGAN_STEMS: Dict[str, Tuple[str, ...]] = {
                          "blindness", "retinal vein"),
     "endocrine":        ("adrenal insufficien", "thyroiditis", "hypophysitis",
                          "hypothyroidism"),
+    # Genuine structural muscle toxicity only (not nonspecific "muscle pain"/weakness).
+    "musculoskeletal":  ("rhabdomyolysis", "myopathy", "myositis", "myopathy toxic",
+                         "necrotising myopathy", "necrotizing myopathy",
+                         "muscle necrosis", "osteonecrosis"),
 }
 
 # Tokens in a DISEASE name that mean the disease IS organ failure / structural
