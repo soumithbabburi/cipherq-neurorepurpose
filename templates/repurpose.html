@@ -48,7 +48,7 @@
     </div>
   </div>
   <p style="font-size:0.7rem;color:#98a1b6;margin-top:8px">
-    Candidates are drawn from three sources - <strong>genetic associations</strong> (a target-association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co-mention</strong> (PubMed) - and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
+    Candidates are drawn from three sources - <strong>genetic associations</strong> (a target association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co mention</strong> (PubMed) - and ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
   </p>
 </div>
 
@@ -83,7 +83,7 @@ function drugSummaryHtml(d){
   var port = d.portfolio || {};
   var badge = '';
   if (port.in_portfolio) {
-    var label = port.status === 'pipeline' ? 'Pipeline molecule' : '505(b)(2)-ready · in portfolio';
+    var label = port.status === 'pipeline' ? 'Pipeline molecule' : '505(b)(2) ready · in portfolio';
     var cls = port.status === 'pipeline' ? 'amber' : 'green';
     badge = '<span class="chip '+cls+'" style="font-size:11px">'+label+(port.form?(' · '+port.form):'')+'</span>';
   }
@@ -95,13 +95,13 @@ function drugSummaryHtml(d){
   var mpoRow = '';
   if (mpo.score != null) {
     // CNS exposure is a MOLECULAR property - relevant (good) for CNS indications,
-    // a side-effect consideration for peripheral ones. Frame it by context.
+    // a side effect consideration for peripheral ones. Frame it by context.
     var hasCns = (d.candidates||[]).some(function(c){ return c.cns_relevant; });
     var mc = mpo.cns_druggable ? '#2563eb' : (mpo.score >= 3 ? '#0e7490' : '#b3261e');
     var pct = Math.round((mpo.score/6)*100);
     var note = hasCns
       ? '(Wager 2010 CNS-MPO - relevant for the CNS indications in your results)'
-      : '(Wager 2010 CNS-MPO - a side-effect consideration for peripheral indications, not a goal)';
+      : '(Wager 2010 CNS-MPO - a side effect consideration for peripheral indications, not a goal)';
     mpoRow = '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">CNS exposure '
       + '<span style="color:#98a1b6;font-weight:400">'+note+'</span></div>'
       + '<div style="display:flex;align-items:center;gap:10px">'
@@ -169,10 +169,10 @@ function evidenceTierBadge(et){
   var col=m[et.tier]||m['preclinical'];
   return '<span class="chip" title="'+(et.note||'').replace(/"/g,'')+'" style="margin-top:5px;background:'+col[0]+';color:'+col[1]+';border:1px solid '+col[2]+';font-weight:600;font-size:11px">'+et.label+'</span>';
 }
-// Layer 2, Commercial & off-label friction
+// Layer 2, Commercial & off label friction
 function commercialFrictionChip(cf){
   if(!cf || !cf.penalized || !(cf.flags||[]).length) return '';
-  var label = (cf.off_label_risk>=0.4) ? 'Off-label reachable' : 'Commercial friction';
+  var label = (cf.off_label_risk>=0.4) ? 'Off label reachable' : 'Commercial friction';
   return '<div class="chip" style="align-self:flex-start;background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-weight:600" title="'+(cf.flags.join(' ')).replace(/"/g,'')+'">'+label+' · ×'+(cf.multiplier||1).toFixed(2)+' rank</div>';
 }
 // Layer 3, therapeutic-organ overlap (a false safety penalty that was correctly suppressed)
@@ -215,7 +215,7 @@ function candidateCard(c, chembl){
   var srcBadges = (c.sources||[]).map(function(s){var m=srcMap[s]||[s,'cyan']; return '<span class="chip '+m[1]+'">'+m[0]+'</span>';}).join(' ');
   var clinLine = '';
   if (c.trial_count) clinLine = c.trial_count+' trial'+(c.trial_count>1?'s':'')+(c.max_trial_phase?' · up to Phase '+c.max_trial_phase:'');
-  else if (c.lit_count) clinLine = c.lit_count+' PubMed co-mentions';
+  else if (c.lit_count) clinLine = c.lit_count+' PubMed co mentions';
   var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease)+'&from=repurpose';
   return ''
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
@@ -228,7 +228,7 @@ function candidateCard(c, chembl){
         ? '<span class="chip" style="align-self:flex-start;background:#eef3f0;color:#2563eb;border:1px solid #cfe0d8;font-size:0.66rem;font-weight:600" title="Scored individually as a specific subtype rather than as the broad umbrella indication.">Subtype of '+(c.parent_indication||'')+'</span>'
         : '')
   +   (c.prior_studied_phase
-        ? '<span class="chip" style="align-self:flex-start;background:#f8f2df;color:#0e7490;border:1px solid #e6cf95;font-size:0.66rem;font-weight:600" title="This drug has already been STUDIED (not approved) for this indication, prior clinical art kept as a 505(b)(2) de-risking asset, not a novel discovery.">Prior clinical art · Phase '+Math.round(c.prior_studied_phase)+'</span>'
+        ? '<span class="chip" style="align-self:flex-start;background:#f8f2df;color:#0e7490;border:1px solid #e6cf95;font-size:0.66rem;font-weight:600" title="This drug has already been STUDIED (not approved) for this indication, prior clinical art kept as a 505(b)(2) derisking asset, not a novel discovery.">Prior clinical art · Phase '+Math.round(c.prior_studied_phase)+'</span>'
         : '')
   +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
   +     '<span class="cc-bar-lbl">Developability</span>'
@@ -547,7 +547,7 @@ async function runScreen(){
     var qs = [];
     if (area) qs.push('area='+encodeURIComponent(area));
     if (inclOnc) qs.push('oncology=1');
-    var url = '/api/drug/'+encodeURIComponent(drug)+'/new-indications'+(qs.length?('?'+qs.join('&')):'');
+    var url = '/api/drug/'+encodeURIComponent(drug)+'/new indications'+(qs.length?('?'+qs.join('&')):'');
     var d = await window.apiFetch(url);
     _stopProgress();
     if (d.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+d.error+'</span>'; btn.disabled=false; return; }

@@ -98,7 +98,7 @@ function buildWhy(c) {
   else if (mech) parts.push(mech.slice(0, 44));
   if (ph >= 3) parts.push(window.phaseLabel(ph) + ' evidence');
   else if (ph >= 1) parts.push('Phase ' + ph + ' data');
-  if (c.in_portfolio || c.portfolio) parts.push('In portfolio · 505(b)(2)-ready');
+  if (c.in_portfolio || c.portfolio) parts.push('In portfolio · 505(b)(2) ready');
   return parts.slice(0, 2).join(' · ') || 'Computational repurposing candidate';
 }
 
@@ -125,7 +125,7 @@ function graphHref(chembl, disease) {
 }
 
 // Flag the one genuine novelty disqualifier: already APPROVED for this indication.
-// Prior lower-phase development is not flagged - it is de-risking, not a blocker.
+// Prior lower-phase development is not flagged - it is derisking, not a blocker.
 function approvedBadge(c) {
   if (!c.approved_here) return '';
   return `<div style="background:#fce8e6;border:1px solid #f5b5ad;border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:#7a1d12;line-height:1.4">Already approved for this indication - reference only, not a 505(b)(2) opportunity</div>`;
@@ -238,7 +238,7 @@ function buildTop3Card(c, disease, rank) {
 }
 
 // A lead needs real mechanistic support - target, pathway or network signal.
-// A drug that scores only on clinical co-mention (e.g. an antibiotic that merely
+// A drug that scores only on clinical co mention (e.g. an antibiotic that merely
 // appears in the disease's trial literature) has target=pathway=0 and must not be
 // featured as a lead, however high its clinical bar.
 function _hasMechanism(c) {
@@ -255,7 +255,7 @@ function renderTop3(compounds, disease) {
   const graphBtn = document.getElementById('graph-link-btn');
   // Leads must be genuine repurposing opportunities - never feature a drug already
   // approved for this indication (shown in the grid, flagged), nor a mechanism-less
-  // clinical co-mention. Fall back to all novel candidates only if NONE have a
+  // clinical co mention. Fall back to all novel candidates only if NONE have a
   // mechanistic signal, so diseases lacking target/pathway data still show leads.
   const eligible = compounds.filter(c => !c.approved_here);
   const mech = eligible.filter(_hasMechanism);

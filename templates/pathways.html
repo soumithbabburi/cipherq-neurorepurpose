@@ -249,7 +249,7 @@ async function runScreen(){
       btn.disabled = false; return;
     }
     status.innerHTML = 'Found <strong>'+res.n_candidates+'</strong> drug'+(res.n_candidates>1?'s':'')+' modulating <strong>'+res.pathway.name+'</strong>'
-      + (res.mode==='B'?' · top candidates carry an inferred new-indication claim.':'.');
+      + (res.mode==='B'?' · top candidates carry an inferred new indication claim.':'.');
     document.getElementById('results').innerHTML =
       '<div class="compound-grid">' + cands.map(candidateCard).join('') + '</div>';
   } catch(e){

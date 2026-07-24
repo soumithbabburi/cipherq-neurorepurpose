@@ -259,7 +259,7 @@ function switchTab(tab) {
 }
 
 // Lightweight client-side modality check (mirrors services/modality.py signals) so the
-// Properties view doesn't show small-molecule metrics (CNS-MPO, Ro5, LogP) for a biologic.
+// Properties view doesn't show small molecule metrics (CNS-MPO, Ro5, LogP) for a biologic.
 function _clientModality(c) {
   const n = (c.name || '').toLowerCase(), mt = (c.molecule_type || '').toLowerCase(), smi = c.smiles || '';
   if (/antibody/.test(mt) || /mab$/.test(n)) return { modality: 'antibody', label: 'antibody', is_sm: false };
@@ -282,7 +282,7 @@ function renderBiologicProperties(el, c, mod) {
         <span class="chip" style="background:#f4ede2;color:#47526b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label}</span>
       </div>
       <p style="font-size:0.76rem;color:#47526b;line-height:1.6">
-        <strong>${c.name || CHEMBL_ID}</strong> is a ${mod.label}. Small-molecule descriptors, <strong>CNS-MPO, Rule-of-Five, LogP, PSA, BBB penetration</strong>, do not apply to biologics and are intentionally not shown (a CNS-MPO of 0/6 for an antibody would be meaningless, not a real signal).
+        <strong>${c.name || CHEMBL_ID}</strong> is a ${mod.label}. Small molecule descriptors, <strong>CNS-MPO, Rule-of-Five, LogP, PSA, BBB penetration</strong>, do not apply to biologics and are intentionally not shown (a CNS-MPO of 0/6 for an antibody would be meaningless, not a real signal).
       </p>
       <div style="margin-top:10px">
         <div class="kv"><span class="kv-k">Modality</span><span class="kv-v" style="text-transform:capitalize">${mod.label} (${mod.modality})</span></div>
@@ -294,7 +294,7 @@ function renderBiologicProperties(el, c, mod) {
     </div>
     <div class="card">
       <div class="card-title mb-1">Biologics developability</div>
-      <p style="font-size:0.75rem;color:#47526b;line-height:1.6">This asset is evaluated on <strong>biologic developability</strong>, affinity, specificity, thermostability, solubility, aggregation, viscosity, immunogenicity, not small-molecule ADMET.</p>
+      <p style="font-size:0.75rem;color:#47526b;line-height:1.6">This asset is evaluated on <strong>biologic developability</strong>, affinity, specificity, thermostability, solubility, aggregation, viscosity, immunogenicity, not small molecule ADMET.</p>
       <a class="btn btn-secondary" style="margin-top:10px;justify-content:center" onclick="switchTab('optimization')">
         <span class="material-symbols-outlined" style="font-size:15px">tune</span>Open Biologics Optimization →</a>
     </div>`;
@@ -302,7 +302,7 @@ function renderBiologicProperties(el, c, mod) {
 
 async function renderProperties(el) {
   const c = compoundData || {};
-  // Biologic? show a modality-appropriate view (no small-molecule CNS/Ro5/LogP metrics).
+  // Biologic? show a modality-appropriate view (no small molecule CNS/Ro5/LogP metrics).
   const _mod = _clientModality(c);
   if (!_mod.is_sm) { renderBiologicProperties(el, c, _mod); return; }
   let p = c;
@@ -2672,7 +2672,7 @@ async function loadPatents(el) {
           <span class="chip" style="background:#f4ede2;color:#47526b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label || mod.modality || 'biologic'}</span>
         </div>
         <p style="font-size:0.75rem;color:#47526b;line-height:1.6;margin-bottom:8px">
-          <strong>${drug}</strong> is a biologic, so it has no FDA Orange Book (small-molecule) patents. Biologic protection is tracked in the <strong>FDA Purple Book</strong>, reference-product exclusivity and biosimilar competition.
+          <strong>${drug}</strong> is a biologic, so it has no FDA Orange Book (small molecule) patents. Biologic protection is tracked in the <strong>FDA Purple Book</strong>, reference-product exclusivity and biosimilar competition.
         </p>
         ${pb.found ? `<div style="display:flex;gap:1.8rem;flex-wrap:wrap">
           <div><div style="font-size:0.61rem;text-transform:uppercase;color:#98a1b6;font-weight:700">Reference exclusivity</div><div style="font-size:1.1rem;font-weight:800;color:${pb.cliff_open ? '#b3261e' : '#2563eb'};font-family:monospace">${(pb.cliff || ', ').slice(0, 7)}</div><div style="font-size:0.62rem;color:#98a1b6">${pb.cliff_open ? 'expired, biosimilars can enter' : 'protected'}</div></div>
@@ -2760,7 +2760,7 @@ async function loadPatents(el) {
           <a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" style="color:var(--cyan)">Google Patents →</a>
         </p>
         <div style="background:#f7f9fc;border:1px solid #cbd5e1;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:0.73rem;color:#47526b;line-height:1.55">
-          <strong>Why this matters for repurposing:</strong> active patents/exclusivity define freedom-to-operate and the earliest market entry; expired ones document regulatory precedent, prior safety data and manufacturing know-how that support a 505(b)(2) pathway.
+          <strong>Why this matters for repurposing:</strong> active patents/exclusivity define freedom to operate and the earliest market entry; expired ones document regulatory precedent, prior safety data and manufacturing know-how that support a 505(b)(2) pathway.
         </div>
         <div style="display:flex;gap:1rem;margin-top:0.5rem;flex-wrap:wrap">
           <span style="font-size:0.77rem"><span style="background:#d9e9df;color:#166534;padding:1px 8px;border-radius:999px;font-weight:600">${summary.active||0} Active</span></span>
@@ -2974,7 +2974,7 @@ async function loadDossier(el) {
         <div style="display:flex;flex-wrap:wrap;gap:1.25rem;align-items:center;margin-bottom:10px">
           <div><div style="font-family:monospace;font-size:2rem;font-weight:900;color:${posCol};line-height:1">${pos.loa_pct}%</div><div style="font-size:0.66rem;color:#98a1b6;text-transform:uppercase;letter-spacing:0.06em">LoA from ${pos.from_phase} · ${pos.band}</div></div>
           <div style="width:1px;height:42px;background:#e0ddd1"></div>
-          <div style="font-size:0.74rem;color:#47526b"><div>De-novo baseline: <strong>${Math.round((pos.baseline_de_novo_loa||0)*100)}%</strong></div><div>Dominant risk: <strong>${pos.dominant_risk||'-'}</strong></div></div>
+          <div style="font-size:0.74rem;color:#47526b"><div>De novo baseline: <strong>${Math.round((pos.baseline_de_novo_loa||0)*100)}%</strong></div><div>Dominant risk: <strong>${pos.dominant_risk||'-'}</strong></div></div>
         </div>
         <div style="font-size:0.68rem;font-weight:700;color:#47526b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Phase-transition survival</div>
         ${posTrans}
