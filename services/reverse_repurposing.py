@@ -1776,8 +1776,11 @@ def screen_indications_for_drug(
         _excl_505b2 = {}
     def _ind_phase_for(dis: str):
         return indication_phase_for(dis, _known_inds)
-    scored: List[Dict] = []
-    for c in candidates:
+    # Each candidate is scored independently (its own DB reads + live trial/patent/lit
+    # enrichment), so the candidates are scored concurrently on a bounded pool. This is the
+    # dominant cost of a cold reverse screen. Worker count is kept at/under the DB connection
+    # pools' headroom (raised to 8) so a pool is never exhausted into silent-empty results.
+    def _score_one(c):
         _attach_trials_by_name(c, trials)   # so a failed trial reaches a mechanism-only candidate
         dinfo = resolve_disease(c["disease"]) or {}
         disease_genes    = [t["gene_symbol"] for t in dinfo.get("targets", [])[:40]]
@@ -1963,7 +1966,10 @@ def screen_indications_for_drug(
             logger.debug(f"505b2 feasibility skipped: {_re}")
             entry["regulatory_505b2"] = {}
         entry["why_not"] = _why_not(entry)
-        scored.append(entry)
+        return entry
+
+    with ThreadPoolExecutor(max_workers=4) as _score_pool:
+        scored: List[Dict] = list(_score_pool.map(_score_one, candidates))
 
     # DEFAULT SORT = pharma repurposing value × pair evidence. The disease Value Score
     # (burden/unmet-need/market-fit) modulates the mechanistic evidence so that a great

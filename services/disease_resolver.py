@@ -29,7 +29,7 @@ def _get_pool():
         if _pool_failed:
             return None
         try:
-            _pool = psycopg2.pool.ThreadedConnectionPool(1, 5, **db_params())
+            _pool = psycopg2.pool.ThreadedConnectionPool(1, 8, **db_params())   # headroom for the parallel reverse-screen scoring loop
         except Exception as e:
             _pool_failed = True
             logger.warning(f"DB pool failed: {e}")

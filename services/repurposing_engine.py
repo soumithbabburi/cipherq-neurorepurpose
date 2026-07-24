@@ -75,7 +75,7 @@ def _get_chembl_pool() -> Optional[psycopg2.pool.ThreadedConnectionPool]:
         try:
             params = db_params()
             params["dbname"] = "chembl_33"   # indications live in chembl_33, not neurorepurpose
-            _chembl_pool = psycopg2.pool.ThreadedConnectionPool(1, 4, **params)
+            _chembl_pool = psycopg2.pool.ThreadedConnectionPool(1, 8, **params)   # headroom for the parallel reverse-screen scoring loop
         except Exception as e:
             logger.warning(f"chembl_33 pool unavailable (will fall back to REST): {e}")
     return _chembl_pool
