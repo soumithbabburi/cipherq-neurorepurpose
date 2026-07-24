@@ -909,6 +909,12 @@ def score_compound_for_disease(
     # direction-matched drug to the top). This also lets the pair clear the phantom-
     # cohesion gate. Disease-specific evidence (real target overlap, trials, an
     # existing indication) still differentiates candidates above this floor.
+    # Capture the REAL (evidence-derived) pathway score BEFORE any KG-novelty prior is
+    # folded in. The corroboration gate below must judge on this, not on the injected value,
+    # so a KG prior can lift the composite to SURFACE a hypothesis without also CERTIFYING
+    # its own "Strong/Promising" tier (that would be the same synthetic signal vouching for
+    # itself). Real pathway modulators (evidence pathway >= 0.30) are unaffected.
+    _pathway_evidence = float(scores.get("pathway", 0.0))
     if mechanistic_prior is not None:
         try:
             scores["pathway"] = max(scores["pathway"],
@@ -1314,7 +1320,7 @@ def score_compound_for_disease(
         float(directional.get("signal", 0.0)) > 0,         # directional KG evidence
         float(coverage.get("coverage") or 0.0) >= 0.5,     # genuine driver coverage
         net_eff >= 0.30,                                    # real (non-promiscuous) network path
-        scores["pathway"] >= 0.30,                          # pathway mechanism
+        _pathway_evidence >= 0.30,                          # pathway mechanism (evidence-derived, NOT the injected KG prior)
     ])
     if corroboration < 1 and calibration.get("tier") in ("Strong", "Promising"):
         calibration = dict(calibration, tier="Moderate", evidence_capped=True,
