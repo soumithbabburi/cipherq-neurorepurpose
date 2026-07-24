@@ -94,7 +94,7 @@ function drugsCard(drugs){
   if(!drugs.length) return '<div class="card"><div class="card-title mb-1">Drugs via novel targets</div><span class="text-dim">No drugs found for the inferred targets.</span></div>';
   var cards = drugs.map(function(d){
     var col = confCol(d.target_confidence||0);
-    return '<div style="border:1px solid #e6e2d7;border-radius:10px;padding:10px 12px;background:#fbfaf6">'
+    return '<div style="border:1px solid #e3e8f0;border-radius:10px;padding:10px 12px;background:#fbfaf6">'
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
       + '<span style="font-weight:800;font-size:0.86rem;color:#0f1e3d">'+(d.name||d.chembl_id)+'</span>'
       + '<span class="chip cyan" style="font-size:0.6rem">'+phaseLabel(d.max_phase)+'</span></div>'

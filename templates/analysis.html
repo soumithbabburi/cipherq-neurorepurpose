@@ -44,7 +44,7 @@
     {% if not loop.last %}<div style="width:28px;height:1px;background:#e0ddd1;flex-shrink:0;margin-bottom:10px"></div>{% endif %}
     {% endfor %}
     <div style="width:1px;height:28px;background:#e0ddd1;margin:0 8px"></div>
-    <a id="graph-link-wf" href="/graph" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px;text-decoration:none;border-radius:8px;background:#eef3f0;border:1px solid #cfe0d8">
+    <a id="graph-link-wf" href="/graph" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 14px;text-decoration:none;border-radius:8px;background:#eef4ff;border:1px solid #cfe0f8">
       <span class="material-symbols-outlined" style="font-size:18px;color:#2563eb">hub</span>
       <span style="font-size:10px;font-weight:600;color:#2563eb;white-space:nowrap">Knowledge Graph</span>
     </a>
@@ -178,10 +178,10 @@ function renderHeader(c) {
   const sc = c.score || 0;
   const ph = Math.min(+(c.max_phase||0),4);
   const phMap = {
-    4:['#eef4ef','#2563eb','#bfe0cd','FDA Approved'],
-    3:['#fbf6ea','#0e7490','#e6cf95','Phase 3'],
-    2:['#eef3f0','#2563eb','#cfe0d8','Phase 2'],
-    1:['#f8f2df','#0e7490','#e6cf95','Phase 1']
+    4:['#eef4ff','#2563eb','#bcd0f5','FDA Approved'],
+    3:['#f7f9fc','#0e7490','#cbd5e1','Phase 3'],
+    2:['#eef4ff','#2563eb','#cfe0f8','Phase 2'],
+    1:['#f7f9fc','#0e7490','#cbd5e1','Phase 1']
   };
   const [pbg,pcolor,pborder,plabel] = phMap[ph]||['#f7f9fc','#47526b','#e0ddd1','Preclinical'];
   document.getElementById('d-name').textContent = c.name || 'Unknown';
@@ -238,7 +238,7 @@ function switchTab(tab) {
     if (!icon) return;
     if (sid === tab) {
       icon.style.color = '#2563eb'; lbl.style.color = '#2563eb';
-      if (btn) { btn.style.background = '#eef3f0'; btn.style.borderRadius = '8px'; }
+      if (btn) { btn.style.background = '#eef4ff'; btn.style.borderRadius = '8px'; }
     } else {
       icon.style.color = '#98a1b6'; lbl.style.color = '#98a1b6';
       if (btn) { btn.style.background = 'transparent'; btn.style.borderRadius = ''; }
@@ -275,11 +275,11 @@ function renderBiologicProperties(el, c, mod) {
   const targets = (c.targets || '').split(/[;,]/).filter(Boolean).slice(0, 8).map(function (t) { return '<span class="chip green">' + t.trim() + '</span>'; }).join(' ');
   const phase = { 4: 'FDA Approved', 3: 'Phase 3', 2: 'Phase 2', 1: 'Phase 1' }[+(c.max_phase || 0)] || 'Preclinical';
   el.innerHTML = `
-    <div class="card mb-1" style="border-left:3px solid #8a5a2b">
+    <div class="card mb-1" style="border-left:3px solid #47526b">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-        <span class="material-symbols-outlined" style="color:#8a5a2b;font-size:18px">biotech</span>
+        <span class="material-symbols-outlined" style="color:#47526b;font-size:18px">biotech</span>
         <span style="font-weight:700;font-size:0.9rem;color:#0f1e3d">Biologic Profile</span>
-        <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label}</span>
+        <span class="chip" style="background:#f4ede2;color:#47526b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label}</span>
       </div>
       <p style="font-size:0.76rem;color:#47526b;line-height:1.6">
         <strong>${c.name || CHEMBL_ID}</strong> is a ${mod.label}. Small-molecule descriptors, <strong>CNS-MPO, Rule-of-Five, LogP, PSA, BBB penetration</strong>, do not apply to biologics and are intentionally not shown (a CNS-MPO of 0/6 for an antibody would be meaningless, not a real signal).
@@ -315,7 +315,7 @@ async function renderProperties(el) {
   const ro5   = +(p.ro5_violations || 0);
   const phase = {4:'FDA Approved',3:'Phase 3',2:'Phase 2',1:'Phase 1'}[+(p.max_phase||0)] || 'Preclinical';
   const bbbColor = p.bbb_level==='High' ? '#2563eb' : p.bbb_level==='Moderate' ? '#0e7490' : '#b3261e';
-  const bbbBg    = p.bbb_level==='High' ? '#eef4ef' : p.bbb_level==='Moderate' ? '#f8f2df' : '#faece9';
+  const bbbBg    = p.bbb_level==='High' ? '#eef4ff' : p.bbb_level==='Moderate' ? '#f7f9fc' : '#faece9';
   const cns      = p.cns_mpo || 0;
   const cnsColor = cns >= 4 ? '#2563eb' : cns >= 2 ? '#0e7490' : '#b3261e';
   const solColor = {High:'#2563eb',Good:'#2563eb',Moderate:'#0e7490',Low:'#b3261e',Poor:'#b3261e'}[p.sol_class] || '#6b7690';
@@ -590,7 +590,7 @@ async function loadBioactivity(el) {
         textposition: 'outside',
         marker: {
           color: chartData.map(a => a.pchembl_value),
-          colorscale: [[0,'#cfe0d8'],[0.5,'#2563eb'],[1,'#1e40af']],
+          colorscale: [[0,'#cfe0f8'],[0.5,'#2563eb'],[1,'#1e40af']],
           showscale: false, line: {width: 0}
         }
       }], {
@@ -637,18 +637,18 @@ async function loadIndications(el) {
       return;
     }
     const phaseStyle = {
-      4: {label:'FDA Approved', bg:'#eef4ef', color:'#166534'},
+      4: {label:'FDA Approved', bg:'#eef4ff', color:'#166534'},
       3: {label:'Phase III',    bg:'#eff6ff', color:'#1e40af'},
       2: {label:'Phase II',     bg:'#fdf4ff', color:'#6b21a8'},
-      1: {label:'Phase I',      bg:'#f8f2df', color:'#7a5c43'},
+      1: {label:'Phase I',      bg:'#f7f9fc', color:'#47526b'},
       0: {label:'Preclinical',  bg:'#f7f9fc', color:'#47526b'},
     };
     const areaColors = {
       'Oncology':{'bg':'#faece9','color':'#922019'},
-      'CNS / Psychiatry':{'bg':'#eef3f0','color':'#5b21b6'},
+      'CNS / Psychiatry':{'bg':'#eef4ff','color':'#5b21b6'},
       'Cardiovascular':{'bg':'#eff6ff','color':'#1e40af'},
-      'Metabolic / Renal':{'bg':'#efe3c2','color':'#7a5c43'},
-      'Autoimmune':{'bg':'#eef4ef','color':'#065f46'},
+      'Metabolic / Renal':{'bg':'#efe3c2','color':'#47526b'},
+      'Autoimmune':{'bg':'#eef4ff','color':'#1c3fa8'},
       'Respiratory':{'bg':'#f3e8cf','color':'#6d4e08'},
       'Hepatology':{'bg':'#fdf4ff','color':'#7e22ce'},
       'Infectious Disease':{'bg':'#fff7ed','color':'#5c3a1f'},
@@ -656,7 +656,7 @@ async function loadIndications(el) {
       'Other':{'bg':'#f7f9fc','color':'#47526b'},
     };
     const srcBadge = s => s === 'Genetic'
-      ? `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#efe3c2;color:#7a5c43">Assoc</span>`
+      ? `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#efe3c2;color:#47526b">Assoc</span>`
       : `<span style="font-size:0.63rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#e3ede8;color:#5b21b6">Curated</span>`;
     const approvedCount = inds.filter(i => +(i.max_phase||0) === 4).length;
     const clinicalCount = inds.filter(i => +(i.max_phase||0) >= 1).length;
@@ -693,7 +693,7 @@ async function loadIndications(el) {
             <div style="font-size:0.72rem;font-weight:700;color:#5b21b6;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Therapeutic Area</div>
             <div style="font-size:0.76rem;color:#47526b;line-height:1.55">Broad clinical domain (e.g. <em>Oncology</em>, <em>CNS/Psychiatry</em>, <em>Cardiovascular</em>). Defines which medical specialty this compound is relevant to.</div>
           </div>
-          <div style="width:1px;background:#e6e2d7;align-self:stretch"></div>
+          <div style="width:1px;background:#e3e8f0;align-self:stretch"></div>
           <div style="flex:1;min-width:200px">
             <div style="font-size:0.72rem;font-weight:700;color:#6d4e08;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Disease Indication</div>
             <div style="font-size:0.76rem;color:#47526b;line-height:1.55">Specific condition this compound is approved or clinically tested for (e.g. <em>Alzheimer Disease</em>, <em>Breast Cancer</em>). Mapped to standard ontology IDs.</div>
@@ -936,7 +936,7 @@ async function runPBPK() {
         <div class="card">
           <div class="card-title mb-1">PK Metrics
             ${adme.anchored
-              ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#065f46;font-size:9px;font-weight:700;letter-spacing:0.04em">MEASURED PK</span>'
+              ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#d9e9df;color:#1c3fa8;font-size:9px;font-weight:700;letter-spacing:0.04em">MEASURED PK</span>'
               : '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;background:#e8edf6;color:#6b7690;font-size:9px;font-weight:700;letter-spacing:0.04em">ESTIMATED</span>'}
           </div>
           ${[['Cmax (plasma)',cmax],['Tmax',tmax],['AUC (0, t)',auc],['Half-life (t½)',thalf],['Brain/Plasma Ratio',bpr]]
@@ -978,7 +978,7 @@ let _dockPockets    = [];  // named binding pockets for current target
 let _dockPosePockets = []; // pocket id per pose (parallel to _dockPoses)
 let _proteinFetching = false;
 // Warm palette for pocket ranks (matches the knowledge-graph node hues)
-const POCKET_COLORS = ['#2563eb','#06b6d4','#b5552f','#7a5c43','#98a1b6'];
+const POCKET_COLORS = ['#2563eb','#06b6d4','#b5552f','#47526b','#98a1b6'];
 let _diseaseTargets = [];  // OT targets loaded for current disease
 let _geneInfoCache  = {};  // gene → gene-info API result
 
@@ -1023,12 +1023,12 @@ async function _loadTargetEvidence(gene) {
 
   const otPct   = Math.round((info.ot_score || 0) * 100);
   const otColor = otPct >= 60 ? '#2563eb' : otPct >= 30 ? '#0e7490' : '#98a1b6';
-  const otBar   = `<div style="display:inline-block;width:48px;height:5px;background:#e6e2d7;border-radius:3px;vertical-align:middle;margin:0 4px 1px">
+  const otBar   = `<div style="display:inline-block;width:48px;height:5px;background:#e3e8f0;border-radius:3px;vertical-align:middle;margin:0 4px 1px">
     <div style="height:100%;width:${otPct}%;background:${otColor};border-radius:3px"></div></div>`;
 
   const drugNm = (compoundData && compoundData.name) ? compoundData.name : 'this drug';
   const knownHtml = info.is_known_target
-    ? `<div style="margin-top:6px;padding:4px 7px;background:#eef4ef;border-radius:5px;color:#065f46;font-size:0.68rem">
+    ? `<div style="margin-top:6px;padding:4px 7px;background:#eef4ff;border-radius:5px;color:#1c3fa8;font-size:0.68rem">
         <strong>Known target</strong> - ${info.known_action}${info.known_mech ? ': '+info.known_mech.slice(0,80)+'…' : ''}
        </div>`
     : `<div style="margin-top:6px;padding:5px 8px;background:#fbf1e3;border:1px solid #ecd9b6;border-radius:5px;color:#0e7490;font-size:0.67rem;line-height:1.45">
@@ -1115,7 +1115,7 @@ async function renderDocking(el) {
             </select>
           </div>
           <!-- Gene→Disease evidence panel -->
-          <div id="target-evidence-card" style="display:none;margin-bottom:0.6rem;padding:10px 12px;border-radius:8px;background:#eef3f0;border:1px solid #cfe0d8;font-size:0.72rem">
+          <div id="target-evidence-card" style="display:none;margin-bottom:0.6rem;padding:10px 12px;border-radius:8px;background:#eef4ff;border:1px solid #cfe0f8;font-size:0.72rem">
           </div>
           <div class="field" style="margin-bottom:0.6rem">
             <label>Ligand SMILES
@@ -1366,7 +1366,7 @@ function _dockingViewerHtml(proteinPdb, ligandSdf, opts) {
   const h  = opts.h  || 420;
   const proteinJs = proteinPdb.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$\{/g,'\\${');
   const ligandJs  = ligandSdf.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$\{/g,'\\${');
-  const POCKET_COLS = ['#2563eb','#06b6d4','#b5552f','#7a5c43','#98a1b6'];
+  const POCKET_COLS = ['#2563eb','#06b6d4','#b5552f','#47526b','#98a1b6'];
   const pocketsJson = JSON.stringify((opts.pockets || []).map((p,i) => ({
     id: p.id, label: p.label, name: p.name,
     center: p.center, volume: p.volume, color: POCKET_COLS[i % POCKET_COLS.length],
@@ -1695,7 +1695,7 @@ async function runDocking() {
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">
 
           <!-- Drug node -->
-          <div style="text-align:center;padding:8px 12px;background:#eef3f0;border:2px solid #2563eb;border-radius:8px;min-width:90px">
+          <div style="text-align:center;padding:8px 12px;background:#eef4ff;border:2px solid #2563eb;border-radius:8px;min-width:90px">
             <div style="font-size:0.62rem;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.06em">Drug</div>
             <div style="font-size:0.82rem;font-weight:800;color:#0f1e3d;margin-top:2px">${c2.name||CHEMBL_ID}</div>
           </div>
@@ -1713,7 +1713,7 @@ async function runDocking() {
           </div>
 
           <!-- Gene node -->
-          <div style="text-align:center;padding:8px 12px;background:${gInfo.is_known_target?'#eef4ef':'#f7f9fc'};border:2px solid ${gInfo.is_known_target?'#2563eb':'#e0ddd1'};border-radius:8px;min-width:90px">
+          <div style="text-align:center;padding:8px 12px;background:${gInfo.is_known_target?'#eef4ff':'#f7f9fc'};border:2px solid ${gInfo.is_known_target?'#2563eb':'#e0ddd1'};border-radius:8px;min-width:90px">
             <div style="font-size:0.62rem;font-weight:700;color:${gInfo.is_known_target?'#2563eb':'#47526b'};text-transform:uppercase;letter-spacing:0.06em">
               Gene${gInfo.is_known_target?' Known':''}
             </div>
@@ -1742,7 +1742,7 @@ async function runDocking() {
         </div>
 
         ${gInfo.is_known_target
-          ? `<div style="margin-top:8px;padding:6px 10px;background:#eef4ef;border-radius:6px;font-size:0.7rem;color:#065f46">
+          ? `<div style="margin-top:8px;padding:6px 10px;background:#eef4ff;border-radius:6px;font-size:0.7rem;color:#1c3fa8">
               <strong>Mechanistic rationale:</strong> ${c2.name||'This drug'} is a known <strong>${gInfo.known_action}</strong> of ${targetName}${gInfo.known_mech?'. '+gInfo.known_mech.slice(0,120)+'…':'.'}</div>`
           : ''}
       </div>`;
@@ -1832,11 +1832,11 @@ function renderBiologicOptimization(res) {
     </div>`;
   }).join('');
   return `
-    <div class="card" style="margin-bottom:1rem;border-left:3px solid #8a5a2b">
+    <div class="card" style="margin-bottom:1rem;border-left:3px solid #47526b">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-        <span class="material-symbols-outlined" style="color:#8a5a2b;font-size:18px">biotech</span>
+        <span class="material-symbols-outlined" style="color:#47526b;font-size:18px">biotech</span>
         <span style="font-weight:700;font-size:0.95rem;color:#0f1e3d">Biologics Optimization</span>
-        <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${m.label || m.modality || 'biologic'}</span>
+        <span class="chip" style="background:#f4ede2;color:#47526b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${m.label || m.modality || 'biologic'}</span>
       </div>
       <p style="font-size:0.79rem;color:#47526b;line-height:1.65;margin-bottom:5px">${bio.headline || ''}</p>
       <p style="font-size:0.66rem;color:#98a1b6">Modality auto-detected, ${m.basis || ''}. SMILES/atom-level optimization is for small molecules; this antibody is optimized in sequence + developability space.</p>
@@ -1873,9 +1873,9 @@ async function scanBiologicSequence(btn, name, modality) {
       </div>`;
     }).join('');
     const liabHtml = liabs.length
-      ? `<div style="font-weight:700;font-size:0.78rem;color:#8a5a2b;margin:12px 0 6px">Sequence liabilities (${liabs.length})</div>`
+      ? `<div style="font-weight:700;font-size:0.78rem;color:#47526b;margin:12px 0 6px">Sequence liabilities (${liabs.length})</div>`
         + liabs.map(function (l) {
-            return `<div style="font-size:0.72rem;color:#47526b;padding:3px 0;border-bottom:1px solid #f1efe7"><strong>${l.liability}</strong> <span class="mono" style="color:#8a5a2b">${l.motif}</span> @ ${l.position}, <span style="color:#6b7690">${l.note}</span></div>`;
+            return `<div style="font-size:0.72rem;color:#47526b;padding:3px 0;border-bottom:1px solid #f1efe7"><strong>${l.liability}</strong> <span class="mono" style="color:#47526b">${l.motif}</span> @ ${l.position}, <span style="color:#6b7690">${l.note}</span></div>`;
           }).join('')
       : '<div style="font-size:0.74rem;color:#5b7a52;margin-top:10px">No standard chemical-liability motifs detected in this sequence.</div>';
     out.innerHTML = `<div style="font-size:0.68rem;color:#6b7690;margin-bottom:6px">Length ${mt.length} aa · ~${(mt.mw_da / 1000).toFixed(1)} kDa (variable region)</div>
@@ -1938,7 +1938,7 @@ async function loadOptimization(el) {
 
     const _profileName = prf.name || 'Lipinski Ro5';
     const lipinskiBadge = res.lipinski_pass_all
-      ? `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#eef4ef;color:#166534">Passes ${_profileName}</span>`
+      ? `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#eef4ff;color:#166534">Passes ${_profileName}</span>`
       : `<span style="padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:700;background:#faece9;color:#922019">${_profileName} Violation</span>`;
 
     const roRows = res.lipinski.map(r=>`
@@ -2000,7 +2000,7 @@ async function loadOptimization(el) {
     const _liabs = _adv.liabilities || [];
     window._optLiabs = _liabs;      // referenced by applyLiabilityFix(i)
     const _sevColor = {high:'#b3261e', medium:'#0e7490', low:'#5b7a52'};
-    const _sevBg    = {high:'#faece9', medium:'#f8f2df', low:'#eef4ef'};
+    const _sevBg    = {high:'#faece9', medium:'#f7f9fc', low:'#eef4ff'};
     const liabCards = _liabs.map((l,i) => {
       const col = _sevColor[l.severity]||'#47526b', bg = _sevBg[l.severity]||'#f7f9fc';
       const tag = (l.type||'').replace('_',' ');
@@ -2097,14 +2097,14 @@ async function loadOptimization(el) {
 
       if (newSmilesEl) {
         newSmilesEl.value = currentSmiles;
-        newSmilesEl.style.background = '#eef4ef'; newSmilesEl.style.borderColor = '#2563eb';
+        newSmilesEl.style.background = '#eef4ff'; newSmilesEl.style.borderColor = '#2563eb';
         setTimeout(() => { newSmilesEl.style.background = ''; newSmilesEl.style.borderColor = ''; }, 2500);
       }
       if (descEl) descEl.value = appliedDesc.join(' + ').slice(0, 200);
 
       const changed = currentSmiles !== origSmiles;
       if (wsResult) wsResult.innerHTML = changed
-        ? `<div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
+        ? `<div style="background:#eef4ff;border:1px solid #bcd0f5;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
             <strong>${sugs.length} transform${sugs.length>1?'s':''} applied.</strong> ${appliedDesc.filter(d=>!d.includes('manual')).join(' · ')}
             <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
            </div>`
@@ -2255,7 +2255,7 @@ async function renderQuantumPanel() {
     const isReal = !!r.is_real_qc;
     if (badge) {
       badge.textContent = isReal ? 'GFN2-xTB · real QM' : 'RDKit estimate';
-      badge.style.background = isReal ? '#eef4ef' : '#f8f2df';
+      badge.style.background = isReal ? '#eef4ff' : '#f7f9fc';
       badge.style.color      = isReal ? '#166534' : '#0e7490';
     }
     if (!qp || (qp.gap_ev == null && qp.homo_ev == null)) {
@@ -2315,11 +2315,11 @@ async function _applyWorkshopRxn(rxn, label, actionText) {
     if (res.applied && res.smiles && res.smiles !== origSmiles) {
       if (newSmilesEl) {
         newSmilesEl.value = res.smiles;
-        newSmilesEl.style.background = '#eef4ef'; newSmilesEl.style.borderColor = '#2563eb';
+        newSmilesEl.style.background = '#eef4ff'; newSmilesEl.style.borderColor = '#2563eb';
         setTimeout(() => { newSmilesEl.style.background = ''; newSmilesEl.style.borderColor = ''; }, 2500);
       }
       if (wsResult) wsResult.innerHTML = `
-        <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
+        <div style="background:#eef4ff;border:1px solid #bcd0f5;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
           <strong>Applied:</strong> ${label}. The Modified SMILES above now carries the change, click
           <strong>Analyze Modification</strong> to see the property &amp; safety impact.
         </div>`;
@@ -2370,12 +2370,12 @@ async function openWorkshop(property, action) {
       if (newSmilesEl) {
         newSmilesEl.value = res.smiles;
         // Flash green to show the field was updated
-        newSmilesEl.style.background = '#eef4ef';
+        newSmilesEl.style.background = '#eef4ff';
         newSmilesEl.style.borderColor = '#2563eb';
         setTimeout(() => { newSmilesEl.style.background = ''; newSmilesEl.style.borderColor = ''; }, 2500);
       }
       if (wsResult) wsResult.innerHTML = `
-        <div style="background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
+        <div style="background:#eef4ff;border:1px solid #bcd0f5;border-radius:8px;padding:10px 14px;font-size:0.77rem;color:#166534">
           <strong>Transform applied:</strong> ${res.description||action}
           <br/><span style="font-size:0.72rem;opacity:0.8;margin-top:2px;display:block">Review the Modified SMILES above, then click <strong>Analyze Modification</strong>.</span>
         </div>`;
@@ -2434,9 +2434,9 @@ async function runDockCompare() {
       })
     });
     if (res.error) { out.innerHTML = `<div class="alert alert-error" style="font-size:0.77rem">${res.error}</div>`; return; }
-    const catColor = {improved:['#2563eb','#eef4ef'], preserved:['#47526b','#f2f4f1'],
+    const catColor = {improved:['#2563eb','#eef4ff'], preserved:['#47526b','#f2f4f1'],
                       degraded:['#b3261e','#faece9'], broke:['#b3261e','#faece9'],
-                      inconclusive:['#0e7490','#f8f2df']};
+                      inconclusive:['#0e7490','#f7f9fc']};
     const [vc, vbg] = catColor[res.category] || ['#47526b','#f7f9fc'];
     const fmtG = v => (v === null || v === undefined) ? ', ' : v.toFixed(2) + ' kcal/mol';
     const cell = (lbl, o) => `
@@ -2540,7 +2540,7 @@ async function runMolWorkshop() {
       </tr>`;
     }).join('');
 
-    const verdColors = {Improved:['#2563eb','#eef4ef'],Mixed:['#0e7490','#f8f2df'],Declined:['#b3261e','#faece9']};
+    const verdColors = {Improved:['#2563eb','#eef4ff'],Mixed:['#0e7490','#f7f9fc'],Declined:['#b3261e','#faece9']};
     const [vColor, vBg] = verdColors[res.verdict] || ['#47526b','#f7f9fc'];
 
     const safetyHTML = (res.safety || []).map(s => `
@@ -2573,7 +2573,7 @@ async function runMolWorkshop() {
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
-        <div class="card" style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border-color:#cfe0d8;padding:1rem">
+        <div class="card" style="background:linear-gradient(135deg,#eef4ff,#e3ede8);border-color:#cfe0f8;padding:1rem">
           <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#2563eb;margin-bottom:6px">
             Repurposing Case${DISEASE?' - '+DISEASE:''}
           </div>
@@ -2665,11 +2665,11 @@ async function loadPatents(el) {
     const biologic = data.biologic;
     const biologicCard = biologic ? (function () {
       const pb = biologic.purple_book || {}, mod = biologic.modality || {};
-      return `<div class="card mb-1" style="border-left:3px solid #8a5a2b;padding:1.1rem 1.4rem">
+      return `<div class="card mb-1" style="border-left:3px solid #47526b;padding:1.1rem 1.4rem">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-          <span class="material-symbols-outlined" style="color:#8a5a2b;font-size:17px">biotech</span>
+          <span class="material-symbols-outlined" style="color:#47526b;font-size:17px">biotech</span>
           <span style="font-weight:700;font-size:0.85rem;color:#0f1e3d">Biologic, Purple Book Status</span>
-          <span class="chip" style="background:#f4ede2;color:#8a5a2b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label || mod.modality || 'biologic'}</span>
+          <span class="chip" style="background:#f4ede2;color:#47526b;border:1px solid #e0cdb0;font-weight:700;text-transform:capitalize">${mod.label || mod.modality || 'biologic'}</span>
         </div>
         <p style="font-size:0.75rem;color:#47526b;line-height:1.6;margin-bottom:8px">
           <strong>${drug}</strong> is a biologic, so it has no FDA Orange Book (small-molecule) patents. Biologic protection is tracked in the <strong>FDA Purple Book</strong>, reference-product exclusivity and biosimilar competition.
@@ -2759,7 +2759,7 @@ async function loadPatents(el) {
           Authoritative status &amp; expiry from the <strong>FDA Orange Book</strong>; supplemented by curated and public patent sources.
           <a href="https://patents.google.com/?q=${encodeURIComponent(drug)}" target="_blank" style="color:var(--cyan)">Google Patents →</a>
         </p>
-        <div style="background:#f8f2df;border:1px solid #e6cf95;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:0.73rem;color:#7a5c43;line-height:1.55">
+        <div style="background:#f7f9fc;border:1px solid #cbd5e1;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:0.73rem;color:#47526b;line-height:1.55">
           <strong>Why this matters for repurposing:</strong> active patents/exclusivity define freedom-to-operate and the earliest market entry; expired ones document regulatory precedent, prior safety data and manufacturing know-how that support a 505(b)(2) pathway.
         </div>
         <div style="display:flex;gap:1rem;margin-top:0.5rem;flex-wrap:wrap">
@@ -2822,7 +2822,7 @@ async function loadDossier(el) {
     const aeMax = Math.max(1, ...((ae.top_reactions||[]).map(r=>r.count)));
     const aeRows = (ae.top_reactions||[]).slice(0,8).map(r=>`<div style="display:flex;align-items:center;gap:8px;font-size:0.73rem;padding:2px 0"><span style="width:130px;flex-shrink:0">${r.term}</span><div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:${Math.round(r.count/aeMax*100)}%;background:#b5552f"></div></div><span class="mono" style="color:#98a1b6">${r.count}</span></div>`).join('');
     const molLitRows = (molLit.recent||[]).slice(0,6).map(p=>`<div style="padding:6px 0;border-bottom:1px solid #e8edf6;font-size:0.73rem"><a href="${p.url}" target="_blank" style="color:#2563eb">${p.title}</a><div style="color:#98a1b6">${p.journal} · ${p.year}</div></div>`).join('');
-    const regHTML = registries.map(r=>`<a href="${r.url}" target="_blank" style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid #e6e2d7;border-radius:8px;text-decoration:none;background:#fbfaf6"><span style="font-weight:700;font-size:0.78rem;color:#0f1e3d">${r.name}</span><span style="font-size:0.64rem;color:#98a1b6">${r.region} · ${r.kind}${r.desc?(' - '+r.desc):''}</span></a>`).join('');
+    const regHTML = registries.map(r=>`<a href="${r.url}" target="_blank" style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid #e3e8f0;border-radius:8px;text-decoration:none;background:#fbfaf6"><span style="font-weight:700;font-size:0.78rem;color:#0f1e3d">${r.name}</span><span style="font-size:0.64rem;color:#98a1b6">${r.region} · ${r.kind}${r.desc?(' - '+r.desc):''}</span></a>`).join('');
     const _devStatusCol = s => s==='ideal'?'#2563eb':s==='acceptable'?'#0e7490':'#b3261e';
     const devRows = (dev.properties||[]).map(p =>
       `<div class="kv"><span class="kv-k">${p.label}</span><span class="kv-v"><span class="mono">${p.value}${p.unit||''}</span> <span style="color:#98a1b6;font-weight:400">/ ${p.target}</span> <span style="color:${_devStatusCol(p.status)}">●</span></span></div>`
@@ -2830,7 +2830,7 @@ async function loadDossier(el) {
     const devCol = dev.score>=0.75?'#2563eb':dev.score>=0.5?'#0e7490':'#b3261e';
 
     const regColor = {strong:'#2563eb',moderate:'#0e7490',possible:'#0e7490',weak:'#98a1b6'}[reg.level]||'#98a1b6';
-    const regBg    = {strong:'#eef4ef',moderate:'#fbf6ea',possible:'#f8f2df',weak:'#f7f9fc'}[reg.level]||'#f7f9fc';
+    const regBg    = {strong:'#eef4ff',moderate:'#f7f9fc',possible:'#f7f9fc',weak:'#f7f9fc'}[reg.level]||'#f7f9fc';
 
     // 5-screen score bars with plain-language interpretation
     function screenInterpret(key, val) {
@@ -2870,7 +2870,7 @@ async function loadDossier(el) {
     }).join('');
 
     // Plain-language score summary + decision framework
-    const compositeLevel = sc >= 0.65 ? ['Strong','#2563eb','#eef4ef'] : sc >= 0.40 ? ['Moderate','#0e7490','#f8f2df'] : sc >= 0.20 ? ['Limited','#b3261e','#faece9'] : ['Insufficient','#98a1b6','#f7f9fc'];
+    const compositeLevel = sc >= 0.65 ? ['Strong','#2563eb','#eef4ff'] : sc >= 0.40 ? ['Moderate','#0e7490','#f7f9fc'] : sc >= 0.20 ? ['Limited','#b3261e','#faece9'] : ['Insufficient','#98a1b6','#f7f9fc'];
     const [cLevel, cColor, cBg] = compositeLevel;
     const strengths = []; const gaps = [];
     if ((scores.clinical || 0) >= 0.5) strengths.push('Established clinical history reduces development risk');
@@ -2906,14 +2906,14 @@ async function loadDossier(el) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
         <div>
           <div style="font-size:0.68rem;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Strengths</div>
-          ${strengths.map(s=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #bfe0cd">• ${s}</div>`).join('')}
+          ${strengths.map(s=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #bcd0f5">• ${s}</div>`).join('')}
         </div>
         <div>
           <div style="font-size:0.68rem;font-weight:700;color:#b3261e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Gaps to Bridge</div>
           ${gaps.map(g=>`<div style="font-size:0.72rem;color:#374151;padding:2px 0;padding-left:8px;border-left:2px solid #e8c3bb">• ${g}</div>`).join('')}
         </div>
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:#fbf6ea;border-radius:6px;font-size:0.73rem">
+      <div style="margin-top:10px;padding:8px 10px;background:#f7f9fc;border-radius:6px;font-size:0.73rem">
         <span style="font-weight:700;color:#0e7490">Recommended Next Step:</span>
         <span style="color:#1e40af;margin-left:4px">${nextStep}</span>
       </div>`;
@@ -2936,7 +2936,7 @@ async function loadDossier(el) {
 
     // Top disease genes
     const topGenes = (dc.top_genes||[]).slice(0,12).map(g=>
-      `<span style="display:inline-block;padding:2px 7px;background:#fbf6ea;color:#0e7490;font-size:0.7rem;font-weight:600;border-radius:9999px;margin:2px">${g}</span>`
+      `<span style="display:inline-block;padding:2px 7px;background:#f7f9fc;color:#0e7490;font-size:0.7rem;font-weight:600;border-radius:9999px;margin:2px">${g}</span>`
     ).join('');
 
     // Literature
@@ -3031,8 +3031,8 @@ async function loadDossier(el) {
     const nv = verdict.novelty || {};
     const _novMeta = {
       approved_here:    ['Not novel, approved here', '#b3261e', '#fce8e6'],
-      investigated_here:['Novel for approval, prior art', '#0e7490', '#fbf6ea'],
-      prior_signal:     ['Novel, early prior signal', '#0e7490', '#f8f2df'],
+      investigated_here:['Novel for approval, prior art', '#0e7490', '#f7f9fc'],
+      prior_signal:     ['Novel, early prior signal', '#0e7490', '#f7f9fc'],
       novel:            ['Novel repurposing', '#2563eb', '#e8f3ec'],
       unknown:          ['Novelty unverified', '#6b7690', '#f7f9fc'],
     };
@@ -3083,25 +3083,25 @@ async function loadDossier(el) {
 
     el.innerHTML = `
       <!-- Header score card -->
-      <div class="card mb-1" style="background:linear-gradient(135deg,#eef3f0 0%,#e3ede8 100%);border-color:#cfe0d8">
+      <div class="card mb-1" style="background:linear-gradient(135deg,#eef4ff 0%,#e3ede8 100%);border-color:#cfe0f8">
         <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center">
           <div>
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2563eb;margin-bottom:4px">Composite Repurposing Score</div>
             <div style="font-family:monospace;font-size:2.5rem;font-weight:900;color:#2563eb;line-height:1">${(sc*100).toFixed(1)}<span style="font-size:1rem;font-weight:400;color:#2563eb;margin-left:4px">/ 100</span></div>
           </div>
-          <div style="width:1px;height:56px;background:#cfe0d8"></div>
+          <div style="width:1px;height:56px;background:#cfe0f8"></div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2563eb;margin-bottom:4px">Drug → Disease</div>
             <div style="font-size:1rem;font-weight:800;color:#0f1e3d">${d.drug_name||'-'}</div>
             <div style="font-size:0.8rem;color:#2563eb">${d.disease_name||DISEASE}</div>
           </div>
-          <div style="width:1px;height:56px;background:#cfe0d8"></div>
+          <div style="width:1px;height:56px;background:#cfe0f8"></div>
           <div>
             <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#2563eb;margin-bottom:4px">Regulatory Path</div>
             <div style="font-size:0.9rem;font-weight:800;color:${regColor}">${reg.pathway||'-'}</div>
             <div style="font-size:0.72rem;color:#2563eb">${reg.timeline||''}</div>
           </div>
-          ${reg.orphan_drug ? `<div style="padding:6px 12px;background:#eef4ef;border:1px solid #bfe0cd;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2563eb">Orphan Drug<br/><span style="font-weight:400;color:#2563eb">under 200k patients</span></div>` : ''}
+          ${reg.orphan_drug ? `<div style="padding:6px 12px;background:#eef4ff;border:1px solid #bcd0f5;border-radius:8px;font-size:0.74rem;font-weight:700;color:#2563eb">Orphan Drug<br/><span style="font-weight:400;color:#2563eb">under 200k patients</span></div>` : ''}
         </div>
       </div>
 
@@ -3226,7 +3226,7 @@ async function loadDossier(el) {
       <div class="card" style="margin-top:1rem">
         <div class="card-title mb-1">Additional registries
           <span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(authoritative deep-search - provenance)</span></div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${registries.map(r=>`<a href="${r.url}" target="_blank" title="${r.region} · ${r.kind}" style="font-size:0.7rem;color:#2563eb;border:1px solid #e6e2d7;border-radius:6px;padding:3px 9px;text-decoration:none;background:#fbfaf6">${r.name}</a>`).join('')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${registries.map(r=>`<a href="${r.url}" target="_blank" title="${r.region} · ${r.kind}" style="font-size:0.7rem;color:#2563eb;border:1px solid #e3e8f0;border-radius:6px;padding:3px 9px;text-decoration:none;background:#fbfaf6">${r.name}</a>`).join('')}</div>
       </div>
       <div id="class-comparison" class="card" style="margin-top:1rem"><div style="display:flex;align-items:center;gap:0.6rem;color:var(--muted)"><span class="spinner"></span> Building within-class / out-of-class differentiation…</div></div>`;
     loadClassComparison();
@@ -3318,8 +3318,8 @@ async function loadClassComparison() {
     // Phase-aware 3-state novelty (matches services/regulatory_verdict).
     const _nvMeta = {
       approved_here:    ['Novelty failure (approved here)', '#b3261e', '#fce8e6', '#f5b5ad', '#7a1d12'],
-      investigated_here:['Novel for approval, prior clinical art', '#0e7490', '#fbf6ea', '#e6cf93', '#6b4e0a'],
-      prior_signal:     ['Novel, early or PK prior signal only', '#0e7490', '#f8f2df', '#e6cf93', '#6b4e0a'],
+      investigated_here:['Novel for approval, prior clinical art', '#0e7490', '#f7f9fc', '#e6cf93', '#6b4e0a'],
+      prior_signal:     ['Novel, early or PK prior signal only', '#0e7490', '#f7f9fc', '#e6cf93', '#6b4e0a'],
       novel:            ['Novelty preserved', '#2563eb', '#e8f3ec', '#b6dcc4', '#1f5240'],
       unknown:          ['Novelty unverified', '#6b7690', '#f7f9fc', '#dcdcd2', '#47526b'],
     };

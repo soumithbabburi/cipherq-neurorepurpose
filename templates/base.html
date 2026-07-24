@@ -160,7 +160,7 @@
     .phase-4 { background:rgba(37, 99, 235,0.12); color:#2563eb; border:1px solid rgba(37, 99, 235,0.28); }
     .phase-3 { background:rgba(181,85,47,0.12); color:#b5552f; border:1px solid rgba(181,85,47,0.26); }
     .phase-2 { background:rgba(151,117,26,0.14); color:#0e7490; border:1px solid rgba(151,117,26,0.28); }
-    .phase-1 { background:rgba(100, 116, 139,0.14); color:#7a5c43; border:1px solid rgba(100, 116, 139,0.28); }
+    .phase-1 { background:rgba(100, 116, 139,0.14); color:#47526b; border:1px solid rgba(100, 116, 139,0.28); }
     .phase-0 { background:rgba(107,119,110,0.12); color:#5c665d; border:1px solid rgba(107,119,110,0.24); }
 
     /* ── Chips ──────────────────────────────────────────────────────────── */
@@ -353,19 +353,19 @@
       const chips = e.indications.map(function (i) {
         var lbl = (i.label || '').replace(/"/g, '&quot;');
         return '<button class="cq-subtype-chip" data-sub="' + lbl + '" '
-          + 'style="border:1px solid #cfe0d8;background:#eef3f0;color:#2563eb;font-size:0.72rem;font-weight:600;'
+          + 'style="border:1px solid #cfe0f8;background:#eef4ff;color:#2563eb;font-size:0.72rem;font-weight:600;'
           + 'padding:3px 10px;border-radius:999px;cursor:pointer;transition:all .15s">' + (i.label || '') + '</button>';
       }).join(' ');
       containerEl.innerHTML =
-        '<div style="background:#fbf6ea;border:1px solid #e6cf95;border-radius:10px;padding:11px 14px">'
-        + '<div style="font-size:0.74rem;color:#7a5c43;line-height:1.55;margin-bottom:7px">'
+        '<div style="background:#f7f9fc;border:1px solid #cbd5e1;border-radius:10px;padding:11px 14px">'
+        + '<div style="font-size:0.74rem;color:#47526b;line-height:1.55;margin-bottom:7px">'
         + '<strong>' + (e.parent_label || disease) + '</strong> is a broad category. Scoring a single umbrella '
         + 'term hides clinically distinct subtypes, pick a specific indication for a precise result:'
         + '</div><div style="display:flex;flex-wrap:wrap;gap:6px">' + chips + '</div></div>';
       containerEl.style.display = 'block';
       containerEl.querySelectorAll('.cq-subtype-chip').forEach(function (b) {
         b.addEventListener('mouseover', function () { b.style.background = '#2563eb'; b.style.color = '#ffffff'; });
-        b.addEventListener('mouseout', function () { b.style.background = '#eef3f0'; b.style.color = '#2563eb'; });
+        b.addEventListener('mouseout', function () { b.style.background = '#eef4ff'; b.style.color = '#2563eb'; });
         b.addEventListener('click', function () { if (onPick) onPick(b.getAttribute('data-sub')); });
       });
       return e;

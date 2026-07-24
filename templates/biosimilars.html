@@ -101,7 +101,7 @@ function card(r){
   var wsChip = (r.n_biosimilars===0)
     ? chip('0 biosimilars · whitespace', '#2563eb')
     : chip(r.n_biosimilars+' biosimilar'+(r.n_biosimilars>1?'s':'')+(r.n_interchangeable?(' · '+r.n_interchangeable+' interchangeable'):''), '#4a6b7c');
-  var patent = r.patent_list ? chip('patent list filed', '#8a5a2b') : '';
+  var patent = r.patent_list ? chip('patent list filed', '#47526b') : '';
   var valChip = '';
   if(r.value){
     var vcol = r.value.value_score>=0.6?'#2563eb':r.value.value_score>=0.45?'#4a6b7c':r.value.value_score>=0.30?'#0e7490':'#8a8f88';
@@ -113,7 +113,7 @@ function card(r){
     if((a.n_trials||0)+(a.n_papers||0) === 0){
       actChip = chip('no biosimilar activity found', '#8a8f88');
     } else {
-      actChip = chip(a.n_trials+' trial'+(a.n_trials===1?'':'s')+' · '+a.n_papers+' paper'+(a.n_papers===1?'':'s'), '#5a5a8a');
+      actChip = chip(a.n_trials+' trial'+(a.n_trials===1?'':'s')+' · '+a.n_papers+' paper'+(a.n_papers===1?'':'s'), '#47526b');
     }
   }
   var rid = 'bs-'+Math.abs((r.proper_name||'').split('').reduce(function(a,c){return (a*31+c.charCodeAt(0))|0;},7));
@@ -133,7 +133,7 @@ function card(r){
   +     '<span class="chip" style="background:#eef2f0;color:#47526b">'+r.timing_note+'</span></div>'
   +   (r.value&&r.value.best_indication ? '<div style="font-size:0.68rem;color:#98a1b6">Most valuable indication: '+r.value.best_indication+'</div>' : '')
   +   '<details style="margin-top:2px" ontoggle="loadEvidence(this,\''+(r.proper_name||'').replace(/\x27/g,\'&#39;\')+'\')">'
-  +     '<summary style="cursor:pointer;font-size:0.72rem;color:#5a5a8a;font-weight:600">Evidence &amp; activity, biosimilar trials &amp; literature</summary>'
+  +     '<summary style="cursor:pointer;font-size:0.72rem;color:#47526b;font-weight:600">Evidence &amp; activity, biosimilar trials &amp; literature</summary>'
   +     '<div class="bs-evidence" style="margin-top:8px;font-size:0.73rem;color:#6b7690">Loading…</div>'
   +   '</details>'
   +   (r.biosimilars&&r.biosimilars.length
