@@ -411,16 +411,47 @@
   window.phaseLabel = function(p) {
     return ({4:'FDA Approved',3:'Phase 3',2:'Phase 2',1:'Phase 1'})[+p] || 'Preclinical';
   };
+  // Close the mobile navigation drawer on Escape (accessibility).
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') document.body.classList.remove('nav-open');
+  });
   </script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.29.2/dist/cytoscape.min.js"></script>
+  <style>
+    /* ── Responsive shell ─────────────────────────────────────────────────────
+       Desktop keeps the fixed 250px sidebar. Below 900px the sidebar becomes an
+       off-canvas drawer toggled by a hamburger, and the header + main drop their
+       250px offset so content uses the full width (no horizontal squeeze/scroll). */
+    #nav-toggle { display: none; }
+    #nav-backdrop { display: none; }
+    @media (max-width: 900px) {
+      #app-sidebar {
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        box-shadow: 4px 0 28px -10px rgba(15,30,61,.35);
+        background: var(--bg-canvas);
+      }
+      body.nav-open #app-sidebar { transform: translateX(0); }
+      #app-header { margin-left: 0 !important; width: 100% !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+      #app-main { margin-left: 0 !important; padding: 22px 18px !important; }
+      #nav-toggle { display: inline-flex; align-items: center; justify-content: center; }
+      #nav-backdrop { display: block; position: fixed; inset: 0; background: rgba(15,30,61,.42); z-index: 45; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+      body.nav-open #nav-backdrop { opacity: 1; pointer-events: auto; }
+      body { overflow-x: hidden; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #app-sidebar { transition: none; }
+      #nav-backdrop { transition: none; }
+    }
+  </style>
   {% block head %}{% endblock %}
 </head>
 <body class="bg-bg-canvas font-ui antialiased text-text-primary">
 
 <!-- Sidebar - notebook spine: same cream as canvas, hairline divide -->
 {% if not standalone %}
-<aside class="fixed left-0 top-0 h-screen w-[250px] border-r border-slate-300 flex flex-col z-50">
+<aside id="app-sidebar" class="fixed left-0 top-0 h-screen w-[250px] border-r border-slate-300 flex flex-col z-50">
   <div class="p-6">
     <a href="/" title="Back to landing page" class="flex items-center gap-3 mb-8" style="text-decoration:none">
       <div class="w-9 h-9 rounded-[10px] brand-gradient flex items-center justify-center text-white flex-shrink-0 shadow-sm">
@@ -522,7 +553,12 @@
   </a>
 </header>
 {% else %}
-<header class="sticky top-0 z-40 flex items-center justify-between px-8 ml-[250px] w-[calc(100%-250px)] h-16 border-b border-slate-300">
+<header id="app-header" class="sticky top-0 z-40 flex items-center justify-between px-8 ml-[250px] w-[calc(100%-250px)] h-16 border-b border-slate-300">
+  <button id="nav-toggle" type="button" aria-label="Open navigation menu"
+    onclick="document.body.classList.toggle('nav-open')"
+    class="items-center justify-center p-2 mr-2 text-text-muted hover:text-accent rounded-lg" style="align-items:center">
+    <span class="material-symbols-outlined" style="font-size:22px">menu</span>
+  </button>
   <div class="flex items-center flex-1 max-w-lg">
     <div class="relative w-full">
       <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" style="font-size:18px">search</span>
@@ -553,8 +589,10 @@
 </header>
 {% endif %}
 
+{% if not standalone %}<div id="nav-backdrop" onclick="document.body.classList.remove('nav-open')"></div>{% endif %}
+
 <!-- Main content -->
-<main class="{% if standalone %}max-w-[1120px] mx-auto{% else %}ml-[250px]{% endif %} min-h-[calc(100vh-64px)] p-[35px]">
+<main id="app-main" class="{% if standalone %}max-w-[1120px] mx-auto{% else %}ml-[250px]{% endif %} min-h-[calc(100vh-64px)] p-[35px]">
   {% block content %}{% endblock %}
 </main>
 
