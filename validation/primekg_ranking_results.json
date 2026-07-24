@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "protocol": "compound-disjoint (seed 42, 15% holdout), filtered ranking over all diseases",
+    "n_diseases": 17080,
+    "n_test_drugs": 270,
+    "elapsed_s": 24.4
+  },
+  "rankers": {
+    "distmult": {
+      "recall@10": 0.156,
+      "recall@20": 0.2311,
+      "recall@50": 0.3851,
+      "recall@100": 0.5321,
+      "mrr": 0.0742,
+      "median_rank": 87,
+      "mean_rank": 164.5,
+      "n_pairs": 1571
+    },
+    "cascade": {
+      "recall@10": 0.2756,
+      "recall@20": 0.3775,
+      "recall@50": 0.5843,
+      "recall@100": 0.7537,
+      "mrr": 0.1237,
+      "median_rank": 36,
+      "mean_rank": 89.7,
+      "n_pairs": 1571
+    },
+    "treats_full": {
+      "recall@10": 0.2584,
+      "recall@20": 0.3488,
+      "recall@50": 0.5251,
+      "recall@100": 0.6696,
+      "mrr": 0.1162,
+      "median_rank": 46,
+      "mean_rank": 154.9,
+      "n_pairs": 1571
+    }
+  }
+}
