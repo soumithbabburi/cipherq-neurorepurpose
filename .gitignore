@@ -89,3 +89,11 @@ data/external/
 data/orange_book/
 # accidental path-named output dirs (misconfigured writer)
 C:Users*/
+
+# PrimeKG raw dump + built artifacts (large; rebuild via services/build_primekg.py)
+data/primekg/*.csv
+data/primekg/*.tab
+data/primekg/*.tsv
+data/primekg/*.json
+data/primekg/*.txt
+data/primekg/*.log
