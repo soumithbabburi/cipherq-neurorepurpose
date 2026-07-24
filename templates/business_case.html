@@ -4,30 +4,30 @@
 
 {% block head %}
 <style>
-  .bc-hero { background:linear-gradient(135deg,#1f3a30 0%,#26342b 45%,#2a2018 100%); border-radius:16px; padding:44px 40px 36px; margin-bottom:26px; position:relative; overflow:hidden; }
-  .bc-hero::after { content:''; position:absolute; top:-60px; right:-60px; width:280px; height:280px; background:radial-gradient(circle,rgba(63,143,111,0.34) 0%,transparent 70%); }
+  .bc-hero { background:linear-gradient(135deg,#12275e 0%,#1c3fa8 45%,#2563eb 100%); border-radius:16px; padding:44px 40px 36px; margin-bottom:26px; position:relative; overflow:hidden; }
+  .bc-hero::after { content:''; position:absolute; top:-60px; right:-60px; width:280px; height:280px; background:radial-gradient(circle,rgba(6,182,212,0.32) 0%,transparent 70%); }
   .bc-hero h1 { font-family:var(--font-serif); font-weight:600 !important; letter-spacing:-0.02em !important; }
   .stat-card { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:18px 20px; backdrop-filter:blur(4px); }
   .stat-num { font-size:1.7rem; font-weight:800; font-family:var(--font-serif); letter-spacing:-0.02em; }
-  .tab-nav { display:flex; gap:0; border-bottom:2px solid #e6e2d7; margin-bottom:26px; overflow-x:auto; }
+  .tab-nav { display:flex; gap:0; border-bottom:2px solid #e3e8f0; margin-bottom:26px; overflow-x:auto; }
   .tab-btn { padding:10px 22px 12px; font-size:13px; font-weight:500; color:#6b7690; border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:all .15s; }
   .tab-btn.active { color:#2563eb; border-bottom-color:#2563eb; font-weight:700; }
   .tab-btn:hover:not(.active) { color:#0f1e3d; }
   .tab-panel { display:none; } .tab-panel.active { display:block; }
-  .pillar { background:#ffffff; border:1px solid #e6e2d7; border-radius:14px; padding:24px; position:relative; overflow:hidden; }
+  .pillar { background:#ffffff; border:1px solid #e3e8f0; border-radius:14px; padding:24px; position:relative; overflow:hidden; }
   .pillar::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,#2563eb,#06b6d4); }
-  .pill-tag { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:600; background:#eef3f0; color:#2563eb; border:1px solid #cfe0d8; }
-  .step { background:#ffffff; border:1px solid #e6e2d7; border-radius:12px; padding:16px 18px; flex:1; min-width:150px; }
+  .pill-tag { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:600; background:#eef4ff; color:#2563eb; border:1px solid #cfe0f8; }
+  .step { background:#ffffff; border:1px solid #e3e8f0; border-radius:12px; padding:16px 18px; flex:1; min-width:150px; }
   .step-no { width:24px; height:24px; border-radius:7px; background:#2563eb; color:#ffffff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
-  .connector { flex:0 0 24px; height:2px; background:#d8d3c4; align-self:center; }
-  .layer { background:#f7f9fc; border:1px solid #e6e2d7; border-radius:12px; padding:16px 20px; margin-bottom:12px; }
-  .chip-src { padding:7px 13px; background:#eef3f0; border:1px solid #cfe0d8; border-radius:8px; font-size:11.5px; font-weight:600; color:#2563eb; }
+  .connector { flex:0 0 24px; height:2px; background:#cbd5e1; align-self:center; }
+  .layer { background:#f7f9fc; border:1px solid #e3e8f0; border-radius:12px; padding:16px 20px; margin-bottom:12px; }
+  .chip-src { padding:7px 13px; background:#eef4ff; border:1px solid #cfe0f8; border-radius:8px; font-size:11.5px; font-weight:600; color:#2563eb; }
   .cap-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #e8edf6; font-size:0.83rem; }
   .cap-row:last-child { border-bottom:none; }
   .cap-state { font-size:0.64rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:2px 8px; border-radius:9999px; margin-left:auto; }
-  .cap-live { background:#eef4ef; color:#2563eb; border:1px solid #bfe0cd; }
+  .cap-live { background:#eef4ff; color:#2563eb; border:1px solid #bcd0f5; }
   .cap-plan { background:#f7f9fc; color:#0e7490; border:1px solid #e6cf95; }
-  .reg-sub-btn { padding:7px 18px; font-size:12px; font-weight:600; border-radius:8px; border:1.5px solid #e6e2d7; cursor:pointer; transition:all .15s; background:#ffffff; color:#47526b; }
+  .reg-sub-btn { padding:7px 18px; font-size:12px; font-weight:600; border-radius:8px; border:1.5px solid #e3e8f0; cursor:pointer; transition:all .15s; background:#ffffff; color:#47526b; }
   .reg-sub-btn.active { background:#2563eb; color:#ffffff; border-color:#2563eb; }
   .metric-row { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid #e8edf6; font-size:0.83rem; }
   .metric-row:last-child { border-bottom:none; }
@@ -43,12 +43,12 @@
       <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#3b82f6">RepurposeIQ Platform</span>
     </div>
     <h1 style="font-size:2.1rem;color:#ffffff;line-height:1.15;margin-bottom:10px">The branded assets hidden inside a generic portfolio</h1>
-    <p style="color:#a9c6ba;font-size:0.92rem;max-width:660px;line-height:1.7;margin-bottom:26px">Drugs developed for one therapeutic area frequently modulate pathways relevant to others. RepurposeIQ identifies which existing molecules carry the strongest new-indication potential, then assembles the regulatory, IP and clinical evidence to support a 505(b)(2)-family filing across the US, EU and India.</p>
+    <p style="color:#bcd2ff;font-size:0.92rem;max-width:660px;line-height:1.7;margin-bottom:26px">Drugs developed for one therapeutic area frequently modulate pathways relevant to others. RepurposeIQ identifies which existing molecules carry the strongest new-indication potential, then assembles the regulatory, IP and clinical evidence to support a 505(b)(2)-family filing across the US, EU and India.</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:720px">
-      <div class="stat-card"><div class="stat-num" style="color:#3b82f6" id="stat1">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Lower cost vs de novo</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:#d8b25a" id="stat2">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Years to market</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:#9fd0b6" id="stat3">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Of FDA approvals are repurposed</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:#fcd34d" id="stat4">0</div><div style="font-size:10px;color:#a9c6ba;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Evidence approaches</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#3b82f6" id="stat1">0</div><div style="font-size:10px;color:#bcd2ff;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Lower cost vs de novo</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#60a5fa" id="stat2">0</div><div style="font-size:10px;color:#bcd2ff;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Years to market</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#7dd3fc" id="stat3">0</div><div style="font-size:10px;color:#bcd2ff;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Of FDA approvals are repurposed</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#a5b4fc" id="stat4">0</div><div style="font-size:10px;color:#bcd2ff;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-top:4px">Evidence approaches</div></div>
     </div>
   </div>
 </div>
@@ -63,7 +63,7 @@
 
 <!-- TAB 1: Overview -->
 <div id="panel-overview" class="tab-panel active">
-  <div style="background:#ffffff;border:1px solid #e6e2d7;border-radius:14px;padding:24px 28px;margin-bottom:24px">
+  <div style="background:#ffffff;border:1px solid #e3e8f0;border-radius:14px;padding:24px 28px;margin-bottom:24px">
     <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2563eb;margin-bottom:6px">The value proposition</div>
     <p style="font-size:0.9rem;color:#47526b;line-height:1.75;margin:0">By reusing an existing molecule, a programme inherits a known safety profile, established pharmacokinetics and proven manufacturing. The opportunity is not new chemistry; it is using evidence-weighted analysis to identify which existing assets can become differentiated, defensible, higher-margin branded products, and to confirm the regulatory and freedom-to-operate position before development spend is committed.</p>
   </div>
@@ -86,7 +86,7 @@
     <div class="pillar"><div style="font-size:1rem;font-weight:700;color:#0f1e3d;margin-bottom:6px">Knowledge-based</div><p style="font-size:0.78rem;color:#47526b;line-height:1.65">A knowledge graph tracing drug, target, pathway and disease to make the mechanistic chain explicit.</p></div>
     <div class="pillar"><div style="font-size:1rem;font-weight:700;color:#0f1e3d;margin-bottom:6px">Clinical-trials-based</div><p style="font-size:0.78rem;color:#47526b;line-height:1.65">Existing trials of the molecule in candidate indications, with live per-region counts from ClinicalTrials.gov.</p></div>
     <div class="pillar"><div style="font-size:1rem;font-weight:700;color:#0f1e3d;margin-bottom:6px">Signature-based</div><p style="font-size:0.78rem;color:#47526b;line-height:1.65">Connectivity scoring that tests whether the drug's perturbation reverses the disease signature.</p></div>
-    <div class="pillar" style="background:#eef3f0"><div style="font-size:1rem;font-weight:700;color:#2563eb;margin-bottom:6px">Worked example</div><p style="font-size:0.78rem;color:#47526b;line-height:1.65">A drug-disease pair is matched, then its mechanism, patent and generic status, regulatory novelty and supporting evidence are surfaced in one integrated dossier.</p></div>
+    <div class="pillar" style="background:#eef4ff"><div style="font-size:1rem;font-weight:700;color:#2563eb;margin-bottom:6px">Worked example</div><p style="font-size:0.78rem;color:#47526b;line-height:1.65">A drug-disease pair is matched, then its mechanism, patent and generic status, regulatory novelty and supporting evidence are surfaced in one integrated dossier.</p></div>
   </div>
 </div>
 
@@ -103,20 +103,20 @@
     </div>
   </div>
 
-  <div class="layer" style="background:linear-gradient(135deg,#eef3f0,#e3ede8);border-color:#cfe0d8">
+  <div class="layer" style="background:linear-gradient(135deg,#eef4ff,#e3ede8);border-color:#cfe0f8">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin-bottom:10px">Engine layer</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       {%- for box in ["Evidence-weighted asset scoring","Probability-of-success model","Asset-indication ranking","Knowledge graph","Signature connectivity","Regulatory and novelty verdict","Acquisition signal (IP)","Molecular docking","PBPK and quantum properties"] -%}
-      <div style="background:#ffffff;border:1px solid #cfe0d8;border-radius:9px;padding:11px 14px;font-size:11.5px;font-weight:600;color:#2563eb;line-height:1.4">{{ box }}</div>
+      <div style="background:#ffffff;border:1px solid #cfe0f8;border-radius:9px;padding:11px 14px;font-size:11.5px;font-weight:600;color:#2563eb;line-height:1.4">{{ box }}</div>
       {%- endfor -%}
     </div>
   </div>
 
-  <div class="layer" style="background:linear-gradient(135deg,#eef4ef,#d9e9df);border-color:#bfe0cd;margin-bottom:24px">
+  <div class="layer" style="background:linear-gradient(135deg,#eef4ff,#d9e9df);border-color:#bcd0f5;margin-bottom:24px">
     <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2563eb;margin-bottom:10px">Output layer</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
       {%- for box in ["Integrated evidence dossier","Global landscape (US / EU / India)","505(b)(2)-family pathway and novelty"] -%}
-      <div style="background:#ffffff;border:1px solid #bfe0cd;border-radius:9px;padding:11px 14px;font-size:11.5px;font-weight:600;color:#2563eb">{{ box }}</div>
+      <div style="background:#ffffff;border:1px solid #bcd0f5;border-radius:9px;padding:11px 14px;font-size:11.5px;font-weight:600;color:#2563eb">{{ box }}</div>
       {%- endfor -%}
     </div>
   </div>
@@ -146,7 +146,7 @@
   </div>
 
   <div id="reg-us">
-    <div style="background:#eef4ef;border:1.5px solid #bfe0cd;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:0.84rem;color:#1e40af;line-height:1.6">
+    <div style="background:#eef4ff;border:1.5px solid #bcd0f5;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:0.84rem;color:#1e40af;line-height:1.6">
       <strong>505(b)(2) New Drug Application.</strong> Relies in part on the FDA's findings for an already-approved reference listed drug, so only studies bridging to the new indication are required. The platform confirms the reference data is citable and that the new indication is genuinely novel before recommending this route.
     </div>
     <div style="display:flex;align-items:stretch;flex-wrap:wrap;gap:0">
@@ -168,7 +168,7 @@
   </div>
 
   <div id="reg-in" style="display:none">
-    <div style="background:#eef3f0;border:1.5px solid #cfe0d8;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:0.84rem;color:#1e40af;line-height:1.6">
+    <div style="background:#eef4ff;border:1.5px solid #cfe0f8;border-radius:12px;padding:14px 18px;margin-bottom:18px;font-size:0.84rem;color:#1e40af;line-height:1.6">
       <strong>CDSCO New Drug application - approved-abroad route.</strong> Under the New Drugs and Clinical Trials Rules, a molecule already approved in well-regulated markets can follow an abbreviated route, and a local clinical trial may be waived in defined circumstances. India is also the largest global generics supplier, so substance access is rarely the constraint.
     </div>
     <p style="font-size:0.82rem;color:#47526b;line-height:1.7">The platform reports the Indian trial landscape from ClinicalTrials.gov and links the CTRI registry. Approval and local generic availability are inferred and flagged; a CDSCO and CTRI feed is on the roadmap.</p>
@@ -248,14 +248,14 @@ function renderEcon() {
     marker:{color:['#98a1b6','#2563eb']},
     text:['$2.6B','$0.3–1B'], textposition:'outside',
     hovertemplate:'%{x}: %{text}<extra></extra>'
-  }], Object.assign({yaxis:{title:'USD billion',range:[0,3.1],gridcolor:'#e6e2d7',linecolor:'#e6e2d7'},xaxis:{linecolor:'#e6e2d7'}}, common), {displayModeBar:false, responsive:true});
+  }], Object.assign({yaxis:{title:'USD billion',range:[0,3.1],gridcolor:'#e3e8f0',linecolor:'#e3e8f0'},xaxis:{linecolor:'#e3e8f0'}}, common), {displayModeBar:false, responsive:true});
 
   Plotly.newPlot('time-chart', [{
     type:'bar', x:['De novo','Repurposing'], y:[12.5, 5],
     marker:{color:['#98a1b6','#2563eb']},
     text:['10–15 yr','3–7 yr'], textposition:'outside',
     hovertemplate:'%{x}: %{text}<extra></extra>'
-  }], Object.assign({yaxis:{title:'Years',range:[0,16],gridcolor:'#e6e2d7',linecolor:'#e6e2d7'},xaxis:{linecolor:'#e6e2d7'}}, common), {displayModeBar:false, responsive:true});
+  }], Object.assign({yaxis:{title:'Years',range:[0,16],gridcolor:'#e3e8f0',linecolor:'#e3e8f0'},xaxis:{linecolor:'#e3e8f0'}}, common), {displayModeBar:false, responsive:true});
 }
 </script>
 
