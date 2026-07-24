@@ -314,12 +314,26 @@ def get_disease_gene_weights(disease_name: str, top_n: int = 40) -> dict:
     return weights
 
 
-def is_orphan_candidate(disease_name: str) -> bool:
-    """True if disease prevalence < 200,000 US patients (FDA orphan threshold)."""
-    name = disease_name.lower()
+def is_orphan_candidate(disease_name: str, efo_id: str = "") -> bool:
+    """True if the disease is orphan / rare (FDA threshold < 200,000 US patients).
+
+    Fast path: the curated CNS prevalence table (exact published counts). Fallback: the
+    Orphanet-backed is_orphan flag from the full-MONDO disease-value table, so a rare disease
+    OUTSIDE the curated list (e.g. a rare vasculitis, metabolic or haematologic disorder) also
+    earns orphan credit instead of being silently denied it (which had over-narrowed the
+    orphan regulatory bonus + the sparse-data actionability relaxation to ~25 CNS diseases).
+    Fail-soft: unknown -> not orphan."""
+    name = (disease_name or "").lower()
     for k, v in PREVALENCE.items():
         if k in name or name in k:
             return v < 200_000
+    try:
+        from services.disease_value import value_for
+        dv = value_for(disease_name=disease_name, efo_id=efo_id or "")
+        if dv and dv.get("is_orphan") is not None:
+            return bool(dv["is_orphan"])
+    except Exception:
+        pass
     return False
 
 

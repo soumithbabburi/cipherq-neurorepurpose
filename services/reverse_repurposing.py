@@ -134,7 +134,7 @@ _ORPHAN_CUTOFF_FACTOR   = 0.85   # rare disease → relax the bar 15%
 try:
     from services.disease_ontology import is_orphan_candidate
 except Exception:                                    # pragma: no cover
-    def is_orphan_candidate(_name: str) -> bool:     # fail-soft stub
+    def is_orphan_candidate(_name: str, _efo: str = "") -> bool:  # fail-soft stub
         return False
 
 
@@ -1878,7 +1878,7 @@ def screen_indications_for_drug(
         ctpa_registry = sr.get("registry", {"ghost": False, "multiplier": 1.0})
 
         try:
-            _orphan = bool(is_orphan_candidate(c["disease"]))
+            _orphan = bool(is_orphan_candidate(c["disease"], c.get("efo_id", "")))
         except Exception:
             _orphan = False
         _has_trial = trial_count > 0 or c.get("max_trial_phase", 0) > 0
