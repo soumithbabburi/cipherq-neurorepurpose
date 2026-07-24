@@ -24,6 +24,8 @@ import os
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -316,8 +318,11 @@ def _ot_graphql(query: str, variables: dict, timeout: int = 12) -> dict:
     return {}
 
 
+@lru_cache(maxsize=4096)
 def _gene_to_ensembl(symbol: str) -> str:
-    """Resolve a gene symbol → Ensembl target ID via Open Targets search."""
+    """Resolve a gene symbol → Ensembl target ID via Open Targets search.
+    Memoized: the same gene recurs across a drug's targets and across drugs, so caching
+    the (stable) symbol→id lookup removes most of the reverse-screen's live-call latency."""
     q = """
     query($q: String!) {
       search(queryString: $q, entityNames: ["target"], page: {index: 0, size: 1}) {
@@ -328,8 +333,10 @@ def _gene_to_ensembl(symbol: str) -> str:
     return hits[0]["id"] if hits else ""
 
 
+@lru_cache(maxsize=8192)
 def _disease_known_drugs(efo_id: str) -> int:
-    """Count of drugs + clinical candidates for a disease — a tractability signal."""
+    """Count of drugs + clinical candidates for a disease — a tractability signal.
+    Memoized: the same EFO id recurs across candidates and drugs."""
     q = """
     query($id: String!) {
       disease(efoId: $id) { drugAndClinicalCandidates { count } }
@@ -681,8 +688,10 @@ def _resolve_disease_meta(name: str) -> Dict:
     }
 
 
+@lru_cache(maxsize=4096)
 def _diseases_for_target(ensembl_id: str, size: int = 250) -> List[Dict]:
-    """Open Targets diseases associated with a target, with therapeutic areas."""
+    """Open Targets diseases associated with a target, with therapeutic areas.
+    Memoized (callers read, never mutate the returned rows)."""
     q = """
     query($id: String!, $size: Int!) {
       target(ensemblId: $id) {
@@ -1390,7 +1399,14 @@ def screen_indications_for_drug(
         logger.debug(f"modality classify failed: {e}")
         _modality = {"modality": "unknown", "is_small_molecule": bool(info.get("smiles")),
                      "optimization": "smiles", "label": "unknown"}
-    _is_biologic = not _modality.get("is_small_molecule", True) and _modality.get("modality") != "unknown"
+    # A molecule is treated as small-molecule ONLY when we can actually analyse it as one
+    # (a SMILES is present). An unknown-modality drug with NO SMILES (e.g. an antibody the
+    # classifier could not label) must NOT be run through CNS-MPO / developability / potency
+    # math — those would emit meaningless small-molecule numbers presented as real. Treat it
+    # as non-small-molecule so those modules are shielded (marked N/A) instead.
+    _has_smiles = bool((info.get("smiles") or "").strip())
+    _is_small_molecule = _modality.get("is_small_molecule", True) and _has_smiles
+    _is_biologic = not _is_small_molecule
 
     # Drug-aware oncology default: only an oncology drug repurposes OUT of oncology.
     onc_drug = _is_oncology_drug(info)
@@ -1414,12 +1430,20 @@ def screen_indications_for_drug(
     excluded_anti = [g for g in drug_genes if g not in screen_genes]
 
     # 1. Candidate diseases from each target's Open Targets associations ────────
+    # Fetched concurrently — each gene needs a live Ensembl lookup + an associations
+    # query, and doing them serially for up to 12 targets was a large part of the
+    # reverse screen's latency. The merge below stays serial (and order-stable).
     candidate_map: Dict[str, Dict] = {}
-    for gene in screen_genes[:12]:
+
+    def _gene_diseases(gene: str):
         ensembl = _gene_to_ensembl(gene)
-        if not ensembl:
-            continue
-        for d in _diseases_for_target(ensembl):
+        return (gene, _diseases_for_target(ensembl) if ensembl else [])
+
+    with ThreadPoolExecutor(max_workers=8) as _ex:
+        _gene_results = list(_ex.map(_gene_diseases, screen_genes[:12]))
+
+    for gene, _diseases in _gene_results:
+        for d in _diseases:
             if d["score"] < MIN_ASSOCIATION_SCORE:
                 continue
             # Skip ontology SIGNS/PHENOTYPES (e.g. myelosuppression EFO_0007053,
@@ -1642,9 +1666,15 @@ def screen_indications_for_drug(
 
     candidates.sort(key=_rank_score, reverse=True)
     pool = candidates[: max_candidates + 20]
+    # Tractability lookups run concurrently — one live Open Targets call per candidate,
+    # previously serial over ~45 candidates (a dominant contributor to the >5 min hangs).
+    def _known(c):
+        return _disease_known_drugs(c["efo_id"]) if c.get("efo_id") else 0
+    with ThreadPoolExecutor(max_workers=8) as _ex:
+        _kd = list(_ex.map(_known, pool))
     tractable: List[Dict] = []
-    for c in pool:
-        c["known_drugs"] = _disease_known_drugs(c["efo_id"]) if c.get("efo_id") else 0
+    for c, kd in zip(pool, _kd):
+        c["known_drugs"] = kd
         # keep druggable indications AND strong KG-generated leads (no efo to look up)
         if c["known_drugs"] > 0 or c.get("kg_probability", 0.0) >= 0.5:
             tractable.append(c)
