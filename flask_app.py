@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
-from flask import Flask, render_template, request, jsonify, abort, send_from_directory
+from flask import Flask, render_template, request, jsonify, abort, send_from_directory, redirect, url_for
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -193,7 +193,7 @@ def _cache_set(key: str, value, ttl: int = _CACHE_TTL):
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def _resolve_fetch(query: str):
     resolved = resolve_disease(query)
-    if not resolved: return [], [], []
+    if not resolved: return [], [], [], []   # 4-tuple: callers unpack (resolved, expanded, comps, removed)
     ids = [r["mesh_id"] for r in resolved if r.get("mesh_id")]
     expanded = expand_mesh_ids(ids, include_children=True) or ids
     comps = get_compounds_for_disease(expanded, limit=80)
@@ -655,6 +655,17 @@ def discover():
     results = []; disease_name = q; mesh_ids = []; excluded = []
     if q:
         resolved, expanded, comps, _removed = _resolve_fetch(q)
+        # If the query is actually a DRUG (no disease compounds, but resolves as a molecule),
+        # forward to the Repurpose Molecule screen instead of rendering an empty grid. Mirrors
+        # the /api/search is_drug hand-off so the global search and direct links behave too.
+        if not comps:
+            try:
+                from services.reverse_repurposing import resolve_drug as _rdrug
+                di = _rdrug(q)
+                if di and di.get("chembl_id") and (di.get("targets") or di.get("known_indications")):
+                    return redirect(url_for("repurpose", drug=di.get("name") or q))
+            except Exception:
+                pass
         results = comps
         disease_name = resolved[0]["heading"] if resolved else q
         mesh_ids = expanded
@@ -670,6 +681,14 @@ def discover():
 def analysis():
     chembl_id = request.args.get("id", "")
     disease = request.args.get("disease", "")
+    # Which screen the user came from, so "Back to Results" and the sidebar highlight
+    # return to the right place (Repurpose Molecule vs Compound Discovery, etc.).
+    _from = (request.args.get("from") or "discover").strip().lower()
+    _back = {"repurpose": ("/repurpose", "repurpose"), "pathways": ("/pathways", "pathways"),
+             "novel-targets": ("/novel-targets", "novel-targets"), "graph": ("/graph", "graph"),
+             "discover": ("/discover", "discover")}.get(_from, ("/discover", "discover"))
+    if _from == "repurpose" and disease:
+        pass  # /repurpose does not deep-link by disease; the client history.back handles it
     dock_method = (
         "Local DiffDock" if LOCAL_DIFFDOCK_OK
         else "NVIDIA DiffDock" if DOCK_OK
@@ -680,7 +699,7 @@ def analysis():
                            rdkit_ok=RDKIT_OK, py3dmol_ok=PY3DMOL_OK,
                            local_diffdock_ok=LOCAL_DIFFDOCK_OK,
                            diffdock_instructions=LOCAL_DIFFDOCK_INSTRUCTIONS,
-                           dock_method=dock_method)
+                           dock_method=dock_method, back_href=_back[0], back_active=_back[1])
 
 
 @app.after_request
@@ -3000,6 +3019,21 @@ def api_repurposing_screen():
         screen.pop("_ts", None)
         if "candidates" in screen:
             screen["candidates"] = [c for c in screen["candidates"] if _is_repurposable(c)]
+            # Same development-reality guardrails as the /discover path: exclude drugs
+            # already approved for this indication and drugs withdrawn for safety, and
+            # demote me-too mechanisms. Without this, run_repurposing_screen (which augments
+            # the pool with already-indicated drugs) ranks standard-of-care as "candidates".
+            canonical = resolved[0].get("heading") if resolved else disease
+            try:
+                from services import forward_guardrails as _fg
+                part = _fg.apply(screen["candidates"], canonical or disease)
+                screen["candidates"] = part["leads"]
+                screen["excluded"] = [{"name": c.get("name"), "chembl_id": c.get("chembl_id"),
+                                       "reason": c.get("removed_reason", ""),
+                                       "market_status": c.get("market_status")}
+                                      for c in part["removed"]]
+            except Exception as _e:
+                logger.debug(f"repurposing-screen guardrails failed: {_e}")
         return jsonify(screen)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -314,7 +314,24 @@
   </style>
   <script>
   window.apiFetch = async function apiFetch(url, opts) {
-    var r = await fetch(url, opts || {});
+    // Bound every API call so a stalled backend can never hang the UI forever. Some
+    // screens (reverse repurposing) legitimately take a while, so the ceiling is generous;
+    // callers that need longer can pass opts.timeoutMs.
+    opts = opts || {};
+    var timeoutMs = opts.timeoutMs || 240000;
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    var r;
+    try {
+      r = await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+    } catch (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') {
+        throw new Error('This is taking longer than expected and was stopped. Please try again.');
+      }
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+    clearTimeout(timer);
     var text = await r.text();
     var data = null;
     if (text) { try { data = JSON.parse(text); } catch (_e) {} }
@@ -511,15 +528,20 @@
       <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" style="font-size:18px">search</span>
       <input id="global-search" class="w-full pl-10 pr-4 py-2 rounded-lg text-sm focus:outline-none transition-all"
         style="background:var(--bg-sunken);border:1px solid var(--border-default)"
-        placeholder="Search compounds, targets, or compound IDs…"
+        placeholder="Search a disease or a drug…"
+        aria-label="Search a disease or a drug"
         onkeydown="if(event.key==='Enter'){var q=this.value.trim();if(q)window.location.href='/discover?q='+encodeURIComponent(q);}"/>
     </div>
   </div>
   <div class="flex items-center gap-3 ml-6">
-    <button class="p-2 text-text-muted hover:text-accent transition-colors rounded-lg" style="--tw-text-opacity:1" onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background='transparent'">
+    <button type="button" aria-label="Notifications" title="No new notifications"
+      onclick="if(window.toast)window.toast('No new notifications','info')"
+      class="p-2 text-text-muted hover:text-accent transition-colors rounded-lg" onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background='transparent'">
       <span class="material-symbols-outlined" style="font-size:20px">notifications</span>
     </button>
-    <button class="p-2 text-text-muted hover:text-accent transition-colors rounded-lg" onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background='transparent'">
+    <button type="button" aria-label="Help and documentation" title="Documentation"
+      onclick="window.location.href='/docs'"
+      class="p-2 text-text-muted hover:text-accent transition-colors rounded-lg" onmouseover="this.style.background='var(--bg-sunken)'" onmouseout="this.style.background='transparent'">
       <span class="material-symbols-outlined" style="font-size:20px">help_outline</span>
     </button>
     <div class="h-5 w-px mx-1" style="background:var(--border-default)"></div>

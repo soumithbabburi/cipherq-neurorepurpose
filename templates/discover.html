@@ -322,6 +322,15 @@ function doSearch() {
   .then(r => r.json())
   .then(data => {
     if (data.error) { toast(data.error, 'error'); return; }
+    // The query was actually a DRUG name, not a disease: hand off to the Repurpose
+    // Molecule screen (drug -> new indications) instead of showing an empty grid.
+    if (data.is_drug && data.drug) {
+      const dn = data.drug.name || q;
+      document.getElementById('status-bar').innerHTML =
+        `<div class="alert alert-info flex items-center gap-sm"><span class="material-symbols-outlined" style="font-size:16px">sync_alt</span>${data.message || (dn + ' is a drug. Opening the Repurpose Molecule screen.')}</div>`;
+      window.location.href = '/repurpose?drug=' + encodeURIComponent(dn);
+      return;
+    }
     const disease = data.disease;
     const nExcl = (data.excluded || []).length;
     document.getElementById('subtitle-text').innerHTML = `Reviewing <strong>${data.compounds.length}</strong> novel-lead candidate${data.compounds.length==1?'':'s'} for <strong>${disease}</strong>` + (nExcl ? ` · <span style="color:var(--text-muted)">${nExcl} already-approved or non-viable drug${nExcl==1?'':'s'} excluded</span>` : '');
@@ -333,7 +342,10 @@ function doSearch() {
     window._meshIds = data.mesh_ids;
     _saveSession(data.compounds, disease);
     renderTop3(data.compounds, disease);
-    history.pushState({}, '', '/discover?q=' + encodeURIComponent(q));
+    // replaceState (not pushState): re-searching within Discover should update the URL in
+    // place, not stack history entries. Stacking them made browser Back leak between tools
+    // (e.g. Back from Repurpose Molecule landed on a stale Compound Discovery result page).
+    history.replaceState({}, '', '/discover?q=' + encodeURIComponent(q));
     // Broad-category → subtype expansion: if the searched disease is an umbrella term,
     // show its clinically-distinct subtypes so the user can refine to a precise indication.
     let _sb = document.getElementById('disc-subtype-banner');

@@ -109,8 +109,12 @@ def classify_study(study: Dict) -> Dict:
                         and (_outcome_pvalue(om) is not None and _outcome_pvalue(om) < 0.05)
                         for om in oms)
 
+    # A primary endpoint that is met matters ONLY if it is a patient-relevant (clinical)
+    # endpoint. A biomarker PRIMARY that moves is target engagement, not a demonstrated
+    # clinical benefit, so it must not be scored as a clinical win — separate the two.
     clin_failed = None
-    any_met = None
+    clin_met = None
+    bio_met_primary = None
     for om in primaries:
         k = _kind(om.get("title", ""))
         p = _outcome_pvalue(om)
@@ -118,24 +122,36 @@ def classify_study(study: Dict) -> Dict:
         if p is None:
             continue
         if p < 0.05:
-            any_met = {"title": title, "p": p, "kind": k}
+            if k == "clinical":
+                clin_met = {"title": title, "p": p}
+            else:
+                bio_met_primary = {"title": title, "p": p}
         elif k == "clinical":
             clin_failed = {"title": title, "p": p}
 
+    # A met CLINICAL primary is the only true "win".
+    if clin_met:
+        return {"class": "met_primary", "primary_endpoint": clin_met["title"],
+                "primary_kind": "clinical", "p": clin_met["p"], "biomarker_met": biomarker_met,
+                "note": f"Primary clinical endpoint met ('{clin_met['title']}', p={clin_met['p']:.2g})."}
     if clin_failed:
         if biomarker_met:
             return {"class": "biomarker_only", "primary_endpoint": clin_failed["title"],
                     "primary_kind": "clinical", "p": clin_failed["p"], "biomarker_met": True,
                     "note": (f"Biomarker moved but the PRIMARY clinical endpoint "
                              f"('{clin_failed['title']}') was missed (p={clin_failed['p']:.2g}). "
-                             f"Right mechanism, wrong endpoint — a smarter-trial signal, not a win.")}
+                             f"Right mechanism, wrong endpoint, a smarter-trial signal, not a win.")}
         return {"class": "failed_primary", "primary_endpoint": clin_failed["title"],
                 "primary_kind": "clinical", "p": clin_failed["p"], "biomarker_met": False,
                 "note": f"Primary clinical endpoint missed ('{clin_failed['title']}', p={clin_failed['p']:.2g})."}
-    if any_met:
-        return {"class": "met_primary", "primary_endpoint": any_met["title"],
-                "primary_kind": any_met["kind"], "p": any_met["p"], "biomarker_met": biomarker_met,
-                "note": f"Primary endpoint met ('{any_met['title']}', p={any_met['p']:.2g})."}
+    # No clinical primary resolved, but a biomarker PRIMARY moved: this is biomarker-only
+    # evidence (target engagement), NOT a clinical win. Score it as such, not met_primary.
+    if bio_met_primary:
+        return {"class": "biomarker_only", "primary_endpoint": bio_met_primary["title"],
+                "primary_kind": "biomarker", "p": bio_met_primary["p"], "biomarker_met": True,
+                "note": (f"The PRIMARY endpoint was a biomarker ('{bio_met_primary['title']}', "
+                         f"p={bio_met_primary['p']:.2g}), not a patient-relevant clinical outcome. "
+                         f"Target engagement, not a demonstrated clinical benefit.")}
     return {"class": "unknown", "note": "Results posted, primary p-value not extractable.", "p": None}
 
 

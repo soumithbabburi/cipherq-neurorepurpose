@@ -1,24 +1,26 @@
 {% extends "base.html" %}
-{% set active_page = "discover" %}
+{% set active_page = back_active|default("discover") %}
 {% block title %}Analysis · RepurposeIQ{% endblock %}
 
 {% block content %}
-<a href="/discover" class="back-link" onclick="return cqGoBack();">
+<a href="{{ back_href|default('/discover') }}" class="back-link" onclick="return cqGoBack();">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
   Back to Results
 </a>
 <script>
   // Return to whatever surface the user actually came from (Repurpose, Pathways,
-  // Novel Targets, Knowledge Graph, or Compound Discovery) — not always /discover.
+  // Novel Targets, Knowledge Graph, or Compound Discovery), not always /discover.
+  // The href fallback is set server-side from the ?from= param; history.back is used
+  // first when we genuinely came from another in-app screen.
   function cqGoBack() {
     try {
       var ref = document.referrer || '';
       var sameSite = ref && ref.indexOf(location.host) > -1;
-      // don't "back" into another analysis page — that just re-opens a compound
+      // don't "back" into another analysis page, that just re-opens a compound
       var fromAnalysis = ref.indexOf('/analysis') > -1;
       if (sameSite && !fromAnalysis && history.length > 1) { history.back(); return false; }
     } catch (_e) {}
-    return true;   // fall back to the href (/discover)
+    return true;   // fall back to the href (server-set from ?from=)
   }
 </script>
 

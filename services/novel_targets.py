@@ -170,6 +170,20 @@ def drugs_via_novel_targets(disease_name: str, max_targets: int = 8,
             except Exception:
                 pass
             out["drugs"].append(drug)
+    # Development-reality guardrails (same as the /discover path): a drug already APPROVED
+    # for this disease is not a "novel-target discovery" even if it happens to hit an
+    # inferred target, and a drug withdrawn for safety is not a viable lead. Exclude those
+    # (surfaced separately) and flag me-too mechanisms; keep the inferred-target framing.
+    try:
+        from services import forward_guardrails as _fg
+        part = _fg.apply(out["drugs"], disease_name)
+        out["drugs"] = part["leads"]
+        out["excluded"] = [{"name": c.get("name"), "chembl_id": c.get("chembl_id"),
+                            "reason": c.get("removed_reason", ""),
+                            "market_status": c.get("market_status")}
+                           for c in part["removed"]]
+    except Exception:
+        out.setdefault("excluded", [])
     # Rank so clinically-viable drugs surface above crushed/ghost ones.
     out["drugs"].sort(key=lambda x: x.get("clinical_multiplier", 1.0), reverse=True)
     return out

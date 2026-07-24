@@ -216,7 +216,7 @@ function candidateCard(c, chembl){
   var clinLine = '';
   if (c.trial_count) clinLine = c.trial_count+' trial'+(c.trial_count>1?'s':'')+(c.max_trial_phase?' · up to Phase '+c.max_trial_phase:'');
   else if (c.lit_count) clinLine = c.lit_count+' PubMed co-mentions';
-  var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease);
+  var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease)+'&from=repurpose';
   return ''
   + '<div class="dossier" style="padding:16px 18px 16px 20px;display:flex;flex-direction:column;gap:9px">'
   +   '<div class="flex justify-between items-start" style="gap:12px">'
@@ -310,7 +310,7 @@ async function loadIndicationSubtypes(btn, drugEnc, diseaseEnc){
         + subs.map(function(s){
             var pct = Math.round((s.score||0)*100), col = window.scoreColor(s.score||0);
             return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f1efe7">'
-              + '<a href="/analysis?id='+encodeURIComponent(drug)+'&disease='+encodeURIComponent(s.label)+'" style="flex:1;font-size:0.74rem;color:#2563eb;text-decoration:none">'+s.label+'</a>'
+              + '<a href="/analysis?id='+encodeURIComponent(drug)+'&disease='+encodeURIComponent(s.label)+'&from=repurpose" style="flex:1;font-size:0.74rem;color:#2563eb;text-decoration:none">'+s.label+'</a>'
               + '<span class="mono" style="font-size:11px;font-weight:700;color:'+col+'">'+pct+'</span></div>';
           }).join('');
     }
