@@ -1,0 +1,44 @@
+{
+  "fusion": {
+    "clf_only(cascade)": {
+      "recall@10": 0.2756,
+      "recall@20": 0.3775,
+      "recall@50": 0.5843,
+      "recall@100": 0.7537,
+      "mrr": 0.1237,
+      "median_rank": 36,
+      "mean_rank": 89.7,
+      "n_pairs": 1571
+    },
+    "gnn_only": {
+      "recall@10": 0.1935,
+      "recall@20": 0.3202,
+      "recall@50": 0.5086,
+      "recall@100": 0.6894,
+      "mrr": 0.0859,
+      "median_rank": 50,
+      "mean_rank": 103.9,
+      "n_pairs": 1571
+    },
+    "fusion_clf_gnn": {
+      "recall@10": 0.2756,
+      "recall@20": 0.3915,
+      "recall@50": 0.5939,
+      "recall@100": 0.7626,
+      "mrr": 0.1204,
+      "median_rank": 34,
+      "mean_rank": 88.6,
+      "n_pairs": 1571
+    }
+  },
+  "shipped_cascade_ref": {
+    "recall@10": 0.2756,
+    "recall@20": 0.3775,
+    "recall@50": 0.5843,
+    "recall@100": 0.7537,
+    "mrr": 0.1237,
+    "median_rank": 36,
+    "mean_rank": 89.7,
+    "n_pairs": 1571
+  }
+}

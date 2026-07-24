@@ -97,3 +97,6 @@ data/primekg/*.tsv
 data/primekg/*.json
 data/primekg/*.txt
 data/primekg/*.log
+data/primekg/*.npz
+data/primekg/*.pkl
+data/primekg/*.pt

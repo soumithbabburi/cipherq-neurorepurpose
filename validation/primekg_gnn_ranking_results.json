@@ -1,0 +1,38 @@
+{
+  "gnn": {
+    "recall@10": 0.1801,
+    "recall@20": 0.2903,
+    "recall@50": 0.4672,
+    "recall@100": 0.6384,
+    "mrr": 0.0812,
+    "median_rank": 56,
+    "mean_rank": 171.7,
+    "n_pairs": 1571
+  },
+  "baseline_cascade": {
+    "recall@10": 0.2756,
+    "recall@20": 0.3775,
+    "recall@50": 0.5843,
+    "recall@100": 0.7537,
+    "mrr": 0.1237,
+    "median_rank": 36,
+    "mean_rank": 89.7,
+    "n_pairs": 1571
+  },
+  "baseline_distmult": {
+    "recall@10": 0.156,
+    "recall@20": 0.2311,
+    "recall@50": 0.3851,
+    "recall@100": 0.5321,
+    "mrr": 0.0742,
+    "median_rank": 87,
+    "mean_rank": 164.5,
+    "n_pairs": 1571
+  },
+  "meta": {
+    "epochs": 60,
+    "layers": 2,
+    "neg_per_pos": 8,
+    "seed": 42
+  }
+}
