@@ -532,22 +532,22 @@ def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
 
 
 def _why_not(e: Dict) -> List[str]:
-    """Concise reasons a candidate is down-ranked or non-actionable — the 'why not' view,
+    """Concise reasons a candidate is down-ranked or non-actionable (the 'why not' view),
     assembled from the gates/penalties already computed for the card."""
     out: List[str] = []
     pkg = e.get("primekg") or {}
     if pkg.get("relation") == "contraindication":
-        out.append("Contraindicated — " + (pkg.get("flag")
+        out.append("Contraindicated: " + (pkg.get("flag")
                    or "PrimeKG labels this an established contraindication for the disease (expert ground truth)."))
     et = e.get("evidence_tier") or {}
     if et.get("tier") == "contradicted":
-        out.append("Contradicted — " + (et.get("note") or "a trial failed for efficacy here"))
+        out.append("Contradicted: " + (et.get("note") or "a trial failed for efficacy here"))
     appr = e.get("appropriateness") or {}
     if appr.get("appropriate") is False and appr.get("flags"):
-        out.append("Wrong direction — " + ", ".join(appr["flags"]))
+        out.append("Wrong direction: " + ", ".join(appr["flags"]))
     saf = e.get("safety") or {}
     if saf.get("penalized") and saf.get("flags"):
-        out.append("Safety liability — " + "; ".join(saf["flags"][:2]))
+        out.append("Safety liability: " + "; ".join(saf["flags"][:2]))
     tf = e.get("trial_failure") or {}
     if tf.get("penalized"):
         out.append("Failed a prior clinical trial in this indication")
@@ -556,14 +556,14 @@ def _why_not(e: Dict) -> List[str]:
         out.append(f"Partial target coverage ({cov.get('n_hit', '?')}/{cov.get('n_drivers', '?')} drivers)")
     cc = e.get("clinical_constraints") or {}
     if cc.get("penalized") and cc.get("flags"):
-        out.append("Clinical mismatch — " + "; ".join(cc["flags"][:1]))
+        out.append("Clinical mismatch: " + "; ".join(cc["flags"][:1]))
     cf = e.get("commercial_friction") or {}
     if cf.get("penalized") and cf.get("flags"):
-        out.append("Commercial friction — " + cf["flags"][0])
+        out.append("Commercial friction: " + cf["flags"][0])
     if (e.get("ctpa") or {}).get("phantom"):
-        out.append("No functional cohesion — off-target match")
+        out.append("No functional cohesion; the target match is off target")
     if not e.get("actionable") and not out:
-        out.append("Below the evidence threshold — mechanistic signal too weak to act on")
+        out.append("Below the evidence threshold: mechanistic signal too weak to act on")
     return out
 
 
