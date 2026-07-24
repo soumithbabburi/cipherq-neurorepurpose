@@ -1286,6 +1286,32 @@ def score_compound_for_disease(
     if registry.get("ghost"):
         composite *= float(registry.get("multiplier", 1.0))
 
+    # ── PrimeKG ground-truth contraindication gate ───────────────────────────────
+    # A drug that PrimeKG (the 17k-disease medical KG behind TxGNN) LABELS as
+    # contraindicated for this disease must not surface as a repurposing lead — a real-world
+    # kill signal from 61k expert-curated edges, stacking with the other hard gates. We also
+    # record the direction-aware P(treats) from the validated treats classifier (compound-
+    # disjoint AUC 0.98 vs real contraindications) as an INDEPENDENT cross-check for display /
+    # corroboration; it is deliberately NOT folded into the composite (an external model must
+    # not silently inflate a validated score). Fail-soft: only fires when PrimeKG resolves the
+    # pair, and never on the drug's own approved indication (_own_therapy).
+    primekg = {"relation": None, "p_treats": None, "multiplier": 1.0}
+    try:
+        from services import primekg_predictor as _pkg
+        if _pkg.available() and not _own_therapy:
+            _nm = compound.get("name", ""); _cid = compound.get("chembl_id", "")
+            rel = _pkg.labeled_relation(_nm, disease_name, _cid)
+            primekg["relation"] = rel
+            primekg["p_treats"] = _pkg.treat_plausibility(_nm, disease_name, _cid)
+            if rel == "contraindication":
+                primekg["multiplier"] = 0.15
+                primekg["flag"] = ("PrimeKG labels this an established contraindication for "
+                                   "the disease (expert ground truth): a documented clinical "
+                                   "kill signal, not a repurposing lead.")
+                composite *= 0.15
+    except Exception as e:
+        logger.debug(f"primekg gate skipped: {e}")
+
     final_score = round(min(1.0, composite), 4)
 
     # Calibration (P1): make the raw score interpretable by ranking it against a
@@ -1392,6 +1418,7 @@ def score_compound_for_disease(
         "registry":        registry,
         "mechanism_scope": mechanism_scope,
         "calibration":     calibration,
+        "primekg":         primekg,   # ground-truth relation cross-check + direction-aware P(treats)
         "drug_genes":      drug_genes[:20],
     }
 
