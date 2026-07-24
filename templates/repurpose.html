@@ -48,7 +48,7 @@
     </div>
   </div>
   <p style="font-size:0.7rem;color:#98a1b6;margin-top:8px">
-    Candidates are drawn from three sources: <strong>genetic associations</strong> (a target association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), and <strong>literature co mention</strong> (PubMed), then ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
+    Candidates are drawn from four sources: <strong>genetic associations</strong> (a target association resource), <strong>existing clinical trials</strong> of this drug (ClinicalTrials.gov), <strong>literature co mention</strong> (PubMed), and <strong>knowledge graphs</strong> (Hetionet, DRKG, and PrimeKG's 17,080 diseases), then ranked by combined <strong>mechanistic + clinical evidence</strong>. The drug's global approval status informs 505(b)(2) feasibility (in the dossier), not the ranking.
   </p>
 </div>
 
@@ -547,7 +547,7 @@ async function runScreen(){
     var qs = [];
     if (area) qs.push('area='+encodeURIComponent(area));
     if (inclOnc) qs.push('oncology=1');
-    var url = '/api/drug/'+encodeURIComponent(drug)+'/new indications'+(qs.length?('?'+qs.join('&')):'');
+    var url = '/api/drug/'+encodeURIComponent(drug)+'/new-indications'+(qs.length?('?'+qs.join('&')):'');
     var d = await window.apiFetch(url);
     _stopProgress();
     if (d.error){ status.innerHTML = '<span class="alert-error" style="display:inline-block">'+d.error+'</span>'; btn.disabled=false; return; }
