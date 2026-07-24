@@ -63,14 +63,22 @@ def mechanism_direction(drug_genes: List[str], drug_actions: Optional[Dict[str, 
     """{factor, net, corrective, harmful, flag} — a bounded multiplier on the target
     score and a contraindication flag. factor ∈ [0.35, 1.15]; 1.0 when undetermined."""
     out = {"factor": 1.0, "net": "neutral", "corrective": [], "harmful": [],
-           "covered": False, "flag": ""}
+           "covered": False, "assessed": False, "flag": ""}
     actions = {k.upper(): _drug_effect(v) for k, v in (drug_actions or {}).items()}
     if not actions or not drug_genes:
         return out
     up, down = _disease_direction(disease)
     if not up and not down:
+        # We know HOW the drug acts (agonist/antagonist) but have no directional
+        # (up/down-regulation) data for this disease, so we cannot confirm the drug pushes
+        # it the right way. Say so honestly rather than defaulting to a silent neutral pass,
+        # which would let an activator of a disease-driving target read as a clean lead.
+        out["flag"] = ("Direction not assessed: no directional expression data for this "
+                       "disease, so the platform cannot verify the drug corrects rather than "
+                       "worsens it. Treat the mechanistic direction as unconfirmed.")
         return out
     out["covered"] = True
+    out["assessed"] = True
     corrective, harmful = [], []
     for g in {x.upper() for x in drug_genes}:
         e = actions.get(g, 0)
