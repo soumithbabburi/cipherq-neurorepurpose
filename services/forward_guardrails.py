@@ -11,7 +11,9 @@ These guardrails add the missing development reality, all GROUNDED in the local
 chembl-derived tables (no live calls, id-independent, matched by drug name):
 
   • approved_for_indication — is the molecule already approved (phase >= 4) for the
-    searched disease? The single true novelty disqualifier (exclude, do not rank).
+    searched disease? The single true novelty disqualifier (exclude, do not rank). Grounded
+    in the local table AND PrimeKG's labeled indication edges, so the check does not fail
+    open on diseases the sparse local table omits (salt display names are reduced to base).
   • mechanism_crowding — is the molecule's mechanism (its targets) ALREADY occupied by
     an approved drug for this disease? If every disease-relevant target it hits already
     has an approved drug for the indication, it is a me-too offering no differentiation
@@ -172,6 +174,50 @@ def approved_names_for_indication(names: List[str], disease: str) -> Set[str]:
     return {r["nm"] for r in rows if r.get("nm")}
 
 
+# Common salt / hydrate suffixes on approved-drug display names (e.g. "DONEPEZIL
+# HYDROCHLORIDE"). Stripped to the base drug so name-keyed ground-truth lookups resolve.
+_SALT_WORDS = {
+    "hydrochloride", "dihydrochloride", "hydrobromide", "hcl", "hbr", "sulfate", "sulphate",
+    "bisulfate", "mesylate", "besylate", "tosylate", "maleate", "dimaleate", "malate",
+    "fumarate", "hemifumarate", "succinate", "citrate", "dicitrate", "tartrate", "bitartrate",
+    "acetate", "phosphate", "diphosphate", "sodium", "potassium", "calcium", "magnesium",
+    "monohydrate", "dihydrate", "trihydrate", "hydrate", "chloride", "bromide", "nitrate",
+    "lactate", "gluconate", "pamoate", "embonate", "oxalate", "furoate", "propionate",
+}
+
+
+def _base_drug_name(name: str) -> str:
+    """Reduce a salt/hydrate display name to its base drug (trailing salt tokens removed)."""
+    toks = (name or "").strip().lower().split()
+    while len(toks) > 1 and toks[-1] in _SALT_WORDS:
+        toks.pop()
+    return " ".join(toks)
+
+
+def primekg_approved_names(names: List[str], disease: str) -> Set[str]:
+    """Lower-cased names in `names` that PrimeKG's real labeled edges mark as an INDICATION
+    for `disease` — ground-truth approvals the sparse local `indications` table misses
+    (it holds only a few hundred curated rows, so it fails open for most diseases, e.g.
+    letting the approved cholinesterase inhibitors surface as Alzheimer's 'novel leads').
+    Salt forms are reduced to the base drug. Fail-soft: empty set if PrimeKG is absent."""
+    out: Set[str] = set()
+    try:
+        from services import primekg_predictor as pkg
+        if not pkg.available():
+            return out
+        for n in names:
+            nl = (n or "").strip().lower()
+            if not nl:
+                continue
+            for cand in (nl, _base_drug_name(nl)):
+                if pkg.labeled_relation(cand, disease) == "indication":
+                    out.add(nl)
+                    break
+    except Exception as e:
+        logger.debug("primekg approved-names lookup skipped: %s", e)
+    return out
+
+
 def targets_for_names(names: List[str]) -> Dict[str, Set[str]]:
     """{lower_name: {gene symbols}} for a whole candidate list in one query."""
     names = [n for n in {(_x or "").strip().lower() for _x in names} if n]
@@ -207,7 +253,10 @@ def apply(candidates: List[Dict], disease: str) -> Dict:
         return {"leads": [], "removed": []}
 
     names = [c.get("name", "") for c in candidates]
-    approved = approved_names_for_indication(names, disease)
+    # Ground the novelty disqualifier in BOTH the local table AND PrimeKG's labeled
+    # indication edges, so approved drugs are excluded even for diseases the sparse local
+    # table does not cover (the Alzheimer's cholinesterase-inhibitor fail-open).
+    approved = approved_names_for_indication(names, disease) | primekg_approved_names(names, disease)
     tmap = targets_for_names(names)
     occ = occupied_targets(disease)
 
