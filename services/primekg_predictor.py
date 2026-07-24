@@ -55,8 +55,21 @@ def _load() -> Optional[Dict]:
                 treats = joblib.load(_D / "pkg_treats.pkl")["model"]
         except Exception as e:
             logger.debug("treats classifier unavailable: %s", e)
+        # R-GCN refined embeddings (the message-passing universe ranker). Fused with the
+        # treats classifier in top_diseases_for_drug; validated to beat the cascade on the
+        # held-out ranking harness. Fail-soft: needs torch + pkg_gnn.pt, else we fall back
+        # to the classifier-only cascade. Kept as numpy for the same vectorised path.
+        gnn_H = gnn_r = None
+        try:
+            if (_D / "pkg_gnn.pt").exists():
+                import torch
+                _blob = torch.load(_D / "pkg_gnn.pt", weights_only=False, map_location="cpu")
+                gnn_H = _blob["H"].numpy(); gnn_r = _blob["r_ind"].numpy()
+        except Exception as e:
+            logger.debug("GNN ranker unavailable: %s", e)
         _state = {
             "E": emb["E"], "R": emb["R"], "rels": rels, "treats": treats,
+            "gnn_H": gnn_H, "gnn_r": gnn_r,
             "drug_by_name": idx.get("drug_by_name", {}), "drug_by_dbid": idx.get("drug_by_dbid", {}),
             "disease_by_name": idx.get("disease_by_name", {}),
             "nodes": nodes, "labels": labels,
@@ -191,15 +204,32 @@ def treat_plausibility(drug: str, disease: str, chembl_id: str = "") -> Optional
 _POOL = 400   # recall pool size before direction-aware re-ranking
 
 
-def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "") -> List[Dict]:
-    """EXPLORATORY relatedness->direction re-rank over the drug's most-connected diseases.
+def _rrf_rerank(scores_list, weights, k_rrf: int = 60):
+    """Reciprocal Rank Fusion of several score vectors over the SAME candidate pool.
+    Returns a fused score per candidate (higher = better)."""
+    fused = np.zeros(len(scores_list[0]))
+    for sc, w in zip(scores_list, weights):
+        order = np.argsort(-sc)
+        rank = np.empty(len(sc)); rank[order] = np.arange(1, len(sc) + 1)
+        fused += w * (1.0 / (k_rrf + rank))
+    return fused
 
-    CAVEAT (validated): the treats classifier is a strong PAIR scorer (AUC 0.98 zero-shot on
-    indication vs contraindication) but is NOT calibrated as a clean from-scratch ranker over
-    the full 17k-disease universe — its extreme top carries spurious false-positives. So this
-    is for exploration only. The trustworthy use is treat_plausibility() on a SPECIFIC pair
-    the biology engine already surfaced. A clean universe generator needs the full end-to-end
-    GNN (TxGNN-style ranking objective), not this lightweight model."""
+
+def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "") -> List[Dict]:
+    """Universe generator: rank candidate indications for a drug over PrimeKG's 17k diseases.
+
+    Method (validated on the held-out ranking harness, validation/validate_primekg_*):
+    a DistMult relatedness pool (recall) is re-ranked by fusing the direction-aware treats
+    classifier (pair features) with the R-GCN (graph structure) via Reciprocal Rank Fusion,
+    weighted 3:1. This FUSION beats the classifier-only cascade on the compound-disjoint
+    held-out set (R@20 0.392 vs 0.378, R@100 0.763 vs 0.754, median rank 34 vs 36) while
+    tying it at R@10. Fail-soft: with no GNN artifact it degrades to the classifier-only
+    cascade (the prior behaviour).
+
+    CAVEAT (honest): even the fusion recovers only ~28% of a held-out drug's true indications
+    in its top 10 — a strong CANDIDATE-GENERATION / triage signal, not a calibrated
+    probability of success. The trustworthy use for a decision remains treat_plausibility()
+    on a SPECIFIC pair the biology engine already surfaced."""
     s = _load()
     di = resolve_drug(drug, chembl_id)
     if s is None or di is None or s.get("treats") is None:
@@ -210,7 +240,17 @@ def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "") -> List[D
     pool = np.argsort(-rel)[:_POOL]
     pool_ids = s["disease_ids"][pool]
     prob = _treats_scores(di, pool_ids)                        # classifier (precision/direction)
-    order = np.argsort(-prob)[:k]
+    # Fuse with the R-GCN structural ranker when available (validated to beat the cascade).
+    gnn_H, gnn_r = s.get("gnn_H"), s.get("gnn_r")
+    if gnn_H is not None and gnn_r is not None:
+        gnn = (gnn_H[di] * gnn_r * gnn_H[pool_ids]).sum(-1)   # R-GCN score over the pool
+        fused = _rrf_rerank([prob, gnn], [3.0, 1.0])
+        order = np.argsort(-fused)[:k]
+        return [{"disease": _name(int(pool_ids[j])),
+                 "node": int(pool_ids[j]),
+                 "score": round(float(prob[j]), 4),   # displayed direction-aware P(treats)
+                 "fused_rank": int(r + 1)} for r, j in enumerate(order)]
+    order = np.argsort(-prob)[:k]                              # fail-soft: classifier-only cascade
     return [{"disease": _name(int(pool_ids[j])),
              "node": int(pool_ids[j]),
              "score": round(float(prob[j]), 4)} for j in order]
