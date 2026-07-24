@@ -215,7 +215,8 @@ def _rrf_rerank(scores_list, weights, k_rrf: int = 60):
     return fused
 
 
-def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "") -> List[Dict]:
+def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "",
+                          min_score: float = 0.0) -> List[Dict]:
     """Universe generator: rank candidate indications for a drug over PrimeKG's 17k diseases.
 
     Method (validated on the held-out ranking harness, validation/validate_primekg_*):
@@ -245,12 +246,12 @@ def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "") -> List[D
     if gnn_H is not None and gnn_r is not None:
         gnn = (gnn_H[di] * gnn_r * gnn_H[pool_ids]).sum(-1)   # R-GCN score over the pool
         fused = _rrf_rerank([prob, gnn], [3.0, 1.0])
-        order = np.argsort(-fused)[:k]
+        order = [j for j in np.argsort(-fused) if prob[j] >= min_score][:k]
         return [{"disease": _name(int(pool_ids[j])),
                  "node": int(pool_ids[j]),
                  "score": round(float(prob[j]), 4),   # displayed direction-aware P(treats)
                  "fused_rank": int(r + 1)} for r, j in enumerate(order)]
-    order = np.argsort(-prob)[:k]                              # fail-soft: classifier-only cascade
+    order = [j for j in np.argsort(-prob) if prob[j] >= min_score][:k]  # fail-soft: classifier-only
     return [{"disease": _name(int(pool_ids[j])),
              "node": int(pool_ids[j]),
              "score": round(float(prob[j]), 4)} for j in order]

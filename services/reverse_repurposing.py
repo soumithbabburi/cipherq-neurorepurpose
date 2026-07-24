@@ -1528,6 +1528,35 @@ def screen_indications_for_drug(
     except Exception as e:
         logger.debug(f"DRKG candidate generation skipped: {e}")
 
+    # 1a-PrimeKG. BROAD-COVERAGE candidates over PrimeKG's 17,080 diseases (the graph TxGNN
+    # is built on) — far wider than Hetionet (213) or DRKG (~5.1k). Ranked by the validated
+    # FUSION generator (DistMult recall pool -> treats-classifier + R-GCN, RRF; beats the
+    # classifier-only cascade on the held-out harness). It is a candidate-GENERATOR (recall);
+    # the canonical composite + disease-value + contraindication gate still RANK/filter them,
+    # so tail noise sinks. A high min_score keeps only confident P(treats) leads. Fail-soft:
+    # needs torch + pkg_gnn.pt (present in .venv312); degrades to the cascade otherwise.
+    try:
+        from services.primekg_predictor import top_diseases_for_drug as _pkg_top
+        _existing = {v["disease"].lower(): k for k, v in candidate_map.items()}
+        for kg in _pkg_top(info.get("name", drug), chembl_id=info.get("chembl_id", ""),
+                           k=30, min_score=0.90):
+            nm = kg["disease"]; low = nm.lower()
+            if low in _existing:
+                v = candidate_map[_existing[low]]
+                v["sources"] = set(v.get("sources", set())) | {"knowledge-graph"}
+                v["kg_probability"] = max(v.get("kg_probability", 0.0), kg["score"])
+                continue
+            candidate_map[f"pkg:{nm}"] = {
+                "disease": nm, "efo_id": "",
+                "therapeutic_areas": (["cancer or benign tumor"] if _is_oncology_name(nm) else []),
+                "association_score": 0.0, "via_target": "", "sources": {"knowledge-graph"},
+                "trial_count": 0, "max_trial_phase": 0, "lit_count": 0,
+                "kg_probability": kg["score"],
+            }
+            _existing[low] = f"pkg:{nm}"
+    except Exception as e:
+        logger.debug(f"PrimeKG candidate generation skipped: {e}")
+
     # 1b. Add candidates from clinical trials + literature (real-world repurposing
     #     signal that genetic associations miss — e.g. an eye-drop trial of an
     #     oncology drug). Resolve each to a disease/EFO and merge by EFO id.
