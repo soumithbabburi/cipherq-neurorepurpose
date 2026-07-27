@@ -144,3 +144,31 @@ def test_qc_engine_aspirin():
     assert len(r.get("atomic_charges", [])) == r.get("n_atoms")
     # Reactivity indices derived from frontier orbitals
     assert r["hardness_ev"] > 0
+
+
+# ── Unit: endpoint outcome-signal logic (regression for the terminated_safety fix) ──
+def test_endpoint_terminated_safety_is_negative(monkeypatch):
+    """A trial stopped for a safety reason must yield a strongly NEGATIVE outcome
+    signal, never neutral (0.0) or positive. Regression for commit 5b7732b."""
+    from services import endpoint_parser as ep
+    monkeypatch.setattr(ep, "classify_study",
+                        lambda s: {"class": s["_c"], "note": s["_c"], "p": None})
+
+    only_safety = ep.aggregate([{"_c": "terminated_safety"}])
+    assert only_safety["outcome_signal"] == -0.9
+    assert only_safety["verdict"] == "terminated_safety"
+
+    # a met_primary must NOT flip a safety stop to a positive readout
+    met_and_safety = ep.aggregate([{"_c": "met_primary"}, {"_c": "terminated_safety"}])
+    assert met_and_safety["outcome_signal"] < 0
+
+
+def test_endpoint_verdict_tie_is_order_independent(monkeypatch):
+    """Equal-magnitude opposite-sign classes must resolve to the same verdict
+    regardless of study order (prefers the more-negative class)."""
+    from services import endpoint_parser as ep
+    monkeypatch.setattr(ep, "classify_study",
+                        lambda s: {"class": s["_c"], "note": s["_c"], "p": None})
+    a = ep.aggregate([{"_c": "met_primary"}, {"_c": "terminated_efficacy"}])["verdict"]
+    b = ep.aggregate([{"_c": "terminated_efficacy"}, {"_c": "met_primary"}])["verdict"]
+    assert a == b == "terminated_efficacy"
