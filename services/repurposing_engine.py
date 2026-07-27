@@ -1470,12 +1470,21 @@ def run_repurposing_screen(
     disease_genes: List[str] = []
     disease_pathways: List[Dict] = []
     ppi_adj: Dict = {}
+    disease_weights: Dict[str, float] = {}
 
     try:
         from services.disease_ontology import resolve_disease as ot_resolve, get_ppi_network
         disease_info    = ot_resolve(disease_name)
         disease_genes   = [t["gene_symbol"] for t in disease_info.get("targets", [])[:40]]
         disease_pathways = disease_info.get("pathways", [])
+        # Genetics-weighted disease genes — SAME construction the reverse screen uses
+        # (reverse_repurposing.py). Passing this makes forward /discover use the
+        # strength-gating target scorer + the polygenic coverage gate, instead of flat
+        # overlap that lets a single promiscuous/coincidental hub gene inflate a pair
+        # to "Strong/Actionable" (a false positive). Empty -> None -> flat, as before.
+        disease_weights = {t["gene_symbol"].upper():
+                           (t.get("quality_score") or t.get("genetic_score") or t.get("score", 0.0))
+                           for t in disease_info.get("targets", []) if t.get("gene_symbol")}
         if disease_genes:
             ppi_adj = get_ppi_network(disease_genes[:15])
     except Exception as e:
@@ -1590,6 +1599,10 @@ def run_repurposing_screen(
         sr = score_compound_for_disease(
             comp, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
             drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
+            # only use weighted scoring when there is real association strength; an
+            # all-zero/empty weight map falls back to flat overlap (never zeroes targets)
+            disease_gene_weights=(disease_weights
+                                  if any(v > 0 for v in disease_weights.values()) else None),
             studied_for_disease=(cid in studied_set),
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}

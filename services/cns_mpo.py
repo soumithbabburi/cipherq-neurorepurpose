@@ -80,9 +80,13 @@ def cns_mpo(props: Optional[Dict] = None, smiles: str = "") -> Dict:
     clogd = pick("cx_logd", default=clogp)          # logD7.4; fall back to logP
     tpsa = pick("psa", "tpsa", default=rd.get("tpsa"))
     hbd  = pick("hbd", default=rd.get("hbd"))
-    # Most basic pKa: if absent the molecule is non-basic at physiological pH —
-    # favourable for CNS penetration, so score the basicity term as ideal.
-    bpka = pick("cx_most_bpka", "most_basic_pka", default=0.0)
+    # Most-basic pKa. Only score this term when the value is actually KNOWN. Previously
+    # a missing pKa defaulted to 0.0, which scores the basicity term as IDEAL (1.0) —
+    # but RDKit computes no pKa, so the live SMILES-only path ALWAYS got the free point,
+    # systematically inflating basic-amine CNS drugs by up to ~1 MPO point (enough to
+    # flip the 4.0 "CNS-penetrant" verdict). Unknown pKa -> desirability None -> excluded
+    # from the score, which is then scaled over the known properties (honest, not optimistic).
+    bpka = pick("cx_most_bpka", "most_basic_pka", default=None)
 
     comps = {
         "MW":     {"value": mw,    "desirability": _mono_dec(mw,   360, 500) if mw   is not None else None},
@@ -90,7 +94,7 @@ def cns_mpo(props: Optional[Dict] = None, smiles: str = "") -> Dict:
         "cLogD":  {"value": clogd, "desirability": _mono_dec(clogd, 2.0, 4.0) if clogd is not None else None},
         "TPSA":   {"value": tpsa,  "desirability": _hump(tpsa, 20, 40, 90, 120) if tpsa is not None else None},
         "HBD":    {"value": hbd,   "desirability": _mono_dec(hbd,  0.5, 3.5) if hbd  is not None else None},
-        "pKa(b)": {"value": bpka,  "desirability": _mono_dec(bpka, 8.0, 10.0)},
+        "pKa(b)": {"value": bpka,  "desirability": (_mono_dec(bpka, 8.0, 10.0) if bpka is not None else None)},
     }
     # Require the core structural properties (a bare pKa default must not yield a score)
     core = ("MW", "cLogP", "TPSA", "HBD")

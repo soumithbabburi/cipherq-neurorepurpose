@@ -342,15 +342,21 @@ class DockingService:
             # repeated) or invented confidence scores. This path only runs if the
             # physics engine itself failed, which is why there is no 3-D pose here.
             aff = round(-(0.8 + logp*0.3 - tpsa*0.01 + hbd*0.2 + hba*0.15), 2)
+            # This descriptor regression is NOT a docking ΔG — no pose was computed.
+            # Keep it OUT of `binding_affinities` so it can never be rendered as a
+            # "Docking ΔG (kcal/mol)"; expose it only in a distinctly-named field. The
+            # docking-ΔG slot stays empty (honest: nothing was docked on this fallback).
             return {
                 "success": True,
                 "poses": [ligand_sdf],            # ligand geometry only — not docked
-                "binding_affinities": [aff],
+                "binding_affinities": [],
+                "descriptor_estimate": aff,       # property-based, no physical ΔG meaning
                 "docking_method": "RDKit descriptor estimate (no 3-D pose)",
                 "target_name": target_name,
                 "drug_name": drug_name,
                 "structure_quality": "none",
-                "note": "Property-based ΔG estimate only — no protein pose was generated for this target.",
+                "note": "No protein pose could be generated for this target; only a rough "
+                        "property-based estimate is available (not a docking ΔG).",
             }
         except Exception as e:
             return {"success": False, "error": f"All docking methods failed: {e}", "poses": []}

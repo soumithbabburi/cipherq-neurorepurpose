@@ -103,18 +103,26 @@ def _estimate_quantum_properties(smiles: str) -> Dict:
         max_c, min_c = max(charges, default=0.0), min(charges, default=0.0)
         logp, tpsa = Descriptors.MolLogP(mol), Descriptors.TPSA(mol)
         mw = Descriptors.ExactMolWt(mol)
-        gap_proxy = round(max(3.0, min(12.0, 4.5 + 0.01 * tpsa - 0.05 * logp + 0.002 * mw)), 3)
+        # Quantum ELECTRONIC properties (HOMO-LUMO gap in eV, dipole in Debye,
+        # polarizability) require a real QM calculation. When xTB is unavailable we do
+        # NOT fabricate them: a descriptor regression for "gap_ev" or a Gasteiger charge
+        # spread mislabeled as a Debye "dipole" is a physically baseless number that a
+        # customer would read as a real quantum result. Emit only genuine RDKit
+        # descriptors + real Gasteiger partial charges; leave the electronic-structure
+        # fields absent so the UI hides the quantum panel rather than showing fakes.
         return {
             "is_estimate": True,
-            "gap_ev": gap_proxy,
-            "dipole_debye": round((max_c - min_c) * 10, 3),
+            "gap_ev": None,
+            "dipole_debye": None,
+            "polarizability_au": None,
             "max_partial_charge": round(max_c, 4),
             "min_partial_charge": round(min_c, 4),
-            "polarizability_au": round(mol.GetNumHeavyAtoms() * 0.54, 2),
             "qed": round(QED.qed(mol), 4),
             "logp": round(logp, 3),
             "mw": round(mw, 2),
             "tpsa": round(tpsa, 2),
+            "note": "Quantum electronic structure (HOMO/LUMO, dipole, polarizability) "
+                    "requires the GFN2-xTB engine and was not computed for this molecule.",
         }
     except Exception as e:
         logger.warning(f"Quantum property estimate failed: {e}")
