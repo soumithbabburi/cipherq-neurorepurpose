@@ -67,6 +67,11 @@ def _registry() -> Dict[str, Dict]:
             "live": True, "cadence": "quarterly", "url": "https://api.fda.gov/drug/event.json",
             "integrity": "Spontaneous reports — signal, not causation",
             "feeds": "Serious adverse-event signals for the safety / appropriateness gate"},
+        "pubmed": {
+            "name": "PubMed (NCBI E-utilities)", "kind": "Literature", "authority": "secondary",
+            "live": True, "cadence": "daily", "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+            "integrity": "Indexed biomedical literature (MeSH + publication type)",
+            "feeds": "Evidence tier by study design (RCT/meta-analysis) and MeSH co-indexing"},
         "open_targets": {
             "name": "Open Targets Platform", "kind": "Target–disease evidence", "authority": "secondary",
             "live": True, "cadence": "quarterly", "url": "https://api.platform.opentargets.org",

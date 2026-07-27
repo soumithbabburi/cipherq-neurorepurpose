@@ -198,6 +198,50 @@ def test_endpoint_typing_uses_structured_fields_not_keywords():
     assert ep._kind({"title": "Responders", "unitOfMeasure": "Participants"}) == "clinical"
 
 
+# ── Unit: clinical-evidence miner parsers (structured, not keyword) ─────────────
+def test_clinical_evidence_adverse_event_parsing():
+    from services.clinical_evidence import parse_adverse_events
+    study = {"resultsSection": {"adverseEventsModule": {
+        "eventGroups": [{"seriousNumAffected": 12, "seriousNumAtRisk": 100, "deathsNumAffected": 1},
+                        {"seriousNumAffected": 8, "seriousNumAtRisk": 100, "deathsNumAffected": 0}],
+        "seriousEvents": [
+            {"organSystem": "Cardiac disorders", "stats": [{"numAffected": 5}, {"numAffected": 3}]},
+            {"organSystem": "Hepatobiliary disorders", "stats": [{"numAffected": 2}]}]}}}
+    ae = parse_adverse_events(study)
+    assert ae["serious_num_affected"] == 20 and ae["serious_num_at_risk"] == 200
+    assert ae["serious_rate"] == 0.1 and ae["deaths"] == 1
+    assert ae["top_serious_organ_systems"][0]["organ_system"] == "Cardiac disorders"
+    assert ae["top_serious_organ_systems"][0]["events"] == 8
+    assert "denominator" in ae["caveat"].lower()
+    # no AE module -> None (never fabricated)
+    assert parse_adverse_events({"resultsSection": {}}) is None
+
+
+def test_clinical_evidence_literature_tier_by_design():
+    from services.clinical_evidence import literature_tier, _parse_efetch_xml
+    # a meta-analysis present -> high tier, directional 'treats' from qualifier
+    records = [
+        {"pub_types": ["Meta-Analysis"], "mesh": [{"descriptor": "Imatinib", "qualifiers": ["therapeutic use"]}],
+         "mesh_confirmed": True},
+        {"pub_types": ["Randomized Controlled Trial"], "mesh": [], "mesh_confirmed": True},
+        {"pub_types": ["Case Reports"], "mesh": [], "mesh_confirmed": True}]
+    lt = literature_tier(records)
+    assert lt["tier"] == "high" and lt["counts"]["meta"] == 1 and lt["counts"]["case_report"] == 1
+    assert lt["directional"] == "treats" and lt["mesh_confirmed"] is True
+    # empty -> none, no fabrication
+    assert literature_tier([])["tier"] == "none"
+    # efetch XML parses publication type + mesh deterministically
+    xml = ("<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>1</PMID>"
+           "<Article><PublicationTypeList><PublicationType>Randomized Controlled Trial"
+           "</PublicationType></PublicationTypeList></Article>"
+           "<MeshHeadingList><MeshHeading><DescriptorName>Asthma</DescriptorName>"
+           "<QualifierName>drug therapy</QualifierName></MeshHeading></MeshHeadingList>"
+           "</MedlineCitation></PubmedArticle></PubmedArticleSet>")
+    recs = _parse_efetch_xml(xml)
+    assert len(recs) == 1 and "Randomized Controlled Trial" in recs[0]["pub_types"]
+    assert recs[0]["mesh"][0]["descriptor"] == "Asthma"
+
+
 # ── Unit: audit trail (Part 11) — append + tamper-evidence ──────────────────────
 def test_audit_trail_chain_and_tamper(tmp_path, monkeypatch):
     from services import audit_trail as at

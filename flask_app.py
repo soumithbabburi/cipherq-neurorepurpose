@@ -278,6 +278,23 @@ def api_sign():
     return jsonify({"ok": True, "signature": manifest})
 
 
+@app.route("/api/clinical-evidence")
+def api_clinical_evidence():
+    """Structured, provenance-tagged clinical-evidence record for a (drug, disease)
+    pair: trial outcomes, denominatored adverse-event summary, and a literature tier
+    by study design. Reports facts with caveats; asserts no efficacy/safety itself."""
+    drug = request.args.get("drug", "").strip()
+    disease = request.args.get("disease", "").strip()
+    if not drug or not disease:
+        return jsonify({"error": "drug and disease are required"}), 400
+    try:
+        from services.clinical_evidence import mine_clinical_evidence
+        return jsonify(mine_clinical_evidence(drug, disease))
+    except Exception as e:
+        logger.debug(f"clinical-evidence failed: {e}")
+        return jsonify({"error": "clinical-evidence unavailable"}), 500
+
+
 @app.route("/api/signatures")
 def api_signatures():
     """List e-signatures recorded against a record_ref. Only active under auth."""
