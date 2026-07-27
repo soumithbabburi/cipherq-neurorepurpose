@@ -41,10 +41,12 @@ Last updated: 2026-07-27.
 | URS-22 | The platform makes no claim of clinical-success prediction | services/repurposing_predictor.py (scope note), UI copy | Stated limit: approved-vs-failed AUROC 0.42 | validation/predictions_results.json, repodb_external_metrics.json | harness + doc |
 | URS-23 | Operator actions are recorded in a tamper-evident, time-stamped audit trail that survives rotation (Part 11) | services/audit_trail.py; flask_app after_request hook | test_audit_trail_chain_and_tamper; test_audit_trail_rotation_keeps_chain | tests/test_cipherq.py | auto |
 | URS-24 | System access is limited to authenticated users with role-based authority (viewer/analyst/admin) (Part 11) | services/auth.py; flask_app before_request guard + /login + /admin/users | test_auth_password_and_roles; test_auth_role_policy_and_user_listing | tests/test_cipherq.py | auto |
+| URS-25 | A record can be electronically signed with re-authentication, signer, meaning, and timestamp, linked tamper-evidently (Part 11 subpart C) | services/esign.py; /api/sign, /api/signatures | test_esign_requires_reauth_and_is_recorded | tests/test_cipherq.py | auto |
+| URS-26 | Hazards are identified with controls and residual risk (ISO 14971) | validation/RISK_MANAGEMENT_FILE.md | 11-hazard log grounded in real findings; controls cite committed fixes/tests | validation/RISK_MANAGEMENT_FILE.md | doc |
 
 ## Coverage summary
 
-* Automated (CI-gated) tests: 21 across `tests/test_cipherq.py` and
+* Automated (CI-gated) tests: 22 across `tests/test_cipherq.py` and
   `tests/test_primekg_gate.py`.
 * Validation harnesses: 10, each writing a dated result JSON.
 * Documented negative results (tested and deliberately NOT integrated): KGE-04

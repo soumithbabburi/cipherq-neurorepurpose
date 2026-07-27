@@ -256,6 +256,41 @@ def admin_users():
     return jsonify({"users": _auth.list_users()})
 
 
+@app.route("/api/sign", methods=["POST"])
+def api_sign():
+    """Electronic signature (Part 11). Body: {record_ref, meaning, password}.
+    The signer is the authenticated session user; the password is the second
+    signing component. Only active under auth."""
+    if _auth is None or not _auth.auth_enabled():
+        abort(404)
+    user = _auth.current_user() or {}
+    data = request.get_json(silent=True) or request.form
+    try:
+        from services.esign import sign as _sign
+    except Exception:
+        return jsonify({"error": "e-signature unavailable"}), 500
+    manifest = _sign(record_ref=data.get("record_ref", ""),
+                     meaning=data.get("meaning", ""),
+                     username=user.get("username", ""),
+                     password=data.get("password", ""))
+    if manifest is None:
+        return jsonify({"error": "signature not executed (bad password or missing fields)"}), 400
+    return jsonify({"ok": True, "signature": manifest})
+
+
+@app.route("/api/signatures")
+def api_signatures():
+    """List e-signatures recorded against a record_ref. Only active under auth."""
+    if _auth is None or not _auth.auth_enabled():
+        abort(404)
+    ref = request.args.get("record_ref", "")
+    try:
+        from services.esign import signatures_for
+        return jsonify({"record_ref": ref, "signatures": signatures_for(ref)})
+    except Exception:
+        return jsonify({"record_ref": ref, "signatures": []})
+
+
 @app.route("/logout")
 def logout():
     u = (_auth.current_user() if _auth is not None else None) or {}

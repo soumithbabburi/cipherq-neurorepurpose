@@ -175,5 +175,22 @@ def verify() -> Tuple[bool, Optional[int]]:
     return True, None
 
 
+def iter_entries():
+    """Yield every audit entry across all segments, in sequence order. Read-only;
+    used by callers that need to query the trail (e.g. e-signature retrieval)."""
+    for seg in _segments():
+        try:
+            with seg.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            yield json.loads(line)
+                        except Exception:
+                            continue
+        except Exception as e:
+            logger.error("audit_trail.iter_entries failed on %s: %s", seg, e)
+
+
 def log_file() -> Path:
     return _LOG_FILE

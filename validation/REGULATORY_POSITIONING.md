@@ -100,15 +100,15 @@ Legend: DONE / PARTIAL / MISSING.
 | Data-layer validation (bioactivity, concordance, resolution, KG integrity) | ALCOA+, GAMP 5 | DONE | validation/validate_*.py + results |
 | Predictive validation vs external gold standard (repoDB) | GAMP 5 | DONE | AUROC 0.73, negative controls collapse to 0.5 |
 | SOPs and CAPA logs | GAMP 5, MHRA | DONE | validation/SOP-*, CAPA-LOG-* |
-| Provenance and freshness scoring | ALCOA+ Attributable | PARTIAL | services/provenance.py; not yet stamped into every result record |
+| Provenance and freshness scoring | ALCOA+ Attributable | PARTIAL | services/provenance.py + build_stamp() attached to every lineage() record; extend the stamp to all API result payloads as needed |
 | Intended Use Statement and non-device rationale | FD&C 201(h), CDS guidance | DONE (this document) | Needs counsel review before external use |
-| Reproducibility stamping (data version + code commit into each result) | ALCOA+ Original, Part 11 | MISSING | Highest-value software add for this lane |
+| Reproducibility stamping (data version + code commit into each result) | ALCOA+ Original, Part 11 | DONE | services/provenance.build_stamp() resolves the running code SHA + data snapshot versions; attached to lineage records |
 | Audit trail (who ran what, when, on which data and code version) | Part 11 | PARTIAL | Implemented: services/audit_trail.py (hash-chained, tamper-evident, with size-based rotation that keeps the chain continuous across read-only segments) wired into every request when AUTH_ENABLED. Remaining: append-only external (WORM) storage — deployment-side |
 | Authentication and access control | Part 11 | PARTIAL | Implemented: services/auth.py (hashed passwords, 3 roles, login/logout, gated by AUTH_ENABLED default off) + a declarative authority policy enforced in before_request (viewer reads, analyst writes, admin manages users) + an admin user API. Remaining: SSO/IdP federation — deployment-side |
-| Electronic signatures | Part 11 | MISSING | Only if records are formally approved in-app |
-| Requirements traceability matrix (URS to spec to test) | GAMP 5 | MISSING | Ties each validation test to a stated requirement |
-| CI re-validation gate (block on regression) | GAMP 5 re-provable | MISSING | Automate what the suite proves manually |
-| Risk management file | ISO 14971 | MISSING | Hazard analysis for a research tool |
+| Electronic signatures | Part 11 | PARTIAL | Implemented: services/esign.py (re-auth second component, meaning + signer + timestamp, recorded into the tamper-evident audit chain) + /api/sign, /api/signatures. Remaining: bind signing to specific record types in the UI (dossier/screen sign-off) |
+| Risk management file | ISO 14971 | PARTIAL | Scaffold done: validation/RISK_MANAGEMENT_FILE.md (11 hazards grounded in real findings, controls, residual risk). Remaining: named risk owner + review cadence (QMS) |
+| Requirements traceability matrix (URS to spec to test) | GAMP 5 | DONE | validation/TRACEABILITY_MATRIX.md — 24 requirements mapped to implementation + evidence |
+| CI re-validation gate (block on regression) | GAMP 5 re-provable | DONE | .github/workflows/ci.yml runs the 22-test suite on push/PR |
 | Criterion-4 UI guardrail (basis always shown with score) | CDS guidance | PARTIAL | Explainability exists; enforce as an invariant |
 
 ## 5. Prioritized roadmap
@@ -139,10 +139,16 @@ Legend: DONE / PARTIAL / MISSING.
    plus an admin user-management API. Remaining: SSO/IdP federation — deployment-side.
 
 **P2 (needed only if records are formally approved in the app, or a partner's
-QMS requires it):**
+QMS requires it) — IMPLEMENTED:**
 
-6. Electronic signatures (Part 11 subpart C).
-7. Risk management file (ISO 14971).
+6. Electronic signatures (Part 11 subpart C). DONE (services/esign.py): a signing
+   mechanism that re-authenticates (second component), records the signer, meaning,
+   and timestamp into the tamper-evident audit chain, and exposes /api/sign +
+   /api/signatures. Remaining: bind signing to specific record types in the UI.
+7. Risk management file (ISO 14971). DONE as a scaffold
+   (validation/RISK_MANAGEMENT_FILE.md): 11 hazards grounded in the real 2026-07-27
+   findings, each with a control and residual risk. Remaining: a named risk owner
+   and a review cadence, which are QMS (P3) activities.
 
 **P3 (organizational, not code):**
 

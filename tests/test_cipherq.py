@@ -251,3 +251,30 @@ def test_audit_trail_rotation_keeps_chain(tmp_path, monkeypatch):
     total = sum(sum(1 for ln in seg.open(encoding="utf-8") if ln.strip())
                 for seg in at._segments())
     assert total == 6
+
+
+# ── Unit: electronic signatures (Part 11 subpart C) ─────────────────────────────
+def test_esign_requires_reauth_and_is_recorded(tmp_path, monkeypatch):
+    from services import auth, audit_trail
+    monkeypatch.setattr(auth, "_AUTH_DIR", tmp_path)
+    monkeypatch.setattr(auth, "_USERS_FILE", tmp_path / "users.json")
+    monkeypatch.setattr(audit_trail, "_AUDIT_DIR", tmp_path)
+    monkeypatch.setattr(audit_trail, "_LOG_FILE", tmp_path / "audit_log.jsonl")
+    import importlib
+    esign = importlib.import_module("services.esign")
+
+    auth.add_user("dana", "SignPass!9", "analyst")
+
+    # wrong password -> no signature executed
+    assert esign.sign("dossier:CHEMBL25:asthma", "approved", "dana", "wrong") is None
+    assert esign.signatures_for("dossier:CHEMBL25:asthma") == []
+
+    # correct password -> signed, with the Part 11 components, and recorded
+    m = esign.sign("dossier:CHEMBL25:asthma", "reviewed and approved", "dana", "SignPass!9")
+    assert m and m["signer"] == "dana" and m["meaning"] == "reviewed and approved"
+    assert m["signed_at"] and m["record_ref"] == "dossier:CHEMBL25:asthma"
+    sigs = esign.signatures_for("dossier:CHEMBL25:asthma")
+    assert len(sigs) == 1 and sigs[0]["signer"] == "dana"
+    # the signature lives in the tamper-evident chain
+    ok, broken = audit_trail.verify()
+    assert ok and broken is None
