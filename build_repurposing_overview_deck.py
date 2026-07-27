@@ -149,6 +149,19 @@ def flow(slide, y, steps, box_w=2.05, box_h=0.95, gap=0.28, start_x=0.6,
         x += box_w + gap
 
 
+def bar(slide, x, y, w, label, frac, note="", color=BLUE):
+    """A labelled horizontal progress bar (component score visual)."""
+    lb = _box(slide, x, y - 0.02, w, 0.3)
+    _text(lb, [(label, 12.5, True, INK)])
+    track = _rect(slide, x, y + 0.3, w, 0.26, RGBColor(0xE3, 0xEA, 0xF6), line=None,
+                  shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+    fillw = max(0.25, w * frac)
+    f = _rect(slide, x, y + 0.3, fillw, 0.26, color, line=None, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+    if note:
+        nb = _box(slide, x + w + 0.1, y + 0.24, 2.4, 0.35)
+        _text(nb, [(note, 11.5, True, color)])
+
+
 def bullets(slide, x, y, w, h, items, size=13.5, head=None, head_color=BLUE):
     box = _box(slide, x, y, w, h)
     lines = []
@@ -228,25 +241,37 @@ notes(s, "Walk the flow left to right. The point: the front end (hypothesis gene
          "that front end with an auditable, mechanism-first engine.")
 
 # ── Slide 4 — Open-source / existing platforms ───────────────────────────────
-s = prs.slides.add_slide(BLANK); chrome(s, "The open-source landscape we build on", 4)
-b = _box(s, 0.6, 1.28, 12.1, 0.7)
-_text(b, [("Excellent public resources exist \u2014 but each is a component, not a decision-ready, "
-           "validated repurposing workflow.", 14.5, False, INK)])
-rows = [("ChEMBL / IUPHAR", "Curated bioactivity & pharmacology", "Data source, not a ranker"),
-        ("Open Targets", "Gene\u2013disease associations", "Association evidence only"),
-        ("Hetionet / Rephetio", "Biomedical knowledge graph", "2016 lineage; research-grade"),
-        ("DRKG / PrimeKG", "Large drug-repurposing graphs", "Embeddings, not decision-ready"),
-        ("TxGNN", "Graph ML for zero-shot indications", "Model; no trust / provenance layer"),
-        ("repoDB", "Approved vs failed gold standard", "Benchmark, not a product")]
-y = 2.15
-for name, what, gap in rows:
-    c = _rect(s, 0.6, y, 3.5, 0.72, CARD, BORDER); _shape_text(c, [(name, 13.5, True, BLUE)])
-    c2 = _rect(s, 4.25, y, 4.3, 0.72, WHITE, BORDER); _shape_text(c2, [(what, 12.5, False, INK)])
-    c3 = _rect(s, 8.7, y, 4.05, 0.72, LIGHT, BORDER); _shape_text(c3, [(gap, 12, False, MUTED)])
-    y += 0.8
-notes(s, "We are not reinventing the data. We STAND ON these resources and add the missing layer: "
-         "a validated, direction-aware, safety-aware ranking with provenance and audit. Name-drop "
-         "TxGNN/Open Targets to show we know the field.")
+s = prs.slides.add_slide(BLANK); chrome(s, "Open-source repurposing platforms today", 4)
+b = _box(s, 0.6, 1.25, 12.1, 0.55)
+_text(b, [("Repurposing is now largely computational. Here is how the leading open platforms do it, "
+           "and the gap each one leaves.", 14, False, INK)])
+flow(s, 1.95, ["Public data\n(omics / graphs)", "One computational\nsignal", "Ranked candidate\nlist",
+               "Manual expert\nvalidation"], box_w=2.75, box_h=0.85, gap=0.35, start_x=0.7,
+     color=LIGHT, line=BORDER, arrow_color=CYAN)
+methods = [("Signature reversal", "Connectivity Map / CLUE",
+            "Find a drug whose gene-expression signature REVERSES the disease's (Broad, LINCS)."),
+           ("Knowledge-graph paths", "Hetionet / Project Rephetio",
+            "Score drug-gene-disease paths (DWPC) across a biomedical graph (Himmelstein 2017)."),
+           ("Graph machine learning", "TxGNN",
+            "A graph neural net predicts new indications zero-shot from the KG (Zitnik 2023)."),
+           ("Association aggregation", "Open Targets / DGIdb",
+            "Aggregate gene-disease and drug-gene evidence into a target rationale.")]
+x = 0.5
+for head, plat, how in methods:
+    c = _rect(s, x, 3.15, 2.95, 2.05, CARD, BORDER)
+    _shape_text(c, [(head, 13, True, NAVY), (plat, 13, True, BLUE), ("", 4, False, MUTED),
+                    (how, 11.5, False, MUTED)], align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP)
+    x += 3.13
+gapc = _rect(s, 0.5, 5.4, 12.34, 1.15, LIGHT, BLUE)
+_shape_text(gapc, [("The shared gap we close", 13.5, True, AMBER),
+                   ("Each is a single signal, research-grade. None integrates direction-awareness, a "
+                    "safety cross-filter, a clinical-evidence readout, provenance, AND external validation "
+                    "into one decision-ready workflow. That integrated layer is RepurposeIQ.",
+                    12.5, False, INK)], align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "How open tools do repurposing NOW: four real families, each ONE signal. Signature reversal "
+         "(CMap/CLUE), knowledge-graph paths (Rephetio), graph ML (TxGNN), association aggregation "
+         "(Open Targets). Our differentiation is integrating direction + safety + clinical evidence + "
+         "provenance + validation into a decision, not just another ranked list.")
 
 # ── Slide 5 — How RepurposeIQ works (flowchart) ──────────────────────────────
 s = prs.slides.add_slide(BLANK); chrome(s, "How RepurposeIQ works", 5)
@@ -290,13 +315,16 @@ groups = [("Scientific", ["Mechanism: target / pathway / PPI / network",
                                         "Off-label & market friction",
                                         "Repurposing value score",
                                         "Provenance, audit trail, e-signatures"])]
+intro = _box(s, 0.6, 1.35, 12.1, 0.55)
+_text(intro, [("One workspace spans the three questions a repurposing decision actually needs, "
+               "with an audit trail underneath.", 14, False, INK, True)])
 x = 0.55
 for head, items in groups:
-    c = _rect(s, x, 1.35, 4.0, 5.35, CARD, BORDER)
-    lines = [(head, 16, True, BLUE)]
+    c = _rect(s, x, 2.25, 4.0, 3.9, CARD, BORDER)
+    lines = [(head, 16, True, BLUE), ("", 6, False, INK)]
     for it in items:
-        lines.append(("\u2022  " + it, 12.5, False, INK))
-    _shape_text(c, lines, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP)
+        lines.append(("\u2022  " + it, 13, False, INK))
+    _shape_text(c, lines, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
     x += 4.19
 notes(s, "Breadth slide. The point for pharma: one workspace spans mechanism, clinical evidence, "
          "and commercial/regulatory feasibility \u2014 the three questions a repurposing decision "
@@ -339,14 +367,16 @@ right = [("It is auditable end to end",
           ["Every candidate: source, freshness, and the exact code + data version that produced it",
            "Tamper-evident audit trail, role-based access, electronic signatures (21 CFR Part 11)",
            "Negative results are published, not hidden (e.g. methods we tested and rejected)"])]
-c = _rect(s, 0.55, 1.35, 6.05, 3.4, CARD, BORDER)
-ln = [(left[0][0], 15, True, BLUE)] + [("\u2022  " + i, 12.5, False, INK) for i in left[0][1]]
-_shape_text(c, ln, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP)
-c2 = _rect(s, 6.75, 1.35, 6.05, 3.4, CARD, BORDER)
-ln2 = [(right[0][0], 15, True, BLUE)] + [("\u2022  " + i, 12.5, False, INK) for i in right[0][1]]
-_shape_text(c2, ln2, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.TOP)
+c = _rect(s, 0.55, 1.45, 6.05, 3.0, CARD, BORDER)
+ln = [(left[0][0], 15, True, BLUE), ("", 6, False, INK)] + \
+     [("\u2022  " + i, 12.5, False, INK) for i in left[0][1]]
+_shape_text(c, ln, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
+c2 = _rect(s, 6.75, 1.45, 6.05, 3.0, CARD, BORDER)
+ln2 = [(right[0][0], 15, True, BLUE), ("", 6, False, INK)] + \
+      [("\u2022  " + i, 12.5, False, INK) for i in right[0][1]]
+_shape_text(c2, ln2, align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
 # honesty banner
-hb = _rect(s, 0.55, 5.0, 12.25, 1.55, LIGHT, BLUE)
+hb = _rect(s, 0.55, 4.65, 12.25, 1.7, LIGHT, BLUE)
 _shape_text(hb, [("The honest boundary (and why it earns trust)", 14, True, AMBER),
                  ("RepurposeIQ predicts biological PLAUSIBILITY, not clinical success. A retrospective "
                   "benchmark is not a prospective guarantee \u2014 we state this explicitly. That candor is "
@@ -393,17 +423,23 @@ _text(b, [("Imatinib \u2014 approved for chronic myeloid leukemia (BCR-ABL), the
 flow(s, 2.35, ["Imatinib\ntargets: ABL,\nKIT, PDGFRA", "GIST disease\ngenes include\nKIT/PDGFRA",
                "Target overlap\n+ correct\ninhibition", "Direction &\nsafety gates\npass",
                "High, EXPLAINED\ncomposite"], box_w=2.15, box_h=1.05, gap=0.2, start_x=0.45)
-c = _rect(s, 0.6, 3.95, 12.15, 1.35, LIGHT, BLUE)
-_shape_text(c, [("How the platform scores it", 14, True, BLUE),
-                ("The KIT/PDGFRA overlap between imatinib's targets and GIST's disease genes, with the "
-                 "inhibitor direction matching a gain-of-function driver, lands the pair in the top tier. "
-                 "In validation the engine scores true target-driven pairs highly (imatinib\u2192CML measured "
-                 "at 0.83) and separates approved from failed repurposings at AUROC 0.73.",
-                 12.5, False, INK)], align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
-c2 = _rect(s, 0.6, 5.45, 12.15, 1.05, CARD, BORDER)
-_shape_text(c2, [("Why this matters: the same mechanism that a scientist would reason through by hand "
-                  "\u2014 shared druggable target, correct direction \u2014 the platform surfaces and RANKS "
-                  "automatically, with the genes shown. That is the time saved.", 12.5, False, MUTED)],
+# left: component score breakdown (visual)
+lc = _rect(s, 0.5, 3.75, 6.5, 2.9, CARD, BORDER)
+lt = _box(s, 0.7, 3.85, 6.1, 0.35)
+_text(lt, [("How the components combine (imatinib \u2192 GIST)", 13.5, True, BLUE)])
+bar(s, 0.75, 4.35, 3.4, "Target overlap (KIT / PDGFRA)", 0.92, "strong")
+bar(s, 0.75, 4.95, 3.4, "Direction: inhibitor fits driver", 1.0, "correct")
+bar(s, 0.75, 5.55, 3.4, "Safety: no organ conflict", 0.85, "clear")
+bar(s, 0.75, 6.15, 3.4, "Clinical evidence: approved", 1.0, "approved")
+# right: validated behavior
+rc = _rect(s, 7.15, 3.75, 5.65, 2.9, LIGHT, BLUE)
+_shape_text(rc, [("Anchored by measured behavior", 13.5, True, NAVY), ("", 5, False, INK),
+                 ("\u2022  imatinib \u2192 CML scored 0.83 in validation", 12.5, False, INK),
+                 ("\u2022  engine separates approved vs failed at AUROC 0.73", 12.5, False, INK),
+                 ("\u2022  label-shuffle control collapses to chance (~0.49)", 12.5, False, INK),
+                 ("", 5, False, INK),
+                 ("The bars are the illustrative component profile; the numbers above are real, "
+                  "committed validation results.", 11.5, False, MUTED)],
              align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
 notes(s, "Concrete, real, approved repurposing. Imatinib CML->GIST is target-driven, which is exactly "
          "what our strongest validated signal captures. Be precise: 0.83 is the MEASURED CML score and "
