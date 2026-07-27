@@ -102,3 +102,7 @@ data/primekg/*.log
 data/primekg/*.npz
 data/primekg/*.pkl
 data/primekg/*.pt
+
+# P1 runtime secrets and records — never versioned
+data/audit/
+data/auth/

@@ -10,6 +10,7 @@ are unavailable, so the suite is safe to run anywhere.
 import os
 import sys
 import time
+import json
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,48 @@ def test_endpoint_verdict_tie_is_order_independent(monkeypatch):
     a = ep.aggregate([{"_c": "met_primary"}, {"_c": "terminated_efficacy"}])["verdict"]
     b = ep.aggregate([{"_c": "terminated_efficacy"}, {"_c": "met_primary"}])["verdict"]
     assert a == b == "terminated_efficacy"
+
+
+# ── Unit: audit trail (Part 11) — append + tamper-evidence ──────────────────────
+def test_audit_trail_chain_and_tamper(tmp_path, monkeypatch):
+    from services import audit_trail as at
+    monkeypatch.setattr(at, "_AUDIT_DIR", tmp_path)
+    monkeypatch.setattr(at, "_LOG_FILE", tmp_path / "audit_log.jsonl")
+
+    e1 = at.record("login", actor="alice", details={"ip": "127.0.0.1"})
+    e2 = at.record("run_screen", actor="alice", details={"disease": "asthma"})
+    assert e1["seq"] == 1 and e2["seq"] == 2
+    assert e2["prev_hash"] == e1["hash"]         # chained
+    ok, broken = at.verify()
+    assert ok and broken is None
+
+    # tamper with the first entry WITHOUT recomputing its hash -> chain must break
+    lines = (tmp_path / "audit_log.jsonl").read_text(encoding="utf-8").splitlines()
+    rec0 = json.loads(lines[0]); rec0["details"] = {"disease": "cancer"}
+    lines[0] = json.dumps(rec0)
+    (tmp_path / "audit_log.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    ok, broken = at.verify()
+    assert not ok and broken == 1
+
+
+# ── Unit: auth — password hashing, roles, gate ──────────────────────────────────
+def test_auth_password_and_roles(tmp_path, monkeypatch):
+    from services import auth
+    monkeypatch.setattr(auth, "_AUTH_DIR", tmp_path)
+    monkeypatch.setattr(auth, "_USERS_FILE", tmp_path / "users.json")
+
+    assert auth.add_user("Bob", "s3cret!", "analyst")
+    # stored hashed, never plaintext
+    stored = (tmp_path / "users.json").read_text(encoding="utf-8")
+    assert "s3cret!" not in stored
+    assert auth.verify_credentials("bob", "s3cret!")["role"] == "analyst"   # case-insensitive user
+    assert auth.verify_credentials("bob", "wrong") is None
+    assert auth.verify_credentials("nobody", "x") is None
+    # role hierarchy
+    assert auth.has_role("admin", "analyst") and auth.has_role("analyst", "viewer")
+    assert not auth.has_role("viewer", "analyst")
+    # gate defaults off
+    monkeypatch.delenv("AUTH_ENABLED", raising=False)
+    assert auth.auth_enabled() is False
+    monkeypatch.setenv("AUTH_ENABLED", "true")
+    assert auth.auth_enabled() is True
