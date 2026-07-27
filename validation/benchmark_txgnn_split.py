@@ -211,9 +211,13 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
         for z in r.get("contraindication", []):
             dcon.setdefault(int(z), []).append(di)
 
-    ranks = {"distmult": [], "clf": [], "fusion": []}
-    roc = {"distmult": [], "clf": [], "fusion": []}   # (pos_scores, contra_scores)
-    prc = {"distmult": [], "clf": [], "fusion": []}
+    # sweep fusion blends (clf:gnn RRF weights) in ONE run to find the best
+    FUS = {"fusion_3:1": [3.0, 1.0], "fusion_2:1": [2.0, 1.0], "fusion_1:1": [1.0, 1.0],
+           "fusion_4:1": [4.0, 1.0], "fusion_1:2": [1.0, 2.0]}
+    RANKERS = ["distmult", "clf"] + list(FUS)
+    ranks = {n: [] for n in RANKERS}
+    roc = {n: [] for n in RANKERS}   # (pos_scores, contra_scores)
+    prc = {n: [] for n in RANKERS}
     n_eval = 0
     for z in test_dis:
         inds = [drug_pos_of[x] for x in dind.get(z, []) if x in drug_pos_of]
@@ -225,11 +229,12 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
         pool = np.argsort(-dm_all)[:_POOL]
         clf_p = clf_scores(z, drug_ids[pool])
         gnn_p = (Hf[drug_ids[pool]] * r_ind * Hf[z]).sum(-1)
-        fus = _rrf([clf_p, gnn_p], [3.0, 1.0])
         # full-length score vectors (out-of-pool pushed to bottom for clf/fusion)
         def full(vec_pool):
             v = np.full(len(drug_ids), -np.inf); v[pool] = vec_pool; return v
-        S = {"distmult": dm_all, "clf": full(clf_p), "fusion": full(fus)}
+        S = {"distmult": dm_all, "clf": full(clf_p)}
+        for _fn, _w in FUS.items():
+            S[_fn] = full(_rrf([clf_p, gnn_p], _w))
         other = set(inds)
         for name, sc in S.items():
             keep = np.ones(len(sc), bool)
@@ -259,14 +264,14 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
            "input_embeddings": ("shipped DistMult reused (mild input leakage -> slight UPPER BOUND)"
                                 if not retrain_dm else "retrained leakage-free"),
            "n_test_diseases_evaluated": n_eval, "elapsed_s": round(time.time() - t0, 1),
-           "rankers": {n: summ(n) for n in ("distmult", "clf", "fusion")}}
+           "rankers": {n: summ(n) for n in RANKERS}}
     json.dump(out, open(ROOT / "validation" / "benchmark_txgnn_split_results.json", "w"), indent=2)
 
     print(f"\n=== TxGNN-protocol disease zero-shot ({n_eval} held-out diseases) ===", flush=True)
-    print(f"{'ranker':10} " + " ".join(f"R@{k:<4}" for k in KS) + "  medRank  AUROC(i/c)  AUPRC", flush=True)
-    for n in ("distmult", "clf", "fusion"):
+    print(f"{'ranker':12} " + " ".join(f"R@{k:<4}" for k in KS) + "  medRank  AUROC(i/c)  AUPRC", flush=True)
+    for n in RANKERS:
         m = out["rankers"][n]
-        print(f"{n:10} " + " ".join(f"{m[f'recall@{k}']:<5}" for k in KS) +
+        print(f"{n:12} " + " ".join(f"{m[f'recall@{k}']:<5}" for k in KS) +
               f"  {m['median_rank']:<7} {m['auroc_ind_vs_contra']:<10} {m['auprc_ind_vs_neg']}", flush=True)
     print(f"\nwrote validation/benchmark_txgnn_split_results.json ({time.time()-t0:.0f}s)", flush=True)
     return 0

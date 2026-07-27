@@ -1,0 +1,78 @@
+{
+  "protocol": "disease zero-shot (TxGNN-style), seed 42, 15% held-out diseases; test-disease treatment edges removed from GNN graph + all supervision. Same protocol/metrics as TxGNN, NOT their exact split files.",
+  "input_embeddings": "shipped DistMult reused (mild input leakage -> slight UPPER BOUND)",
+  "n_test_diseases_evaluated": 204,
+  "elapsed_s": 198.3,
+  "rankers": {
+    "distmult": {
+      "recall@10": 0.2992,
+      "recall@20": 0.4288,
+      "recall@50": 0.5556,
+      "recall@100": 0.6676,
+      "median_rank": 34,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.6831,
+      "auprc_ind_vs_neg": 0.6569
+    },
+    "clf": {
+      "recall@10": 0.3453,
+      "recall@20": 0.4688,
+      "recall@50": 0.6187,
+      "recall@100": 0.711,
+      "median_rank": 25,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.7161,
+      "auprc_ind_vs_neg": 0.7089
+    },
+    "fusion_3:1": {
+      "recall@10": 0.3589,
+      "recall@20": 0.483,
+      "recall@50": 0.6275,
+      "recall@100": 0.713,
+      "median_rank": 22,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.7182,
+      "auprc_ind_vs_neg": 0.7043
+    },
+    "fusion_2:1": {
+      "recall@10": 0.3521,
+      "recall@20": 0.4722,
+      "recall@50": 0.6248,
+      "recall@100": 0.7096,
+      "median_rank": 23,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.7181,
+      "auprc_ind_vs_neg": 0.7069
+    },
+    "fusion_1:1": {
+      "recall@10": 0.3168,
+      "recall@20": 0.4281,
+      "recall@50": 0.597,
+      "recall@100": 0.7022,
+      "median_rank": 28,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.7179,
+      "auprc_ind_vs_neg": 0.6873
+    },
+    "fusion_4:1": {
+      "recall@10": 0.3575,
+      "recall@20": 0.479,
+      "recall@50": 0.6214,
+      "recall@100": 0.7151,
+      "median_rank": 23,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.719,
+      "auprc_ind_vs_neg": 0.7054
+    },
+    "fusion_1:2": {
+      "recall@10": 0.287,
+      "recall@20": 0.3616,
+      "recall@50": 0.5421,
+      "recall@100": 0.6805,
+      "median_rank": 43,
+      "n_ind_pairs": 1474,
+      "auroc_ind_vs_contra": 0.7115,
+      "auprc_ind_vs_neg": 0.6472
+    }
+  }
+}
