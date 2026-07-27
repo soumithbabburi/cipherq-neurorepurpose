@@ -75,10 +75,10 @@
 </div>
 
 <script>
-const meshIds = {{ mesh_ids|safe }};
+const meshIds = {{ mesh_ids|tojson }};
 window._compounds = {};
 window._initialResults = [];
-window._initialExcluded = {{ excluded|safe if excluded else '[]' }};
+window._initialExcluded = {{ excluded|tojson }};
 {% for c in results %}
 try { var _c = {{ c|tojson }}; window._compounds[_c.chembl_id] = _c; window._initialResults.push(_c); } catch(_e) {}
 {% endfor %}
@@ -429,7 +429,7 @@ function openCompound(chemblId, disease) {
   window.location.href = `/analysis?id=${chemblId}&disease=${encodeURIComponent(disease || '')}`;
 }
 
-window._currentDisease = {{ ('"' ~ disease_name ~ '"')|safe }};
+window._currentDisease = {{ disease_name|tojson }};
 window._meshIds = meshIds;
 
 // ── Session helpers ───────────────────────────────────────────────────────────

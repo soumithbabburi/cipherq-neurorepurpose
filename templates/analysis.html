@@ -96,12 +96,12 @@
 </div>
 
 <script>
-const CHEMBL_ID = {{ ('"' ~ chembl_id ~ '"')|safe }};
-const DISEASE   = {{ ('"' ~ disease ~ '"')|safe }};
+const CHEMBL_ID = {{ chembl_id|tojson }};
+const DISEASE   = {{ disease|tojson }};
 const DOCK_OK          = {{ 'true' if dock_ok else 'false' }};
 const LOCAL_DIFFDOCK   = {{ 'true' if local_diffdock_ok else 'false' }};
-const DOCK_METHOD      = {{ ('"' ~ dock_method ~ '"')|safe }};
-const DIFFDOCK_INSTALL = {{ ('"' ~ diffdock_instructions|replace('\n','\\n') ~ '"')|safe }};
+const DOCK_METHOD      = {{ dock_method|tojson }};
+const DIFFDOCK_INSTALL = {{ diffdock_instructions|tojson }};
 const PBPK_OK   = {{ 'true' if pbpk_ok else 'false' }};
 const QUANTUM_OK = {{ 'true' if quantum_ok else 'false' }};
 const RDKIT_OK  = {{ 'true' if rdkit_ok else 'false' }};

@@ -673,8 +673,8 @@ def discover():
                      "reason": c.get("removed_reason", ""),
                      "market_status": c.get("market_status")} for c in (_removed or [])]
     return render_template("discover.html", results=results,
-                           disease_name=disease_name, mesh_ids=json.dumps(mesh_ids),
-                           excluded=json.dumps(excluded), query=q, db_ok=DB_OK)
+                           disease_name=disease_name, mesh_ids=mesh_ids,
+                           excluded=excluded, query=q, db_ok=DB_OK)
 
 
 @app.route("/analysis")
