@@ -103,8 +103,8 @@ Legend: DONE / PARTIAL / MISSING.
 | Provenance and freshness scoring | ALCOA+ Attributable | PARTIAL | services/provenance.py; not yet stamped into every result record |
 | Intended Use Statement and non-device rationale | FD&C 201(h), CDS guidance | DONE (this document) | Needs counsel review before external use |
 | Reproducibility stamping (data version + code commit into each result) | ALCOA+ Original, Part 11 | MISSING | Highest-value software add for this lane |
-| Audit trail (who ran what, when, on which data and code version) | Part 11 | PARTIAL | Implemented: services/audit_trail.py (hash-chained, tamper-evident) wired into every request when AUTH_ENABLED. Remaining: rotation + WORM/external storage |
-| Authentication and access control | Part 11 | PARTIAL | Implemented: services/auth.py (hashed passwords, 3 roles, login/logout, gated by AUTH_ENABLED default off). Remaining: apply role gates to individual routes; SSO/IdP is deployment-side |
+| Audit trail (who ran what, when, on which data and code version) | Part 11 | PARTIAL | Implemented: services/audit_trail.py (hash-chained, tamper-evident, with size-based rotation that keeps the chain continuous across read-only segments) wired into every request when AUTH_ENABLED. Remaining: append-only external (WORM) storage — deployment-side |
+| Authentication and access control | Part 11 | PARTIAL | Implemented: services/auth.py (hashed passwords, 3 roles, login/logout, gated by AUTH_ENABLED default off) + a declarative authority policy enforced in before_request (viewer reads, analyst writes, admin manages users) + an admin user API. Remaining: SSO/IdP federation — deployment-side |
 | Electronic signatures | Part 11 | MISSING | Only if records are formally approved in-app |
 | Requirements traceability matrix (URS to spec to test) | GAMP 5 | MISSING | Ties each validation test to a stated requirement |
 | CI re-validation gate (block on regression) | GAMP 5 re-provable | MISSING | Automate what the suite proves manually |
@@ -129,12 +129,14 @@ Legend: DONE / PARTIAL / MISSING.
 
 4. Audit trail. DONE (services/audit_trail.py): append-only, hash-chained,
    tamper-evident event log stamped with actor, action, timestamp, and code SHA;
-   wired into every request when AUTH_ENABLED. Remaining hardening: file rotation
-   with chain hand-off and append-only external (WORM) storage.
+   wired into every request when AUTH_ENABLED; size-based rotation keeps the chain
+   continuous across read-only segments. Remaining hardening: append-only
+   external (WORM) storage — deployment-side, not application code.
 5. Authentication and role-based access control. DONE (services/auth.py):
    hashed passwords, three roles, login/logout, secret-key hardening, gated by
-   AUTH_ENABLED (default off). Remaining: apply role_required to individual
-   sensitive routes; SSO/IdP federation is a deployment concern.
+   AUTH_ENABLED (default off). Role authority is enforced by a declarative policy
+   in before_request (viewer reads, analyst state-changing verbs, admin /admin/*)
+   plus an admin user-management API. Remaining: SSO/IdP federation — deployment-side.
 
 **P2 (needed only if records are formally approved in the app, or a partner's
 QMS requires it):**

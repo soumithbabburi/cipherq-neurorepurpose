@@ -183,10 +183,18 @@ if _AUTH_ON and _auth is not None:
     def _require_login():
         if request.endpoint in _AUTH_ALLOWLIST:
             return None
-        if not _auth.current_user():
+        user = _auth.current_user()
+        if not user:
             if request.path.startswith("/api/"):
                 return jsonify({"error": "authentication required"}), 401
             return redirect(url_for("login", next=request.path))
+        # Part 11 authority check: declarative role policy (viewer reads,
+        # analyst performs state-changing actions, admin manages users).
+        required = _auth.required_role_for(request.method, request.path)
+        if not _auth.has_role(user.get("role"), required):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "insufficient role", "required_role": required}), 403
+            abort(403)
         return None
 
     @app.after_request
@@ -225,6 +233,27 @@ def login():
                           details={"result": "failure"})
         error = "Invalid username or password."
     return render_template("login.html", error=error, next=nxt)
+
+
+@app.route("/admin/users", methods=["GET", "POST"])
+def admin_users():
+    """Admin-only user management (JSON). Exists only when auth is enabled; the
+    before_request policy already requires the admin role for /admin/* paths."""
+    if _auth is None or not _auth.auth_enabled():
+        abort(404)
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        username = data.get("username", "")
+        password = data.get("password", "")
+        role = data.get("role", "viewer")
+        if not _auth.add_user(username, password, role):
+            return jsonify({"error": "invalid username, password, or role"}), 400
+        actor = (_auth.current_user() or {}).get("username")
+        if _audit is not None:
+            _audit.record("admin_user_upsert", actor=actor,
+                          details={"target": (username or "").strip().lower(), "role": role})
+        return jsonify({"ok": True, "user": (username or "").strip().lower(), "role": role})
+    return jsonify({"users": _auth.list_users()})
 
 
 @app.route("/logout")

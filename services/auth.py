@@ -100,6 +100,25 @@ def has_role(user_role: Optional[str], required: str) -> bool:
     return _ROLE_RANK[user_role] >= _ROLE_RANK[required]
 
 
+def list_users() -> list:
+    """Users WITHOUT password hashes — for the admin view / audit."""
+    return sorted(({"username": u, "role": v.get("role", "viewer"),
+                    "created": v.get("created")} for u, v in _load_users().items()),
+                  key=lambda r: r["username"])
+
+
+def required_role_for(method: str, path: str) -> str:
+    """Declarative authority policy (Part 11): the minimum role for a request.
+    admin for /admin/*, analyst for any state-changing verb, viewer for reads.
+    One auditable place instead of decorating dozens of routes."""
+    p = path or ""
+    if p.startswith("/admin"):
+        return "admin"
+    if (method or "GET").upper() in ("POST", "PUT", "PATCH", "DELETE"):
+        return "analyst"
+    return "viewer"
+
+
 def bootstrap_admin() -> Optional[str]:
     """When auth is enabled and no users exist, create a single admin from
     AUTH_ADMIN_USER + AUTH_ADMIN_PASSWORD. Returns the username, or None if it

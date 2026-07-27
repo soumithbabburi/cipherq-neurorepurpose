@@ -218,3 +218,36 @@ def test_auth_password_and_roles(tmp_path, monkeypatch):
     assert auth.auth_enabled() is False
     monkeypatch.setenv("AUTH_ENABLED", "true")
     assert auth.auth_enabled() is True
+
+
+def test_auth_role_policy_and_user_listing(tmp_path, monkeypatch):
+    from services import auth
+    monkeypatch.setattr(auth, "_AUTH_DIR", tmp_path)
+    monkeypatch.setattr(auth, "_USERS_FILE", tmp_path / "users.json")
+    # declarative authority policy
+    assert auth.required_role_for("GET", "/discover") == "viewer"
+    assert auth.required_role_for("POST", "/api/compound/x/dock") == "analyst"
+    assert auth.required_role_for("GET", "/admin/users") == "admin"
+    assert auth.required_role_for("POST", "/admin/users") == "admin"
+    # listing never leaks password hashes
+    auth.add_user("carol", "pw12345", "admin")
+    users = auth.list_users()
+    assert users and users[0]["username"] == "carol" and users[0]["role"] == "admin"
+    assert all("pw_hash" not in u for u in users)
+
+
+def test_audit_trail_rotation_keeps_chain(tmp_path, monkeypatch):
+    from services import audit_trail as at
+    monkeypatch.setattr(at, "_AUDIT_DIR", tmp_path)
+    monkeypatch.setattr(at, "_LOG_FILE", tmp_path / "audit_log.jsonl")
+    monkeypatch.setattr(at, "_MAX_BYTES", 500)     # force rotation after a couple entries
+    for i in range(6):
+        at.record("event", actor="alice", details={"i": i})
+    rotated = list(tmp_path.glob("audit_log.*.jsonl"))
+    assert len(rotated) >= 1                        # at least one segment rolled off
+    ok, broken = at.verify()                        # chain continuous across segments
+    assert ok and broken is None
+    # total entries across all segments equals what we wrote
+    total = sum(sum(1 for ln in seg.open(encoding="utf-8") if ln.strip())
+                for seg in at._segments())
+    assert total == 6
