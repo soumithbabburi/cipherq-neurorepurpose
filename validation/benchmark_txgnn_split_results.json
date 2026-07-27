@@ -1,78 +1,78 @@
 {
   "protocol": "disease zero-shot (TxGNN-style), seed 42, 15% held-out diseases; test-disease treatment edges removed from GNN graph + all supervision. Same protocol/metrics as TxGNN, NOT their exact split files.",
-  "input_embeddings": "shipped DistMult reused (mild input leakage -> slight UPPER BOUND)",
+  "input_embeddings": "retrained leakage-free",
   "n_test_diseases_evaluated": 204,
-  "elapsed_s": 198.3,
+  "elapsed_s": 4302.6,
   "rankers": {
     "distmult": {
-      "recall@10": 0.2992,
-      "recall@20": 0.4288,
-      "recall@50": 0.5556,
-      "recall@100": 0.6676,
-      "median_rank": 34,
+      "recall@10": 0.0102,
+      "recall@20": 0.021,
+      "recall@50": 0.0455,
+      "recall@100": 0.0916,
+      "median_rank": 1588,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.6831,
-      "auprc_ind_vs_neg": 0.6569
+      "auroc_ind_vs_contra": 0.5222,
+      "auprc_ind_vs_neg": 0.1655
     },
     "clf": {
-      "recall@10": 0.3453,
-      "recall@20": 0.4688,
-      "recall@50": 0.6187,
-      "recall@100": 0.711,
-      "median_rank": 25,
+      "recall@10": 0.0733,
+      "recall@20": 0.0896,
+      "recall@50": 0.1282,
+      "recall@100": 0.1621,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.7161,
-      "auprc_ind_vs_neg": 0.7089
+      "auroc_ind_vs_contra": 0.2212,
+      "auprc_ind_vs_neg": 0.2701
     },
     "fusion_3:1": {
-      "recall@10": 0.3589,
-      "recall@20": 0.483,
-      "recall@50": 0.6275,
-      "recall@100": 0.713,
-      "median_rank": 22,
+      "recall@10": 0.0604,
+      "recall@20": 0.0868,
+      "recall@50": 0.1187,
+      "recall@100": 0.1581,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.7182,
-      "auprc_ind_vs_neg": 0.7043
+      "auroc_ind_vs_contra": 0.2174,
+      "auprc_ind_vs_neg": 0.2653
     },
     "fusion_2:1": {
-      "recall@10": 0.3521,
-      "recall@20": 0.4722,
-      "recall@50": 0.6248,
-      "recall@100": 0.7096,
-      "median_rank": 23,
+      "recall@10": 0.0543,
+      "recall@20": 0.0814,
+      "recall@50": 0.114,
+      "recall@100": 0.1506,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.7181,
-      "auprc_ind_vs_neg": 0.7069
+      "auroc_ind_vs_contra": 0.2098,
+      "auprc_ind_vs_neg": 0.2621
     },
     "fusion_1:1": {
-      "recall@10": 0.3168,
-      "recall@20": 0.4281,
-      "recall@50": 0.597,
-      "recall@100": 0.7022,
-      "median_rank": 28,
+      "recall@10": 0.0271,
+      "recall@20": 0.0461,
+      "recall@50": 0.097,
+      "recall@100": 0.1404,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.7179,
-      "auprc_ind_vs_neg": 0.6873
+      "auroc_ind_vs_contra": 0.2099,
+      "auprc_ind_vs_neg": 0.2448
     },
     "fusion_4:1": {
-      "recall@10": 0.3575,
-      "recall@20": 0.479,
-      "recall@50": 0.6214,
-      "recall@100": 0.7151,
-      "median_rank": 23,
+      "recall@10": 0.0631,
+      "recall@20": 0.0882,
+      "recall@50": 0.1221,
+      "recall@100": 0.1581,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.719,
-      "auprc_ind_vs_neg": 0.7054
+      "auroc_ind_vs_contra": 0.2174,
+      "auprc_ind_vs_neg": 0.2688
     },
     "fusion_1:2": {
-      "recall@10": 0.287,
-      "recall@20": 0.3616,
-      "recall@50": 0.5421,
-      "recall@100": 0.6805,
-      "median_rank": 43,
+      "recall@10": 0.0102,
+      "recall@20": 0.0156,
+      "recall@50": 0.0516,
+      "recall@100": 0.1167,
+      "median_rank": 399,
       "n_ind_pairs": 1474,
-      "auroc_ind_vs_contra": 0.7115,
-      "auprc_ind_vs_neg": 0.6472
+      "auroc_ind_vs_contra": 0.2103,
+      "auprc_ind_vs_neg": 0.2273
     }
   }
 }
