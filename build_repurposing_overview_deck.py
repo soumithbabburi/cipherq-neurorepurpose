@@ -331,29 +331,41 @@ notes(s, "Breadth slide. The point for pharma: one workspace spans mechanism, cl
          "actually needs, with an audit trail underneath.")
 
 # ── Slide 7 — How we validate the incoming data (flowchart) ──────────────────
-s = prs.slides.add_slide(BLANK); chrome(s, "How we validate the incoming data", 7)
-b = _box(s, 0.6, 1.28, 12.1, 0.6)
-_text(b, [("We treat public data as a raw material under engineering QC \u2014 built to align with "
-           "ALCOA+ and GAMP 5, and we show the proof.", 14.5, False, INK)])
-flow(s, 2.05, ["Source &\nversion stamp", "Completeness\n& validity", "Noise vs\n0.5-log floor",
-               "Independent\ncross-check", "Flag, never\ndelete", "Re-runnable\nCAPA log"],
-     box_w=1.9, box_h=0.95, gap=0.15, start_x=0.35)
-metrics = [("91%", "ChEMBL agrees with IUPHAR (independent) within 1 log"),
-           ("\u2264 0.5 log", "Measurement noise inside the published floor"),
-           ("100%", "Disease-name resolution on a curated golden set"),
-           ("100%", "Knowledge-graph provenance coverage, 0 duplicates")]
-x = 0.6
-for head, sub in metrics:
-    c = _rect(s, x, 3.5, 2.95, 1.6, LIGHT, BORDER)
-    _shape_text(c, [(head, 22, True, GREEN), (sub, 11.5, False, MUTED)], anchor=MSO_ANCHOR.MIDDLE)
-    x += 3.12
-b2 = _box(s, 0.6, 5.35, 12.1, 1.2)
-_text(b2, [("Standards we build to: FDA data-integrity guidance, WHO ALCOA+, EU Annex 11, GAMP 5, "
-            "DAMA-DMBOK. Every number above is produced by a read-only script anyone can re-run.",
-            12.5, False, MUTED, True)])
-notes(s, "This is the trust bedrock. The 91% independent concordance is the headline \u2014 it is "
-         "ChEMBL checked against an OUTSIDE authority, not against itself. Say clearly: built TO "
-         "these standards, not certified against them.")
+s = prs.slides.add_slide(BLANK); chrome(s, "How we validate: the data and the outcomes", 7)
+b = _box(s, 0.6, 1.25, 12.1, 0.5)
+_text(b, [("Two independent layers, both re-runnable: we validate the DATA we ingest, and the "
+           "OUTCOMES the engine produces.", 14, False, INK, True)])
+# Layer 1 \u2014 the data
+c1 = _rect(s, 0.5, 1.9, 6.1, 4.05, CARD, BORDER)
+_shape_text(c1, [("LAYER 1 \u2014 the DATA", 15, True, BLUE),
+                 ("Is the input trustworthy?", 12.5, True, MUTED),
+                 ("", 5, False, INK),
+                 ("\u2022  91% agreement with IUPHAR (an INDEPENDENT expert DB) within 1 log", 12.5, False, INK),
+                 ("\u2022  Measurement noise \u2264 0.5 log \u2014 inside the published floor", 12.5, False, INK),
+                 ("\u2022  100% disease-name resolution on a curated golden set", 12.5, False, INK),
+                 ("\u2022  100% knowledge-graph provenance, 0 duplicates", 12.5, False, INK),
+                 ("\u2022  Method: ALCOA+ / GAMP 5, flag-never-delete, open CAPA log", 12.5, False, INK)],
+             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
+# Layer 2 \u2014 the outcomes
+c2 = _rect(s, 6.75, 1.9, 6.1, 4.05, CARD, BORDER)
+_shape_text(c2, [("LAYER 2 \u2014 the OUTCOMES", 15, True, GREEN),
+                 ("Does the engine recover REAL repurposing?", 12.5, True, MUTED),
+                 ("", 5, False, INK),
+                 ("\u2022  Benchmark: repoDB \u2014 APPROVED vs FAILED repurposings (hard negatives)", 12.5, False, INK),
+                 ("\u2022  Leakage-free mechanistic score: AUROC 0.73", 12.5, False, INK),
+                 ("\u2022  Random baseline 0.49; label-shuffle control collapses to ~0.49", 12.5, False, INK),
+                 ("\u2022  Validated component by component (target overlap alone 0.75)", 12.5, False, INK),
+                 ("\u2022  Methods that did NOT help are documented, not hidden", 12.5, False, INK)],
+             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
+band = _rect(s, 0.5, 6.1, 12.35, 0.78, LIGHT, BLUE)
+_shape_text(band, [("Both layers are read-only, re-runnable scripts (validation/validate_*.py + the "
+                    "repoDB predictive harness), re-executed on every data refresh. Built to ALCOA+ / "
+                    "GAMP 5 \u2014 not certified against them.", 12, False, INK)],
+             align=PP_ALIGN.LEFT, anchor=MSO_ANCHOR.MIDDLE)
+notes(s, "The question was 'how do you validate the DATA AND the OUTCOMES' \u2014 this slide answers both. "
+         "Layer 1: the data is trustworthy (91% independent concordance is the headline). Layer 2: the "
+         "engine's RESULTS recover real approved repurposings on an external gold standard (AUROC 0.73), "
+         "with controls that collapse to chance. Both are re-runnable, and we publish what did not work.")
 
 # ── Slide 8 — Can a pharma company rely on it ────────────────────────────────
 s = prs.slides.add_slide(BLANK); chrome(s, "Can a pharma company rely on RepurposeIQ?", 8)
