@@ -806,6 +806,7 @@ def score_compound_for_disease(
     mechanistic_prior: Optional[float] = None,
     studied_for_disease: bool = False,
     indication_phase: Optional[int] = None,
+    therapeutic_areas: Optional[List[str]] = None,
 ) -> Dict:
     existing_ind = compound.get("indications", "") or ""
     raw_phase    = compound.get("max_phase") or compound.get("max_phase_for_ind") or 0
@@ -1199,11 +1200,12 @@ def score_compound_for_disease(
             _rx = [] if _studied_or_own else (_faers_serious_reactions(_cn) or [])
             _rx_total = sum(c for _, c in _rx)
             _act = infer_drug_action(_cn, drug_genes)
-            # 3rd arg is the candidate DISEASE's therapeutic areas (a list) — used only for
-            # the inhibitor-vs-congenital gate. The forward scorer has no OT areas in scope
-            # (that gate runs in the reverse screen, which passes them), so pass [] here
-            # rather than the drug's indication STRING, which join()-mangled into characters.
-            appropriate = _appr(_cn, disease_name, [], _act,
+            # 3rd arg = the candidate DISEASE's therapeutic areas (a list), used for the
+            # inhibitor-vs-congenital / loss-of-function gate. Forward /discover now passes
+            # the real OT areas (see run_repurposing_screen), so the gate is live on both
+            # surfaces; [] fallback if unavailable. (Never pass the drug's indication string
+            # here — it would join()-mangle into characters and the gate could never fire.)
+            appropriate = _appr(_cn, disease_name, therapeutic_areas or [], _act,
                                 faers_reactions=_rx, faers_total=_rx_total)
     except Exception as e:
         logger.debug(f"appropriateness gate skipped: {e}")
@@ -1471,6 +1473,7 @@ def run_repurposing_screen(
     disease_pathways: List[Dict] = []
     ppi_adj: Dict = {}
     disease_weights: Dict[str, float] = {}
+    disease_areas: List[str] = []
 
     try:
         from services.disease_ontology import resolve_disease as ot_resolve, get_ppi_network
@@ -1485,6 +1488,13 @@ def run_repurposing_screen(
         disease_weights = {t["gene_symbol"].upper():
                            (t.get("quality_score") or t.get("genetic_score") or t.get("score", 0.0))
                            for t in disease_info.get("targets", []) if t.get("gene_symbol")}
+        # Candidate disease's OT therapeutic areas — revives the inhibitor-vs-congenital /
+        # loss-of-function appropriateness gate on the forward surface (was dead: [] passed).
+        try:
+            from services.disease_ontology import therapeutic_areas as _ot_areas
+            disease_areas = _ot_areas(disease_info.get("disease_id", ""))
+        except Exception:
+            disease_areas = []
         if disease_genes:
             ppi_adj = get_ppi_network(disease_genes[:15])
     except Exception as e:
@@ -1603,6 +1613,7 @@ def run_repurposing_screen(
             # all-zero/empty weight map falls back to flat overlap (never zeroes targets)
             disease_gene_weights=(disease_weights
                                   if any(v > 0 for v in disease_weights.values()) else None),
+            therapeutic_areas=disease_areas,
             studied_for_disease=(cid in studied_set),
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}

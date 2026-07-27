@@ -288,6 +288,21 @@ def get_disease_pathways(disease_name: str) -> list:
     return resolve_disease(disease_name).get("pathways", [])
 
 
+def therapeutic_areas(efo_id: str) -> list:
+    """Open Targets therapeutic-area NAMES for a disease EFO id (e.g. 'genetic, familial
+    or congenital disease'). Used by the appropriateness gate to detect
+    loss-of-function/congenital indications. Returns [] on any miss. Fail-soft."""
+    if not efo_id:
+        return []
+    try:
+        q = "query($id:String!){ disease(efoId:$id){ therapeuticAreas { name } } }"
+        data = _ot_graphql(q, {"id": efo_id})
+        d = ((data or {}).get("disease")) or {}
+        return [t.get("name", "") for t in (d.get("therapeuticAreas") or []) if t.get("name")]
+    except Exception:
+        return []
+
+
 def get_disease_gene_weights(disease_name: str, top_n: int = 40) -> dict:
     """{GENE_SYMBOL_UPPER: genetic_association_score} for a disease.
 

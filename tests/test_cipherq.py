@@ -242,6 +242,22 @@ def test_clinical_evidence_literature_tier_by_design():
     assert recs[0]["mesh"][0]["descriptor"] == "Asthma"
 
 
+# ── Unit: loss-of-function / congenital appropriateness gate (F2 regression) ────
+def test_appropriateness_congenital_lof_gate():
+    """An inhibitor proposed for a congenital / loss-of-function disease must be
+    demoted; a non-congenital area must not trigger the penalty. Regression for the
+    forward-path gate that was dead when therapeutic_areas was []."""
+    from services.disease_appropriateness import appropriateness
+    hit = appropriateness("somedrug", "Hirschsprung disease",
+                          ["genetic, familial or congenital disease"], "inhibitor")
+    assert hit["factor"] <= 0.4 and "loss-of-function mismatch" in hit["flags"]
+    clean = appropriateness("somedrug", "asthma", ["respiratory or thoracic disease"], "inhibitor")
+    assert clean["factor"] == 1.0 and not clean["flags"]
+    # empty areas -> cannot fire (documents why forward must pass real OT areas)
+    none = appropriateness("somedrug", "Hirschsprung disease", [], "inhibitor")
+    assert none["factor"] == 1.0
+
+
 # ── Unit: audit trail (Part 11) — append + tamper-evidence ──────────────────────
 def test_audit_trail_chain_and_tamper(tmp_path, monkeypatch):
     from services import audit_trail as at
