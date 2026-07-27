@@ -1074,11 +1074,18 @@ def score_compound_for_disease(
     # requires real approval here; studied and novel pairs keep every gate.
     _own_therapy = bool(
         (indication_phase is not None and int(indication_phase) >= 4)
-        or studied_for_disease                          # forward screen asserts drug is used for disease
         or (indication_phase is None
             and _indication_matches_disease(existing_ind, disease_name)
             and _to_phase(max_phase) >= 4)              # legacy fallback only when per-indication phase unknown
     )
+    # `studied_for_disease` means the drug reached ANY development phase for this disease
+    # (min_phase=1) — that is NOT established therapy, so a merely-studied or failed pair
+    # must KEEP every safety/clinical/coverage/phantom guardrail (this is the confounding
+    # the 2026-07 note above set out to stop re-introducing). It earns ONE narrow
+    # exemption: because the drug was developed FOR this disease, that disease's symptoms
+    # appear in its own FAERS, so for the FAERS adverse-event confounding guard only we
+    # treat a studied pair as "own" to avoid reading the indication as drug-caused toxicity.
+    _studied_or_own = _own_therapy or bool(studied_for_disease)
 
     safety = {"multiplier": 1.0, "penalized": False, "flags": []}
     try:
@@ -1174,11 +1181,16 @@ def score_compound_for_disease(
         from services.safety_filter import _faers_serious_reactions
         _cn = compound.get("name") or compound.get("pref_name") or ""
         if _cn and disease_name:
-            # _own_therapy computed once above (confounding-by-indication guard)
-            _rx = [] if _own_therapy else (_faers_serious_reactions(_cn) or [])
+            # FAERS-confounding guard: suppress the drug's own adverse-event profile for an
+            # approved OR merely-studied pair (both put the disease's symptoms in its FAERS).
+            _rx = [] if _studied_or_own else (_faers_serious_reactions(_cn) or [])
             _rx_total = sum(c for _, c in _rx)
             _act = infer_drug_action(_cn, drug_genes)
-            appropriate = _appr(_cn, disease_name, existing_ind or [], _act,
+            # 3rd arg is the candidate DISEASE's therapeutic areas (a list) — used only for
+            # the inhibitor-vs-congenital gate. The forward scorer has no OT areas in scope
+            # (that gate runs in the reverse screen, which passes them), so pass [] here
+            # rather than the drug's indication STRING, which join()-mangled into characters.
+            appropriate = _appr(_cn, disease_name, [], _act,
                                 faers_reactions=_rx, faers_total=_rx_total)
     except Exception as e:
         logger.debug(f"appropriateness gate skipped: {e}")
@@ -1193,7 +1205,7 @@ def score_compound_for_disease(
     try:
         from services.delivery_feasibility import assess_delivery
         _cn = compound.get("name") or compound.get("pref_name") or ""
-        _ind_blob = (" ".join(existing_ind or [])).lower()
+        _ind_blob = (existing_ind or "").lower()   # existing_ind is a string, not a list
         _cns_ind = any(k in _ind_blob for k in
                        ("cns", "alzheimer", "parkinson", "epilep", "depress", "schizophren",
                         "migraine", "neuropath", "dementia", "seizure", "psychos"))
