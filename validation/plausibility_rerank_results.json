@@ -1,0 +1,33 @@
+{
+  "run_at": "2026-07-27T11:11:29",
+  "gold_standard": "repoDB Approved vs failed (Terminated/Withdrawn/Suspended) \u2014 hard negatives",
+  "note": "DWPC plausibility (repurposing_predictor.py, AUC 0.98 vs RANDOM) tested as a rank signal on the harder external approved-vs-failed benchmark, on the covered subset.",
+  "full_benchmark": {
+    "pairs": 1476,
+    "mechanistic_auroc": 0.7366
+  },
+  "covered_subset": {
+    "pairs": 574,
+    "approved": 422,
+    "failed": 152,
+    "mechanistic_auroc": 0.7413,
+    "plausibility_only_auroc": 0.3423,
+    "ensemble_50_50_auroc": 0.5632,
+    "ensemble_lift_over_mechanistic": -0.1781,
+    "weight_sweep": {
+      "w_plaus_0.00": 0.7413,
+      "w_plaus_0.25": 0.6655,
+      "w_plaus_0.50": 0.5632,
+      "w_plaus_0.75": 0.4163,
+      "w_plaus_1.00": 0.3423
+    },
+    "best_weight_on_plausibility": 0.0,
+    "best_ensemble_auroc": 0.7413,
+    "best_lift": 0.0
+  },
+  "verdict": {
+    "ship": false,
+    "ship_margin_required": 0.01,
+    "recommendation": "DO NOT WIRE IN: plausibility does not beat mechanism alone on the external approved-vs-failed benchmark by the required margin. Leave the ranking unchanged; keep plausibility as a display/recall field (like KGE-04)."
+  }
+}
