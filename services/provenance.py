@@ -177,11 +177,67 @@ def lineage(source_keys: List[str], fetched_at: Optional[str] = None) -> Dict:
     flags = [r["source"] for r in recs if r["provenance"]["flag"]]
     return {"sources": recs, "overall_score": overall,
             "overall_label": _score_label(overall), "flagged": flags,
-            "as_of": (fetched_at or datetime.now(timezone.utc).isoformat())[:10]}
+            "as_of": (fetched_at or datetime.now(timezone.utc).isoformat())[:10],
+            "build": build_stamp()}   # reproducibility fingerprint (code + data versions)
 
 
 def _score_label(s: int) -> str:
     return "High" if s >= 80 else "Good" if s >= 65 else "Moderate" if s >= 45 else "Low"
+
+
+_UNSET = object()
+_COMMIT_CACHE = _UNSET
+
+
+def _code_commit() -> Optional[str]:
+    """The running code's git commit SHA, read straight from .git (no subprocess),
+    cached. Fail-soft to None when .git is absent (e.g. a packaged deploy)."""
+    global _COMMIT_CACHE
+    if _COMMIT_CACHE is not _UNSET:
+        return _COMMIT_CACHE
+    sha = None
+    try:
+        gitdir = _ROOT / ".git"
+        head = (gitdir / "HEAD").read_text(encoding="utf-8").strip()
+        if head.startswith("ref:"):
+            ref = head.split(" ", 1)[1].strip()
+            refpath = gitdir / ref
+            if refpath.exists():
+                sha = refpath.read_text(encoding="utf-8").strip()
+            else:                                   # packed-refs fallback
+                pr = gitdir / "packed-refs"
+                if pr.exists():
+                    for line in pr.read_text(encoding="utf-8").splitlines():
+                        if line and not line.startswith(("#", "^")) and line.endswith(ref):
+                            sha = line.split()[0]
+                            break
+        else:                                       # detached HEAD holds the SHA directly
+            sha = head or None
+    except Exception as e:
+        logger.debug("code commit read failed: %s", e)
+        sha = None
+    _COMMIT_CACHE = sha
+    return sha
+
+
+def build_stamp() -> Dict:
+    """Reproducibility fingerprint to attach to an OUTPUT: the exact code version
+    (git commit) and the data-source snapshot versions that produced it, so any
+    result can be regenerated and traced. Serves ALCOA+ (Original/Attributable) and
+    21 CFR Part 11. Fail-soft — a missing git dir yields code_commit=None, not an error.
+    See validation/REGULATORY_POSITIONING.md (P0 item 1)."""
+    reg = _registry()
+    data_versions = {
+        k: (v.get("snapshot") or ("live" if v.get("live") else None))
+        for k, v in reg.items()
+    }
+    sha = _code_commit()
+    return {
+        "code_commit": sha,
+        "code_commit_short": (sha[:10] if sha else None),
+        "data_versions": data_versions,
+        "stamped_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def registry_snapshot() -> Dict:
