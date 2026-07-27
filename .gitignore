@@ -47,8 +47,10 @@ biocypher-log/
 .claude/
 
 # Docking — provisioned locally, not committed (see vendor/vina_bin/setup.sh)
-.qc/                          # micromamba root: qc + drugdisc-agent envs
-vendor/vina_bin/*.exe         # AutoDock Vina Windows binaries (re-downloadable)
+# .qc/ = micromamba root (qc + drugdisc-agent envs)
+.qc/
+# vendor/vina_bin/*.exe = AutoDock Vina Windows binaries (re-downloadable)
+vendor/vina_bin/*.exe
 vendor/AtomisticSkills/**/__pycache__/
 
 # Predictor DWPC cache — rebuilt from the DB on first use (services/repurposing_predictor.py)
