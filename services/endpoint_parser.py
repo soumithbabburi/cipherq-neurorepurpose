@@ -172,16 +172,23 @@ def aggregate(studies: List[Dict]) -> Dict:
         c = classify_study(s)
         counts[c["class"]] = counts.get(c["class"], 0) + 1
         r = _RANK.get(c["class"], 0)
-        # keep the most INFORMATIVE verdict (a real met or a real fail beats 'unknown')
-        if abs(r) > abs(best_rank) or (best["class"] == "unknown" and c["class"] != "unknown"):
+        # keep the most INFORMATIVE verdict (a real met or a real fail beats 'unknown');
+        # on an equal-magnitude tie, prefer the more-negative class so the verdict can't
+        # read positive for the same evidence just because a met_primary was seen first.
+        if (abs(r) > abs(best_rank)
+                or (abs(r) == abs(best_rank) and r < best_rank)
+                or (best["class"] == "unknown" and c["class"] != "unknown")):
             best, best_rank = c, r
     # signal: worst credible negative dominates (a failed primary is stronger evidence
     # than another 'trial exists'); a clean met_primary is the only strong positive.
     sig = 0.0
-    if counts.get("met_primary") and not (counts.get("failed_primary") or counts.get("terminated_efficacy")):
+    if counts.get("met_primary") and not (counts.get("failed_primary")
+            or counts.get("terminated_efficacy") or counts.get("terminated_safety")):
         sig = 1.0
     elif counts.get("terminated_efficacy"):
         sig = -1.0
+    elif counts.get("terminated_safety"):
+        sig = -0.9
     elif counts.get("failed_primary"):
         sig = -0.7
     elif counts.get("biomarker_only"):
