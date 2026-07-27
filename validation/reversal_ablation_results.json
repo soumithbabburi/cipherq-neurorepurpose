@@ -1,0 +1,18 @@
+{
+  "run_at": "2026-07-27T13:45:04",
+  "evaluable_pairs": 1476,
+  "covered_pairs": 167,
+  "approved": 75,
+  "failed": 92,
+  "mechanism_auroc": 0.7414,
+  "connectivity_only_auroc": 0.485,
+  "blend_sweep": {
+    "w_0.00": 0.7414,
+    "w_0.25": 0.7251,
+    "w_0.50": 0.667
+  },
+  "best_weight": 0.0,
+  "best_blend_auroc": 0.7414,
+  "best_lift": 0.0,
+  "verdict": "KEEP AS DISPLAY/FLAG: connectivity does not beat mechanism by the >=0.01 bar on the covered subset; not a ranking driver."
+}

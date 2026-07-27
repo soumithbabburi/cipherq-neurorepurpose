@@ -1009,6 +1009,11 @@ def score_compound_for_disease(
         composite = min(1.0, composite + 0.18 * float(prolif["score"]))
 
     # Signature-reversal bonus / mimic penalty (bounded, orthogonal).
+    # NOTE (2026-07-27): on repoDB approved-vs-failed, CMap connectivity was measured
+    # NEUTRAL-to-dilutive (AUROC 0.485 on the covered subset, blend best-weight 0.0 —
+    # validation/experiment_reversal_ablation.py). It is kept as a small, bounded,
+    # direction-aware signal / explainability flag, NOT validated as a ranking driver.
+    # Demoting its weight is a candidate pending a broader-coverage measurement.
     if reversal.get("direction") == "reversing":
         composite = min(1.0, composite + 0.15 * float(reversal.get("score", 0.0)))
     elif reversal.get("direction") == "mimicking":
