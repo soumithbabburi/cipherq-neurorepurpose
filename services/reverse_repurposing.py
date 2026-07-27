@@ -1922,29 +1922,23 @@ def screen_indications_for_drug(
             _orphan = False
         _has_trial = trial_count > 0 or c.get("max_trial_phase", 0) > 0
 
-        # Actionability is judged on the CALIBRATED percentile when the null exists
-        # (a top-percentile lead is actionable even if its raw score is modest —
-        # this reconciles the 0.40 raw bar with "top 1%"). The adaptive exceptions
-        # relax the PERCENTILE bar: a trial link and an orphan disease each lower it.
-        cal = sr.get("calibration", {})
-        if cal.get("basis") == "calibrated" and cal.get("percentile") is not None:
-            pct_bar = 0.85                      # top 15% = actionable
-            if _has_trial:
-                pct_bar = 0.75                  # trial link → top 25%
-            if _orphan:
-                pct_bar -= 0.10                 # orphan → relax further
-            actionable = cal["percentile"] >= pct_bar
-            eff_cutoff = round(pct_bar, 3)      # a percentile bar, shown as such
-            cutoff_kind = "percentile"
-        else:                                   # heuristic fallback (no null yet)
-            eff_cutoff = _BASE_ACTIONABLE_CUTOFF
-            if _has_trial:
-                eff_cutoff = min(eff_cutoff, _TRIAL_LINK_CUTOFF)
-            if _orphan:
-                eff_cutoff *= _ORPHAN_CUTOFF_FACTOR
-            eff_cutoff = round(eff_cutoff, 3)
-            actionable = sr["composite_score"] >= eff_cutoff
-            cutoff_kind = "raw"
+        # Actionability is judged on the RAW composite score against the well-separated
+        # 2026-07 bands (base 0.40 = the "Promising" floor). The calibrated percentile is
+        # reported as background context (see the "calibration" field) but is NOT the gate:
+        # the signal/noise gap widened so far that the null collapsed near zero and the
+        # percentile SATURATES (raw 0.15 and 0.83 both read top ~98%), so gating on it made
+        # nearly every mechanistically-linked candidate "actionable". score_calibration.py
+        # abandoned the percentile for tiering for exactly this reason; we match it here.
+        # Adaptive relaxations: a trial link in this indication and an orphan disease each
+        # lower the raw bar.
+        eff_cutoff = _BASE_ACTIONABLE_CUTOFF
+        if _has_trial:
+            eff_cutoff = min(eff_cutoff, _TRIAL_LINK_CUTOFF)
+        if _orphan:
+            eff_cutoff *= _ORPHAN_CUTOFF_FACTOR
+        eff_cutoff = round(eff_cutoff, 3)
+        actionable = sr["composite_score"] >= eff_cutoff
+        cutoff_kind = "raw"
 
         entry = {
             **c,
