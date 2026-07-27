@@ -1,0 +1,121 @@
+{
+  "run_at": "2026-07-27T11:58:46",
+  "pairs": 1476,
+  "diseases": 55,
+  "n_boot": 2000,
+  "baseline": "current_triad (0.25/0.20/0.20)",
+  "variants": {
+    "current_triad": {
+      "weights_target_pathway_ppi": [
+        0.25,
+        0.2,
+        0.2
+      ],
+      "overall_auroc": 0.7372,
+      "per_disease_mean_auroc": 0.7323,
+      "gap_vs_current": 0.0,
+      "gap_ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "target_only": {
+      "weights_target_pathway_ppi": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "overall_auroc": 0.7464,
+      "per_disease_mean_auroc": 0.7491,
+      "gap_vs_current": 0.0092,
+      "gap_ci95": [
+        0.0029,
+        0.0153
+      ]
+    },
+    "no_pathway": {
+      "weights_target_pathway_ppi": [
+        0.25,
+        0.0,
+        0.2
+      ],
+      "overall_auroc": 0.7446,
+      "per_disease_mean_auroc": 0.7349,
+      "gap_vs_current": 0.0074,
+      "gap_ci95": [
+        0.0035,
+        0.0113
+      ]
+    },
+    "target_heavy": {
+      "weights_target_pathway_ppi": [
+        0.45,
+        0.1,
+        0.2
+      ],
+      "overall_auroc": 0.7411,
+      "per_disease_mean_auroc": 0.733,
+      "gap_vs_current": 0.0039,
+      "gap_ci95": [
+        0.0013,
+        0.0066
+      ]
+    },
+    "target_heavy_lowpw": {
+      "weights_target_pathway_ppi": [
+        0.5,
+        0.05,
+        0.15
+      ],
+      "overall_auroc": 0.7406,
+      "per_disease_mean_auroc": 0.7324,
+      "gap_vs_current": 0.0035,
+      "gap_ci95": [
+        0.0002,
+        0.0067
+      ]
+    },
+    "mostly_target": {
+      "weights_target_pathway_ppi": [
+        0.6,
+        0.1,
+        0.15
+      ],
+      "overall_auroc": 0.7412,
+      "per_disease_mean_auroc": 0.734,
+      "gap_vs_current": 0.004,
+      "gap_ci95": [
+        0.0009,
+        0.0071
+      ]
+    }
+  },
+  "winners_meeting_ship_criterion": [
+    {
+      "variant": "target_only",
+      "gap": 0.0092,
+      "ci_low": 0.0029
+    },
+    {
+      "variant": "no_pathway",
+      "gap": 0.0074,
+      "ci_low": 0.0035
+    },
+    {
+      "variant": "mostly_target",
+      "gap": 0.004,
+      "ci_low": 0.0009
+    },
+    {
+      "variant": "target_heavy",
+      "gap": 0.0039,
+      "ci_low": 0.0013
+    },
+    {
+      "variant": "target_heavy_lowpw",
+      "gap": 0.0035,
+      "ci_low": 0.0002
+    }
+  ],
+  "recommendation": "Re-weight toward 'target_only' (gap +0.0092, CI low 0.0029)."
+}
