@@ -161,4 +161,14 @@ def mechanism_direction(drug_genes: List[str], drug_actions: Optional[Dict[str, 
     elif nc > nh:
         out["net"] = "corrective"
         out["factor"] = round(min(1.15, 1.0 + 0.08 * (nc - nh)), 3)
+    elif nh >= 1:
+        # tie with a real harmful component (nh == nc, both >= 1): the drug pushes as
+        # many disease-driving genes the WRONG way as the right way. Previously this
+        # passed clean (factor 1.0, no flag) — a false-positive channel. Surface it with
+        # a mild demotion + caution rather than cancelling the harmful signal to neutral.
+        out["net"] = "mixed"
+        out["factor"] = 0.85
+        out["flag"] = (f"MIXED direction: corrective on {nc} disease gene(s) but ALSO "
+                       f"amplifies gene(s) {', '.join(out['harmful'][:4])} — net effect "
+                       "uncertain, verify before pursuing.")
     return out

@@ -334,17 +334,24 @@ def assess(drug_name: str, disease_name: str, therapeutic_organs=None) -> Dict:
     only a toxicity in an organ the drug is NOT therapeutic for is a real contraindication.
     """
     result = {"multiplier": 1.0, "penalized": False, "flags": [],
-              "drug_toxicity": {}, "disease_organs": {}}
+              "drug_toxicity": {}, "disease_organs": {}, "safety_assessed": False}
     disease_organs = disease_organ_profile(disease_name)
     if not disease_organs:
+        # disease organ pathology not mapped → cannot assess (NOT a clean bill)
+        result["note"] = "Disease organ profile unavailable — organ-toxicity not assessed."
         return result
     tox = drug_toxicity_profile(drug_name)
-    if not tox:                                   # no data → no penalty (honest)
+    if not tox:                                   # FAERS could not be resolved for this drug
+        # IMPORTANT: multiplier 1.0 here means "could not assess", NOT "assessed clean".
+        # safety_assessed=False lets callers avoid presenting an implicit clean bill (F4).
         result["disease_organs"] = disease_organs
+        result["note"] = ("No FAERS adverse-event data resolved for this drug — organ-toxicity "
+                          "NOT assessed (absence of a penalty is not a safety clearance).")
         return result
 
     result["drug_toxicity"] = tox
     result["disease_organs"] = disease_organs
+    result["safety_assessed"] = True
     therapeutic = set(therapeutic_organs or [])
 
     multiplier = 1.0

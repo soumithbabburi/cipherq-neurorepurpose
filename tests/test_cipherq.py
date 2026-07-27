@@ -258,6 +258,19 @@ def test_appropriateness_congenital_lof_gate():
     assert none["factor"] == 1.0
 
 
+# ── Unit: mechanism-direction tie must be flagged, not passed clean (F5) ────────
+def test_mechanism_direction_tie_is_flagged(monkeypatch):
+    from services import mechanism_direction as md
+    # AAA up-regulated, BBB down-regulated; drug activates both -> harmful on AAA,
+    # corrective on BBB -> a 1/1 tie (previously net "neutral", factor 1.0, no flag).
+    monkeypatch.setattr(md, "_disease_direction",
+                        lambda d: (frozenset({"AAA"}), frozenset({"BBB"})))
+    r = md.mechanism_direction(["AAA", "BBB"], {"AAA": "agonist", "BBB": "agonist"}, "somedisease")
+    assert r["net"] == "mixed"
+    assert r["factor"] < 1.0
+    assert r["flag"] and r["harmful"] and r["corrective"]
+
+
 # ── Unit: audit trail (Part 11) — append + tamper-evidence ──────────────────────
 def test_audit_trail_chain_and_tamper(tmp_path, monkeypatch):
     from services import audit_trail as at

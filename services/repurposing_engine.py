@@ -1086,8 +1086,13 @@ def score_compound_for_disease(
     # pulmonary hypertension, mepolizumab→eosinophilic esophagitis) had its guardrails
     # switched off as if it were established therapy — inflating it. Now suppression
     # requires real approval here; studied and novel pairs keep every gate.
+    # STRICT approval for THIS disease: a real per-indication Phase-4 signal. Used for the
+    # ground-truth contraindication gate, which must NOT be switched off by the looser
+    # text-match fallback below (a token collision could otherwise skip the one hard safety
+    # backstop on a genuinely contraindicated pair — F3).
+    _approved_here = bool(indication_phase is not None and int(indication_phase) >= 4)
     _own_therapy = bool(
-        (indication_phase is not None and int(indication_phase) >= 4)
+        _approved_here
         or (indication_phase is None
             and _indication_matches_disease(existing_ind, disease_name)
             and _to_phase(max_phase) >= 4)              # legacy fallback only when per-indication phase unknown
@@ -1321,11 +1326,13 @@ def score_compound_for_disease(
     # disjoint AUC 0.98 vs real contraindications) as an INDEPENDENT cross-check for display /
     # corroboration; it is deliberately NOT folded into the composite (an external model must
     # not silently inflate a validated score). Fail-soft: only fires when PrimeKG resolves the
-    # pair, and never on the drug's own approved indication (_own_therapy).
+    # pair, and skipped only on a STRICT per-indication approval (_approved_here) — NOT the
+    # looser text-match _own_therapy, so a token collision can never switch off this hard
+    # contraindication backstop on a genuinely contraindicated pair (F3).
     primekg = {"relation": None, "p_treats": None, "multiplier": 1.0}
     try:
         from services import primekg_predictor as _pkg
-        if _pkg.available() and not _own_therapy:
+        if _pkg.available() and not _approved_here:
             _nm = compound.get("name", ""); _cid = compound.get("chembl_id", "")
             rel = _pkg.labeled_relation(_nm, disease_name, _cid)
             primekg["relation"] = rel
@@ -1372,7 +1379,10 @@ def score_compound_for_disease(
         scores["target"] >= 0.40,                          # a genuine on-target hit (single strong target counts)
         float(directional.get("signal", 0.0)) > 0,         # directional KG evidence
         float(coverage.get("coverage") or 0.0) >= 0.5,     # genuine driver coverage
-        net_eff >= 0.30,                                    # real (non-promiscuous) network path
+        # real (non-promiscuous) network path: a DIRECT treats edge or >=3 shared genes.
+        # A 2-shared-gene indirect path still earns the small +0.10 net bonus above, but
+        # is too promiscuous to CERTIFY a Strong/Promising tier on its own (F6).
+        (net_eff >= 0.30 and (_net_basis.startswith("direct") or len(_net_genes) >= 3)),
         _pathway_evidence >= 0.30,                          # pathway mechanism (evidence-derived, NOT the injected KG prior)
     ])
     if corroboration < 1 and calibration.get("tier") in ("Strong", "Promising"):
