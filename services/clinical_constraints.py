@@ -231,7 +231,7 @@ def _cns_barrier_factor(disease_name: str, smiles: str) -> tuple:
         return 1.0, None
     try:
         from services.cns_mpo import cns_mpo
-        mpo = cns_mpo(smiles)
+        mpo = cns_mpo(smiles=smiles)
         score = mpo.get("score") if isinstance(mpo, dict) else None
         if score is None:
             return 1.0, None
