@@ -175,6 +175,29 @@ def test_endpoint_verdict_tie_is_order_independent(monkeypatch):
     assert a == b == "terminated_efficacy"
 
 
+def _study(title, unit, pval, status="COMPLETED"):
+    return {"protocolSection": {"statusModule": {"overallStatus": status}},
+            "resultsSection": {"outcomeMeasuresModule": {"outcomeMeasures": [
+                {"type": "PRIMARY", "title": title, "unitOfMeasure": unit,
+                 "analyses": [{"pValue": pval}]}]}}}
+
+
+def test_endpoint_typing_uses_structured_fields_not_keywords():
+    """A met SURROGATE primary (lab unit) must NOT be scored as a clinical win, and a
+    validated clinical instrument must be. Regression for the structured-typing fix."""
+    from services import endpoint_parser as ep
+    # HbA1c in mg/dL, significant -> surrogate, so NOT met_primary (was a clinical win before)
+    surrogate = ep.classify_study(_study("Change in HbA1c", "mg/dL", "0.001"))
+    assert surrogate["class"] != "met_primary"
+    assert surrogate.get("primary_kind") != "clinical" or surrogate["class"] == "biomarker_only"
+    # ACR20 responder analysis, significant -> a real clinical win
+    clinical = ep.classify_study(_study("ACR20 response at Week 24", "Percentage of Participants", "0.002"))
+    assert clinical["class"] == "met_primary" and clinical["primary_kind"] == "clinical"
+    # structured unit alone types an otherwise-neutral title as surrogate
+    assert ep._kind({"title": "Change from baseline", "unitOfMeasure": "ng/mL"}) == "biomarker"
+    assert ep._kind({"title": "Responders", "unitOfMeasure": "Participants"}) == "clinical"
+
+
 # ── Unit: audit trail (Part 11) — append + tamper-evidence ──────────────────────
 def test_audit_trail_chain_and_tamper(tmp_path, monkeypatch):
     from services import audit_trail as at

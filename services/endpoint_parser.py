@@ -38,14 +38,32 @@ _CLINICAL_KW = ("symptom", "dysphagia", "pain", "response", "remission", "qualit
                 "attack", "relapse", "mortality", "cure", "fev1", "fvc", "score", "index",
                 "improvement", "activity", "steroid-sparing", "hospitali")
 
+# ── Structured typing signals (ClinicalTrials.gov v2 unitOfMeasure / paramType) ──
+# These are consulted BEFORE the keyword title scan: they are a controlled-ish
+# vocabulary and are far more reliable than scanning free-text titles, which
+# misreads surrogates (HbA1c, LDL-C, tumour size) as clinical wins. Keyword
+# scanning remains only as a last-resort fallback (flagged). See the miner design.
+_SURROGATE_UNIT_STEMS = ("mg/dl", "g/dl", "mmol", "µmol", "umol", "nmol", "ng/ml", "pg/ml",
+                         "ng/l", "iu/", "u/l", "units per liter", "cells", "copies", "/ml",
+                         "mmhg", "ml/min", "kpa", "meq/", "10^", "x10")
+_CLINICAL_UNIT_STEMS = ("participant", "score on a scale", "units on a scale",
+                        "score on scale", "scale units")
+# Named validated CLINICAL instruments / patient-relevant outcomes (title match).
+_CLINICAL_INSTRUMENTS = ("acr20", "acr50", "acr70", "das28", "pasi", "easi", "ham-d", "hamd",
+                         "madrs", "adas-cog", "updrs", "panss", "haq", "6-minute walk", "6mwd",
+                         "overall survival", "progression-free survival", "exacerbation rate")
+# Named SURROGATE markers (title match) that must never read as a clinical win.
+_KNOWN_SURROGATES = ("hba1c", "ldl", "egfr", "viral load", "tumor size", "tumour size",
+                     "eosinophil", "cd4 count", "hdl", "triglycerid", "c-reactive", "crp ",
+                     "glucose level", "blood glucose")
+
 _EFF_STOP = ("lack of efficacy", "no efficacy", "inefficac", "futility", "did not meet",
              "failed", "insufficient efficacy", "no benefit", "lack of effect")
 _SAF_STOP = ("safety", "adverse", "toxicity", "death", "tolerab", "serious")
 
 
-def _kind(title: str) -> str:
-    t = (title or "").lower()
-    # biomarker wins only if it isn't clearly a clinical composite (e.g. "symptom score")
+def _kind_by_keyword(t: str) -> str:
+    """Legacy last-resort typing by scanning the (lowercased) title. Lower confidence."""
     is_bio = any(k in t for k in _BIOMARKER_KW)
     is_clin = any(k in t for k in _CLINICAL_KW)
     if is_clin and not (is_bio and not is_clin):
@@ -53,6 +71,32 @@ def _kind(title: str) -> str:
     if is_bio:
         return "biomarker"
     return "clinical"          # conservative: an un-typed primary is treated as clinical
+
+
+def _kind(om) -> str:
+    """Type a primary outcome as 'clinical' vs 'biomarker' from STRUCTURED fields first
+    (unitOfMeasure / paramType / a validated-instrument table), keyword title-scan last.
+    Accepts a CT.gov outcomeMeasure dict, or a bare title string (legacy callers)."""
+    if isinstance(om, dict):
+        title = (om.get("title") or "")
+        unit = (om.get("unitOfMeasure") or "")
+    else:
+        title, unit = (om or ""), ""
+    t, u = title.lower(), unit.lower()
+    # 1) a named validated clinical instrument / hard outcome in the title
+    if any(k in t for k in _CLINICAL_INSTRUMENTS):
+        return "clinical"
+    # 2) a named surrogate marker in the title
+    if any(k in t for k in _KNOWN_SURROGATES):
+        return "biomarker"
+    # 3) structured unit says molecular / lab -> surrogate
+    if any(k in u for k in _SURROGATE_UNIT_STEMS):
+        return "biomarker"
+    # 4) structured unit says patient-level (participants / rating scale) -> clinical
+    if any(k in u for k in _CLINICAL_UNIT_STEMS):
+        return "clinical"
+    # 5) last resort: the legacy keyword title scan
+    return _kind_by_keyword(t)
 
 
 def _pvalue(s) -> Optional[float]:
@@ -105,7 +149,7 @@ def classify_study(study: Dict) -> Dict:
         return {"class": "unknown", "note": "Results posted, no primary-outcome analysis.", "p": None}
 
     # Was any biomarker outcome (primary OR secondary) statistically moved?
-    biomarker_met = any(_kind(om.get("title", "")) == "biomarker"
+    biomarker_met = any(_kind(om) == "biomarker"
                         and (_outcome_pvalue(om) is not None and _outcome_pvalue(om) < 0.05)
                         for om in oms)
 
@@ -116,7 +160,7 @@ def classify_study(study: Dict) -> Dict:
     clin_met = None
     bio_met_primary = None
     for om in primaries:
-        k = _kind(om.get("title", ""))
+        k = _kind(om)
         p = _outcome_pvalue(om)
         title = (om.get("title") or "")[:90]
         if p is None:
