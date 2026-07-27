@@ -30,6 +30,14 @@ from config import db_params
 logger = logging.getLogger(__name__)
 CACHE_FILE = Path(__file__).parent.parent / "data" / "repurposing_cache.json"
 
+# NOTE (2026-07-27): a bootstrap sweep (validation/experiment_mech_weights.py)
+# proved the pathway term is DILUTIVE for RANKING — dropping it lifts repoDB
+# approved-vs-failed AUROC by ~+0.006-0.007 (95% CI excludes zero). BUT the tier
+# re-check (validation/check_mech_tier_shift.py) showed the naive re-weight
+# (redistributing pathway's mass to target/ppi) inflates the "Strong" population
+# from 4% to 19% — a calibration regression. So the weights are LEFT AS-IS until
+# the 0.40/0.60 tier bands are re-anchored to the new distribution as a
+# coordinated change. Ranking win is banked as evidence, not shipped half-done.
 WEIGHTS = {
     "target":     0.25,
     "pathway":    0.20,

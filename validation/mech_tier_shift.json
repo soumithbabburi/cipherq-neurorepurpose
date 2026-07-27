@@ -1,0 +1,24 @@
+{
+  "run_at": "2026-07-27T13:04:28",
+  "pairs": 1476,
+  "mech_component_auroc": {
+    "old": 0.7431,
+    "new": 0.7489
+  },
+  "mean": {
+    "old": 0.2274,
+    "new": 0.2637
+  },
+  "frac_ge_0.40_promising": {
+    "old": 0.2859,
+    "new": 0.3449
+  },
+  "frac_ge_0.60_strong": {
+    "old": 0.0407,
+    "new": 0.1944
+  },
+  "max": {
+    "old": 0.65,
+    "new": 0.65
+  }
+}
