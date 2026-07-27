@@ -278,6 +278,13 @@ def api_sign():
     return jsonify({"ok": True, "signature": manifest})
 
 
+@app.route("/clinical-evidence")
+def clinical_evidence_page():
+    """UI for the structured clinical-evidence miner (reads drug/disease from the
+    query string client-side and calls /api/clinical-evidence)."""
+    return render_template("clinical_evidence.html")
+
+
 @app.route("/api/clinical-evidence")
 def api_clinical_evidence():
     """Structured, provenance-tagged clinical-evidence record for a (drug, disease)

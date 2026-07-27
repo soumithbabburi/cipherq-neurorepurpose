@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Clinical Evidence — RepurposeIQ{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:8px 4px 40px">
+  <h1 style="font-size:1.4rem;font-weight:700;color:var(--primary,#2563eb);margin:0 0 4px">
+    Clinical Evidence</h1>
+  <p style="font-size:0.9rem;color:var(--text-muted,#64748b);margin:0 0 18px">
+    Structured trial outcomes, denominatored adverse events, and a literature tier by study design.
+    Reported facts with provenance and caveats — not a clinical determination.</p>
+
+  <form id="ce-form" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+    <input id="ce-drug" placeholder="Drug (e.g. imatinib)" required
+           style="flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--border,#cbd5e1);border-radius:8px;font-size:0.9rem">
+    <input id="ce-disease" placeholder="Disease (e.g. gastrointestinal stromal tumor)" required
+           style="flex:2;min-width:220px;padding:10px 12px;border:1px solid var(--border,#cbd5e1);border-radius:8px;font-size:0.9rem">
+    <button type="submit"
+            style="padding:10px 20px;background:var(--primary,#2563eb);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">
+      Mine evidence</button>
+  </form>
+
+  <div id="ce-status" style="font-size:0.9rem;color:var(--text-muted,#64748b)"></div>
+  <div id="ce-out"></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function card(title, bodyHtml, accent) {
+  return `<div style="background:var(--surface,#fff);border:1px solid var(--border,#e5e7eb);
+    border-left:4px solid ${accent||'#2563eb'};border-radius:10px;padding:16px 18px;margin-bottom:14px">
+    <div style="font-size:0.95rem;font-weight:700;color:#0f1e3d;margin-bottom:8px">${title}</div>${bodyHtml}</div>`;
+}
+function pill(text, color) {
+  return `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:0.75rem;
+    font-weight:600;background:${color}22;color:${color};margin:2px 4px 2px 0">${text}</span>`;
+}
+const TIER_COLOR = {high:'#157f3c', moderate:'#b45409', low:'#64748b', none:'#94a3b8'};
+
+function render(d) {
+  let h = '';
+  // Trials
+  const t = d.trials;
+  if (t) {
+    const cc = t.class_counts || {};
+    const counts = Object.keys(cc).filter(k=>cc[k]>0)
+      .map(k => pill(`${k}: ${cc[k]}`, k.includes('met')?'#157f3c':(k.includes('fail')||k.includes('terminated'))?'#b91c1c':'#64748b')).join('');
+    h += card('Clinical trials',
+      `<div style="font-size:0.85rem;color:#1f2a3d">Matched trials: <b>${t.n_matched}</b> ·
+       outcome signal <b>${t.outcome_signal}</b> · most-informative verdict <b>${t.verdict||'n/a'}</b></div>
+       <div style="margin-top:8px">${counts||'<span style="color:#94a3b8">no posted results</span>'}</div>
+       <div style="font-size:0.75rem;color:#94a3b8;margin-top:8px">${t.caveat||''}</div>`, '#2563eb');
+  }
+  // Adverse events
+  const ae = d.adverse_events;
+  if (ae) {
+    const rate = ae.serious_rate!=null ? (ae.serious_rate*100).toFixed(1)+'%' : 'n/a';
+    const organs = (ae.top_serious_organ_systems||[]).map(o=>pill(`${o.organ_system} (${o.events})`, '#b45409')).join('');
+    h += card('Adverse events (trial-reported, with denominator)',
+      `<div style="font-size:0.85rem;color:#1f2a3d">Serious: <b>${ae.serious_num_affected}</b> of
+       <b>${ae.serious_num_at_risk}</b> at risk (<b>${rate}</b>) · deaths <b>${ae.deaths}</b></div>
+       <div style="margin-top:8px">${organs}</div>
+       <div style="font-size:0.75rem;color:#94a3b8;margin-top:8px">${ae.caveat||''}</div>`, '#b45409');
+  } else {
+    h += card('Adverse events', '<span style="color:#94a3b8;font-size:0.85rem">No structured trial AE table posted.</span>', '#94a3b8');
+  }
+  // Literature
+  const lit = d.literature;
+  if (lit) {
+    const c = lit.counts || {};
+    const counts = ['meta','sysrev','rct','case_report','other'].filter(k=>c[k]>0)
+      .map(k=>pill(`${k}: ${c[k]}`, '#2563eb')).join('');
+    h += card('Literature',
+      `<div>${pill('tier: '+lit.tier, TIER_COLOR[lit.tier]||'#64748b')}
+        ${pill('direction: '+lit.directional, '#64748b')}
+        ${lit.query==='tiab_fallback'?pill('MeSH miss → title/abstract fallback','#b45409'):pill('MeSH-indexed','#157f3c')}</div>
+       <div style="margin-top:8px">${counts||'<span style="color:#94a3b8">none</span>'}</div>`, '#157f3c');
+  }
+  // Caveats + provenance
+  const cavs = (d.caveats||[]).map(c=>`<li style="margin-bottom:4px">${c}</li>`).join('');
+  const build = (d.lineage && d.lineage.build) ? d.lineage.build : null;
+  h += card('Provenance & caveats',
+    `<ul style="font-size:0.78rem;color:#64748b;margin:0 0 6px;padding-left:18px">${cavs}</ul>
+     ${build?`<div style="font-size:0.72rem;color:#94a3b8">code ${build.code_commit_short||'?'} ·
+       data as-of ${(d.lineage&&d.lineage.as_of)||'?'} · integrity ${(d.lineage&&d.lineage.overall_label)||'?'}</div>`:''}`,
+    '#64748b');
+  $('ce-out').innerHTML = h;
+}
+
+async function run(drug, disease) {
+  $('ce-status').textContent = 'Mining ClinicalTrials.gov + PubMed…';
+  $('ce-out').innerHTML = '';
+  try {
+    const r = await fetch(`/api/clinical-evidence?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(disease)}`);
+    const d = await r.json();
+    if (d.error) { $('ce-status').textContent = 'Error: ' + d.error; return; }
+    $('ce-status').textContent = `${d.drug} → ${d.disease}`;
+    render(d);
+  } catch (e) { $('ce-status').textContent = 'Request failed: ' + e; }
+}
+
+$('ce-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const drug = $('ce-drug').value.trim(), disease = $('ce-disease').value.trim();
+  if (drug && disease) {
+    history.replaceState(null, '', `/clinical-evidence?drug=${encodeURIComponent(drug)}&disease=${encodeURIComponent(disease)}`);
+    run(drug, disease);
+  }
+});
+
+// prefill + auto-run from URL
+(function () {
+  const p = new URLSearchParams(location.search);
+  const drug = p.get('drug') || '', disease = p.get('disease') || '';
+  if (drug) $('ce-drug').value = drug;
+  if (disease) $('ce-disease').value = disease;
+  if (drug && disease) run(drug, disease);
+})();
+</script>
+{% endblock %}
