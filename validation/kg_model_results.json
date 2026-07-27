@@ -1,0 +1,44 @@
+{
+  "run_at": "2026-06-29T13:42:59",
+  "model": "DistMult KGE (numpy), dim=128, epochs=30",
+  "graph": {
+    "triples": 2250197,
+    "nodes": 45158,
+    "relations": 24,
+    "source": "hetionet_v1.0"
+  },
+  "treat_edges": {
+    "total": 755,
+    "held_out_test": 151
+  },
+  "candidate_space": {
+    "compounds": 387,
+    "diseases": 77
+  },
+  "metrics": {
+    "auroc": 0.6936,
+    "bedroc_a20": 0.2169,
+    "hits_at_10": 0.4371,
+    "hits_at_30": 0.7815,
+    "mrr": 0.206,
+    "negative_control_auroc": 0.5209,
+    "negatives_per_positive": 20
+  },
+  "comparison_note": "Transductive link prediction: learns from biology + 80% of known treatments, predicts the held-out 20%. Complementary to the mechanism-only benchmark (AUROC 0.73), which uses NO treatment data.",
+  "findings": [
+    {
+      "id": "KGE-01",
+      "severity": "WARN",
+      "title": "KG-embedding predicts held-out treatment edges",
+      "detail": "A DistMult embedding of the Hetionet graph predicts the held-out 20% of Compound-treats-Disease edges with AUROC 0.694 (Hits@10 0.44, MRR 0.21) \u2014 capturing indirect multi-hop biology the direct target-overlap score cannot. Held-out edges are absent from training.",
+      "capa": "Re-train on each graph refresh; track AUROC/Hits@10. Integrate the embedding score as an additional engine signal (needs ChEMBL\u2192DrugBank node mapping)."
+    },
+    {
+      "id": "KGE-02",
+      "severity": "INFO",
+      "title": "Negative control",
+      "detail": "Shuffling labels collapses AUROC to 0.521 (expect ~0.5).",
+      "capa": "None \u2014 control."
+    }
+  ]
+}

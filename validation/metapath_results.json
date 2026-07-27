@@ -1,0 +1,69 @@
+{
+  "run_at": "2026-06-29T15:00:34",
+  "benchmark": "repoDB external, Hetionet-mappable subset (same-pairs head-to-head)",
+  "mappable_pairs": 559,
+  "approved": 336,
+  "failed": 223,
+  "per_metapath_unsupervised_auroc": {
+    "CbGaD": 0.5006,
+    "CdGuD": 0.5007,
+    "CuGdD": 0.5071,
+    "CbGiGaD": 0.4884,
+    "CbGrGaD": 0.4165,
+    "CbG_PW_GaD": 0.4113,
+    "CrCbGaD": 0.5319,
+    "CbGaD_via_DuG": 0.475,
+    "CbGaD_via_DdG": 0.4739
+  },
+  "best_single_metapath_auroc": 0.5319,
+  "mechanistic_auroc": 0.7459,
+  "metapath_cv_lr_auroc": 0.5938,
+  "ensemble_auroc": 0.7295,
+  "cv_lr_lift_over_mech": -0.1521,
+  "ensemble_lift_over_mech": -0.0164,
+  "negative_control_auroc": 0.5108,
+  "top_coefficients": [
+    {
+      "metapath": "CbG_PW_GaD",
+      "coef": -0.638
+    },
+    {
+      "metapath": "CbGrGaD",
+      "coef": -0.534
+    },
+    {
+      "metapath": "CbGaD_via_DuG",
+      "coef": -0.488
+    },
+    {
+      "metapath": "CbGaD",
+      "coef": 0.41
+    },
+    {
+      "metapath": "CbGaD_via_DdG",
+      "coef": -0.307
+    },
+    {
+      "metapath": "CuGdD",
+      "coef": 0.203
+    },
+    {
+      "metapath": "CrCbGaD",
+      "coef": 0.131
+    },
+    {
+      "metapath": "CdGuD",
+      "coef": 0.108
+    }
+  ],
+  "verdict": "DO NOT integrate \u2014 metapath does not clearly beat the mechanistic score on the external benchmark.",
+  "findings": [
+    {
+      "id": "MP-01",
+      "severity": "WARN",
+      "title": "Metapath/DWPC vs mechanistic on external repoDB (decision gate)",
+      "detail": "On 559 Hetionet-mappable repoDB pairs: best single metapath 0.532 (unsupervised), mechanistic 0.746, metapath CV-LR 0.594 (lift -0.1521), mech+metapath ensemble 0.729 (lift -0.0164); negative control 0.511. DO NOT integrate \u2014 metapath does not clearly beat the mechanistic score on the external benchmark.",
+      "capa": "Integrate the metapath signal only on a positive, reproducible external lift; otherwise keep the mechanistic score (simpler) and revisit features."
+    }
+  ]
+}

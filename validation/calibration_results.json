@@ -1,0 +1,85 @@
+{
+  "run_at": "2026-06-29T12:13:17",
+  "source": "predictions_pairs.json (mechanism-only scores vs repoDB labels)",
+  "n_pairs": 1476,
+  "base_rate": 0.673,
+  "ece_raw": 0.3753,
+  "brier_raw": 0.3455,
+  "monotonicity_spearman": 0.515,
+  "reliability_table": [
+    {
+      "bin": "0.0-0.1",
+      "n": 646,
+      "mean_score": 0.002,
+      "observed_rate": 0.45
+    },
+    {
+      "bin": "0.1-0.2",
+      "n": 31,
+      "mean_score": 0.147,
+      "observed_rate": 0.677
+    },
+    {
+      "bin": "0.2-0.3",
+      "n": 147,
+      "mean_score": 0.246,
+      "observed_rate": 0.83
+    },
+    {
+      "bin": "0.3-0.4",
+      "n": 94,
+      "mean_score": 0.365,
+      "observed_rate": 0.84
+    },
+    {
+      "bin": "0.4-0.5",
+      "n": 92,
+      "mean_score": 0.44,
+      "observed_rate": 0.88
+    },
+    {
+      "bin": "0.5-0.6",
+      "n": 99,
+      "mean_score": 0.547,
+      "observed_rate": 0.828
+    },
+    {
+      "bin": "0.6-0.7",
+      "n": 94,
+      "mean_score": 0.67,
+      "observed_rate": 0.872
+    },
+    {
+      "bin": "0.7-0.8",
+      "n": 175,
+      "mean_score": 0.74,
+      "observed_rate": 0.863
+    },
+    {
+      "bin": "0.8-0.9",
+      "n": 71,
+      "mean_score": 0.849,
+      "observed_rate": 0.887
+    },
+    {
+      "bin": "0.9-1.0",
+      "n": 27,
+      "mean_score": 0.993,
+      "observed_rate": 0.778
+    }
+  ],
+  "isotonic_recalibration": {
+    "ece_calibrated": 0.0129,
+    "brier_calibrated": 0.1813,
+    "ece_improvement": 0.3624
+  },
+  "findings": [
+    {
+      "id": "CAL-01",
+      "severity": "WARN",
+      "title": "Mechanism-score calibration vs repoDB outcomes",
+      "detail": "Across 1,476 pairs the raw mechanistic score has ECE 0.3753 (Brier 0.3455); observed approval rate is monotonic in the score (Spearman 0.515). An out-of-fold isotonic map lowers ECE to 0.0129.",
+      "capa": "Ship the isotonic map as the score->probability display layer; re-fit on each data refresh. Monotonicity < 0.6 triggers review of the score definition."
+    }
+  ]
+}

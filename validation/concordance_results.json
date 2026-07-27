@@ -1,0 +1,205 @@
+{
+  "run_at": "2026-06-17T10:13:20",
+  "comparison": "ChEMBL 33 vs IUPHAR/Guide to Pharmacology",
+  "tolerance_log": 1.0,
+  "pairs_compared": 5754,
+  "overall_concordance_pct": 91.0,
+  "overall_median_abs_diff_log": 0.03,
+  "by_type": {
+    "Ki": {
+      "compared": 1976,
+      "concordant": 1827,
+      "concordance_pct": 92.5,
+      "median_abs_diff_log": 0.02
+    },
+    "IC50": {
+      "compared": 3034,
+      "concordant": 2754,
+      "concordance_pct": 90.8,
+      "median_abs_diff_log": 0.02
+    },
+    "EC50": {
+      "compared": 521,
+      "concordant": 455,
+      "concordance_pct": 87.3,
+      "median_abs_diff_log": 0.17
+    },
+    "Kd": {
+      "compared": 223,
+      "concordant": 203,
+      "concordance_pct": 91.0,
+      "median_abs_diff_log": 0.005
+    }
+  },
+  "examples": [
+    {
+      "chembl_id": "CHEMBL3113165",
+      "uniprot": "P18054",
+      "type": "IC50",
+      "chembl": 6.46,
+      "gtopdb": 6.47,
+      "abs_diff": 0.01
+    },
+    {
+      "chembl_id": "CHEMBL1548353",
+      "uniprot": "P16050",
+      "type": "IC50",
+      "chembl": 6.52,
+      "gtopdb": 6.7,
+      "abs_diff": 0.18
+    },
+    {
+      "chembl_id": "CHEMBL180917",
+      "uniprot": "P16050",
+      "type": "Ki",
+      "chembl": 5.42,
+      "gtopdb": 6.7,
+      "abs_diff": 1.28
+    },
+    {
+      "chembl_id": "CHEMBL235920",
+      "uniprot": "O15296",
+      "type": "IC50",
+      "chembl": 7.29,
+      "gtopdb": 7.29,
+      "abs_diff": 0.0
+    },
+    {
+      "chembl_id": "CHEMBL577784",
+      "uniprot": "O15530",
+      "type": "IC50",
+      "chembl": 8.22,
+      "gtopdb": 7.96,
+      "abs_diff": 0.26
+    },
+    {
+      "chembl_id": "CHEMBL1765740",
+      "uniprot": "O15530",
+      "type": "IC50",
+      "chembl": 8.0,
+      "gtopdb": 8.6,
+      "abs_diff": 0.6
+    },
+    {
+      "chembl_id": "CHEMBL1650595",
+      "uniprot": "O15530",
+      "type": "IC50",
+      "chembl": 5.3,
+      "gtopdb": 8.05,
+      "abs_diff": 2.75
+    },
+    {
+      "chembl_id": "CHEMBL378577",
+      "uniprot": "P80404",
+      "type": "IC50",
+      "chembl": 5.26,
+      "gtopdb": 5.26,
+      "abs_diff": 0.0
+    },
+    {
+      "chembl_id": "CHEMBL231068",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 7.93,
+      "gtopdb": 9.0,
+      "abs_diff": 1.07
+    },
+    {
+      "chembl_id": "CHEMBL1279",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 7.21,
+      "gtopdb": 7.22,
+      "abs_diff": 0.01
+    },
+    {
+      "chembl_id": "CHEMBL243954",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 7.21,
+      "gtopdb": 7.22,
+      "abs_diff": 0.01
+    },
+    {
+      "chembl_id": "CHEMBL522691",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 6.73,
+      "gtopdb": 6.73,
+      "abs_diff": 0.0
+    },
+    {
+      "chembl_id": "CHEMBL225284",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 7.28,
+      "gtopdb": 7.28,
+      "abs_diff": 0.0
+    },
+    {
+      "chembl_id": "CHEMBL277120",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 8.04,
+      "gtopdb": 8.0,
+      "abs_diff": 0.04
+    },
+    {
+      "chembl_id": "CHEMBL267615",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 6.77,
+      "gtopdb": 6.8,
+      "abs_diff": 0.03
+    },
+    {
+      "chembl_id": "CHEMBL313714",
+      "uniprot": "P08908",
+      "type": "IC50",
+      "chembl": 7.18,
+      "gtopdb": 7.2,
+      "abs_diff": 0.02
+    },
+    {
+      "chembl_id": "CHEMBL101690",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 7.66,
+      "gtopdb": 7.8,
+      "abs_diff": 0.14
+    },
+    {
+      "chembl_id": "CHEMBL263881",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 8.96,
+      "gtopdb": 9.0,
+      "abs_diff": 0.04
+    },
+    {
+      "chembl_id": "CHEMBL230963",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 8.66,
+      "gtopdb": 8.6,
+      "abs_diff": 0.06
+    },
+    {
+      "chembl_id": "CHEMBL905",
+      "uniprot": "P08908",
+      "type": "Ki",
+      "chembl": 6.69,
+      "gtopdb": 6.4,
+      "abs_diff": 0.29
+    }
+  ],
+  "findings": [
+    {
+      "id": "CONC-01",
+      "severity": "INFO",
+      "title": "Cross-database concordance with IUPHAR/GtoPdb",
+      "detail": "Of 5,754 compound-target affinity pairs present in BOTH ChEMBL and the independently-curated IUPHAR/GtoPdb, 91.0% agree within 1 log unit (median absolute difference 0.03 log). This is an external accuracy check - ChEMBL measured against a second authority, not itself.",
+      "capa": "Pairs disagreeing by >1 log are candidates for review/exclusion from the certified tier."
+    }
+  ]
+}

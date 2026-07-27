@@ -1,0 +1,318 @@
+{
+  "run_at": "2026-06-16T14:18:26",
+  "database": "chembl_33",
+  "scope": "ChEMBL bioactivity/affinity data (Ki/IC50/EC50/Kd) shared by RepurposeIQ + CompoundIQ (POZ)",
+  "standard": "ALCOA+ (FDA/WHO/EU Annex 11), GAMP 5 structure",
+  "reference_noise_floor_log": 0.5,
+  "checks": {
+    "available": {
+      "activities_rows": 20334684,
+      "chembl_version": "ChEMBL_33",
+      "release_date": "2023-05-31 00:00:00",
+      "pass": true
+    },
+    "universe_by_endpoint": {
+      "Ki": {
+        "rows": 761069,
+        "with_pchembl": 484694
+      },
+      "IC50": {
+        "rows": 2663617,
+        "with_pchembl": 1787443
+      },
+      "EC50": {
+        "rows": 500081,
+        "with_pchembl": 325307
+      },
+      "Kd": {
+        "rows": 179399,
+        "with_pchembl": 67473
+      }
+    },
+    "attributable": {
+      "activities_without_assay": 0,
+      "activities_without_target": 0,
+      "pass": true
+    },
+    "validity": {
+      "Ki": {
+        "total_with_pchembl": 484694,
+        "high_confidence_ge8": 424492,
+        "high_confidence_pct": 87.6,
+        "data_validity_flagged": 1802,
+        "censored_relation": 34,
+        "potential_duplicate": 32672,
+        "pchembl_out_of_range": 29
+      },
+      "IC50": {
+        "total_with_pchembl": 1787443,
+        "high_confidence_ge8": 933807,
+        "high_confidence_pct": 52.2,
+        "data_validity_flagged": 1365,
+        "censored_relation": 162,
+        "potential_duplicate": 48286,
+        "pchembl_out_of_range": 9
+      },
+      "EC50": {
+        "total_with_pchembl": 325307,
+        "high_confidence_ge8": 140957,
+        "high_confidence_pct": 43.3,
+        "data_validity_flagged": 80,
+        "censored_relation": 0,
+        "potential_duplicate": 5049,
+        "pchembl_out_of_range": 0
+      },
+      "Kd": {
+        "total_with_pchembl": 67473,
+        "high_confidence_ge8": 55071,
+        "high_confidence_pct": 81.6,
+        "data_validity_flagged": 66,
+        "censored_relation": 0,
+        "potential_duplicate": 5115,
+        "pchembl_out_of_range": 0
+      }
+    },
+    "reproducibility": {
+      "Ki": {
+        "multi_measured_pairs": 37796,
+        "mean_log_sd": 0.191,
+        "median_log_sd": 0.02,
+        "p95_log_sd": 0.86,
+        "pct_pairs_disagree_gt_1log": 3.27,
+        "vs_literature_floor": "within"
+      },
+      "IC50": {
+        "multi_measured_pairs": 111186,
+        "mean_log_sd": 0.296,
+        "median_log_sd": 0.16,
+        "p95_log_sd": 1.04,
+        "pct_pairs_disagree_gt_1log": 5.69,
+        "vs_literature_floor": "within"
+      },
+      "EC50": {
+        "multi_measured_pairs": 17065,
+        "mean_log_sd": 0.278,
+        "median_log_sd": 0.15,
+        "p95_log_sd": 0.965,
+        "pct_pairs_disagree_gt_1log": 4.33,
+        "vs_literature_floor": "within"
+      },
+      "Kd": {
+        "multi_measured_pairs": 8380,
+        "mean_log_sd": 0.424,
+        "median_log_sd": 0.186,
+        "p95_log_sd": 1.6,
+        "pct_pairs_disagree_gt_1log": 16.38,
+        "vs_literature_floor": "within"
+      }
+    },
+    "flagged_disagreeing_pairs_ki": [
+      {
+        "chembl_id": "CHEMBL115078",
+        "drug": "(unnamed)",
+        "target": "Muscarinic acetylcholine receptor M2",
+        "n_measurements": 3,
+        "log_sd": 2.46,
+        "pchembl_min": 4.19,
+        "pchembl_max": 10.12
+      },
+      {
+        "chembl_id": "CHEMBL34259",
+        "drug": "METHOTREXATE",
+        "target": "Dihydrofolate reductase",
+        "n_measurements": 3,
+        "log_sd": 2.21,
+        "pchembl_min": 5.62,
+        "pchembl_max": 10.68
+      },
+      {
+        "chembl_id": "CHEMBL104647",
+        "drug": "(unnamed)",
+        "target": "Vanilloid receptor",
+        "n_measurements": 4,
+        "log_sd": 2.12,
+        "pchembl_min": 5.19,
+        "pchembl_max": 9.92
+      },
+      {
+        "chembl_id": "CHEMBL112297",
+        "drug": "(unnamed)",
+        "target": "Muscarinic acetylcholine receptor M2",
+        "n_measurements": 3,
+        "log_sd": 2.1,
+        "pchembl_min": 4.65,
+        "pchembl_max": 9.64
+      },
+      {
+        "chembl_id": "CHEMBL48233",
+        "drug": "(unnamed)",
+        "target": "Coagulation factor X",
+        "n_measurements": 3,
+        "log_sd": 2.08,
+        "pchembl_min": 4.77,
+        "pchembl_max": 9.18
+      },
+      {
+        "chembl_id": "CHEMBL104647",
+        "drug": "(unnamed)",
+        "target": "Vanilloid receptor",
+        "n_measurements": 3,
+        "log_sd": 2.04,
+        "pchembl_min": 5.7,
+        "pchembl_max": 10.27
+      },
+      {
+        "chembl_id": "CHEMBL413",
+        "drug": "SIROLIMUS",
+        "target": "FK506-binding protein 1A",
+        "n_measurements": 3,
+        "log_sd": 1.98,
+        "pchembl_min": 5.27,
+        "pchembl_max": 9.7
+      },
+      {
+        "chembl_id": "CHEMBL195915",
+        "drug": "(unnamed)",
+        "target": "Methionine aminopeptidase 2",
+        "n_measurements": 3,
+        "log_sd": 1.98,
+        "pchembl_min": 4.8,
+        "pchembl_max": 9.0
+      },
+      {
+        "chembl_id": "CHEMBL153094",
+        "drug": "DECYL SULFAMATE",
+        "target": "Carbonic anhydrase II",
+        "n_measurements": 3,
+        "log_sd": 1.93,
+        "pchembl_min": 5.05,
+        "pchembl_max": 9.15
+      },
+      {
+        "chembl_id": "CHEMBL23034",
+        "drug": "(unnamed)",
+        "target": "Serotonin transporter",
+        "n_measurements": 5,
+        "log_sd": 1.92,
+        "pchembl_min": 6.08,
+        "pchembl_max": 11.0
+      },
+      {
+        "chembl_id": "CHEMBL544961",
+        "drug": "(unnamed)",
+        "target": "Dopamine D2 receptor",
+        "n_measurements": 3,
+        "log_sd": 1.88,
+        "pchembl_min": 4.19,
+        "pchembl_max": 8.4
+      },
+      {
+        "chembl_id": "CHEMBL115653",
+        "drug": "CIPEMASTAT",
+        "target": "Matrix metalloproteinase-1",
+        "n_measurements": 3,
+        "log_sd": 1.86,
+        "pchembl_min": 5.16,
+        "pchembl_max": 9.52
+      },
+      {
+        "chembl_id": "CHEMBL34259",
+        "drug": "METHOTREXATE",
+        "target": "Dihydrofolate reductase",
+        "n_measurements": 6,
+        "log_sd": 1.86,
+        "pchembl_min": 5.36,
+        "pchembl_max": 11.0
+      },
+      {
+        "chembl_id": "CHEMBL4279639",
+        "drug": "(unnamed)",
+        "target": "Melatonin receptor 1B",
+        "n_measurements": 3,
+        "log_sd": 1.85,
+        "pchembl_min": 6.01,
+        "pchembl_max": 10.15
+      },
+      {
+        "chembl_id": "CHEMBL1236225",
+        "drug": "(unnamed)",
+        "target": "Enoyl-[acyl-carrier-protein] reductase",
+        "n_measurements": 4,
+        "log_sd": 1.85,
+        "pchembl_min": 6.04,
+        "pchembl_max": 10.66
+      }
+    ],
+    "uniqueness": {
+      "Ki": {
+        "measurements": 422720,
+        "distinct_pairs": 355982,
+        "avg_measurements_per_pair": 1.19
+      },
+      "IC50": {
+        "measurements": 932387,
+        "distinct_pairs": 758238,
+        "avg_measurements_per_pair": 1.23
+      },
+      "EC50": {
+        "measurements": 140880,
+        "distinct_pairs": 112327,
+        "avg_measurements_per_pair": 1.25
+      },
+      "Kd": {
+        "measurements": 55007,
+        "distinct_pairs": 39779,
+        "avg_measurements_per_pair": 1.38
+      }
+    },
+    "completeness": {
+      "total_affinity_rows": 4104166,
+      "pchembl_coverage_pct": 64.9,
+      "units_coverage_pct": 91.8,
+      "confidence_coverage_pct": 100.0
+    }
+  },
+  "findings": [
+    {
+      "id": "VAL-B01",
+      "severity": "MEDIUM",
+      "title": "ChEMBL-flagged suspect measurements present",
+      "detail": "3,313 affinity rows carry a non-null data_validity_comment (ChEMBL's own 'this value looks wrong' flag). Excluded from the certified tier.",
+      "capa": "Filter on data_validity_comment IS NULL for certified affinities; keep raw rows flagged."
+    },
+    {
+      "id": "NOISE-B01",
+      "severity": "INFO",
+      "title": "High-disagreement compound-target pairs identified",
+      "detail": "Compound-target pairs whose replicate affinity measurements disagree by >1 log are flagged. They are NOT deleted; the certified value is the median and the spread is carried as the uncertainty band on that pair.",
+      "capa": "Surface median +/- spread (not a point value) for these pairs; show N and range."
+    }
+  ],
+  "scorecard": {
+    "completeness": {
+      "metric": "pchembl coverage",
+      "value_pct": 64.9
+    },
+    "validity": {
+      "metric": "high-confidence (cs>=8) share",
+      "value_pct": 58.3
+    },
+    "accuracy": {
+      "metric": "measured noise vs 0.5 log floor",
+      "worst_mean_log_sd": 0.424,
+      "status": "within floor"
+    },
+    "consistency": {
+      "metric": "assay types kept separate",
+      "status": "enforced (per-endpoint lanes)"
+    },
+    "uniqueness": {
+      "metric": "duplicates aggregated to median",
+      "status": "planned (raw retained)"
+    },
+    "timeliness": {
+      "metric": "source version",
+      "value": "ChEMBL_33 (2023-05-31 00:00:00)"
+    }
+  }
+}

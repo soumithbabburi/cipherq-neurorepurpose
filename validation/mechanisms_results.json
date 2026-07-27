@@ -1,0 +1,81 @@
+{
+  "run_at": "2026-06-29T11:35:10",
+  "comparison": "ChEMBL 33 mechanism action_type vs IUPHAR/GtoPdb interaction Type",
+  "validates": "Direction sign used by the direction-aware pathway score and the Pathway Screen 'suppresses vs activates' verdict.",
+  "pairs_compared": 1410,
+  "direction_agreement_pct": 99.3,
+  "agree": 1400,
+  "gtopdb_pairs": 10120,
+  "chembl_pairs": 3029,
+  "disagreement_examples": [
+    {
+      "chembl_id": "CHEMBL1112",
+      "gene": "HTR2A",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL1276308",
+      "gene": "PGR",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL1614652",
+      "gene": "HTR1A",
+      "chembl_sign": 1,
+      "gtopdb_sign": -1
+    },
+    {
+      "chembl_id": "CHEMBL18442",
+      "gene": "CXCR4",
+      "chembl_sign": 1,
+      "gtopdb_sign": -1
+    },
+    {
+      "chembl_id": "CHEMBL301829",
+      "gene": "LTB4R2",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL407",
+      "gene": "GABRA4",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL407",
+      "gene": "GABRA6",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL4297447",
+      "gene": "AGTR1",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL476323",
+      "gene": "HRH3",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    },
+    {
+      "chembl_id": "CHEMBL517140",
+      "gene": "HRH3",
+      "chembl_sign": -1,
+      "gtopdb_sign": 1
+    }
+  ],
+  "findings": [
+    {
+      "id": "MECH-01",
+      "severity": "INFO",
+      "title": "Mechanism-direction concordance with IUPHAR/GtoPdb",
+      "detail": "Of 1,410 (drug, target-gene) pairs whose interaction direction is asserted in BOTH ChEMBL and the independently-curated IUPHAR/GtoPdb, 99.3% assign the SAME direction (inhibit vs activate). This validates the signed mechanism input the direction-aware pathway score relies on.",
+      "capa": "Pairs with opposite signs are flagged for review; the platform keeps ChEMBL's curated action_type but the disagreement list is the audit trail."
+    }
+  ]
+}

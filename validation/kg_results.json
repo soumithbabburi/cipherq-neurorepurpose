@@ -1,0 +1,74 @@
+{
+  "run_at": "2026-06-29T11:44:50",
+  "asset": "Hetionet knowledge graph (neurorepurpose DB)",
+  "edges": 2261663,
+  "nodes": 55926,
+  "metaedge_types": 24,
+  "provenance_coverage_pct": 100.0,
+  "by_source": {
+    "hetionet_v1.0": 2250197,
+    "chembl_derived": 11466
+  },
+  "by_metaedge": {
+    "GpBP": 559504,
+    "AeG": 526407,
+    "Gr>G": 265672,
+    "GiG": 147164,
+    "CcSE": 138944,
+    "AdG": 102240,
+    "AuG": 97848,
+    "GpMF": 97222,
+    "GpPW": 84372,
+    "GpCC": 73566,
+    "GcG": 61690,
+    "CbG": 22304,
+    "CdG": 21102,
+    "CuG": 18756,
+    "DaG": 12623,
+    "DuG": 7731,
+    "DdG": 7623,
+    "CrC": 6486,
+    "DlA": 3602,
+    "DpS": 3357,
+    "CtD": 1488,
+    "PCiC": 1029,
+    "DrD": 543,
+    "CpD": 390
+  },
+  "referential_integrity_pct": 100.0,
+  "referential_sample_size": 46342,
+  "duplicate_edge_groups": 0,
+  "duplicate_pct": 0.0,
+  "self_loops": 0,
+  "malformed_ids_in_sample": 0,
+  "findings": [
+    {
+      "id": "KG-01",
+      "severity": "INFO",
+      "title": "Knowledge-graph provenance coverage (Attributable)",
+      "detail": "All 2,261,663 edges carry a source tag (100.0% coverage): 2,250,197 hetionet_v1.0, 11,466 chembl_derived. Every edge is therefore traceable to either peer-reviewed Hetionet v1.0 or the independently-validated ChEMBL layer \u2014 no anonymous edges.",
+      "capa": "Provenance tag is enforced at load; any untagged edge is quarantined from the graph."
+    },
+    {
+      "id": "KG-02",
+      "severity": "INFO",
+      "title": "Referential integrity & structural validity",
+      "detail": "On a ~46,342-edge sample, 100.0% of edge endpoints resolve to a node in the node table; 0 self-loops; 0 malformed ids in the sample. Ids follow the Type::id convention.",
+      "capa": "Dangling endpoints (if any) are logged for reload; never silently dropped."
+    },
+    {
+      "id": "KG-03",
+      "severity": "INFO",
+      "title": "Edge uniqueness",
+      "detail": "0 duplicate (source, metaedge, target) groups (0.0% of edges).",
+      "capa": "Duplicates collapse at query time; raw rows retained per ALCOA+ Original."
+    },
+    {
+      "id": "KG-04",
+      "severity": "INFO",
+      "title": "Accuracy posture (integration of validated sources)",
+      "detail": "The KG is an integration, not a new measurement: hetionet_v1.0 edges come from the peer-reviewed Hetionet (Himmelstein et al., eLife 2017) and chembl_derived edges are built from the validated chembl_33 layer, whose mechanism directions are 99%+ concordant with IUPHAR (see mechanisms_results.json). Accuracy is therefore inherited from two authoritative, separately-validated sources.",
+      "capa": "On each refresh, re-pin Hetionet version and re-run the ChEMBL mechanism concordance."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "run_at": "2026-06-29T13:44:41",
+  "held_out_treats": 151,
+  "auroc": {
+    "gene_overlap": 0.6887,
+    "kg_embedding": 0.6936,
+    "ensemble": 0.7353
+  },
+  "ensemble_lift_over_best_single": 0.0416,
+  "verdict": "Ensemble beats both singles \u2014 the KG embedding carries orthogonal signal worth keeping.",
+  "findings": [
+    {
+      "id": "KGE-03",
+      "severity": "INFO",
+      "title": "KG-embedding complementarity vs gene overlap",
+      "detail": "On held-out treat edges: gene-overlap AUROC 0.689, KG-embedding 0.694, rank-average ensemble 0.735 (lift +0.042 over the best single). Ensemble beats both singles \u2014 the KG embedding carries orthogonal signal worth keeping.",
+      "capa": "Keep the KG embedding as an engine signal only if the ensemble lift is positive and reproducible; otherwise prefer the simpler mechanistic score."
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "run_at": "2026-06-29T14:51:09",
+  "gold_standard": "repoDB (Brown & Patel, Sci Data 2017) \u2014 Approved vs failed (Terminated/Withdrawn/Suspended)",
+  "scoring": "Mechanism-only (target + direction-aware pathway + PPI); clinical/literature/regulatory features removed to prevent retrospective leakage.",
+  "drug_target_mapping_mode": "fallback",
+  "diseases_evaluated": 55,
+  "pairs_evaluated": 1476,
+  "pairs_approved": 993,
+  "pairs_failed": 483,
+  "base_rate_pct": 67.3,
+  "drug_mapping_coverage_pct": 68.0,
+  "metrics": {
+    "engine_mechanistic": {
+      "auroc": 0.7347,
+      "auprc": 0.8198,
+      "bedroc_a20": 0.8472,
+      "ef_top10pct": 1.28
+    },
+    "baselines": {
+      "random": {
+        "auroc": 0.4939
+      },
+      "drug_popularity": {
+        "auroc": 0.4314
+      },
+      "target_overlap_only": {
+        "auroc": 0.7464
+      }
+    },
+    "ablation_pathway_term": {
+      "direction_aware": 0.7347,
+      "direction_blind": 0.735,
+      "pathway_excluded": 0.7438
+    },
+    "negative_control_label_shuffle": {
+      "auroc": 0.4794
+    },
+    "disease_genes_genetics_weighted": {
+      "flat_target_auroc": 0.7347,
+      "genetics_weighted_auroc": 0.7297,
+      "lift": -0.005,
+      "note": "Genetics-weighted = disease genes weighted by Open Targets genetic_association score (Nelson 2015); also reduces leakage vs the overall OT score (no known-drug channel)."
+    },
+    "kg_ensemble_on_repodb": {
+      "mappable_pairs": 443,
+      "mechanistic_auroc": 0.7553,
+      "kg_only_auroc": 0.5358,
+      "ensemble_auroc": 0.7007,
+      "ensemble_lift_over_mechanistic": -0.0546
+    }
+  },
+  "per_disease_mean_auroc": 0.731,
+  "per_disease_top": [
+    {
+      "disease": "Psoriasis",
+      "n": 24,
+      "auroc": 1.0,
+      "ef10": 1.41
+    },
+    {
+      "disease": "Sarcoidosis",
+      "n": 15,
+      "auroc": 1.0,
+      "ef10": 1.25
+    },
+    {
+      "disease": "Nephrotic Syndrome",
+      "n": 14,
+      "auroc": 1.0,
+      "ef10": 1.17
+    },
+    {
+      "disease": "Tenosynovitis",
+      "n": 14,
+      "auroc": 1.0,
+      "ef10": 1.08
+    },
+    {
+      "disease": "Crohn Disease",
+      "n": 30,
+      "auroc": 0.997,
+      "ef10": 1.43
+    },
+    {
+      "disease": "Hypercholesterolemia",
+      "n": 18,
+      "auroc": 0.969,
+      "ef10": 1.12
+    },
+    {
+      "disease": "Ulcerative Colitis",
+      "n": 23,
+      "auroc": 0.962,
+      "ef10": 1.77
+    },
+    {
+      "disease": "Diabetes Mellitus",
+      "n": 16,
+      "auroc": 0.958,
+      "ef10": 4.0
+    },
+    {
+      "disease": "Schizophrenia",
+      "n": 58,
+      "auroc": 0.956,
+      "ef10": 1.61
+    },
+    {
+      "disease": "Angina Pectoris",
+      "n": 20,
+      "auroc": 0.947,
+      "ef10": 1.05
+    },
+    {
+      "disease": "Ocular Hypertension",
+      "n": 20,
+      "auroc": 0.947,
+      "ef10": 1.05
+    },
+    {
+      "disease": "Gastroesophageal reflux disease",
+      "n": 14,
+      "auroc": 0.923,
+      "ef10": 1.08
+    },
+    {
+      "disease": "Hodgkin Disease",
+      "n": 22,
+      "auroc": 0.921,
+      "ef10": 1.16
+    },
+    {
+      "disease": "Urticaria",
+      "n": 21,
+      "auroc": 0.921,
+      "ef10": 1.11
+    },
+    {
+      "disease": "Anxiety",
+      "n": 14,
+      "auroc": 0.917,
+      "ef10": 1.17
+    }
+  ],
+  "findings": [
+    {
+      "id": "PRED-01",
+      "severity": "INFO",
+      "title": "Retrospective repurposing recovery (mechanism-only) vs repoDB",
+      "detail": "On 1,476 repoDB drug-indication pairs across 55 diseases, the engine's leakage-free mechanistic score separates Approved from failed repurposings with AUROC 0.7347 (AUPRC 0.8198, BEDROC 0.8472, EF@10% 1.28x), vs random 0.4939 and target-only 0.7464.",
+      "capa": "Re-run on each data refresh; track AUROC over time. Below 0.55 triggers review of the biology inputs (Open Targets gene sets, mechanism coverage)."
+    },
+    {
+      "id": "PRED-02",
+      "severity": "WARN",
+      "title": "Ablation: does the direction-aware pathway term help?",
+      "detail": "AUROC with direction-aware pathway scoring 0.7347 vs direction-blind 0.735 (delta -0.0003); pathway excluded 0.7438.",
+      "capa": "If delta is consistently <=0, revert the pathway term to direction-blind."
+    },
+    {
+      "id": "PRED-03",
+      "severity": "INFO",
+      "title": "Negative control",
+      "detail": "Shuffling the labels collapses AUROC to 0.4794 (expected ~0.5), confirming the signal is not an artefact of the evaluation.",
+      "capa": "None \u2014 control check."
+    },
+    {
+      "id": "GEN-01",
+      "severity": "INFO",
+      "title": "Genetics-weighted disease genes \u2014 tested, neutral",
+      "detail": "Weighting disease genes by Open Targets genetic_association (Nelson 2015) gives AUROC 0.7297 vs flat 0.7347 (lift -0.005) \u2014 neutral on retrospective recovery. The tiny flat-over-genetics gap also confirms the headline score is NOT meaningfully inflated by the overall-score known-drug channel. Genetics enrichment is now fetched per disease and available as an opt-in, leakage-safer target weighting; it is NOT the engine default (no measured benefit).",
+      "capa": "Keep genetics weighting opt-in; revisit for prospective validation where the Nelson prior is more relevant than retrospective overlap."
+    },
+    {
+      "id": "KGE-04",
+      "severity": "WARN",
+      "title": "KG-embedding ensemble fails the EXTERNAL benchmark \u2014 not integrated",
+      "detail": "On 443 KG-mappable repoDB pairs, the KG embedding alone scores AUROC 0.5358 (~chance) and the mechanistic+KG ensemble 0.7007 vs mechanistic 0.7553 (lift -0.0546). The +0.042 seen on Hetionet's own held-out treats did NOT transfer to discriminating real-world approved-vs-failed repurposings.",
+      "capa": "Do NOT wire the KG embedding into the engine \u2014 it degrades the mechanistic score on the external benchmark. Revisit only with metapath/DWPC features or a better-generalising model."
+    }
+  ]
+}
