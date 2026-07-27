@@ -1,0 +1,416 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>RepurposeIQ — Data Validation</title><style>
+@page { size: A4; margin: 1.8cm 1.7cm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 10.5pt; color: #1f2a26; line-height: 1.5; }
+h1 { font-size: 20pt; color: #2f6f5b; margin: 0 0 2pt; }
+h2 { font-size: 14pt; color: #2f6f5b; border-bottom: 1.5px solid #d9e2dd; padding-bottom: 3px; margin: 18px 0 8px; }
+h3 { font-size: 11.5pt; color: #2a3b34; margin: 12px 0 4px; }
+p, li { font-size: 10.5pt; }
+strong { color: #1a241f; }
+code { font-family: Courier, monospace; font-size: 9.5pt; background: #f3f6f4; padding: 1px 3px; }
+pre { background: #f3f6f4; border: 1px solid #e0e8e3; padding: 8px 10px; font-size: 9pt; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
+th { background: #eef3f0; color: #2a3b34; text-align: left; font-size: 9.5pt; padding: 5px 7px; border: 1px solid #d2ddd7; }
+td { font-size: 9.5pt; padding: 5px 7px; border: 1px solid #e2e9e5; vertical-align: top; }
+hr { border: none; border-top: 1px solid #d9e2dd; margin: 16px 0; }
+a { color: #2f6f5b; text-decoration: none; }
+.cover { border-left: 4px solid #2f6f5b; padding: 4px 0 4px 14px; margin: 0 0 18px; }
+.cover .sub { color: #6b7a73; font-size: 10pt; }
+</style></head>
+<body><h1>Data Validation — Explained</h1>
+<p><strong>For managers, partners, and pharma customers of RepurposeIQ and CompoundIQ (POZ).</strong>
+Last updated: 2026-06-17</p>
+<p>This document explains, in plain language, <strong>what data our platforms run on, how we
+checked that the data is trustworthy, and why a pharma partner can rely on it.</strong>
+You do not need a data-science background to read it. Every number here is something
+we actually measured with a script that anyone can re-run; every reference is real.</p>
+<hr />
+<h2>TL;DR (the 30-second version)</h2>
+<p>We build on the best public pharmaceutical databases (ChEMBL, a curated biomedical
+knowledge graph, IUPHAR, MeSH). Public data has a reputation for being messy, so instead of <em>claiming</em> it's
+clean, we <strong>measured how good it is</strong> and published the results inside the product.
+The three numbers that matter:</p>
+<ul>
+<li><strong>91%</strong> — how often our drug-potency data agrees with a <em>second, independent</em>
+  expert database (IUPHAR), within normal experimental error.</li>
+<li><strong>Within the ~0.5-log "noise floor"</strong> — our data is no noisier than the known,
+  published limit of how reproducible lab measurements are in the first place.</li>
+<li><strong>100%</strong> — correctness of our disease-name matching, checked against a
+  hand-curated list of known-correct answers.</li>
+</ul>
+<p>And we did all of this using the <strong>same validation standards (ALCOA+, GAMP 5) that
+regulated pharma companies use on their own systems</strong> — which is the language a
+pharma quality team already speaks.</p>
+<hr />
+<h2>1. The problem we are solving</h2>
+<p>Pharma scientists are trained to distrust two things: <strong>black boxes</strong> (models that
+can't explain themselves) and <strong>public data</strong> (which they assume is scraped and
+noisy). If we just said "we use ChEMBL, it's gold-standard," a serious reviewer
+would shrug — because even good public databases contain measurement noise,
+duplicates, and mapping errors.</p>
+<p>So we reframed the problem. We treat public data not as "free stuff we downloaded,"
+but as a <strong>raw material that we put through engineering quality controls</strong> — the
+same kind a pharma company applies to its own data. Then we <em>show our work</em>.</p>
+<hr />
+<h2>2. Plain-language glossary (the terms you'll be asked about)</h2>
+<p><strong>The data sources</strong></p>
+<ul>
+<li><strong>ChEMBL</strong> — a large, manually-curated database from the European Bioinformatics
+  Institute (EMBL-EBI) that records how strongly drugs bind to their biological
+  targets. It is the pharmaceutical industry's standard reference for this data.</li>
+<li><strong>Curated biomedical knowledge graph</strong> — a giant map connecting drugs, genes,
+  and diseases with millions of relationships (e.g. "this drug affects this gene,"
+  "this gene is involved in this disease"). It lets us reason about <em>why</em> a drug
+  might work for a new disease, through biology. (We build on an established,
+  peer-reviewed open knowledge graph; the integration and reasoning layer is ours.)</li>
+<li><strong>IUPHAR / Guide to Pharmacology (GtoPdb)</strong> — a <em>separate</em>, independently
+  expert-curated pharmacology database. We use it as an outside referee to
+  cross-check ChEMBL.</li>
+<li><strong>MeSH (Medical Subject Headings)</strong> — the U.S. National Library of Medicine's
+  official controlled vocabulary of medical/disease terms. It's how we make sure
+  "Parkinson's," "PD," and "paralysis agitans" all map to the <em>one</em> correct disease.</li>
+</ul>
+<p><strong>The measurement terms</strong></p>
+<ul>
+<li><strong>Ki, IC50, EC50, Kd</strong> — different ways of measuring how potent a drug is at its
+  target (smaller number = more potent). We keep them in separate "lanes" because
+  they are not directly interchangeable.</li>
+<li><strong>Log unit</strong> — potency is measured on a logarithmic scale, so <strong>1 log unit = a
+  10× difference</strong>. When we say two measurements "agree within 1 log," we mean they
+  are within an order of magnitude — the normal tolerance for this kind of lab data.</li>
+<li><strong>The ~0.5-log noise floor</strong> — published research (Kramer 2012; see references)
+  showed that even careful labs, measuring the <em>same</em> drug, disagree by about 0.5
+  log on average. That's the natural noise floor of the field. Our job isn't to beat
+  physics — it's to show our data sits <em>within</em> that known floor, not above it.</li>
+</ul>
+<p><strong>The validation standards (this is what makes it "industry-level")</strong></p>
+<ul>
+<li><strong>ALCOA+</strong> — the data-integrity standard used by the FDA, the UK's MHRA, and the
+  WHO. It's an acronym for nine properties every trustworthy data record must have.
+  In plain terms:</li>
+<li><strong>A — Attributable:</strong> you can trace every value back to its source.</li>
+<li><strong>L — Legible:</strong> it's readable and permanent.</li>
+<li><strong>C — Contemporaneous:</strong> recorded at the time, not back-filled.</li>
+<li><strong>O — Original:</strong> the raw record is kept, never overwritten.</li>
+<li><strong>A — Accurate:</strong> it's correct and error-checked.</li>
+<li><strong>+ Complete:</strong> nothing is silently dropped.</li>
+<li><strong>Consistent:</strong> it doesn't contradict itself.</li>
+<li><strong>Enduring:</strong> it survives over time.</li>
+<li><strong>Available:</strong> it can be retrieved when needed.</li>
+<li><strong>GAMP 5</strong> — "Good Automated Manufacturing Practice," 5th edition, from ISPE. It's
+  the pharma industry's playbook for <strong>validating computer systems</strong>. Its core idea
+  is that validation must be a <em>repeatable test you can run again to re-prove the
+  system</em> — not a one-time sign-off. Our validation scripts ARE that repeatable test.
+  (In GAMP language these are the "OQ/PQ" tests — Operational and Performance
+  Qualification — which just means "prove it works, and prove it keeps working.")</li>
+<li><strong>CAPA — Corrective And Preventive Action.</strong> A formal log where every problem found
+  is written down with its cause and its fix. In a validated system, <em>finding and
+  recording errors is expected</em> — a clean-looking dashboard with no findings is
+  actually a red flag.</li>
+<li><strong>The six data-quality dimensions</strong> (from the DAMA data-management body of
+  knowledge) — the standard checklist for "is this data good?": <strong>completeness,
+  accuracy, consistency, validity, uniqueness, timeliness.</strong> We measured all six.</li>
+</ul>
+<hr />
+<h2>3. How we actually did the validation (the method)</h2>
+<p>We followed four principles a regulated pharma data team would recognize:</p>
+<ol>
+<li>
+<p><strong>Validate once, at the data layer.</strong> Both products — RepurposeIQ and CompoundIQ
+   — read the <em>same</em> ChEMBL database underneath. So we validate that shared source
+   <strong>one time</strong> and certify it for both. This is also why the two products can't
+   show contradictory raw facts about the same drug: there is one validated source,
+   not two separate cleanings.</p>
+</li>
+<li>
+<p><strong>Make it read-only and re-runnable.</strong> Our validation is a set of scripts that
+   only <em>read</em> the data (they can never change it) and can be re-run at any time —
+   for example, every time we refresh the data. "Validated" therefore stays
+   <em>provable on demand</em>, which is exactly what GAMP 5 asks for.</p>
+</li>
+<li>
+<p><strong>Never delete — only flag (the ALCOA+ "Original" rule).</strong> When we find a
+   low-quality record, we don't erase it. We <em>tag</em> it and exclude it from the
+   "certified" set, but the raw record stays. This means every decision is
+   reversible and auditable — an auditor can always see what we excluded and why.</p>
+</li>
+<li>
+<p><strong>Disclose everything, including weaknesses (CAPA).</strong> Every issue we find is
+   logged openly with a root cause and a corrective action. We publish these inside
+   the product. We'd rather a customer see a measured, honest weakness than a
+   suspiciously perfect dashboard.</p>
+</li>
+</ol>
+<hr />
+<h2>4. The five validations we ran — what, why, and the result</h2>
+<p><strong>1) Source provenance &amp; versioning</strong> — <em>Can every dataset be traced and dated?</em>
+We stamped every dataset with its exact source and version, so nothing is anonymous
+or undated.
+→ ChEMBL 33 (released mid-2023): 2.4M molecules, 20.3M potency measurements;
+the curated biomedical knowledge graph: 2.25M relationships across 24 types.</p>
+<p><strong>2) Bioactivity (potency) validation</strong> — <em>Is the drug-potency data complete and how
+noisy is it?</em> We checked field-completeness, applied ChEMBL's own quality flags
+(confidence score, "suspect value" flags, censored values), kept each measurement
+type (Ki/IC50/EC50/Kd) separate, and <strong>measured the noise</strong> by comparing repeated
+measurements of the same drug-target pair.
+→ Across 4.1M measurements, our noise is a median of <strong>0.02–0.19 log</strong> and a mean of
+<strong>≤0.42 log</strong> — i.e. <strong>inside the published ~0.5-log floor.</strong> We are not artificially
+smoothing the data; it is genuinely as reproducible as the field allows.</p>
+<p><strong>3) Cross-database concordance</strong> — <em>Does an independent expert database agree with
+ChEMBL?</em> We took every drug-target potency value that appears in <em>both</em> ChEMBL and
+the independently-curated IUPHAR database and compared them.
+→ <strong>91.0% of 5,754 shared values agree within 1 log</strong> (median difference just 0.03
+log). This is the strongest evidence of all, because it's ChEMBL checked against an
+<em>outside authority</em>, not against itself.</p>
+<p><strong>4) Disease entity-resolution audit</strong> — <em>When a user types a disease, do we map it
+to the right concept?</em> This is the highest-risk silent error: if "RA" mapped to the
+wrong disease, every downstream result would be wrong while <em>looking</em> fine. We tested
+this two different ways, and we keep them honestly separate:
+- <strong>Consistency</strong> (round-trip identity: name → ID → name): proves the matching is
+  <em>stable and deterministic</em>. Result: heading <strong>100%</strong>, synonym <strong>99.7%</strong>.
+- <strong>Correctness</strong> (against a hand-curated "golden set" of 34 tricky synonyms with
+  <em>known-correct</em> answers, e.g. "Lou Gehrig's disease" → Amyotrophic Lateral
+  Sclerosis): proves the matching is <em>actually clinically right</em>, not just
+  consistent. Result: <strong>100% (34/34).</strong>
+We report both because consistency alone could be "consistently wrong" — correctness
+is what proves it's right.</p>
+<p><strong>5) Knowledge-graph integrity</strong> — <em>Is our biological reasoning based on real data?</em>
+We confirmed the platform uses the genuine, full curated knowledge graph (2.25M relationships),
+tagged by source, so the "drug → gene → disease" reasoning is real and independent of
+ChEMBL, and every conclusion can show the specific genes that connect a drug to a
+disease.</p>
+<hr />
+<h2>5. The results at a glance</h2>
+<table>
+<thead>
+<tr>
+<th>Validation</th>
+<th>The question it answers</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provenance &amp; versioning</td>
+<td>Is everything traceable and dated?</td>
+<td>ChEMBL 33 (mid-2023, 2.4M molecules, 20.3M activities); curated knowledge graph (2.25M edges)</td>
+</tr>
+<tr>
+<td>Bioactivity / noise</td>
+<td>How noisy is the potency data?</td>
+<td>Median 0.02–0.19 log, mean ≤0.42 log — <strong>within the ~0.5-log published floor</strong></td>
+</tr>
+<tr>
+<td>Cross-database concordance</td>
+<td>Does an independent database agree?</td>
+<td><strong>91.0%</strong> of 5,754 shared pairs agree within 1 log (median diff 0.03 log)</td>
+</tr>
+<tr>
+<td>Entity resolution</td>
+<td>Do disease names map correctly?</td>
+<td>Consistency 99.7–100%; <strong>correctness 100%</strong> on a curated golden set</td>
+</tr>
+<tr>
+<td>Knowledge-graph integrity</td>
+<td>Is the biology reasoning real?</td>
+<td>2.25M edges, <strong>100% provenance-tagged, 100% referential integrity</strong>, 0 duplicates</td>
+</tr>
+<tr>
+<td>Mechanism direction</td>
+<td>Is inhibit-vs-activate right?</td>
+<td><strong>99.3%</strong> direction agreement with IUPHAR (1,410 shared drug-target pairs)</td>
+</tr>
+<tr>
+<td><strong>Predictive recovery</strong></td>
+<td><strong>Does the engine find real repurposing?</strong></td>
+<td><strong>AUROC 0.73</strong> (mechanism-only, leakage-free) vs repoDB; random 0.49; 68% drug coverage</td>
+</tr>
+<tr>
+<td><strong>Score calibration</strong></td>
+<td><strong>Is a score a probability?</strong></td>
+<td>Raw ECE 0.38 → <strong>0.013</strong> after honest out-of-fold isotonic recalibration</td>
+</tr>
+<tr>
+<td><strong>KG-embedding</strong></td>
+<td><strong>Does graph structure add signal?</strong></td>
+<td>In-graph ensemble looked promising (+0.042), but on the external repoDB benchmark KG alone ≈ chance (0.54) and ensembling <em>hurt</em> (−0.053) → <strong>tested and NOT integrated</strong> (would regress)</td>
+</tr>
+<tr>
+<td><strong>Metapath/DWPC</strong></td>
+<td><strong>Does the Rephetio method help?</strong></td>
+<td>In-graph 0.6–0.7, but external repoDB CV-model 0.59 vs mechanistic 0.75 on same pairs → <strong>tested and NOT integrated</strong>; Hetionet is a weaker source than live OT+ChEMBL</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Why a pharma partner can trust this — by platform</h2>
+<p>Both platforms stand on the <strong>same validated ChEMBL data layer.</strong> What differs is the
+<em>reasoning</em> built on top — so the trust argument is shared at the bottom and specific
+at the top:</p>
+<ul>
+<li>
+<p><strong>RepurposeIQ (drug repurposing).</strong> A repurposing suggestion rests on (a) potency
+  data that is validated and 91%-concordant with an independent database; (b) biology
+  from the <em>real</em> curated knowledge graph, where every suggestion shows the actual genes
+  linking the drug to the disease (explainable, not a black box); and (c) a
+  provenance tag on every candidate. The trust comes from being <strong>auditable and
+  externally corroborated</strong>, not from a confidence score alone.</p>
+</li>
+<li>
+<p><strong>CompoundIQ / POZ (505(b)(2) reformulation screening).</strong> The drug-exposure (Cmax)
+  data is validated under its own protocol (SOP-001) with a full accounting of every
+  drug, and the underlying potency data shares the same ChEMBL validation. So a
+  screening candidate's pharmacokinetic and potency inputs are traceable,
+  version-stamped, and quality-flagged.</p>
+</li>
+</ul>
+<p>The two platforms <strong>share the data layer but use distinct algorithms</strong>: RepurposeIQ
+reasons over the <em>knowledge graph</em>; CompoundIQ reasons over <em>pharmacokinetic</em> (Cmax)
+scaling. Same validated facts underneath; different, purpose-built logic on top.</p>
+<hr />
+<h2>7. Validating the predictions (not just the data)</h2>
+<p>Everything above validates the <strong>data</strong>. We also now validate the <strong>results</strong> —
+whether the engine actually recovers real repurposing — against an external gold
+standard, <strong>repoDB</strong> (a curated database of drug-indication pairs that were either
+<strong>approved</strong> or <strong>failed in trials</strong>).</p>
+<p>The honest, hard version of the test:</p>
+<ul>
+<li><strong>We test biology only.</strong> The live engine also uses clinical-trial and literature
+  signals; in a <em>backward-looking</em> test those would be the answer (data leakage). So
+  for the benchmark we <strong>switch them off</strong> and score on mechanism alone — target
+  overlap, pathway, and protein-network proximity.</li>
+<li><strong>We use hard negatives.</strong> The negatives aren't random drug-disease pairs; they're
+  repurposings that were actually <em>tried and failed</em>. Beating those is real signal.</li>
+</ul>
+<p>Result: the mechanism-only score separates approved from failed repurposings with
+<strong>AUROC 0.73</strong> (0.73 averaged within disease), versus 0.49 for random and 0.43 for a
+"popular drug" baseline. A label-shuffle control collapses to 0.48 (chance), proving
+the signal is real. The raw score is a good <em>ranking</em> but is not itself a probability
+(calibration error 0.38); an honest out-of-fold recalibration turns it into one
+(error 0.013).</p>
+<p>We also <em>measure our own improvements</em>: a coverage fix (mapping drug salts to their
+parent molecule and filling gaps from high-confidence bioactivity) raised the share
+of drugs the engine can score from 46% to 68% and AUROC from 0.71 to 0.73 — and we
+kept the version that helped (gap-fill only) over the one that didn't (broaden every
+drug), because the benchmark said so.</p>
+<p>We also disclose what <em>doesn't</em> help: target overlap carries most of the signal, and
+the pathway term is near-neutral for ranking (we keep it for correctness and
+explainability, not because it boosts recovery).</p>
+<p><strong>The remaining honest limit.</strong> A retrospective benchmark proves <em>historical
+recovery on a fixed data snapshot</em> — it is not a guarantee of prospective
+performance. We track that as the data refreshes. Being explicit about this boundary
+is what makes the number believable.</p>
+<hr />
+<h2>8. How to explain it in 60 seconds</h2>
+<p><strong>To a pharma scientist / data-quality team:</strong></p>
+<blockquote>
+<p>"We treat public data as a raw material under engineering controls. We validated
+the shared ChEMBL layer under ALCOA+ and GAMP 5 — read-only, re-runnable, additive
+(we flag, never delete), with an open CAPA log. The headline: 91% concordance with
+IUPHAR as an independent referee, measured noise inside the published 0.5-log floor,
+and 100% correctness on a curated disease-mapping golden set. And it's all published
+live in the product, not just in a slide. We also validate the <em>results</em>: on the
+repoDB gold standard, our leakage-free mechanistic score recovers approved-vs-failed
+repurposings at AUROC 0.73 — with the clinical/literature features switched off so
+it can't cheat. Prospective performance is the stated boundary we still track."</p>
+</blockquote>
+<p><strong>To your manager (business framing):</strong></p>
+<blockquote>
+<p>"Customers don't trust 'we use public data.' So we built a pharma-grade validation
+layer — using the exact standards (ALCOA+, GAMP 5) their own QA teams use — and we
+show the proof inside the product. The standout number is 91% agreement with an
+independent expert database. This turns 'trust us' into 'here's the measured
+evidence,' which is what unblocks the technical due-diligence stage of a deal."</p>
+</blockquote>
+<hr />
+<h2>9. References (all real and citable)</h2>
+<p><strong>Standards we built to</strong>
+- FDA. <em>Data Integrity and Compliance With Drug CGMP: Questions and Answers — Guidance for Industry.</em> 2018.
+- MHRA. <em>'GXP' Data Integrity Guidance and Definitions.</em> 2018.
+- WHO. <em>Guidance on Good Data and Record Management Practices.</em> WHO Technical Report Series No. 996, Annex 5, 2016. (Defines <strong>ALCOA+</strong>.)
+- EU GMP <strong>Annex 11</strong>: Computerised Systems (EudraLex Vol. 4).
+- ISPE. <em>GAMP 5: A Risk-Based Approach to Compliant GxP Computerized Systems</em>, 2nd ed., 2022.
+- DAMA International. <em>DAMA-DMBOK: Data Management Body of Knowledge</em>, 2nd ed., 2017. (The six data-quality dimensions.)</p>
+<p><strong>Data sources</strong>
+- Zdrazil B, et al. "The ChEMBL Database in 2023." <em>Nucleic Acids Research</em> 2024, 52(D1):D1180–D1192. (ChEMBL, EMBL-EBI. Note: the paper sits in the 2024 NAR database issue; the ChEMBL 33 data release itself dates to mid-2023 — the citation year is the journal volume, not a newer data version.)
+- Harding SD, et al. "The IUPHAR/BPS Guide to PHARMACOLOGY in 2024." <em>Nucleic Acids Research</em> 2024, 52(D1):D1438–D1449.
+- U.S. National Library of Medicine. <em>Medical Subject Headings (MeSH).</em></p>
+<p><strong>The experimental-noise benchmark (why ~0.5 log is the floor)</strong>
+- Kramer C, Kalliokoski T, Gedeck P, Vulpetti A. "The Experimental Uncertainty of Heterogeneous Public Ki Data." <em>Journal of Medicinal Chemistry</em> 2012, 55(11):5165–5173.
+- Kalliokoski T, Kramer C, Vulpetti A, Gedeck P. "Comparability of Mixed IC50 Data — A Statistical Analysis." <em>PLoS ONE</em> 2013, 8(4):e61007.</p>
+<hr />
+<h2>10. How to reproduce (read-only)</h2>
+<pre><code class="language-bash"># Data validation
+python validation/validate_bioactivity.py     # completeness, validity, noise
+python validation/validate_concordance.py      # accuracy vs IUPHAR/GtoPdb (91%)
+python validation/validate_resolution.py       # disease-term resolution (consistency + golden set)
+python validation/validate_mechanisms.py       # mechanism direction vs IUPHAR (99.3%)
+python validation/validate_kg_accuracy.py      # knowledge-graph integrity &amp; provenance
+python validation/validate_data.py             # Cmax universe (CompoundIQ / POZ, SOP-001)
+
+# Predictive (results) validation — needs data/external/repodb/full.csv
+python validation/validate_predictions.py      # retrospective recovery vs repoDB (AUROC)
+python validation/validate_calibration.py      # score → probability calibration
+</code></pre>
+<p>Each script only reads the database, writes a machine-readable results file plus a
+run log, and can be re-run on every data refresh (append a dated entry to the CAPA
+log each time). The live versions of these results are shown on the platform's
+<strong>Data Validation</strong> page.</p>
+<hr />
+<h2>Appendix A — The six standards, explained</h2>
+<p>Five of these are pharma regulatory / data-integrity standards; one (DAMA-DMBOK)
+is a general data-management standard. They divide the work: some define <em>what</em>
+trustworthy data is, one requires you to validate the <em>system</em>, one tells you
+<em>how</em>, and one provides the <em>measurement framework</em>.</p>
+<p><strong>1. FDA — Data Integrity and Compliance With Drug CGMP (2018).</strong>
+A U.S. Food and Drug Administration guidance. "CGMP" = Current Good Manufacturing
+Practice. This Q&amp;A spells out the FDA's data-integrity expectations and is what FDA
+inspectors reference when judging whether a company's data can be trusted. <em>How we
+use it:</em> its core demands — every value traceable to source (Attributable) and the
+raw record preserved (Original) — are why our validation is read-only and additive:
+we flag bad records, never delete, and always keep the raw data.</p>
+<p><strong>2. MHRA — 'GXP' Data Integrity Guidance and Definitions (2018).</strong>
+The UK equivalent, from the Medicines and Healthcare products Regulatory Agency.
+"GXP" is the umbrella for all Good Practice standards (GMP, GLP, GCP, …). It is
+widely regarded as the clearest, most practical statement of data integrity and is
+cited internationally. <em>How we use it:</em> its emphasis on the full data lifecycle and
+a "measure-and-disclose" posture is what our CAPA discipline maps to — we record
+every finding, weaknesses included, rather than hiding them.</p>
+<p><strong>3. WHO TRS 996, Annex 5 (2016) — defines ALCOA+.</strong>
+World Health Organization, Technical Report Series No. 996, Annex 5: "Guidance on
+good data and record management practices." The global, region-neutral document
+that formally lays out the ALCOA+ principles. <em>How we use it:</em> this is the source
+of the ALCOA+ framing for the whole validation — every check maps to a principle
+(source-tagging → Attributable, raw retention → Original, concordance → Accurate,
+field coverage → Complete).</p>
+<p><strong>4. EU GMP Annex 11 — Computerised Systems.</strong>
+Part of EudraLex Volume 4 (the EU's GMP rulebook). Annex 11 specifically governs
+computer systems in regulated pharma — validation, audit trails, data security,
+electronic records. <em>How we use it:</em> our pipeline and platform are computerised
+systems, so Annex 11 is why we version-stamp the data (ChEMBL 33), keep an audit
+trail (CAPA log + per-run logs), and treat validation as a controlled, repeatable
+activity.</p>
+<p><strong>5. ISPE — GAMP 5, 2nd ed. (2022).</strong>
+From the International Society for Pharmaceutical Engineering. "GAMP" = Good
+Automated Manufacturing Practice. Where Annex 11 says "you must validate computer
+systems," GAMP 5 is the practical how-to: a risk-based methodology with the
+qualification lifecycle (IQ/OQ/PQ — Installation / Operational / Performance
+Qualification). <em>How we use it:</em> our validation scripts ARE the executable OQ/PQ
+test — re-runnable proof that data quality holds, re-proven on every refresh.</p>
+<p><strong>6. DAMA-DMBOK, 2nd ed. (2017) — data-quality dimensions.</strong>
+From DAMA International (Data Management Association); "DMBOK" = Data Management Body
+of Knowledge. The standard, vendor-neutral reference for data management as a
+discipline; it defines the formal data-quality dimensions. <em>How we use it:</em> our
+scorecard is organized around its six dimensions — completeness, accuracy,
+consistency, validity, uniqueness, timeliness — and each validation module maps to
+one or more.</p>
+<p><strong>How they fit together</strong>
+- WHO + MHRA + FDA → define <em>what</em> trustworthy data is (ALCOA+).
+- EU Annex 11 → requires you to <em>validate the computer system</em>.
+- GAMP 5 → tells you <em>how</em> (risk-based, re-runnable OQ/PQ).
+- DAMA-DMBOK → gives the <em>measurement framework</em> (the six dimensions).</p>
+<p><strong>Honesty note.</strong> We built our methodology to <em>align with</em> these standards; we are
+not formally certified or audited against them (that would require a full
+quality-management system and an external auditor). The accurate phrasing for a
+customer is "built to the same standards used for GxP data integrity and
+computerized-system validation" — never "FDA-compliant" or "GAMP-certified."</p></body></html>

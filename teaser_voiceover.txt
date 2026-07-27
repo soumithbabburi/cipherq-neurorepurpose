@@ -1,0 +1,7 @@
+Thousands of approved, safe drugs could treat diseases they were never designed for. The barrier to repurposing them has never been ideas — it's trust in the data. This is RepurposeIQ.
+
+Start from a disease to find candidate drugs, or start from a drug to find new indications. Either way, in seconds, RepurposeIQ ranks the best repurposing opportunities — scoring clinical evidence, biological targets, potency, and a knowledge graph of over two million drug, gene, and disease links. It even surfaces novel candidates, and shows the exact genes that connect them.
+
+And we don't ask you to trust the data — we measure it. Validated to pharma-grade ALCOA-plus and GAMP-five standards, with ninety-one percent agreement against an independent expert database, published live in the platform.
+
+Explainable evidence. Validated data. RepurposeIQ — let's put your next breakthrough back to work.
