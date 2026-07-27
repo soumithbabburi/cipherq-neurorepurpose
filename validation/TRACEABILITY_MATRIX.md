@@ -39,10 +39,12 @@ Last updated: 2026-07-27.
 | URS-20 | Every output is traceable to the exact code + data versions that produced it | services/provenance.py (build_stamp, attached to lineage) | build_stamp() resolves the running commit SHA + source snapshots | services/provenance.py | manual (verified 2026-07-27) |
 | URS-21 | Every candidate shows its reviewable basis alongside any score (CDS criterion 4) | templates/*, services/evidence_dossier.py, provenance | Design invariant; positioning rationale | validation/REGULATORY_POSITIONING.md | doc |
 | URS-22 | The platform makes no claim of clinical-success prediction | services/repurposing_predictor.py (scope note), UI copy | Stated limit: approved-vs-failed AUROC 0.42 | validation/predictions_results.json, repodb_external_metrics.json | harness + doc |
+| URS-23 | Operator actions are recorded in a tamper-evident, time-stamped audit trail (Part 11) | services/audit_trail.py; flask_app after_request hook | test_audit_trail_chain_and_tamper | tests/test_cipherq.py | auto |
+| URS-24 | System access is limited to authenticated users with role-based authority (Part 11) | services/auth.py; flask_app before_request guard + /login | test_auth_password_and_roles | tests/test_cipherq.py | auto |
 
 ## Coverage summary
 
-* Automated (CI-gated) tests: 17 across `tests/test_cipherq.py` and
+* Automated (CI-gated) tests: 19 across `tests/test_cipherq.py` and
   `tests/test_primekg_gate.py`.
 * Validation harnesses: 10, each writing a dated result JSON.
 * Documented negative results (tested and deliberately NOT integrated): KGE-04

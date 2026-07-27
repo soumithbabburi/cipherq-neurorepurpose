@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in — RepurposeIQ{% endblock %}
+{% block content %}
+<div style="max-width:380px;margin:8vh auto;padding:32px;background:var(--surface,#fff);
+            border:1px solid var(--border,#e5e7eb);border-radius:14px;
+            box-shadow:0 8px 30px rgba(15,30,61,0.08)">
+  <h1 style="font-size:1.25rem;font-weight:700;color:var(--primary,#2563eb);margin:0 0 4px">
+    RepurposeIQ</h1>
+  <p style="font-size:0.85rem;color:var(--text-muted,#64748b);margin:0 0 22px">
+    Sign in to continue.</p>
+
+  {% if error %}
+  <div role="alert" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+       font-size:0.82rem;padding:9px 12px;border-radius:8px;margin-bottom:16px">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('login') }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label style="display:block;font-size:0.78rem;font-weight:600;color:var(--text,#0f1e3d);margin-bottom:6px">
+      Username</label>
+    <input name="username" autocomplete="username" required autofocus
+           style="width:100%;padding:10px 12px;margin-bottom:14px;border:1px solid var(--border,#cbd5e1);
+                  border-radius:8px;font-size:0.9rem;box-sizing:border-box">
+    <label style="display:block;font-size:0.78rem;font-weight:600;color:var(--text,#0f1e3d);margin-bottom:6px">
+      Password</label>
+    <input name="password" type="password" autocomplete="current-password" required
+           style="width:100%;padding:10px 12px;margin-bottom:20px;border:1px solid var(--border,#cbd5e1);
+                  border-radius:8px;font-size:0.9rem;box-sizing:border-box">
+    <button type="submit"
+            style="width:100%;padding:11px;background:var(--primary,#2563eb);color:#fff;border:none;
+                   border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer">
+      Sign in</button>
+  </form>
+</div>
+{% endblock %}

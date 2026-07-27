@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import requests
-from flask import Flask, render_template, request, jsonify, abort, send_from_directory, redirect, url_for
+from flask import Flask, render_template, request, jsonify, abort, send_from_directory, redirect, url_for, session
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -155,6 +155,85 @@ except Exception:
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "neurorepurpose-cipherq-2026")
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# ── P1: authentication + audit trail (21 CFR Part 11) ─────────────────────────
+# GATED by AUTH_ENABLED (env, default off). When off, every route below behaves
+# exactly as before. See validation/P1_DESIGN.md. When on: a strong session
+# secret replaces the hardcoded default, an admin is bootstrapped from env, an
+# unauthenticated request is redirected to /login, and each meaningful request is
+# recorded to the hash-chained audit trail.
+try:
+    from services import auth as _auth
+    from services import audit_trail as _audit
+    _AUTH_ON = _auth.auth_enabled()
+except Exception as _e:
+    _auth = _audit = None
+    _AUTH_ON = False
+    logger.warning(f"P1 auth/audit unavailable: {_e}")
+
+if _AUTH_ON and _auth is not None:
+    _sk = _auth.resolve_secret_key()
+    if _sk:
+        app.secret_key = _sk
+    _auth.bootstrap_admin()
+    # endpoints reachable WITHOUT a session (login flow + static assets + health)
+    _AUTH_ALLOWLIST = {"login", "logout", "assets", "static", "health"}
+
+    @app.before_request
+    def _require_login():
+        if request.endpoint in _AUTH_ALLOWLIST:
+            return None
+        if not _auth.current_user():
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "authentication required"}), 401
+            return redirect(url_for("login", next=request.path))
+        return None
+
+    @app.after_request
+    def _audit_request(resp):
+        # Record meaningful actions only — skip static/asset noise so the trail
+        # stays a record of what a user DID, not every byte the browser fetched.
+        try:
+            ep = request.endpoint or ""
+            if ep not in ("assets", "static") and not request.path.startswith(("/assets", "/static", "/favicon")):
+                u = _auth.current_user() or {}
+                _audit.record("http_request", actor=u.get("username"),
+                              details={"method": request.method, "path": request.path,
+                                       "status": resp.status_code, "endpoint": ep})
+        except Exception:
+            pass
+        return resp
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Session login. Only meaningful when AUTH_ENABLED; harmless otherwise."""
+    if _auth is None or not _auth.auth_enabled():
+        return redirect(url_for("landing") if "landing" in app.view_functions else "/")
+    nxt = request.args.get("next") or request.form.get("next") or "/"
+    error = None
+    if request.method == "POST":
+        u = _auth.verify_credentials(request.form.get("username", ""),
+                                     request.form.get("password", ""))
+        if u:
+            session["user"] = u
+            if _audit is not None:
+                _audit.record("login", actor=u["username"], details={"result": "success"})
+            return redirect(nxt if nxt.startswith("/") else "/")
+        if _audit is not None:
+            _audit.record("login", actor=(request.form.get("username") or "").strip().lower(),
+                          details={"result": "failure"})
+        error = "Invalid username or password."
+    return render_template("login.html", error=error, next=nxt)
+
+
+@app.route("/logout")
+def logout():
+    u = (_auth.current_user() if _auth is not None else None) or {}
+    if _audit is not None and u:
+        _audit.record("logout", actor=u.get("username"))
+    session.pop("user", None)
+    return redirect(url_for("login") if _auth is not None and _auth.auth_enabled() else "/")
 
 
 @app.after_request
