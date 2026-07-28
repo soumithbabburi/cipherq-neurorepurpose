@@ -167,6 +167,30 @@ function marketStatusBadge(c) {
   return `<div style="background:${bg};border:1px solid ${bd};border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:${fg};line-height:1.4" title="${(ms.reason||'').replace(/"/g,'')}">${ms.label}${ms.source ? ' · ' + ms.source : ''}</div>`;
 }
 
+// Coverage-aware Verification: were the negative sources actually CHECKED for this
+// pair, or is a clean read just absence of evidence? Amber "Unverified hypothesis"
+// means too few sources were consulted to trust the pass (a lead to probe, not a
+// vetted one). The confidence score is unchanged; this only reports how much of the
+// evidence base was actually looked at.
+function verificationBadge(c) {
+  const eb = c.evidence_balance;
+  if (!eb || !eb.verdict) return '';
+  const V = {
+    verified_supported: ['rgba(16,122,87,0.10)','rgba(16,122,87,0.30)','#0e7454','Evidence checked'],
+    verified_clean:     ['rgba(16,122,87,0.10)','rgba(16,122,87,0.30)','#0e7454','Evidence checked'],
+    mixed:              ['#eef1f4','#d5dde6','#41566b','Mixed evidence'],
+    contradicted:       ['#fce8e6','#f5b5ad','#7a1d12','Contradicted'],
+    insufficient_coverage: ['#fbf3e2','#e7cf97','#8a5a1a','Unverified hypothesis']
+  };
+  const m = V[eb.verdict]; if (!m) return '';
+  const LBL = {clinicaltrials:'trials', faers:'adverse events', primekg:'ground truth', target_coverage:'target genetics'};
+  const cov = eb.coverage || {}, missing = [];
+  Object.keys(LBL).forEach(k => { const cc = cov[k]; if (cc && !cc.suppressed && !cc.checked) missing.push(LBL[k]); });
+  const frac = eb.n_applicable ? ` · ${eb.n_checked}/${eb.n_applicable} sources checked` : '';
+  const tip = ((eb.verdict_reason || '') + (missing.length ? '  Not checked: ' + missing.join(', ') + '.' : '')).replace(/"/g,'');
+  return `<div style="background:${m[0]};border:1px solid ${m[1]};border-radius:7px;padding:5px 9px;font-size:0.66rem;font-weight:600;color:${m[2]};line-height:1.4" title="${tip}">${m[3]}${eb.verdict==='insufficient_coverage'?frac:''}</div>`;
+}
+
 // Per-card data provenance: which sources the numbers came from + a link to the
 // live validation page. Trust shown where the decision is made.
 function provFooter(c) {
@@ -196,7 +220,7 @@ function buildCard(c, disease) {
         <div class="seal-lbl" style="margin-top:3px">Confidence</div>
       </div>
     </div>
-    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
@@ -226,7 +250,7 @@ function buildTop3Card(c, disease, rank) {
       </div>
       ${window.scoreSeal(sc, 60)}
     </div>
-    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>

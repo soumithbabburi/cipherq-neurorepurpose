@@ -164,10 +164,36 @@ function evidenceTierBadge(et){
   var m={'trial-supported':['#e6f4ea','#1b5e20','#bfe0c8'],'promising':['#fdf3e3','#8a5a00','#e6d3aa'],
          'biomarker-only':['#f8f2df','#8a5a00','#e6cf95'],'failed-endpoint':['#faece9','#922019','#e6c3bb'],
          'tested-unverified':['#eef1f4','#41566b','#d5dde6'],
+         'unverified':['#fdf3e3','#8a5a00','#e6d3aa'],
          'contradicted':['#faece9','#922019','#e6c3bb'],'literature':['#eef1f4','#41566b','#d5dde6'],
          'preclinical':['#eef1f4','#41566b','#d5dde6']};
   var col=m[et.tier]||m['preclinical'];
   return '<span class="chip" title="'+(et.note||'').replace(/"/g,'')+'" style="margin-top:5px;background:'+col[0]+';color:'+col[1]+';border:1px solid '+col[2]+';font-weight:600;font-size:11px">'+et.label+'</span>';
+}
+// Coverage-aware Verification: was this pair actually CHECKED against negative
+// sources, or is a clean read just absence of evidence? A green "Evidence checked"
+// means the negative sources answered; amber "Unverified" means too few were
+// consulted to trust the pass (the pair is a hypothesis, not a vetted lead). The
+// score is unchanged either way, this only tells the user how much was verified.
+function verificationBadge(eb){
+  if(!eb || !eb.verdict) return '';
+  var M={'verified_supported':['#e6f4ea','#1b5e20','#bfe0c8','Evidence checked'],
+         'verified_clean':    ['#e6f4ea','#1b5e20','#bfe0c8','Evidence checked'],
+         'mixed':             ['#eef1f4','#41566b','#d5dde6','Mixed evidence'],
+         'contradicted':      ['#faece9','#922019','#e6c3bb','Contradicted'],
+         'insufficient_coverage':['#fdf3e3','#8a5a00','#e6d3aa','Unverified']};
+  var m=M[eb.verdict]; if(!m) return '';
+  var LBL={clinicaltrials:'trials',faers:'adverse events',primekg:'ground truth',target_coverage:'target genetics'};
+  var cov=eb.coverage||{}, checked=[], missing=[];
+  Object.keys(LBL).forEach(function(k){
+    var c=cov[k]; if(!c || c.suppressed) return;   // suppressed = not applicable, do not list
+    (c.checked?checked:missing).push(LBL[k]);
+  });
+  var tip=(eb.verdict_reason||'');
+  if(checked.length) tip+='  Checked: '+checked.join(', ')+'.';
+  if(missing.length) tip+='  Not checked: '+missing.join(', ')+'.';
+  var sub=(eb.verdict==='insufficient_coverage' && eb.n_applicable)?' · '+eb.n_checked+'/'+eb.n_applicable+' checked':'';
+  return '<span class="chip" title="'+tip.replace(/"/g,'')+'" style="margin-top:5px;background:'+m[0]+';color:'+m[1]+';border:1px solid '+m[2]+';font-weight:600;font-size:11px">'+m[3]+sub+'</span>';
 }
 // Layer 2, Commercial & off label friction
 function commercialFrictionChip(cf){
@@ -223,7 +249,7 @@ function candidateCard(c, chembl){
   +     '<div style="min-width:0;flex:1"><div class="cc-name">'+tcase(c.disease)+(c.narrowed_from?' <span class="text-dim" style="font-weight:400;font-size:11px">(narrowed from '+tcase(c.narrowed_from)+')</span>':'')+'</div><div class="cc-id">'+(c.efo_id||'')+'</div></div>'
   +     '<div style="width:56px;flex-shrink:0;text-align:center">'+window.scoreSeal(ev,52)+'<div class="seal-lbl" style="margin-top:3px">Repurposing</div></div>'
   +   '</div>'
-  +   '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+'</div>'
+  +   '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+tierBadge(c.calibration)+plausibilityBadge(c.plausibility)+diseaseValueBadge(c.disease_value)+evidenceTierBadge(c.evidence_tier)+verificationBadge(c.evidence_balance)+'</div>'
   +   (c.is_subtype
         ? '<span class="chip" style="align-self:flex-start;background:#eef3f0;color:#2563eb;border:1px solid #cfe0d8;font-size:0.66rem;font-weight:600" title="Scored individually as a specific subtype rather than as the broad umbrella indication.">Subtype of '+(c.parent_indication||'')+'</span>'
         : '')

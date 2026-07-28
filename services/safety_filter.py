@@ -213,10 +213,18 @@ def _name_variants(drug: str) -> List[str]:
     return variants
 
 
-def _faers_one(name: str, n: int) -> List[Tuple[str, int]]:
+def _faers_one(name: str, n: int, probe: dict = None) -> List[Tuple[str, int]]:
     """Serious FAERS reactions for ONE exact name string.
     NOTE: the ` AND serious:1` filter must use spaces (encoded to +), NOT a
-    literal `+AND+` — the latter 404s through the request encoder."""
+    literal `+AND+` — the latter 404s through the request encoder.
+
+    Stamp-at-fetch: sets `probe["faers_queried"] = True` once openFDA has actually
+    ANSWERED. Note openFDA returns HTTP 404 (r.ok False) for a drug with ZERO matching
+    serious reports, which is a valid checked-and-clean answer, not a failure. So the
+    honest 'queried' signal is `r is not None` (http_client returns None ONLY when every
+    attempt raised a network exception). A genuine outage leaves it silent, so a FAERS
+    outage is never mistaken for a verified-clean profile, and a genuinely clean drug is
+    never mistaken for unchecked."""
     d = name.strip().lower()
     search = (f'(patient.drug.openfda.generic_name:"{d}"'
               f'+patient.drug.openfda.brand_name:"{d}"'
@@ -225,21 +233,30 @@ def _faers_one(name: str, n: int) -> List[Tuple[str, int]]:
         r = http_client.get(OPENFDA_EVENT, params={
             "search": search,
             "count": "patient.reaction.reactionmeddrapt.exact"}, timeout=12)
-        if r is not None and r.ok:
-            return [(x["term"], int(x["count"]))
-                    for x in r.json().get("results", [])[:n] if x.get("term")]
+        if r is not None:                 # 200 (data) OR 404 (no records) = openFDA answered
+            if probe is not None:
+                probe["faers_queried"] = True
+            if r.ok:
+                return [(x["term"], int(x["count"]))
+                        for x in r.json().get("results", [])[:n] if x.get("term")]
     except Exception as e:
         logger.debug(f"FAERS fetch failed for {name}: {e}")
     return []
 
 
-def _faers_serious_reactions(drug: str, n: int = 50) -> List[Tuple[str, int]]:
+def _faers_serious_reactions(drug: str, n: int = 50, probe: dict = None) -> List[Tuple[str, int]]:
     """Top SERIOUS FAERS reaction terms for a drug — tries the generic name, then
-    its brand synonyms, so a brand-keyed profile is not missed. [] on total miss."""
+    its brand synonyms, so a brand-keyed profile is not missed. [] on total miss.
+
+    Stamp-at-fetch: when a mutable `probe` dict is supplied, `probe["faers_queried"]`
+    is set by `_faers_one` only once openFDA actually answers (see there). An empty
+    name or a fully suppressed call never dispatches, so it stays silent; a total
+    network failure across every name variant also stays silent. That is the honest
+    source of the Verification stage's FAERS `checked` flag."""
     if not (drug or "").strip():
         return []
     for name in _name_variants(drug):
-        rx = _faers_one(name, n)
+        rx = _faers_one(name, n, probe=probe)
         if rx:
             return rx
     return []

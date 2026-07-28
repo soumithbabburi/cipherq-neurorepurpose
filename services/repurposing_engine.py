@@ -1190,6 +1190,10 @@ def score_compound_for_disease(
     # Feeding FAERS to the AE check for such a drug would flag its OWN therapy as harmful
     # (e.g. methotrexate → RA). So we withhold FAERS from the gate when the drug is an
     # established/developed therapy for the disease; the LoF/direction checks still run.
+    # Stamp-at-fetch marker: the FAERS fetch helper sets _faers_probe["faers_queried"]
+    # at the moment it dispatches a query, so the Verification stage can tell a
+    # queried-but-clean FAERS profile from one that was never consulted.
+    _faers_probe: Dict = {}
     appropriate = {"factor": 1.0, "appropriate": True, "flags": [], "reasons": []}
     try:
         from services.disease_appropriateness import appropriateness as _appr, infer_drug_action
@@ -1198,7 +1202,7 @@ def score_compound_for_disease(
         if _cn and disease_name:
             # FAERS-confounding guard: suppress the drug's own adverse-event profile for an
             # approved OR merely-studied pair (both put the disease's symptoms in its FAERS).
-            _rx = [] if _studied_or_own else (_faers_serious_reactions(_cn) or [])
+            _rx = [] if _studied_or_own else (_faers_serious_reactions(_cn, probe=_faers_probe) or [])
             _rx_total = sum(c for _, c in _rx)
             _act = infer_drug_action(_cn, drug_genes)
             # 3rd arg = the candidate DISEASE's therapeutic areas (a list), used for the
@@ -1208,6 +1212,9 @@ def score_compound_for_disease(
             # here — it would join()-mangle into characters and the gate could never fire.)
             appropriate = _appr(_cn, disease_name, therapeutic_areas or [], _act,
                                 faers_reactions=_rx, faers_total=_rx_total)
+            # Surface the queried FAERS mass so the Verification stage can read
+            # FAERS checked-ness unambiguously (0 = queried and clean; absent = not run).
+            appropriate["faers_total"] = _rx_total
     except Exception as e:
         logger.debug(f"appropriateness gate skipped: {e}")
 
@@ -1427,8 +1434,49 @@ def score_compound_for_disease(
         "rank_score": round(final_score * (1.0 if aligned else 0.6), 4),
     }
 
+    # ── Coverage-aware Verification stage (label / lane only) ─────────────────────
+    # Attach a separate evidence_balance object that records which NEGATIVE sources
+    # were actually queried vs silent for this pair and summarises support vs
+    # contradiction from gates that already ran. It writes NOTHING to the composite /
+    # final_score and adds no multiplier; it only RELABELS the actionability lane of a
+    # low-coverage candidate (demote-and-flag, mirroring the existing hypothesis lane).
+    evidence_balance = {}
+    try:
+        from services import verification as _verif
+        _cov_probe = {
+            "faers_queried":     bool(_faers_probe.get("faers_queried")),
+            "faers_suppressed":  bool(_studied_or_own),   # own/studied FAERS guard withheld it
+            "faers_total":       appropriate.get("faers_total"),
+            "primekg_suppressed": bool(_approved_here),   # PrimeKG skipped on strict approval
+            "coverage_suppressed": bool(_own_therapy),    # coverage gate suppressed for own therapy
+            "ctgov_queried":     False,   # the forward screen does not fetch trials per candidate
+            "trial_count":       int(trial_count or 0),
+            "endpoint_verdict":  None,
+        }
+        evidence_balance = _verif.evidence_balance({
+            "mechanistic_plausibility": mech_plausibility,
+            "primekg": primekg, "directional_evidence": directional,
+            "actionability": actionability, "trial_failure": trial_failure,
+            "direction": direction, "appropriateness": appropriate,
+            "registry": registry, "ctpa": ctpa, "coverage": coverage,
+            "mechanism_scope": mechanism_scope,
+        }, _cov_probe)
+        # Single demote-and-flag relabel: an insufficient-coverage pass is a MECHANISTIC
+        # HYPOTHESIS we could not verify, not a ready lead. Move it into a labelled
+        # unverified lane exactly like the existing "Mechanistic hypothesis" demotion —
+        # it never raises rank, and the composite is byte-identical.
+        if (evidence_balance.get("verdict") == "insufficient_coverage"
+                and actionability["tier"] in ("Actionable", "Mechanistic hypothesis")):
+            actionability["tier"] = "Mechanistic hypothesis (unverified)"
+            actionability["unverified"] = True
+            actionability["aligned"] = False
+            actionability["rank_score"] = round(final_score * 0.6, 4)   # reuse the hypothesis factor
+    except Exception as e:
+        logger.debug(f"verification stage skipped: {e}")
+
     return {
         "composite_score": final_score,
+        "evidence_balance": evidence_balance,
         "mechanistic_plausibility": mech_plausibility,
         "actionability":   actionability,
         "appropriateness": appropriate,

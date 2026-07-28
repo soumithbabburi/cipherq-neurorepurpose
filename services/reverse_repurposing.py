@@ -408,7 +408,7 @@ def _classify_why_stopped(why: str) -> str:
     return "other"
 
 
-def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
+def _trials_for_drug(drug_name: str, page_size: int = 200, probe: dict = None) -> Dict[str, Dict]:
     """Conditions studied in ClinicalTrials.gov for this drug → candidate indications,
     WITH per-condition trial OUTCOMES (P3): completed / with-results / failed-for-
     efficacy / failed-for-safety / ongoing, and a directional outcome_signal
@@ -417,12 +417,20 @@ def _trials_for_drug(drug_name: str, page_size: int = 200) -> Dict[str, Dict]:
 
     Relationship-aware: `query.intr` so the drug is an INTERVENTION, not merely
     mentioned (the v2 param is `query.intr`, not `query.intervention`).
+
+    Stamp-at-fetch: when a mutable `probe` dict is supplied, this helper records
+    `probe["ctgov_queried"] = True` only once ClinicalTrials.gov has actually
+    ANSWERED (r.ok). That is the honest source of the Verification stage's
+    clinicaltrials `checked` flag: an empty answer for a disease with no program
+    still reads checked (a query ran), while a network failure leaves it silent.
     """
     out: Dict[str, Dict] = {}
     try:
         r = http_client.get(CT_BASE, params={"query.intr": drug_name,
                                           "pageSize": page_size, "format": "json"}, timeout=15)
         if r and r.ok:
+            if probe is not None:
+                probe["ctgov_queried"] = True
             for s in r.json().get("studies", []):
                 ps = s.get("protocolSection", {})
                 conds = ps.get("conditionsModule", {}).get("conditions", []) or []
@@ -562,6 +570,10 @@ def _why_not(e: Dict) -> List[str]:
         out.append("Commercial friction: " + cf["flags"][0])
     if (e.get("ctpa") or {}).get("phantom"):
         out.append("No functional cohesion; the target match is off target")
+    eb = e.get("evidence_balance") or {}
+    if eb.get("verdict") == "insufficient_coverage":
+        out.append("Unverified: " + (eb.get("verdict_reason")
+                   or "negative sources not yet checked for this pair; hypothesis only."))
     if not e.get("actionable") and not out:
         out.append("Below the evidence threshold: mechanistic signal too weak to act on")
     return out
@@ -1598,9 +1610,12 @@ def screen_indications_for_drug(
             e["sources"].add("literature")
             e["lit_count"] = max(e["lit_count"], lit_count)
 
+    # Stamp-at-fetch marker for the Verification stage: set once ClinicalTrials.gov
+    # actually answers, so a per-candidate clinicaltrials `checked` flag is truthful.
+    _ctgov_probe: Dict = {}
     trials: Dict[str, Dict] = {}
     try:
-        trials = _trials_for_drug(info["name"])
+        trials = _trials_for_drug(info["name"], probe=_ctgov_probe)
         for v in sorted(trials.values(), key=lambda x: -x["count"])[:MAX_TRIAL_CONDITIONS]:
             _merge_clinical(v["name"], trial_count=v["count"], max_trial_phase=v["max_phase"],
                             outcome_signal=v.get("outcome_signal", 0.0),
@@ -1785,9 +1800,11 @@ def screen_indications_for_drug(
         if not drug_action_map:
             drug_action_map = {g: "inhibitor" for g in screen_genes}
     # C. The drug's serious FAERS reactions — to flag AE-not-target candidates.
+    # Stamp-at-fetch marker for the Verification stage (drug-level, shared by candidates).
+    _faers_probe: Dict = {}
     try:
         from services.safety_filter import _faers_serious_reactions
-        _faers_rx = _faers_serious_reactions(info.get("name", drug))
+        _faers_rx = _faers_serious_reactions(info.get("name", drug), probe=_faers_probe)
     except Exception:
         _faers_rx = []
     _faers_total = sum(cnt for _, cnt in _faers_rx)
@@ -1999,6 +2016,39 @@ def screen_indications_for_drug(
         except Exception as _re:
             logger.debug(f"505b2 feasibility skipped: {_re}")
             entry["regulatory_505b2"] = {}
+
+        # ── Coverage-aware Verification stage (label / lane only) ─────────────────
+        # Record which negative sources were actually consulted for THIS pair. Uses the
+        # drug-level stamp-at-fetch markers (_ctgov_probe / _faers_probe) so a genuinely
+        # queried-but-clean source is never confused with one that was never run. Writes
+        # nothing to the composite and adds no rank multiplier: it only relabels a
+        # mechanism-only tier to a visibly distinct "unverified" lane at the SAME rank
+        # factor, so a sparse novel candidate is flagged, never sunk below junk.
+        try:
+            from services import verification as _verif
+            _ipf = _ind_phase_for(c["disease"])
+            _approved = bool(_ipf is not None and int(_ipf) >= 4)
+            entry["evidence_balance"] = _verif.evidence_balance(sr, {
+                "faers_queried":      bool(_faers_probe.get("faers_queried")),
+                "faers_suppressed":   _approved,
+                "faers_total":        _faers_total,
+                "primekg_suppressed": _approved,
+                "coverage_suppressed": _approved,
+                "ctgov_queried":      bool(_ctgov_probe.get("ctgov_queried")),
+                "trial_count":        int(c.get("trial_count", 0) or 0),
+                "endpoint_verdict":   c.get("endpoint_verdict"),
+            })
+            if entry["evidence_balance"].get("verdict") == "insufficient_coverage":
+                _et = entry.get("evidence_tier") or {}
+                if _et.get("tier") in ("preclinical", "mechanistic"):
+                    entry["evidence_tier"] = {
+                        "tier": "unverified", "label": "Unverified hypothesis",
+                        "note": ("Negative sources not yet checked for this pair; "
+                                 "hypothesis only.")}
+        except Exception as _ve:
+            logger.debug(f"verification stage skipped: {_ve}")
+            entry["evidence_balance"] = {}
+
         entry["why_not"] = _why_not(entry)
         return entry
 
@@ -2016,6 +2066,9 @@ def screen_indications_for_drug(
     # the mechanistic composite (which stays the displayed score).
     _TIER_RANK = {"trial-supported": 1.15, "tested-unverified": 1.05, "promising": 1.03,
                   "literature": 0.97, "preclinical": 0.95, "mechanistic": 0.95,
+                  # coverage-unverified reads at the SAME factor as mechanistic/preclinical
+                  # (design LOCKED): a sparse novel candidate is relabelled, never sunk.
+                  "unverified": 0.95,
                   "biomarker-only": 0.80, "failed-endpoint": 0.60, "contradicted": 0.55}
     def _rank(x):
         dv = x.get("disease_value") or {}

@@ -3407,6 +3407,7 @@ def api_new_indications(drug_id):
                         "scores": ps.get("scores", {}), "calibration": ps.get("calibration", {}),
                         "plausibility": ps.get("plausibility"), "disease_value": (_val(lab) or None),
                         "evidence_tier": pc.get("evidence_tier"),
+                        "evidence_balance": ps.get("evidence_balance"),
                         "therapeutic_areas": pc.get("therapeutic_areas", []),
                         "sources": pc.get("sources", []),
                         "overlapping_targets": pc.get("overlapping_targets", []),
