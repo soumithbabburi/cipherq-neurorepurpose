@@ -54,6 +54,95 @@ Benchmarks and the cardinal pitfalls:
   promiscuity, gates that fail OPEN (missing data treated as a pass), wrong-direction hits,
   thresholds so loose that noise clears the actionable bar.
 
+## 1b. Field landscape — how repurposing is used in the real world (grounded 2024-2026)
+
+- **Economics / why it exists:** de novo ~$2-3B, ~10-17 yr, ~7.9% Phase-I->approval (BIO/QLS 2021);
+  repurposing ~$300M, faster, ~higher success for de-risked assets — but the field's cost/success
+  figures are self-estimates, treat as indicative. Repurposing market ~$35B (2024).
+- **Organizations (real):** **Every Cure** (nonprofit; Fajgenbaum; MATRIX ~3,000 drugs x ~12,000
+  diseases; built on **TxGNN**, Zitnik lab, Nat Med 2024, +49%/+35% indication/contra vs baselines;
+  ARPA-H $48.3M). **Healx** (rare disease, AI combination therapies; Fragile X IND+ODD).
+  **BenevolentAI** (KG; famous baricitinib->COVID via JAK1/2+AAK1, validated by COV-BARRIER/RECOVERY
+  — but the company is in serious decline since 2023-24, layoffs/US-exit; later "merger/founder-return"
+  claims are UNVERIFIED). **Recursion** (phenomics/Cell Painting; acquired Exscientia 2024).
+  **Insilico** (mostly DE NOVO generative, e.g. rentosertib/TNIK for IPF — NOT classical repurposing).
+  **BioXcel** (dexmedetomidine sublingual = 505(b)(2) reformulation). Public infra: **Broad CMap/CLUE**,
+  **Open Targets**, **ChEMBL**, **NCATS** New Therapeutic Uses.
+- **Big pharma** mostly repurposes its OWN on-patent assets (lifecycle/indication expansion) because
+  a generic repurposing has weak IP capture.
+- **Regulatory / IP that make it viable:** **505(b)(2)** (rely on FDA's prior safety/efficacy + only
+  new data — THE repurposing route); **new-clinical-investigation 3-yr** and **orphan 7-yr**
+  exclusivity; **method-of-use patents** (weak, skinny-label/off-label leakage). The **patent-cliff
+  disincentive** (no one funds trials for off-patent generics) is the market failure nonprofits fill.
+
+## 1c. The data (what each source is authoritative for)
+
+ChEMBL v35 (measured bioactivity: 2.5M compounds / 21M activities); DrugBank (drug MoA/DDIs);
+**IUPHAR/GtoPdb** (expert affinities AND action agonist/antagonist — the DIRECTION source);
+Open Targets (target-disease + genetics/L2G; genetic support ~2x approval odds, Nelson 2015);
+OMIM/ClinVar (Mendelian gene-disease + GoF/LoF direction); LINCS/CMap (perturbational signatures);
+STRING/Reactome/GO (PPI/pathways/function); ClinicalTrials.gov (source of FAILED-trial negatives);
+FAERS (post-market AE signals — disproportionality is hypothesis-only, not incidence);
+**repoDB** (the benchmark: approved positives + FAILED-trial hard negatives); MeSH/MONDO/EFO
+(vocabulary harmonization — mismatch fragments the same disease). Single-source or cross-DB-discordant
+values = lower confidence.
+
+## 1d. Biology from first principles (what a hypothesis must satisfy)
+
+- **Causal chain:** gene -> protein -> pathway -> phenotype -> disease. A valid hypothesis traces an
+  unbroken, DIRECTION-correct chain from the drug's molecular action to the disease.
+- **GoF vs LoF direction (the #1 way a hit is wrong):** a gain-of-function/over-active driver needs an
+  INHIBITOR; a loss-of-function/deficient driver needs an AGONIST/activator/replacement — inhibiting a
+  deficient protein is useless or harmful. A directionless "drug<->gene<->disease" hit is not actionable
+  until disease GoF/LoF and drug action are confirmed to OPPOSE.
+- **Druggability:** only ~4,500 proteins (~22% of the proteome) are plausibly small-molecule-druggable;
+  TFs / many PPI interfaces / RAS-like are classically intractable regardless of network/genetic support.
+- **Modality gate:** small molecules reach INTRACELLULAR targets; antibodies/large biologics only
+  extracellular/surface/secreted. Never propose an mAb against an intracellular target, and never dock
+  an antibody (category error).
+- **Delivery:** target expression must overlap diseased tissue AND the drug must reach it (BBB excludes
+  most large/polar/efflux substrates; CNS/ocular/dermal/joint/airway localization is a first-class filter).
+- **Safety/tox:** organ-tox from target/tissue overlap (separate therapeutic vs incidental organ);
+  hERG->QT/torsades is a mandatory anti-target; FAERS is hypothesis-generating only.
+- **Noise floor:** public bioactivity has ~0.5-log uncertainty (pKi SD ~0.54); potency differences under
+  ~3-5x are within noise. A model reporting error below the data's own noise is overfitting.
+
+## 1e. Scenario playbook (heuristic + what to distrust)
+
+- **Zero-shot novel disease:** guilt-by-association has nothing to propagate; only disease-similarity
+  transfer works. Distrust a score inherited from one near-neighbor's single edge; demand the multi-hop path.
+- **Rare/orphan:** thin data + strong incentives; keep the VALUE score separate from the EVIDENCE score;
+  distrust small-N/biomarker-only/open-label positives.
+- **Biologic vs small molecule:** gate modality BEFORE scoring; suppress mAb-vs-intracellular and
+  antibody-docking as category errors, do not surface them.
+- **Loss-of-function/congenital:** need to RESTORE activity; an inhibitor is the wrong direction; require
+  explicit direction modeling (plain KG relatedness ~0.57 direction accuracy is not enough).
+- **Candidate is a CONTRAINDICATION:** KGs conflate association with "treats"; require direction-aware
+  scoring + explicit contraindication ground truth (PrimeKG) + FAERS; distrust AE co-mention read as benefit.
+- **Well-studied vs sparse drug:** link-prediction tracks node DEGREE -> hubs over-ranked, sparse drugs
+  falsely novel; treat a sparse drug's low score as LOW INFORMATION, not evidence of no effect.
+- **Wrong/no-structure docking:** holo > apo > homology; verify UniProt identity + correct domain +
+  holo/apo + named pocket; a lone deltaG with no provenance or an apo/homology-only dock is not defensible.
+- **Sparse KG coverage:** emit a coverage-honesty flag; a data gap is neither a confident positive nor negative.
+- **Own-therapy confounding:** a drug scored against its OWN approved disease looks artificially strong
+  (endogenous signals); hold such pairs out of headline metrics, never cite as "proof the model works".
+
+## 1f. Honest limits & evaluation (say these plainly)
+
+- **Nothing reliably predicts clinical SUCCESS** — every method scores retrospective PLAUSIBILITY.
+  Success labels are ~unlearnable (repoDB approved-vs-failed ~AUC 0.42); a repurposed drug still inherits
+  ~8-14% Phase-I->approval odds. Output a ranked HYPOTHESIS list with mechanism + uncertainty, never a
+  probability of benefit.
+- **Benchmarks:** hard negatives (repoDB failed trials), disease- AND compound-disjoint splits, leakage-free.
+  Random negatives inflate AUC; matrix-completion-across-all-cells is a leakage trap; KG-split redundancy
+  and LLM corpus contamination inflate reported metrics. Weight prospective/independently-replicated
+  evidence far above benchmark-only claims.
+- **Regulatory (keep it non-device CDS):** the FDA CDS 4 criteria (not analyzing images/device signals;
+  displays medical info; RECOMMENDS to an HCP; HCP can INDEPENDENTLY REVIEW the basis and it's not
+  time-critical). A ranked hypothesis list with full basis + provenance + uncertainty for a
+  researcher/HCP, non-urgent, keeps it a non-device decision-support tool; a hidden-basis "do this" or
+  acute bedside targeting pushes it into SaMD/device territory.
+
 ## 2. This platform (RepurposeIQ) — what is real, and where
 
 - **Core score:** hand-weighted composite in `services/repurposing_engine.py` →
