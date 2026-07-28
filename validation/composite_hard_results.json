@@ -1,0 +1,31 @@
+{
+  "run_at": "2026-07-28T13:42:07",
+  "n": 1879,
+  "n_pos": 1278,
+  "n_diseases": 80,
+  "cv": "disease-disjoint GroupKFold(5)",
+  "auroc_hand_composite": 0.6291,
+  "auroc_learned_logistic": 0.6377,
+  "auroc_learned_gbm": 0.6524,
+  "best_model": "gbm",
+  "best_auroc": 0.6524,
+  "gap_vs_hand": 0.0232,
+  "gap_ci95": [
+    -0.0016,
+    0.0496
+  ],
+  "calibration_ece_isotonic_oof": 0.0,
+  "logistic_weights": {
+    "target": 0.463,
+    "pathway": -0.15,
+    "ppi": 0.49,
+    "network": 0.0,
+    "directional": -0.119,
+    "proliferation": 0.041,
+    "signature": -0.013,
+    "direction": 0.104
+  },
+  "ship": false,
+  "ship_margin": 0.01,
+  "verdict": "DO NOT SHIP: learned composite does not clear +0.01 with a CI excluding zero on the hard task; keep the validated hand composite."
+}
