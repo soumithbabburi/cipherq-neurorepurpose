@@ -44,7 +44,9 @@ Thumbs.db
 .flasklog.txt
 .flaskout.txt
 biocypher-log/
-.claude/
+# ignore local .claude settings/caches, but VERSION the shared subagents
+.claude/*
+!.claude/agents/
 
 # Docking — provisioned locally, not committed (see vendor/vina_bin/setup.sh)
 # .qc/ = micromamba root (qc + drugdisc-agent envs)
