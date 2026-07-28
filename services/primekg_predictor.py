@@ -215,6 +215,68 @@ def _rrf_rerank(scores_list, weights, k_rrf: int = 60):
     return fused
 
 
+def _knn_transfer(query_idx: int, is_disease: bool, k_neighbors: int = 25):
+    """Disease-/drug-SIMILARITY TRANSFER generator: score candidates by the similarity-
+    weighted KNOWN indications of the query's nearest labelled neighbours. For a disease
+    query it borrows the drugs that treat biologically-similar diseases; for a drug query,
+    the diseases treated by similar drugs.
+
+    This is the fix for the KG zero-shot collapse: the DistMult/GNN/classifier fusion encodes
+    RELATEDNESS (a contraindicated drug sits close), so leakage-free it inverts to AUROC 0.22 /
+    recall@10 0.06 on unseen diseases. Transfer asks 'does this treat diseases LIKE this one',
+    a direction-correct signal. CERTIFIED leakage-free on the disease->drugs direction:
+    recall@10 0.39, recall@100 0.89, AUROC(ind-vs-contra) 0.55 (NOT inverted) — see
+    validation/benchmark_txgnn_split_results.certified.json. Returns (scores, target_ids) or
+    (None, None). Strong CANDIDATE-GENERATION signal, not a calibrated probability."""
+    s = _load()
+    if s is None:
+        return None, None
+    E = s["E"]
+    key = "_knn_dis" if is_disease else "_knn_drug"
+    if key not in s:
+        # labels are keyed by DRUG node; r['indication'] lists the DISEASE nodes it treats.
+        nbr_map: Dict[int, set] = {}
+        for drug_str, r in s["labels"].items():
+            dnode = int(drug_str)
+            for z in r.get("indication", []) or []:
+                if is_disease:
+                    nbr_map.setdefault(int(z), set()).add(dnode)     # disease -> its drugs
+                else:
+                    nbr_map.setdefault(dnode, set()).add(int(z))     # drug -> its diseases
+        ids = np.array(sorted(nbr_map.keys()), dtype=np.int64)
+        if len(ids) == 0:
+            s[key] = None
+        else:
+            En = E[ids]
+            En = En / (np.linalg.norm(En, axis=1, keepdims=True) + 1e-9)
+            s[key] = {"map": nbr_map, "ids": ids, "En": En}
+    cache = s.get(key)
+    if not cache:
+        return None, None
+    nbr_map, nbr_ids, En = cache["map"], cache["ids"], cache["En"]
+    q = E[query_idx]
+    q = q / (np.linalg.norm(q) + 1e-9)
+    sims = En @ q
+    order = np.argsort(-sims)[:k_neighbors + 1]      # +1 to drop the query itself if present
+    target_ids = s["drug_ids"] if is_disease else s["disease_ids"]
+    pos = {int(t): i for i, t in enumerate(target_ids)}
+    scores = np.zeros(len(target_ids), dtype=float)
+    used = 0
+    for oi in order:
+        nb = int(nbr_ids[oi])
+        if nb == int(query_idx):
+            continue                                  # don't borrow from the query itself
+        sim = max(0.0, float(sims[oi]))
+        for lbl in nbr_map[nb]:
+            j = pos.get(lbl)
+            if j is not None:
+                scores[j] += sim
+        used += 1
+        if used >= k_neighbors:
+            break
+    return scores, target_ids
+
+
 def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "",
                           min_score: float = 0.0) -> List[Dict]:
     """Universe generator: rank candidate indications for a drug over PrimeKG's 17k diseases.
@@ -233,7 +295,19 @@ def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "",
     on a SPECIFIC pair the biology engine already surfaced."""
     s = _load()
     di = resolve_drug(drug, chembl_id)
-    if s is None or di is None or s.get("treats") is None:
+    if s is None or di is None:
+        return []
+    # PRIMARY (2026-07-28): drug-similarity TRANSFER — the certified fix for the zero-shot
+    # collapse (the fusion below inverts leakage-free, AUROC 0.22 / recall@10 0.06). Transfer
+    # is the same mechanism certified on the disease->drugs direction at recall@10 0.39.
+    knn, dis_ids = _knn_transfer(di, is_disease=False)
+    if knn is not None and knn.any():
+        order = [j for j in np.argsort(-knn) if knn[j] > min_score][:k]
+        return [{"disease": _name(int(dis_ids[j])), "node": int(dis_ids[j]),
+                 "score": round(float(knn[j]), 4),
+                 "method": "drug-similarity transfer"} for j in order]
+    # FAIL-SOFT: prior recall-then-classifier(/fusion) cascade (kept for coverage).
+    if s.get("treats") is None:
         return []
     rel = _score_vs_all(di, "indication", s["disease_ids"])   # DistMult relatedness (recall)
     if rel is None:
@@ -258,10 +332,23 @@ def top_diseases_for_drug(drug: str, k: int = 20, chembl_id: str = "",
 
 
 def top_drugs_for_disease(disease: str, k: int = 20) -> List[Dict]:
-    """Drugs for a disease, same recall-then-precision cascade."""
+    """Drugs for a disease. PRIMARY: disease-similarity TRANSFER — borrow the drugs that
+    treat biologically-similar diseases. This is the direction CERTIFIED leakage-free
+    (recall@10 0.39, recall@100 0.89, AUROC(ind-vs-contra) 0.55, NOT inverted — vs the old
+    cascade's 0.06 / 0.22 collapse; validation/benchmark_txgnn_split_results.certified.json).
+    Fail-soft to the prior recall-then-classifier cascade if transfer yields nothing."""
     s = _load()
     zi = resolve_disease(disease)
-    if s is None or zi is None or s.get("treats") is None:
+    if s is None or zi is None:
+        return []
+    knn, drug_ids = _knn_transfer(zi, is_disease=True)
+    if knn is not None and knn.any():
+        order = [j for j in np.argsort(-knn) if knn[j] > 0.0][:k]
+        return [{"drug": _name(int(drug_ids[j])), "node": int(drug_ids[j]),
+                 "score": round(float(knn[j]), 4),
+                 "method": "disease-similarity transfer"} for j in order]
+    # FAIL-SOFT: prior recall-then-classifier cascade.
+    if s.get("treats") is None:
         return []
     rv = _rel_vec("indication")
     rel = s["E"][s["drug_ids"]] @ (s["E"][zi] * rv)
