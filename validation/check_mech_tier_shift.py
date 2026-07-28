@@ -80,6 +80,19 @@ def run(max_diseases=60):
         "frac_ge_0.60_strong": {"old": frac(old_s, 0.60), "new": frac(new_s, 0.60)},
         "max": {"old": round(float(old_s.max()), 4), "new": round(float(new_s.max()), 4)},
     }
+    # RE-ANCHOR the tier bands: find the NEW-weighting threshold that reproduces the OLD
+    # tier population fraction, so 'Strong'/'Promising'/'Moderate' keep their meaning after
+    # the re-weight shifts the mechanism scale. (Re-anchored on the mechanism component —
+    # the dominant, and only changed, term — verified by the restored fractions below.)
+    OLD_BANDS = {"moderate": 0.18, "promising": 0.40, "strong": 0.60}
+    reanchor = {}
+    for name, b in OLD_BANDS.items():
+        f_old = float((old_s >= b).mean())          # target upper-tail fraction to preserve
+        t_new = float(np.quantile(new_s, 1.0 - f_old)) if 0 < f_old < 1 else b
+        reanchor[name] = {"old_band": b, "old_frac_above": round(f_old, 4),
+                          "new_band": round(t_new, 3),
+                          "new_frac_above_newband": round(float((new_s >= t_new).mean()), 4)}
+    out["re_anchored_bands"] = reanchor
     (HERE / "mech_tier_shift.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(json.dumps(out, indent=2))
     return out

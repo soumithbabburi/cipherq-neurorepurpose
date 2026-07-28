@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-07-27T13:04:28",
+  "run_at": "2026-07-28T11:11:48",
   "pairs": 1476,
   "mech_component_auroc": {
     "old": 0.7431,
@@ -20,5 +20,25 @@
   "max": {
     "old": 0.65,
     "new": 0.65
+  },
+  "re_anchored_bands": {
+    "moderate": {
+      "old_band": 0.18,
+      "old_frac_above": 0.5393,
+      "new_band": 0.156,
+      "new_frac_above_newband": 0.544
+    },
+    "promising": {
+      "old_band": 0.4,
+      "old_frac_above": 0.2859,
+      "new_band": 0.506,
+      "new_frac_above_newband": 0.3184
+    },
+    "strong": {
+      "old_band": 0.6,
+      "old_frac_above": 0.0407,
+      "new_band": 0.65,
+      "new_frac_above_newband": 0.1863
+    }
   }
 }
