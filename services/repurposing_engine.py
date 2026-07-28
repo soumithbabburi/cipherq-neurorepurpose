@@ -899,10 +899,10 @@ def score_compound_for_disease(
         from services.signature_reversal import reversal_score
         _cname = compound.get("name") or compound.get("pref_name") or ""
         if _cname:
-            reversal = reversal_score(_cname, disease_name)
-            if reversal.get("direction") == "reversing":
-                mechanistic_prior = max(float(mechanistic_prior or 0.0),
-                                        0.5 * float(reversal.get("score", 0.0)))
+            reversal = reversal_score(_cname, disease_name)   # computed for DISPLAY only
+            # W3 (2026-07-28): CMap connectivity is chance-level on the external benchmark
+            # (AUROC 0.485, best blend weight 0.0 — validation/reversal_ablation_results.json),
+            # so it no longer feeds the mechanistic prior / ranking; kept as a mechanism flag.
     except Exception as e:
         logger.debug(f"signature reversal skipped: {e}")
 
@@ -1009,16 +1009,12 @@ def score_compound_for_disease(
     if prolif.get("match"):
         composite = min(1.0, composite + 0.18 * float(prolif["score"]))
 
-    # Signature-reversal bonus / mimic penalty (bounded, orthogonal).
-    # NOTE (2026-07-27): on repoDB approved-vs-failed, CMap connectivity was measured
-    # NEUTRAL-to-dilutive (AUROC 0.485 on the covered subset, blend best-weight 0.0 —
-    # validation/experiment_reversal_ablation.py). It is kept as a small, bounded,
-    # direction-aware signal / explainability flag, NOT validated as a ranking driver.
-    # Demoting its weight is a candidate pending a broader-coverage measurement.
-    if reversal.get("direction") == "reversing":
-        composite = min(1.0, composite + 0.15 * float(reversal.get("score", 0.0)))
-    elif reversal.get("direction") == "mimicking":
-        composite *= 0.85          # the drug amplifies the disease signature (wrong way)
+    # Signature reversal is a DISPLAY / explainability flag only (W3, 2026-07-28). The CMap
+    # connectivity was measured NON-discriminating on the repoDB approved-vs-failed benchmark
+    # (AUROC 0.485, best blend weight 0.0 — validation/reversal_ablation_results.json), so its
+    # former +0.15 reversing bonus and x0.85 mimic penalty — a false-POSITIVE and a
+    # false-NEGATIVE channel resting on an 11%-coverage, chance-level signal — are REMOVED from
+    # the composite. `reversal` is still surfaced in the breakdown for mechanism context.
 
     # Directional literature evidence (P3): a typed drug→gene→disease path or a
     # direct drug-treats-disease edge from DRKG (GNBR/DGIDB/DrugBank triples) —
