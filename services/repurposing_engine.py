@@ -1565,6 +1565,38 @@ def run_repurposing_screen(
     except Exception as e:
         logger.debug(f"novelty augmentation skipped: {e}")
 
+    # ── Augment with PrimeKG SIMILARITY-TRANSFER candidates (W4) ───────────────
+    # HetioNet is the 2016, 213-disease graph, so for any disease outside it the block
+    # above finds nothing and forward discovery surfaces only ALREADY-indicated drugs —
+    # the opposite of repurposing. The certified disease-similarity transfer generator
+    # (recall@10 0.39 leakage-free) supplies a real novel-candidate pool. These are RECALL
+    # candidates: the validated composite + gates still rank and filter them; they carry
+    # only a bounded HINT-level prior (<=0.35), never enough alone to reach Strong/actionable.
+    try:
+        from services import primekg_predictor as _pkg
+        if _pkg.available():
+            _tk = _pkg.top_drugs_for_disease(disease_name, k=30)
+            if _tk:
+                _bn = _local_molecules_by_name([t["drug"] for t in _tk])
+                _mx = max((t.get("score") or 0.0) for t in _tk) or 1.0
+                _added = 0
+                for t in _tk:
+                    mol = _bn.get((t.get("drug") or "").lower())
+                    if not mol or not mol.get("smiles"):
+                        continue
+                    cid = mol.get("chembl_id", "")
+                    if not cid or cid in seen_ids:
+                        continue
+                    seen_ids.add(cid)
+                    candidates.append({**mol, "source": "PrimeKG similarity transfer",
+                                       "novelty": True,
+                                       "kg_transfer": round(float(t.get("score") or 0.0) / _mx, 4)})
+                    _added += 1
+                    if _added >= 15:
+                        break
+    except Exception as e:
+        logger.debug(f"PrimeKG transfer augmentation skipped: {e}")
+
     if not candidates:
         return {
             "disease": disease_name, "disease_info": disease_info,
@@ -1616,6 +1648,11 @@ def run_repurposing_screen(
         _prior = None
         if comp.get("novelty") and comp.get("shared_disease_genes"):
             _prior = min(0.85, 0.35 + 0.12 * int(comp["shared_disease_genes"]))
+        elif comp.get("novelty") and comp.get("kg_transfer") is not None:
+            # bounded HINT-level prior from the certified similarity-transfer recall signal
+            # (W4): surfaces a novel candidate for a disease outside HetioNet without letting
+            # the analogy signal alone reach Strong/actionable — capped at 0.35 (< the 0.40 bar).
+            _prior = round(0.20 + 0.15 * float(comp["kg_transfer"]), 4)
         sr = score_compound_for_disease(
             comp, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
             drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
