@@ -35,6 +35,17 @@ from services import http_client
 
 logger = logging.getLogger(__name__)
 
+# Card Safety/Efficacy column formatters (display only; no scoring). Fail-soft stubs
+# keep the reverse screen working if the miner module is unavailable.
+try:
+    from services.clinical_evidence import (safety_column as _ct_safety_col,
+                                             efficacy_column as _ct_efficacy_col)
+except Exception:                                    # pragma: no cover
+    def _ct_safety_col(_ae, **_kw):
+        return {"status": "no_data", "label": "No trial data", "muted": True}
+    def _ct_efficacy_col(_v, **_kw):
+        return {"status": "no_data", "label": "No trial data", "muted": True}
+
 OT_URL      = "https://api.platform.opentargets.org/api/v4/graphql"
 CHEMBL_BASE = "https://www.ebi.ac.uk/chembl/api/data"
 CT_BASE     = "https://clinicaltrials.gov/api/v2/studies"
@@ -472,8 +483,28 @@ def _trials_for_drug(drug_name: str, page_size: int = 200, probe: dict = None) -
                 from services.endpoint_parser import aggregate as _ep_agg
             except Exception:
                 _ep_agg = None
+            try:
+                from services.clinical_evidence import parse_adverse_events as _parse_ae
+            except Exception:
+                _parse_ae = None
             for e in out.values():
                 studies = e.pop("_studies", [])
+                # Serious-AE (denominatored) summary for the Safety card column — the
+                # results-posting study in THIS indication with the largest at-risk
+                # denominator. Display only; adds nothing to the composite/rank.
+                e["serious_ae"] = None
+                if _parse_ae and studies:
+                    _best_ae, _best_n = None, -1
+                    for _s in studies:
+                        _ae = _parse_ae(_s)
+                        if _ae is None:
+                            continue
+                        _m = _ae.get("serious_num_at_risk") or 0
+                        if _m > _best_n:
+                            _sph = _max_phase_from_phases(
+                                (_s.get("protocolSection", {}).get("designModule", {}) or {}).get("phases", []) or [])
+                            _best_ae, _best_n = {**_ae, "phase": _sph}, _m
+                    e["serious_ae"] = _best_ae
                 agg = _ep_agg(studies) if (_ep_agg and studies) else None
                 if agg and agg.get("verdict") not in (None, "unknown"):
                     e["outcome_signal"] = agg["outcome_signal"]
@@ -532,10 +563,15 @@ def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
         c["trial_outcome_signal"] = best.get("outcome_signal", 0.0)
         c["failed_efficacy"] = best.get("failed_efficacy", 0)
         c["failed_safety"] = best.get("failed_safety", 0)
+        c["serious_ae"] = best.get("serious_ae")          # for the Safety card column
         # Layer 1: carry the parsed primary-endpoint verdict onto the candidate
         for _k in ("endpoint_verdict", "endpoint_note", "endpoint_primary", "endpoint_p"):
             if best.get(_k) is not None:
                 c[_k] = best.get(_k)
+        # Display-only mirror for the Efficacy column (same key the merge path fills)
+        if best.get("endpoint_verdict"):
+            c["ct_efficacy_verdict"] = best.get("endpoint_verdict")
+            c["ct_efficacy_note"] = best.get("endpoint_note", "")
         c["sources"] = set(c.get("sources", set())) | {"clinical_trial"}
 
 
@@ -1146,9 +1182,10 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
     when the very reason it surfaced IS a mechanism. Changes the cache key so a
     prior-boosted score never overwrites the plain direct-scoring value for the pair."""
     _pk = "" if mechanistic_prior is None else f"|m{round(float(mechanistic_prior), 2)}"
-    # v2: phase-scaled prior-art + mechanism-only renorm (2026-07 audit) — bump invalidates
-    # pre-fix cached pair scores so the confounding-inflated values are not served.
-    cache_key = f"pair:v2:{(chembl_id or drug_name).lower()}|{disease.lower().strip()}{_pk}"
+    # v3: FIX 1 argument-parity (adds therapeutic_areas + studied_for_disease to the canonical
+    # scoring call so the dossier matches the forward list) — bump invalidates pre-fix cached
+    # pair scores. v2 was phase-scaled prior-art + mechanism-only renorm (2026-07 audit).
+    cache_key = f"pair:v3:{(chembl_id or drug_name).lower()}|{disease.lower().strip()}{_pk}"
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -1198,11 +1235,33 @@ def canonical_pair_score(chembl_id: str, disease: str, drug_genes: Optional[List
         _iphase = indication_phase_for(disease, _pinfo.get("known_indications", []))
     except Exception:
         pass
+    # FIX 1 — argument PARITY with the forward screen (run_repurposing_screen) so the SAME
+    # (drug, disease) pair yields the SAME composite on the leads list and in the dossier.
+    # therapeutic_areas revives the LoF/congenital appropriateness gate here (was []); it is
+    # resolved from the SAME OT disease-area helper the forward path uses.
+    _disease_areas: List[str] = []
+    try:
+        from services.disease_ontology import therapeutic_areas as _ot_areas
+        _disease_areas = _ot_areas(dinfo.get("disease_id", "")) or []
+    except Exception:
+        _disease_areas = []
+    # studied_for_disease: any development footprint (phase>=1) for THIS disease — the SAME
+    # confounding-by-indication signal the forward screen passes (approved_chembls_for_disease,
+    # min_phase=1). Batched membership query; fail-soft to False.
+    _studied = False
+    try:
+        from services.repurposing_scorer import approved_chembls_for_disease
+        if chembl_id:
+            _studied = chembl_id in approved_chembls_for_disease([chembl_id], [], disease, min_phase=1)
+    except Exception:
+        _studied = False
     sr = score_compound_for_disease(compound, disease, disease_genes, disease_pathways, ppi,
                                     drug_genes, drug_actions=drug_actions,
                                     disease_gene_weights=disease_weights or None,
                                     mechanistic_prior=mechanistic_prior,
-                                    indication_phase=_iphase)
+                                    indication_phase=_iphase,
+                                    therapeutic_areas=_disease_areas,
+                                    studied_for_disease=_studied)
     out = {"score": sr["composite_score"], "composite_score": sr["composite_score"],
            "scores": sr["scores"], "safety": sr.get("safety", {}),
            "coverage": sr.get("coverage", {}),
@@ -1575,7 +1634,8 @@ def screen_indications_for_drug(
     def _merge_clinical(name: str, *, trial_count: int = 0,
                         max_trial_phase: int = 0, lit_count: int = 0,
                         outcome_signal: float = 0.0, failed_efficacy: int = 0,
-                        failed_safety: int = 0):
+                        failed_safety: int = 0, serious_ae: dict = None,
+                        endpoint_verdict: str = None, endpoint_note: str = ""):
         # Safety trials can list a drug's symptom/AE as a studied "condition"
         # (e.g. a trial of nausea prophylaxis); the generic denylist keeps those
         # bare symptom terms out of the candidate indications.
@@ -1606,6 +1666,14 @@ def screen_indications_for_drug(
             e["trial_outcome_signal"] = outcome_signal
             e["failed_efficacy"] = failed_efficacy
             e["failed_safety"]   = failed_safety
+            if serious_ae is not None:
+                e["serious_ae"] = serious_ae      # denominatored serious-AE for the Safety column
+            # Display-only copy of the parsed primary-endpoint verdict for the Efficacy
+            # column. Kept under a SEPARATE key so it never feeds _evidence_tier / the rank
+            # (that path still reads c["endpoint_verdict"], which the merge does not set).
+            if endpoint_verdict:
+                e["ct_efficacy_verdict"] = endpoint_verdict
+                e["ct_efficacy_note"] = endpoint_note or ""
         if lit_count:
             e["sources"].add("literature")
             e["lit_count"] = max(e["lit_count"], lit_count)
@@ -1620,7 +1688,10 @@ def screen_indications_for_drug(
             _merge_clinical(v["name"], trial_count=v["count"], max_trial_phase=v["max_phase"],
                             outcome_signal=v.get("outcome_signal", 0.0),
                             failed_efficacy=v.get("failed_efficacy", 0),
-                            failed_safety=v.get("failed_safety", 0))
+                            failed_safety=v.get("failed_safety", 0),
+                            serious_ae=v.get("serious_ae"),
+                            endpoint_verdict=v.get("endpoint_verdict"),
+                            endpoint_note=v.get("endpoint_note", ""))
     except Exception as e:
         logger.debug(f"trial merge failed: {e}")
     try:
@@ -1841,12 +1912,26 @@ def screen_indications_for_drug(
         disease_weights = {t["gene_symbol"].upper():
                            (t.get("quality_score") or t.get("genetic_score") or t.get("score", 0.0))
                            for t in dinfo.get("targets", []) if t.get("gene_symbol")}
+        # FIX 1 — pass the SAME therapeutic_areas + studied_for_disease the canonical/dossier
+        # path now passes, so the reverse LIST card and the dossier score the pair identically
+        # (single source of truth; otherwise the canonical edit would open a new list-vs-dossier
+        # drift on the LoF/congenital gate and the FAERS confounding guard).
+        _studied_here = False
+        try:
+            from services.repurposing_scorer import approved_chembls_for_disease
+            if chembl_id:
+                _studied_here = chembl_id in approved_chembls_for_disease(
+                    [chembl_id], [], c["disease"], min_phase=1)
+        except Exception:
+            _studied_here = False
         sr = score_compound_for_disease(
             drug_compound, c["disease"], disease_genes, disease_pathways, ppi_adj, screen_genes,
             disease_gene_weights=disease_weights or None, drug_actions=drug_action_map or None,
             trial_count=c.get("trial_count", 0), max_trial_phase=c.get("max_trial_phase", 0),
             trial_outcome=c.get("trial_outcome_signal", 0.0),
             indication_phase=_ind_phase_for(c["disease"]),
+            therapeutic_areas=c.get("therapeutic_areas") or [],
+            studied_for_disease=_studied_here,
         )
         sc = sr["scores"]
 
@@ -1982,6 +2067,17 @@ def screen_indications_for_drug(
             "actionable":           bool(actionable and appr["appropriate"] and not pkg_contra),
             "appropriateness":      appr,   # B/C: would the drug worsen or cause this disease?
             "evidence_tier":        _evidence_tier(c),   # real-world strength: supported / promising / contradicted
+            # Human-readable Safety / Efficacy columns sourced from ClinicalTrials.gov
+            # (serious-AE rate with denominator; primary-endpoint verdict). DISPLAY ONLY —
+            # not folded into composite_score or any rank key (no double counting). A pair
+            # with no trials reads "No trial data" for BOTH, never a safe/effective default.
+            "safety_ct":            _ct_safety_col(c.get("serious_ae"),
+                                                   n_trials=trial_count,
+                                                   phase=c.get("max_trial_phase", 0)),
+            "efficacy_ct":          _ct_efficacy_col(c.get("ct_efficacy_verdict") or c.get("endpoint_verdict"),
+                                                     n_trials=trial_count,
+                                                     phase=c.get("max_trial_phase", 0),
+                                                     note=c.get("ct_efficacy_note") or c.get("endpoint_note", "")),
             "scores":               sc,
             "clinical_signal":      round(clinical_signal, 4),
             "trial_count":          trial_count,
@@ -2064,11 +2160,20 @@ def screen_indications_for_drug(
     # Real-world evidence tier nudges rank order: a trial-supported candidate outranks an
     # equal-scoring mechanism-only one, and a contradicted one sinks — without overwriting
     # the mechanistic composite (which stays the displayed score).
-    _TIER_RANK = {"trial-supported": 1.15, "tested-unverified": 1.05, "promising": 1.03,
-                  "literature": 0.97, "preclinical": 0.95, "mechanistic": 0.95,
-                  # coverage-unverified reads at the SAME factor as mechanistic/preclinical
-                  # (design LOCKED): a sparse novel candidate is relabelled, never sunk.
-                  "unverified": 0.95,
+    # FIX 2 — pair-specific + DIRECTIONAL evidence factor. ABSENCE of clinical/trial art is
+    # NEUTRAL (exactly 1.0), never a penalty — a genuinely novel mechanism-strong indication must
+    # not be buried behind an equal-mechanism already-tried one purely for prior art. Positive
+    # human evidence keeps a >1.0 edge but only as a MILD TIE-BREAKER (<=5%), not a dominating
+    # multiplier that reorders mechanism. A FAILED / contradicted trial FOR THIS indication stays
+    # negative (<1.0). lit_count (PubMed co-mention) no longer carries any ranking weight: the
+    # "literature" tier now reads 1.0 (its co-mention signal remains a displayed field only, and
+    # the reverse `evidence_score` axis that also carried it was already display-only — not in _rank).
+    _TIER_RANK = {"trial-supported": 1.05, "tested-unverified": 1.02, "promising": 1.01,
+                  # absent / mechanism-only / preclinical / literature / coverage-unverified:
+                  # NEUTRAL — novelty is relabelled to the hypothesis lane, never rank-demoted.
+                  "literature": 1.00, "preclinical": 1.00, "mechanistic": 1.00,
+                  "unverified": 1.00,
+                  # negative-directional evidence FOR THIS indication stays below 1.0:
                   "biomarker-only": 0.80, "failed-endpoint": 0.60, "contradicted": 0.55}
     def _rank(x):
         dv = x.get("disease_value") or {}

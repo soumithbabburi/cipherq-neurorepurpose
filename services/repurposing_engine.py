@@ -1426,12 +1426,27 @@ def score_compound_for_disease(
     else:
         act_tier = "Insufficiently supported"
 
+    # FIX 2 — ABSENCE of clinical support is NEUTRAL for ranking, not a penalty. A novel
+    # mechanism-strong candidate that only LACKS clinical art (feasible, not harmful, not an
+    # AE it causes) stays in the "Mechanistic hypothesis" lane and is FLAGGED there, but is
+    # NOT rank-demoted below weak candidates — mirroring the reverse-screen directional rule
+    # (absent evidence = 1.0). Only genuine deficiencies sink: contraindicated/harmful hardest,
+    # delivery-limited and insufficient-mechanism demoted. A fully-aligned lead keeps a MILD
+    # tie-breaker edge (matches the reverse trial-supported factor), not a dominating boost.
+    if aligned:
+        rank_factor = 1.02
+    elif act_tier == "Mechanistic hypothesis":
+        rank_factor = 1.0
+    elif act_tier == "Contraindicated by evidence":
+        rank_factor = 0.3
+    else:  # Delivery-limited / Insufficiently supported
+        rank_factor = 0.6
     actionability = {
         "aligned": bool(aligned), "tier": act_tier, "reasons": reasons,
         "mechanistic_plausibility": mech_plausibility,
         "clinical_present": bool(clinical_present), "feasible": feasible,
-        # ranking key — aligned leads sort above hypotheses of equal raw score.
-        "rank_score": round(final_score * (1.0 if aligned else 0.6), 4),
+        # ranking key — see FIX 2 above: novelty at parity, positive evidence a mild edge.
+        "rank_score": round(final_score * rank_factor, 4),
     }
 
     # ── Coverage-aware Verification stage (label / lane only) ─────────────────────
@@ -1516,7 +1531,9 @@ def run_repurposing_screen(
     db_compounds: pre-fetched compounds from local DB (may be empty).
     Returns dict with ranked candidates + disease context.
     """
-    cache_key = f"screen:{disease_name.lower().strip()}"
+    # v2: FIX 1 argument-parity (per-candidate indication_phase now passed to the scorer, so the
+    # forward list matches the dossier) — version bump invalidates pre-fix cached screen results.
+    cache_key = f"screen:v2:{disease_name.lower().strip()}"
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -1697,8 +1714,31 @@ def run_repurposing_screen(
             # (W4): surfaces a novel candidate for a disease outside HetioNet without letting
             # the analogy signal alone reach Strong/actionable — capped at 0.35 (< the 0.40 bar).
             _prior = round(0.20 + 0.15 * float(comp["kg_transfer"]), 4)
+        # FIX 1 — argument + input PARITY with the canonical/dossier path so the forward list and
+        # the dossier yield the SAME composite for the same pair. The dossier (canonical_pair_score)
+        # (a) resolves the drug's known_indications from ChEMBL and (b) derives BOTH the
+        # per-indication phase AND the existing-indication text from them. This screen previously
+        # passed neither, so the own-therapy gate fell back to text-match and the indication/
+        # clinical/regulatory dimensions read the candidate's heterogeneous source `indications`
+        # string instead — the real source of the list-vs-dossier score drift. Resolve the SAME
+        # known_indications here (one lazy call; fail-soft) and feed a scoring-only compound copy
+        # so the DISPLAY candidate (and forward_guardrails' view of it) is left untouched.
+        _iphase = None
+        comp_for_score = comp
+        try:
+            from services.reverse_repurposing import resolve_drug as _rd, indication_phase_for as _ipf
+            if cid:
+                _ki = _rd(cid).get("known_indications", []) or []
+                _iphase = _ipf(disease_name, _ki)
+                # canonical auto-fills indications from known_indications when the caller passes
+                # none (the /api/compound + dossier flow) — match that SINGLE SOURCE OF TRUTH.
+                _ind_str = "; ".join(k.get("name", "") for k in _ki if k.get("name"))
+                if _ind_str:
+                    comp_for_score = {**comp, "indications": _ind_str}
+        except Exception as e:
+            logger.debug(f"forward indication_phase skipped for {cid}: {e}")
         sr = score_compound_for_disease(
-            comp, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
+            comp_for_score, disease_name, disease_genes, disease_pathways, ppi_adj, drug_genes_list,
             drug_actions=actions_map.get(cid), mechanistic_prior=_prior,
             # only use weighted scoring when there is real association strength; an
             # all-zero/empty weight map falls back to flat overlap (never zeroes targets)
@@ -1706,6 +1746,7 @@ def run_repurposing_screen(
                                   if any(v > 0 for v in disease_weights.values()) else None),
             therapeutic_areas=disease_areas,
             studied_for_disease=(cid in studied_set),
+            indication_phase=_iphase,
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}
         # Same quality filters as every other surface (plausibility + lead-viability;
@@ -1718,14 +1759,15 @@ def run_repurposing_screen(
             logger.debug(f"discover overlay skipped: {e}")
         scored.append(sc)
 
-    # Rank by ACTIONABILITY: aligned (mechanistic + clinical + feasibility) leads first,
-    # then by the actionability-weighted score — so a labelled hypothesis or a delivery-
-    # limited pair sinks below a genuinely actionable one of equal raw mechanism. Nothing
-    # is dropped; the demoted candidates stay visible with their reason.
-    scored.sort(key=lambda x: (
-        1 if x.get("actionability", {}).get("aligned") else 0,
-        x.get("actionability", {}).get("rank_score", x.get("composite_score", 0)),
-    ), reverse=True)
+    # Rank by the actionability-weighted rank_score (FIX 2). The prior hard two-level key put
+    # EVERY aligned candidate above EVERY hypothesis, which sank a genuinely novel
+    # mechanism-strong indication (no clinical art) below weak aligned ones purely for prior art.
+    # rank_score now carries the ordering directly: a fully-aligned lead gets a MILD edge (x1.02),
+    # a lacking-only-clinical hypothesis is NEUTRAL (x1.0, flagged not sunk), and genuine
+    # deficiencies (contraindicated / delivery-limited / insufficient mechanism) are demoted.
+    # Nothing is dropped; demoted candidates stay visible with their reason and lane flag.
+    scored.sort(key=lambda x: x.get("actionability", {}).get(
+        "rank_score", x.get("composite_score", 0)), reverse=True)
 
     _dv = None
     try:
