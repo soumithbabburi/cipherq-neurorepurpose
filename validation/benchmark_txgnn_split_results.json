@@ -2,7 +2,21 @@
   "protocol": "disease zero-shot (TxGNN-style), seed 42, 15% held-out diseases; test-disease treatment edges removed from GNN graph + all supervision. Same protocol/metrics as TxGNN, NOT their exact split files.",
   "input_embeddings": "retrained leakage-free",
   "n_test_diseases_evaluated": 204,
-  "elapsed_s": 4347.3,
+  "elapsed_s": 5289.5,
+  "rank_tie_handling": "fair (average/fractional) \u2014 DEFECT 1 fix",
+  "disease_knn_leakage_free": true,
+  "auroc_gap_bootstrap": {
+    "metric": "AUROC(ind-vs-contra) gap  disease_knn - clf",
+    "point_estimate": 0.3264,
+    "ci95": [
+      0.2353,
+      0.4086
+    ],
+    "excludes_zero": true,
+    "n_diseases_paired": 96,
+    "n_boot": 1000,
+    "leakage_free": true
+  },
   "rankers": {
     "distmult": {
       "recall@10": 0.0102,
@@ -12,77 +26,85 @@
       "median_rank": 1588,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.5222,
-      "auprc_ind_vs_neg": 0.1655
+      "auprc_ind_vs_neg": 0.1655,
+      "leaky": false
     },
     "clf": {
       "recall@10": 0.0733,
       "recall@20": 0.0896,
       "recall@50": 0.1282,
       "recall@100": 0.1621,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2212,
-      "auprc_ind_vs_neg": 0.2701
+      "auprc_ind_vs_neg": 0.2701,
+      "leaky": false
     },
     "disease_knn": {
-      "recall@10": 0.3867,
-      "recall@20": 0.4647,
-      "recall@50": 0.6608,
-      "recall@100": 0.8887,
-      "median_rank": 32,
+      "recall@10": 0.3813,
+      "recall@20": 0.4613,
+      "recall@50": 0.5414,
+      "recall@100": 0.5814,
+      "median_rank": 36,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.5477,
-      "auprc_ind_vs_neg": 0.7177
+      "auprc_ind_vs_neg": 0.7177,
+      "leaky": false
     },
     "fusion_3:1": {
       "recall@10": 0.0604,
       "recall@20": 0.0868,
       "recall@50": 0.1187,
       "recall@100": 0.1581,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2174,
-      "auprc_ind_vs_neg": 0.2653
+      "auprc_ind_vs_neg": 0.2653,
+      "leaky": false
     },
     "fusion_2:1": {
       "recall@10": 0.0543,
       "recall@20": 0.0814,
       "recall@50": 0.114,
       "recall@100": 0.1506,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2098,
-      "auprc_ind_vs_neg": 0.2621
+      "auprc_ind_vs_neg": 0.2621,
+      "leaky": false
     },
     "fusion_1:1": {
       "recall@10": 0.0271,
       "recall@20": 0.0461,
       "recall@50": 0.097,
       "recall@100": 0.1404,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2099,
-      "auprc_ind_vs_neg": 0.2448
+      "auprc_ind_vs_neg": 0.2448,
+      "leaky": false
     },
     "fusion_4:1": {
       "recall@10": 0.0631,
       "recall@20": 0.0882,
       "recall@50": 0.1221,
       "recall@100": 0.1581,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2174,
-      "auprc_ind_vs_neg": 0.2688
+      "auprc_ind_vs_neg": 0.2688,
+      "leaky": false
     },
     "fusion_1:2": {
       "recall@10": 0.0102,
       "recall@20": 0.0156,
       "recall@50": 0.0516,
       "recall@100": 0.1167,
-      "median_rank": 399,
+      "median_rank": 4167,
       "n_ind_pairs": 1474,
       "auroc_ind_vs_contra": 0.2103,
-      "auprc_ind_vs_neg": 0.2273
+      "auprc_ind_vs_neg": 0.2273,
+      "leaky": false
     }
   }
 }

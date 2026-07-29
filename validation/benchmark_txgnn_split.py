@@ -211,11 +211,25 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
         for z in r.get("contraindication", []):
             dcon.setdefault(int(z), []).append(di)
 
+    # Disease-similarity TRANSFER ranker (zero-shot): for a held-out disease, borrow the
+    # KNOWN indications of its most biologically-similar TRAIN diseases (cosine on node
+    # embeddings), weighted by similarity. This addresses the relatedness-not-direction
+    # inversion of the embedding classifier — instead of asking "does this drug look
+    # related to the disease" (which ranks contraindications high), it asks "does this drug
+    # treat diseases like this one". No leakage: only TRAIN diseases' treatment edges feed it.
+    _KNN = 25
+    _train_dis = np.array([d for d in dind if d not in test_dis], np.int64)
+    _E_td = E[_train_dis]
+    _E_td = _E_td / (np.linalg.norm(_E_td, axis=1, keepdims=True) + 1e-9)
+    _train_ind_pos = {int(d): [drug_pos_of[x] for x in dind[int(d)] if x in drug_pos_of]
+                      for d in _train_dis}
+
     # sweep fusion blends (clf:gnn RRF weights) in ONE run to find the best
     FUS = {"fusion_3:1": [3.0, 1.0], "fusion_2:1": [2.0, 1.0], "fusion_1:1": [1.0, 1.0],
            "fusion_4:1": [4.0, 1.0], "fusion_1:2": [1.0, 2.0]}
-    RANKERS = ["distmult", "clf"] + list(FUS)
+    RANKERS = ["distmult", "clf", "disease_knn"] + list(FUS)
     ranks = {n: [] for n in RANKERS}
+    ranks_strict = {n: [] for n in RANKERS}  # DEFECT-1 proof: old strict-tie rank, for no-op check
     roc = {n: [] for n in RANKERS}   # (pos_scores, contra_scores)
     prc = {n: [] for n in RANKERS}
     n_eval = 0
@@ -229,10 +243,19 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
         pool = np.argsort(-dm_all)[:_POOL]
         clf_p = clf_scores(z, drug_ids[pool])
         gnn_p = (Hf[drug_ids[pool]] * r_ind * Hf[z]).sum(-1)
+        # disease-similarity transfer score over ALL drugs
+        _zc = E[z] / (np.linalg.norm(E[z]) + 1e-9)
+        _sims = _E_td @ _zc
+        _tk = np.argsort(-_sims)[:_KNN]
+        knn = np.zeros(len(drug_ids), dtype=float)
+        for _ti in _tk:
+            _s = max(0.0, float(_sims[_ti]))
+            for _dp in _train_ind_pos[int(_train_dis[_ti])]:
+                knn[_dp] += _s
         # full-length score vectors (out-of-pool pushed to bottom for clf/fusion)
         def full(vec_pool):
             v = np.full(len(drug_ids), -np.inf); v[pool] = vec_pool; return v
-        S = {"distmult": dm_all, "clf": full(clf_p)}
+        S = {"distmult": dm_all, "clf": full(clf_p), "disease_knn": knn}
         for _fn, _w in FUS.items():
             S[_fn] = full(_rrf([clf_p, gnn_p], _w))
         other = set(inds)
@@ -242,7 +265,14 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
                 keep[j] = False
             for j in inds:
                 keep[j] = True
-                r = int(np.sum(sc[keep] > sc[j]) + 1); ranks[name].append(r)
+                # DEFECT 1 FIX: fair (average/fractional) rank. Strict `>` gives every
+                # zero-tied positive the BEST rank in its tie block, inflating recall for
+                # the sparse disease_knn ranker (~21% of true positives score exactly 0).
+                # Fair rank places a tied positive at the MIDDLE of its tie block.
+                n_gt = int(np.sum(sc[keep] > sc[j]))
+                n_eq = int(np.sum(sc[keep] == sc[j]))          # includes j itself
+                r = int(n_gt + (n_eq + 1) / 2); ranks[name].append(r)
+                ranks_strict[name].append(int(n_gt + 1))       # old behaviour, for no-op proof
                 keep[j] = False
             # AUROC/AUPRC using the same scorer
             ps = [sc[j] for j in inds]
@@ -252,27 +282,76 @@ def main(seed=42, holdout=0.15, dim=64, dm_epochs=20, gnn_epochs=60, neg_per_pos
                 roc[name].append(_auroc(ps, cs))
             prc[name].append(_auprc(ps, cs + ns))
 
+    # DEFECT 2(b) HONESTY GUARD: disease_knn's similarity embedding E is only leakage-free
+    # when retrain_dm=True. Under the default retrain_dm=False it reuses the SHIPPED DistMult
+    # (trained on the FULL graph incl. held-out diseases' own treatment edges), which the audit
+    # measured at 6.1x leakage enrichment. Tag it so its numbers are never read as zero-shot.
+    def _is_leaky(name):
+        return (name == "disease_knn" and not retrain_dm)
+
+    def _disp(name):
+        return f"{name} (LEAKY_UPPER_BOUND)" if _is_leaky(name) else name
+
     def summ(name):
         r = np.array(ranks[name], float)
         return {**{f"recall@{k}": round(float(np.mean(r <= k)), 4) for k in KS},
                 "median_rank": int(np.median(r)), "n_ind_pairs": int(len(r)),
                 "auroc_ind_vs_contra": round(float(np.nanmean(roc[name])), 4),
-                "auprc_ind_vs_neg": round(float(np.nanmean(prc[name])), 4)}
+                "auprc_ind_vs_neg": round(float(np.nanmean(prc[name])), 4),
+                "leaky": bool(_is_leaky(name))}
+
+    # DEFECT-1 no-op proof: recall@k under FAIR vs STRICT tie handling, for the continuous
+    # rankers (distmult, clf). These have no zero-tie block inside the top-k, so the fair-rank
+    # fix must leave their recall unchanged; disease_knn is where it bites.
+    print("\n[tie-fix no-op check] recall@k  STRICT -> FAIR (should be identical for "
+          "continuous rankers, differ for disease_knn):", flush=True)
+    for name in ("distmult", "clf", "disease_knn"):
+        rf = np.array(ranks[name], float); rs = np.array(ranks_strict[name], float)
+        strict = {k: round(float(np.mean(rs <= k)), 4) for k in KS}
+        fair = {k: round(float(np.mean(rf <= k)), 4) for k in KS}
+        changed = "  <-- changed" if strict != fair else "  (no-op)"
+        print(f"  {name:12} strict {strict}  ->  fair {fair}{changed}", flush=True)
+
+    # DELIVERABLE 4: bootstrap CI on the AUROC(ind-vs-contra) GAP disease_knn - clf.
+    # roc[name] holds one AUROC per test disease that has >=1 contraindication, appended in
+    # lockstep across rankers, so the arrays are PAIRED by disease. Resample diseases 1000x.
+    dk = np.array(roc["disease_knn"], float); cf = np.array(roc["clf"], float)
+    m = ~(np.isnan(dk) | np.isnan(cf)); dk, cf = dk[m], cf[m]
+    boot = None
+    if len(dk) > 1:
+        rs_ = np.random.RandomState(seed); gaps = np.empty(1000)
+        for _b in range(1000):
+            idx = rs_.randint(0, len(dk), len(dk))
+            gaps[_b] = float(np.mean(dk[idx]) - np.mean(cf[idx]))
+        lo, hi = float(np.percentile(gaps, 2.5)), float(np.percentile(gaps, 97.5))
+        boot = {"metric": "AUROC(ind-vs-contra) gap  disease_knn - clf",
+                "point_estimate": round(float(np.mean(dk) - np.mean(cf)), 4),
+                "ci95": [round(lo, 4), round(hi, 4)],
+                "excludes_zero": bool(lo > 0 or hi < 0),
+                "n_diseases_paired": int(len(dk)), "n_boot": 1000,
+                "leakage_free": bool(retrain_dm)}
     out = {"protocol": "disease zero-shot (TxGNN-style), seed 42, 15% held-out diseases; "
                        "test-disease treatment edges removed from GNN graph + all supervision. "
                        "Same protocol/metrics as TxGNN, NOT their exact split files.",
            "input_embeddings": ("shipped DistMult reused (mild input leakage -> slight UPPER BOUND)"
                                 if not retrain_dm else "retrained leakage-free"),
            "n_test_diseases_evaluated": n_eval, "elapsed_s": round(time.time() - t0, 1),
+           "rank_tie_handling": "fair (average/fractional) — DEFECT 1 fix",
+           "disease_knn_leakage_free": bool(retrain_dm),
+           "auroc_gap_bootstrap": boot,
            "rankers": {n: summ(n) for n in RANKERS}}
     json.dump(out, open(ROOT / "validation" / "benchmark_txgnn_split_results.json", "w"), indent=2)
 
     print(f"\n=== TxGNN-protocol disease zero-shot ({n_eval} held-out diseases) ===", flush=True)
-    print(f"{'ranker':12} " + " ".join(f"R@{k:<4}" for k in KS) + "  medRank  AUROC(i/c)  AUPRC", flush=True)
+    print(f"{'ranker':30} " + " ".join(f"R@{k:<4}" for k in KS) + "  medRank  AUROC(i/c)  AUPRC", flush=True)
     for n in RANKERS:
         m = out["rankers"][n]
-        print(f"{n:12} " + " ".join(f"{m[f'recall@{k}']:<5}" for k in KS) +
+        print(f"{_disp(n):30} " + " ".join(f"{m[f'recall@{k}']:<5}" for k in KS) +
               f"  {m['median_rank']:<7} {m['auroc_ind_vs_contra']:<10} {m['auprc_ind_vs_neg']}", flush=True)
+    if boot is not None:
+        print(f"\n[bootstrap] {boot['metric']}: {boot['point_estimate']} "
+              f"CI95 {boot['ci95']}  excludes_zero={boot['excludes_zero']}  "
+              f"(leakage_free={boot['leakage_free']}, n={boot['n_diseases_paired']})", flush=True)
     print(f"\nwrote validation/benchmark_txgnn_split_results.json ({time.time()-t0:.0f}s)", flush=True)
     return 0
 
