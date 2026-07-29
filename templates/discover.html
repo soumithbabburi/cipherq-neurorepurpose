@@ -102,6 +102,42 @@ function buildWhy(c) {
   return parts.slice(0, 2).join(' · ') || 'Computational repurposing candidate';
 }
 
+// ── SINGLE headline verdict: is this drug a repurposing lead for the disease, in one
+// word + the single most important reason. Same vocabulary and score bands as the
+// reverse /repurpose screen so the SAME drug-disease pair reads the same on both. ──
+function verdictForward(c) {
+  const sc = c.score || 0;
+  if (c.approved_here)
+    return { word: 'Approved here', col: '#7a1d12',
+             why: 'Already approved for this indication; reference only, not a repurposing opportunity.' };
+  const ms = c.market_status;
+  if (ms && ms.disqualifier === 'hard')
+    return { word: 'Not viable', col: '#7a1d12',
+             why: (ms.reason || ms.label || 'Withdrawn or discontinued asset, not a viable lead.') };
+  // Prefer the engine's calibration tier (same field the reverse screen headlines from,
+  // so the same pair never reads a different tier word on the two screens); fall back to
+  // the raw score bands (identical thresholds) when no calibration is attached.
+  const TW = { Strong: 'Strong candidate', Promising: 'Promising candidate',
+               Moderate: 'Moderate candidate', Weak: 'Weak candidate' };
+  const TC = { Strong: '#2563eb', Promising: '#06b6d4', Moderate: '#a86b2d', Weak: '#98a1b6' };
+  const cal = c.calibration || {};
+  let word, col;
+  if (cal.tier && TW[cal.tier]) { word = TW[cal.tier]; col = TC[cal.tier]; }
+  else if (sc >= 0.65) { word = 'Strong candidate';   col = '#2563eb'; }
+  else if (sc >= 0.40) { word = 'Promising candidate'; col = '#06b6d4'; }
+  else if (sc >= 0.20) { word = 'Moderate candidate';  col = '#a86b2d'; }
+  else { word = 'Weak candidate'; col = '#98a1b6'; }
+  return { word, col, why: buildWhy(c) };
+}
+
+// The headline strip: recommendation word (colour-coded) + one-line plain-language why.
+function headlineHtml(vd) {
+  return `<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+      <span style="font-weight:800;font-size:0.92rem;letter-spacing:-0.01em;color:${vd.col}">${vd.word}</span>
+      <span style="font-size:0.74rem;color:var(--text-muted);line-height:1.45;flex:1;min-width:170px">${vd.why || ''}</span>
+    </div>`;
+}
+
 // ── Score factor bars - uniform accent→gold gradient (one accent discipline) ──
 function scoreBars(c) {
   const sc = c.score || 0, bd = c.score_breakdown || {}, sc5 = c.scores || {};
@@ -202,6 +238,65 @@ function provFooter(c) {
     <a href="/validation" onclick="event.stopPropagation()" style="color:var(--accent);text-decoration:none;font-weight:600">Validated</a></div>`;
 }
 
+// Safety / Efficacy columns sourced from ClinicalTrials.gov (serious-AE rate with a
+// real denominator; primary-endpoint verdict). Display only, never part of the score.
+// A candidate with no fetched trial data reads "No trial data" (muted, distinct), never
+// a value that implies safe or effective.
+function ctColVal(v, kind) {
+  const st = (v && v.status) || 'no_data';
+  let fg = '#98a1b6', ital = false;
+  if (st === 'no_data') { fg = '#98a1b6'; ital = true; }
+  else if (st === 'not_reported' || st === 'no_denominator') { fg = '#8a94a8'; }
+  else if (kind === 'efficacy') {
+    const vd = v.verdict;
+    fg = (vd === 'met_primary') ? '#0e7454'
+       : (vd === 'failed_primary' || vd === 'terminated_efficacy' || vd === 'terminated_safety') ? '#7a1d12'
+       : (vd === 'biomarker_only') ? '#8a5a1a' : '#31415f';
+  } else { fg = '#31415f'; }   // a serious-AE rate is a fact, shown neutral (not green)
+  const label = ((v && v.label) || 'No trial data').replace(/</g, '&lt;');
+  const tip = ((v && v.tooltip) || '').replace(/"/g, '');
+  return `<div style="flex:1;min-width:0">
+    <div style="font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#98a1b6;margin-bottom:2px">${kind === 'safety' ? 'Safety · trials' : 'Efficacy · trials'}</div>
+    <div title="${tip}" style="font-size:0.74rem;font-weight:600;color:${fg};line-height:1.35${ital ? ';font-style:italic' : ''}">${label}</div>
+  </div>`;
+}
+// Safety column LEADS with established human safety (an approved drug cleared safety
+// trials - a derisking positive for repurposing, not a risk), derived from fields
+// already on the candidate. The trial serious-AE rate is DEMOTED to a neutral secondary
+// context line (kept verbatim, with its trial-specific tooltip), never green.
+function safetyApprovalLine(c) {
+  const mp = +(c.max_phase || 0);
+  if (mp >= 4 || c.approved_here) return { label: 'Approved drug, established human safety profile', muted: false };
+  if (mp >= 1) return { label: 'Phase ' + Math.round(mp) + ', human safety data available', muted: false };
+  return { label: 'No approved human safety data', muted: true };
+}
+function severityQualifier(c) {
+  const sev = (c.clinical_constraints || {}).disease_severity;
+  if (sev === 'high') return 'acceptable bar for a life threatening indication';
+  if (sev === 'low')  return 'high safety bar for a benign indication';
+  return '';
+}
+function safetyCell(c) {
+  const ap = safetyApprovalLine(c);
+  const qual = severityQualifier(c);
+  const v = c.safety_ct;
+  const secLabel = (v && v.label) ? String(v.label).replace(/</g, '&lt;') : '';
+  const secTip = ((v && v.tooltip) || '').replace(/"/g, '');
+  const apCol = ap.muted ? '#8a94a8' : '#31415f';
+  const sec = secLabel
+    ? `<div title="${secTip}" style="font-size:0.66rem;color:#8a94a8;line-height:1.3;margin-top:3px">${secLabel}</div>` : '';
+  const qh = qual
+    ? `<div style="font-size:0.62rem;color:#98a1b6;line-height:1.3;margin-top:1px;font-style:italic">${qual}</div>` : '';
+  return `<div style="flex:1;min-width:0">
+    <div style="font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#98a1b6;margin-bottom:2px">Safety · established</div>
+    <div style="font-size:0.74rem;font-weight:600;color:${apCol};line-height:1.35">${ap.label}</div>
+    ${sec}${qh}
+  </div>`;
+}
+function ctColumns(c) {
+  return `<div style="display:flex;gap:14px;background:var(--bg-sunken,#f4f6f9);border:1px solid rgba(0,0,0,0.06);border-radius:8px;padding:8px 12px">${safetyCell(c)}${ctColVal(c.efficacy_ct, 'efficacy')}</div>`;
+}
+
 // ── Standard dossier card ─────────────────────────────────────────────────────
 function buildCard(c, disease) {
   const sc = c.score || 0;
@@ -217,10 +312,12 @@ function buildCard(c, disease) {
       </div>
       <div style="text-align:center;flex-shrink:0">
         ${window.scoreSeal(sc, 52)}
-        <div class="seal-lbl" style="margin-top:3px">Confidence</div>
+        <div class="seal-lbl" style="margin-top:3px">Evidence</div>
       </div>
     </div>
-    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${headlineHtml(verdictForward(c))}
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}
+    ${ctColumns(c)}
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
@@ -231,16 +328,63 @@ function buildCard(c, disease) {
   </div>`;
 }
 
-// ── Lead (top-3) card - same dossier, rank seal banner ────────────────────────
-function buildTop3Card(c, disease, rank) {
+// ── Lead differentiation: rank basis, "why this is a lead", and score-gap ──────
+// All from fields ALREADY computed; each piece degrades to nothing when absent.
+// The rank basis reflects the REAL actionability + calibration tier, not position.
+function leadRankBasis(c, rankWord) {
+  const parts = [rankWord + ' candidate'];
+  const at = (c.actionability || {}).tier;
+  const ct = (c.calibration || {}).tier;
+  if (at) parts.push(at);
+  if (ct) parts.push(ct);
+  return parts.join(' · ');
+}
+// The single strongest true contributor: novel mechanism > direction-aware treats
+// edge > highest of target/pathway/ppi. No field -> empty (omitted, never invented).
+function leadReason(c) {
+  const mc = c.mechanism_crowding || {};
+  if (mc.novel && (mc.novel_targets || []).length && !(mc.crowded_targets || []).length) {
+    return 'Novel mechanism, no approved drug on ' + mc.novel_targets.slice(0, 3).join(', ');
+  }
+  const de = c.directional_evidence || {};
+  if (de.covered && de.signal > 0 && de.direct_treat) {
+    return 'Direction aware support: a treats relation backs this pair';
+  }
+  const s = c.scores || {}, b = c.score_breakdown || {};
+  const t = (+s.target || 0), p = (+s.pathway || 0), n = (+s.ppi || 0) || (+b.network_score || 0);
+  const best = Math.max(t, p, n);
+  if (best <= 0.05) return '';
+  if (best === t) {
+    const ng = +(c.shared_disease_genes || 0) || (b.network_genes || []).length || 0;
+    return ng ? ('Leads on target overlap across ' + ng + ' disease gene' + (ng === 1 ? '' : 's'))
+              : 'Leads on target overlap with the disease gene set';
+  }
+  if (best === p) return 'Leads on shared disease pathways';
+  return 'Leads on PPI network proximity to disease proteins';
+}
+// Honest separation marker: delta to the next candidate in the already-sorted list.
+// A small delta reads "closely matched field" so a non-separation is not oversold.
+function leadGap(list, idx) {
+  if (!Array.isArray(list) || idx + 1 >= list.length) return '';
+  const d = (+(list[idx].score || 0)) - (+(list[idx + 1].score || 0));
+  if (d < 0.03) return 'closely matched field';
+  return '+' + d.toFixed(2) + ' over the next candidate';
+}
+
+// ── Lead (top-3) card - same dossier, rank basis banner + lead rationale ───────
+function buildTop3Card(c, disease, rank, list) {
   const sc = c.score || 0;
   const ph = Math.min(+(c.max_phase || 0), 4);
   const dEsc = (disease || '').replace(/'/g, "\\'");
   const rankWord = {1:'Lead', 2:'Second', 3:'Third'}[rank] || ('#' + rank);
+  const reason = leadReason(c), gap = leadGap(list, rank - 1);
+  const bits = []; if (reason) bits.push(reason); if (gap) bits.push(gap);
+  const leadNote = bits.length
+    ? `<div style="font-size:0.68rem;color:#47526b;line-height:1.4;background:var(--accent-soft,#eef4ff);border:1px solid rgba(37,99,235,0.14);border-radius:6px;padding:5px 9px">${bits.join(' · ')}</div>` : '';
   return `<div class="dossier" style="padding:18px 20px 18px 22px;display:flex;flex-direction:column;gap:13px;cursor:pointer"
       onclick="openCompound('${c.chembl_id || ''}','${dEsc}')" data-chembl="${c.chembl_id || ''}" data-phase="${ph}">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent)">${rankWord} candidate</span>
+      <span style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent)">${leadRankBasis(c, rankWord)}</span>
       ${phasePill(ph)}
     </div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -248,9 +392,15 @@ function buildTop3Card(c, disease, rank) {
         <div class="cc-name" style="font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name || 'Unknown'}</div>
         <div class="cc-id">${c.chembl_id || ''}</div>
       </div>
-      ${window.scoreSeal(sc, 60)}
+      <div style="text-align:center;flex-shrink:0">
+        ${window.scoreSeal(sc, 60)}
+        <div class="seal-lbl" style="margin-top:3px">Evidence</div>
+      </div>
     </div>
-    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}<div class="why-line"><span class="mk">-</span><span>${buildWhy(c)}</span></div>
+    ${headlineHtml(verdictForward(c))}
+    ${leadNote}
+    ${approvedBadge(c)}${marketStatusBadge(c)}${mechanismBadge(c)}${novelBadge(c)}${verificationBadge(c)}
+    ${ctColumns(c)}
     <div class="cc-bars">${scoreBars(c)}</div>${provFooter(c)}
     <div style="display:flex;gap:6px;margin-top:2px">
       <button onclick="event.stopPropagation();openCompound('${c.chembl_id || ''}','${dEsc}')" class="btn btn-primary" style="flex:1;padding:0.45rem;font-size:0.74rem;justify-content:center">Full Analysis →</button>
@@ -286,7 +436,7 @@ function renderTop3(compounds, disease) {
   const novel = mech.length ? mech : eligible;
   if (!novel.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
-  grid.innerHTML = novel.slice(0, 3).map((c, i) => buildTop3Card(c, disease, i + 1)).join('');
+  grid.innerHTML = novel.slice(0, 3).map((c, i) => buildTop3Card(c, disease, i + 1, novel)).join('');
   filterCards();   // honour the active phase filter on (re)render
   if (graphBtn) {
     const topId = (novel[0] || {}).chembl_id || '';
@@ -449,7 +599,7 @@ function filterCards() {
 function openCompound(chemblId, disease) {
   if (!chemblId) return;
   const cdata = window._compounds && window._compounds[chemblId];
-  if (cdata) { try { sessionStorage.setItem('compound_' + chemblId, JSON.stringify(cdata)); } catch(_e) {} }
+  if (cdata) { try { sessionStorage.setItem('compound_' + chemblId + '|' + (disease||'').trim().toLowerCase(), JSON.stringify(cdata)); } catch(_e) {} }
   window.location.href = `/analysis?id=${chemblId}&disease=${encodeURIComponent(disease || '')}`;
 }
 

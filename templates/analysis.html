@@ -115,16 +115,34 @@ async function init() {
 
   let c = null;
 
-  // 1. Try sessionStorage first (populated when clicking a card in discover.html)
+  // 1. Try sessionStorage first (populated when clicking a card in discover.html).
+  // The key is scoped by disease: a cached compound object carries a score for the
+  // ONE disease it was scored against, so it must not be reused for a different disease
+  // of the same molecule (that would show one indication's score for all of them).
   try {
-    const raw = sessionStorage.getItem('compound_' + CHEMBL_ID);
+    const raw = sessionStorage.getItem('compound_' + CHEMBL_ID + '|' + (DISEASE||'').trim().toLowerCase());
     if (raw) c = JSON.parse(raw);
   } catch(_e) {}
 
-  // 2. Try API to enrich or load fresh data
+  // 2. Try API to enrich or load fresh data. SINGLE SOURCE OF TRUTH for the score:
+  // when we arrived from a leads list, sessionStorage already holds this pair's
+  // authoritative composite (including the discovery prior that a direct dossier
+  // recompute cannot reconstruct for a novel knowledge-graph lead). Let the API enrich
+  // other fields, but never let it overwrite the list's score for this pair, so the
+  // number is identical to what the list showed.
   try {
     const apiData = await apiFetch(`/api/compound/${CHEMBL_ID}?disease=${encodeURIComponent(DISEASE)}`);
-    c = c ? Object.assign({}, c, apiData) : apiData;
+    if (c) {
+      const listScore = c.score, listScores = c.scores, listBreakdown = c.score_breakdown;
+      c = Object.assign({}, c, apiData);
+      if (listScore != null) {
+        c.score = listScore;
+        if (listScores) c.scores = listScores;
+        if (listBreakdown) c.score_breakdown = listBreakdown;
+      }
+    } else {
+      c = apiData;
+    }
   } catch(_e) {
     if (!c) {
       // Neither sessionStorage nor API has data - create a minimal stub so the page
@@ -456,7 +474,7 @@ async function loadRepurposing(el) {
     // Cache candidates in sessionStorage so analysis page has score data when navigating to them
     candidates.forEach(cand => {
       if (cand.chembl_id) {
-        try { sessionStorage.setItem('compound_' + cand.chembl_id, JSON.stringify(cand)); } catch(_e) {}
+        try { sessionStorage.setItem('compound_' + cand.chembl_id + '|' + (DISEASE||'').trim().toLowerCase(), JSON.stringify(cand)); } catch(_e) {}
       }
     });
     grid.innerHTML = candidates.map(cand => buildRepurposingCard(cand)).join('');
@@ -3208,8 +3226,22 @@ async function loadDossier(el) {
       <div class="grid-2" style="gap:1rem;margin-top:1rem">
         <!-- Adverse events / safety -->
         <div class="card">
-          <div class="card-title mb-1">Safety signal · FDA FAERS
-            <span style="font-size:0.7rem;font-weight:400;color:#98a1b6">(${(ae.total||0).toLocaleString()} reports · ${(ae.serious||0).toLocaleString()} serious)</span></div>
+          <div class="card-title mb-1">Safety · established profile</div>
+          ${(function(){
+            const mp = +((compoundData||{}).max_phase||0) || +(reg.phase||0);
+            const appr = reg.is_approved || mp>=4;
+            let lead = appr ? 'Approved drug, established human safety profile'
+                     : mp>=1 ? ('Phase '+Math.round(mp)+', human safety data available')
+                     : 'No approved human safety data';
+            const sev = ((d.clinical_constraints)||{}).disease_severity;
+            const qual = sev==='high' ? 'acceptable bar for a life threatening indication'
+                       : sev==='low'  ? 'high safety bar for a benign indication' : '';
+            const col = (appr||mp>=1) ? '#2563eb' : '#8a94a8';
+            return '<div style="font-size:0.82rem;font-weight:700;color:'+col+';line-height:1.4;margin-bottom:4px">'+lead+'</div>'
+              + (qual?'<div style="font-size:0.68rem;color:#98a1b6;font-style:italic;margin-bottom:8px">'+qual+'</div>':'<div style="margin-bottom:8px"></div>');
+          })()}
+          <div style="font-size:0.7rem;font-weight:700;color:#47526b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Post market signal · FDA FAERS
+            <span style="font-size:0.66rem;font-weight:400;color:#98a1b6">(${(ae.total||0).toLocaleString()} reports · ${(ae.serious||0).toLocaleString()} serious)</span></div>
           ${aeRows||'<span class="text-dim">No adverse-event reports found.</span>'}
           <div style="font-size:0.62rem;color:#b3a98f;margin-top:8px;line-height:1.4">${ae.caveat||''}</div>
         </div>

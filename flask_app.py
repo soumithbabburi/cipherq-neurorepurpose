@@ -1144,6 +1144,24 @@ def api_stats():
     return jsonify(get_stats() if DB_OK else {})
 
 
+@app.route("/api/workbench-index")
+def api_workbench_index():
+    """Precomputed, cached ranked disease table for the Repurposing Workbench landing.
+    Serves data/workbench_index.json (built by `python -m services.workbench_index`).
+    If the cache is missing, falls back to the real top-N value diseases WITHOUT any
+    invented mechanisms or trend labels (mechanism blank, trials null, computing flag)."""
+    try:
+        from services import workbench_index as wi
+        payload = wi.load()
+        if payload is None:
+            payload = wi.fallback_rows()
+        return jsonify(payload)
+    except Exception as e:
+        logger.warning("workbench-index unavailable: %s", e)
+        return jsonify({"rows": [], "n_rows": 0, "universe_size": 0,
+                        "built_at": None, "computing": True})
+
+
 @app.route("/provenance")
 def provenance_page():
     return render_template("provenance.html")
@@ -1268,6 +1286,12 @@ def api_compound(chembl_id):
         c = _get_compound(chembl_id)
         if not c:
             return jsonify({"error": f"Compound {chembl_id} not found", "chembl_id": chembl_id}), 404
+        # Response-local copy. _get_compound returns the process-wide cached object;
+        # the per-(drug,disease) score computed below MUST NOT be written back onto it,
+        # or the next request for the SAME drug with a DIFFERENT disease would read the
+        # stale score and skip recomputation (every indication then shows one disease's
+        # number). Mutating a copy keeps the score strictly per-request/per-disease.
+        c = dict(c)
         smiles = c.get("smiles", "")
         if RDKIT_OK and smiles:
             try:
@@ -1282,7 +1306,11 @@ def api_compound(chembl_id):
         # Canonical repurposing score for the (drug, disease) pair — the SAME function
         # the Repurpose card and the Evidence Dossier use, so the number matches everywhere.
         disease = request.args.get("disease", "").strip()
-        if disease and REVERSE_OK and not c.get("score"):
+        # ALWAYS recompute when a disease is supplied: the canonical score is
+        # per-(drug,disease), so any score already present on the compound dict belongs
+        # to a different disease and must never be reused. canonical_pair_score is itself
+        # cached per (drug,disease) pair, so recomputation is cheap on repeat views.
+        if disease and REVERSE_OK:
             try:
                 ps = canonical_pair_score(
                     chembl_id=chembl_id, disease=disease,
@@ -3201,6 +3229,20 @@ def api_repurposing_screen():
                                       for c in part["removed"]]
             except Exception as _e:
                 logger.debug(f"repurposing-screen guardrails failed: {_e}")
+            # Safety / Efficacy card columns sourced from ClinicalTrials.gov. The forward
+            # engine does not fetch per-candidate trials, so we do ONE CT.gov call per lead
+            # here — capped to the TOP 6 ranked leads only, to avoid a live-call storm.
+            # Candidates beyond the cap carry no columns and render "No trial data" in the UI
+            # (honest: no data was fetched, not a claim of no trials). Display only; nothing
+            # here feeds the composite or the rank order.
+            try:
+                from services.clinical_evidence import pair_clinical_columns as _pcc
+                for _c in (screen.get("candidates") or [])[:6]:
+                    _cols = _pcc(_c.get("name") or _c.get("chembl_id") or "", disease)
+                    _c["safety_ct"] = _cols["safety_ct"]
+                    _c["efficacy_ct"] = _cols["efficacy_ct"]
+            except Exception as _e:
+                logger.debug(f"repurposing-screen clinical columns skipped: {_e}")
         return jsonify(screen)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

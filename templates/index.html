@@ -103,7 +103,7 @@
     <div class="ledger-cell">
       <div class="ledger-fig"><span id="stat-areas-count">-</span></div>
       <div class="ledger-lbl">Research Areas</div>
-      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--terracotta)">neurology</span> Curated therapeutic areas</div>
+      <div class="ledger-sub"><span class="material-symbols-outlined" style="font-size:12px;color:var(--terracotta)">neurology</span> High value diseases by active pipeline</div>
     </div>
   </div>
 </div>
@@ -116,7 +116,7 @@
     <div class="section-panel-header">
       <div style="flex:1">
         <div class="section-panel-title">Research Areas</div>
-        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px" id="areas-showing">Loading…</div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px" id="areas-showing">Highest repurposing value diseases, ordered by active clinical pipeline</div>
       </div>
       <div class="search-inline">
         <span class="material-symbols-outlined">search</span>
@@ -131,7 +131,7 @@
             <th style="width:30%">Disease / Indication</th>
             <th>Category</th>
             <th>Key Mechanism</th>
-            <th>Market Trend</th>
+            <th>Opportunity Signal</th>
             <th></th>
           </tr>
         </thead>
@@ -150,8 +150,8 @@
       </div>
       <div style="padding:1.1rem 1.3rem">
         <div id="trend-breakdown" style="display:flex;flex-direction:column;gap:0.9rem"></div>
-        <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid var(--border-subtle);font-size:0.65rem;color:var(--text-muted);line-height:1.6">
-          Ranked by active pipeline volume, patent-cliff opportunity, and unmet medical need.
+        <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid var(--border-subtle);font-size:0.65rem;color:var(--text-muted);line-height:1.6" id="landscape-note">
+          Grouped by Repurposing Value tier (disease burden, unmet need, and market fit).
         </div>
       </div>
     </div>
@@ -163,20 +163,20 @@
       </div>
       <div style="padding:0.95rem 1.3rem;display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div class="mini-stat" style="background:rgba(181,85,47,0.10);border:1px solid rgba(181,85,47,0.24)">
-          <div class="v mono" style="color:var(--terracotta)" id="ind-hot">9</div>
-          <div class="l" style="color:var(--terracotta)">Hot Areas</div>
+          <div class="v mono" style="color:var(--terracotta)" id="ind-hot">0</div>
+          <div class="l" style="color:var(--terracotta)">High priority</div>
         </div>
         <div class="mini-stat" style="background:rgba(37, 99, 235,0.10);border:1px solid rgba(37, 99, 235,0.24)">
-          <div class="v mono" style="color:var(--accent)" id="ind-grow">8</div>
-          <div class="l" style="color:var(--accent)">Growing</div>
+          <div class="v mono" style="color:var(--accent)" id="ind-grow">0</div>
+          <div class="l" style="color:var(--accent)">Attractive</div>
         </div>
         <div class="mini-stat" style="background:rgba(151,117,26,0.12);border:1px solid rgba(151,117,26,0.26)">
-          <div class="v mono" style="color:var(--gold-deep)" id="ind-est">1</div>
-          <div class="l" style="color:var(--gold-deep)">Established</div>
+          <div class="v mono" style="color:var(--gold-deep)" id="ind-est">0</div>
+          <div class="l" style="color:var(--gold-deep)">Marginal</div>
         </div>
         <div class="mini-stat" style="background:rgba(100, 116, 139,0.12);border:1px solid rgba(100, 116, 139,0.26)">
-          <div class="v mono" style="color:var(--brown)" id="ind-emrg">7</div>
-          <div class="l" style="color:var(--brown)">Emerging</div>
+          <div class="v mono" style="color:var(--brown)" id="ind-emrg">0</div>
+          <div class="l" style="color:var(--brown)">Low value</div>
         </div>
       </div>
     </div>
@@ -185,94 +185,66 @@
 </div>
 
 <script>
-// ── Research areas dataset ────────────────────────────────────────────────────
-const RESEARCH_AREAS = [
-  { disease:"Alzheimer Disease",         category:"Dementia",             mechanism:"Amyloid · Tau · ApoE4",            trend:"hot"         },
-  { disease:"Migraine",                  category:"Pain / Vascular",      mechanism:"CGRP · 5-HT1B/1D",                trend:"hot"         },
-  { disease:"Parkinson Disease",         category:"Movement Disorder",    mechanism:"LRRK2 · α-Synuclein · GBA",        trend:"hot"         },
-  { disease:"Major Depression",          category:"Psychiatry",           mechanism:"NMDA · Serotonergic · Ketamine",   trend:"hot"         },
-  { disease:"Epilepsy",                  category:"Neurology",            mechanism:"SV2A · Nav Channel · GABA-A",      trend:"hot"         },
-  { disease:"ALS",                       category:"Neurology",            mechanism:"TDP-43 · SOD1 · C9orf72",          trend:"hot"         },
-  { disease:"Schizophrenia",             category:"Psychiatry",           mechanism:"TAAR1 · Dopamine D2 · GlyT1",      trend:"growing"     },
-  { disease:"ADHD",                      category:"Psychiatry",           mechanism:"Dopamine · Norepinephrine",         trend:"growing"     },
-  { disease:"Anxiety Disorders",         category:"Psychiatry",           mechanism:"GABA-A · 5-HT1A · CRFR1",          trend:"growing"     },
-  { disease:"Huntington Disease",        category:"Neurology",            mechanism:"HTT · CAG Repeat · ASO",           trend:"growing"     },
-  { disease:"Frontotemporal Dementia",   category:"Dementia",             mechanism:"GRN · C9orf72 · TDP-43",           trend:"growing"     },
-  { disease:"PTSD",                      category:"Psychiatry",           mechanism:"NMDA · Endocannabinoid · CRF",     trend:"growing"     },
-  { disease:"Autism Spectrum Disorder",  category:"Psychiatry",           mechanism:"mGluR5 · SHANK3 · GABA-A",         trend:"growing"     },
-  { disease:"Multiple Sclerosis",        category:"Autoimmune",           mechanism:"BTK · S1P · CD20",                 trend:"growing"     },
-  { disease:"Narcolepsy",                category:"Neurology",            mechanism:"Orexin · OX2R",                    trend:"growing"     },
-  { disease:"Bipolar Disorder",          category:"Psychiatry",           mechanism:"Mood Stabilizer · GSK-3β",         trend:"established" },
-  { disease:"Lewy Body Dementia",        category:"Dementia",             mechanism:"α-Synuclein · AChE · DLB",         trend:"emerging"    },
-  { disease:"Traumatic Brain Injury",    category:"Neurology",            mechanism:"Neuroinflammation · NMDA · BDNF",  trend:"emerging"    },
-  { disease:"Spinal Cord Injury",        category:"Neurology",            mechanism:"Neuroprotection · Axon Regen",     trend:"emerging"    },
-  { disease:"Neuropathic Pain",          category:"Pain Medicine",        mechanism:"Nav1.7 · TRPV1 · CGRP",            trend:"hot"         },
-  { disease:"Non-Small Cell Lung Cancer",category:"Oncology",             mechanism:"EGFR · KRAS · PD-L1 · ALK",        trend:"hot"         },
-  { disease:"Breast Cancer",             category:"Oncology",             mechanism:"HER2 · BRCA1/2 · CDK4/6 · PI3K",   trend:"hot"         },
-  { disease:"Colorectal Cancer",         category:"Oncology",             mechanism:"KRAS · BRAF · HER2 · PD-L1",       trend:"hot"         },
-  { disease:"Multiple Myeloma",          category:"Oncology",             mechanism:"BCMA · CD38 · IMiDs · Proteasome",  trend:"hot"         },
-  { disease:"Pancreatic Cancer",         category:"Oncology",             mechanism:"KRAS G12C · Stromal TGFβ · PARP",  trend:"growing"     },
-  { disease:"Acute Myeloid Leukemia",    category:"Oncology",             mechanism:"FLT3 · IDH1/2 · BCL-2 · Menin",    trend:"growing"     },
-  { disease:"Hepatocellular Carcinoma",  category:"Oncology",             mechanism:"VEGFR · mTOR · PD-1 · MET",        trend:"growing"     },
-  { disease:"Glioblastoma",              category:"Oncology",             mechanism:"EGFR · MGMT · IDH · VEGF",         trend:"emerging"    },
-  { disease:"Heart Failure (HFrEF)",     category:"Cardiovascular",       mechanism:"SGLT2 · Sacubitril · RAAS · GLP-1", trend:"hot"         },
-  { disease:"Atrial Fibrillation",       category:"Cardiovascular",       mechanism:"Nav1.5 · Kv11.1 · Factor Xa",      trend:"hot"         },
-  { disease:"Coronary Artery Disease",   category:"Cardiovascular",       mechanism:"PCSK9 · HMG-CoA · P2Y12 · IL-6",   trend:"growing"     },
-  { disease:"Pulmonary Arterial Hypertension", category:"Cardiovascular", mechanism:"PDE5 · Prostacyclin · Endothelin", trend:"growing"     },
-  { disease:"Type 2 Diabetes",           category:"Metabolic",            mechanism:"GLP-1R · SGLT2 · DPP-4 · PPAR-γ",  trend:"hot"         },
-  { disease:"NASH / NAFLD",              category:"Metabolic",            mechanism:"FXR · PPAR-α/δ · GLP-1 · FGF21",   trend:"hot"         },
-  { disease:"Obesity",                   category:"Metabolic",            mechanism:"GLP-1R · MC4R · NPY · Amylin",      trend:"hot"         },
-  { disease:"Chronic Kidney Disease",    category:"Metabolic",            mechanism:"SGLT2 · Endothelin · RAAS · NF-κB", trend:"growing"     },
-  { disease:"Rheumatoid Arthritis",      category:"Autoimmune",           mechanism:"JAK1/2 · TNF-α · IL-6 · BTK",      trend:"hot"         },
-  { disease:"Lupus (SLE)",               category:"Autoimmune",           mechanism:"BAFF · IFN-α · BTK · PCSK9",       trend:"growing"     },
-  { disease:"Crohn's Disease",           category:"Autoimmune",           mechanism:"IL-12/23 · TNF-α · Integrins",      trend:"growing"     },
-  { disease:"Psoriasis",                 category:"Autoimmune",           mechanism:"IL-17A · IL-23 · TYK2 · PDE4",      trend:"growing"     },
-  { disease:"Atopic Dermatitis",         category:"Autoimmune",           mechanism:"JAK1 · IL-4Rα · IL-31 · IgE",       trend:"hot"         },
-  { disease:"Asthma",                    category:"Respiratory",          mechanism:"IgE · IL-5 · TSLP · PDE4",         trend:"hot"         },
-  { disease:"COPD",                      category:"Respiratory",          mechanism:"PDE4 · β2 · M3 · NLRP3",           trend:"growing"     },
-  { disease:"Idiopathic Pulmonary Fibrosis", category:"Respiratory",      mechanism:"TGF-β · PDGFR · FGFR · LPA1",      trend:"growing"     },
-  { disease:"Cystic Fibrosis",           category:"Rare Disease",         mechanism:"CFTR Potentiator · Corrector",      trend:"hot"         },
-  { disease:"Spinal Muscular Atrophy",   category:"Rare Disease",         mechanism:"SMN1/2 · mRNA Splicing · ASO",      trend:"hot"         },
-  { disease:"Duchenne Muscular Dystrophy",category:"Rare Disease",        mechanism:"Dystrophin · Exon Skip · HDAC",     trend:"growing"     },
-  { disease:"Gaucher Disease",           category:"Rare Disease",         mechanism:"GBA · Glucocerebrosidase",          trend:"established" },
-  { disease:"Rett Syndrome",             category:"Rare Disease",         mechanism:"MeCP2 · GABA · Trofinetide",        trend:"emerging"    },
-  { disease:"Neuromyelitis Optica",      category:"Autoimmune",           mechanism:"AQP4 · IL-6 · FcRn",               trend:"growing"     },
-];
-
-// Warm earthy trend palette
-const TREND = {
-  hot:         { label:"Hot",         bg:"rgba(181,85,47,0.13)",  color:"#b5552f", bar:"#b5552f", icon:"local_fire_department" },
-  growing:     { label:"Growing",     bg:"rgba(37, 99, 235,0.13)",  color:"#2563eb", bar:"#2563eb", icon:"trending_up"           },
-  established: { label:"Established", bg:"rgba(151,117,26,0.14)", color:"#0e7490", bar:"#0e7490", icon:"verified"              },
-  emerging:    { label:"Emerging",    bg:"rgba(100, 116, 139,0.14)", color:"#64748b", bar:"#64748b", icon:"spa"                   },
-};
-
-const CATEGORIES = ["All", ...new Set(RESEARCH_AREAS.map(a => a.category))];
+// ── Data-driven research areas (precomputed cache: /api/workbench-index) ───────
+// Rows are computed by services/workbench_index.py from the real disease-value
+// universe (top diseases by Repurposing Value Score), the Open Targets disease->gene
+// resolution the scorer uses, and a live ClinicalTrials.gov active-trial count.
+// There is NO hand-typed disease, mechanism, or trend anywhere below.
+let RESEARCH_AREAS = [];   // [{disease, mondo_id, category, mechanism_genes:[...], value_score, value_tier, active_trials}]
+let CATEGORIES = ["All"];
 let activeFilter = "All";
 let searchQuery  = "";
+
+// Repurposing Value tier -> chip palette (the four bands of services.disease_value._tier)
+const TIER = {
+  "High priority": { bg:"rgba(181,85,47,0.13)",  color:"#b5552f", bar:"#b5552f", icon:"priority_high" },
+  "Attractive":    { bg:"rgba(37, 99, 235,0.13)", color:"#2563eb", bar:"#2563eb", icon:"trending_up"   },
+  "Marginal":      { bg:"rgba(151,117,26,0.14)", color:"#0e7490", bar:"#0e7490", icon:"remove"         },
+  "Low value":     { bg:"rgba(100, 116, 139,0.14)", color:"#64748b", bar:"#64748b", icon:"south"       },
+};
+const TIER_ORDER = ["High priority", "Attractive", "Marginal", "Low value"];
+function tierStyle(t) { return TIER[t] || { bg:"var(--bg-sunken)", color:"var(--text-muted)", bar:"var(--brown)", icon:"help" }; }
+
+function mechText(a) { return (a.mechanism_genes || []).join(" · "); }
 
 function filteredAreas() {
   return RESEARCH_AREAS.filter(a => {
     const catOk = activeFilter === "All" || a.category === activeFilter;
     const q = searchQuery.toLowerCase();
     const srchOk = !q || a.disease.toLowerCase().includes(q) ||
-                   a.mechanism.toLowerCase().includes(q) || a.category.toLowerCase().includes(q);
+                   mechText(a).toLowerCase().includes(q) || (a.category||"").toLowerCase().includes(q);
     return catOk && srchOk;
   });
+}
+
+function opportunityChip(a) {
+  const ts = tierStyle(a.value_tier);
+  const trials = (a.active_trials === null || a.active_trials === undefined)
+    ? "" : ` <span style="opacity:0.85">| ${a.active_trials} active trial${a.active_trials===1?"":"s"}</span>`;
+  return `<span class="trend-pill" style="background:${ts.bg};color:${ts.color}">
+      <span class="material-symbols-outlined mi">${ts.icon}</span>${a.value_tier || "Unscored"}${trials}
+    </span>`;
+}
+
+function mechCell(a) {
+  const genes = a.mechanism_genes || [];
+  if (!genes.length) {
+    return `<td><span style="font-size:0.71rem;color:var(--text-dim);font-style:italic">No mapped genes</span></td>`;
+  }
+  return `<td><span class="mono" style="font-size:0.71rem;color:var(--accent-deep);background:var(--accent-soft);padding:2px 8px;border-radius:6px;border:1px solid var(--accent-line);white-space:nowrap">${mechText(a)}</span></td>`;
 }
 
 function renderTable() {
   const areas = filteredAreas();
   document.getElementById("areas-showing").textContent =
-    `${areas.length} area${areas.length !== 1 ? "s" : ""} · click any row to start analysis`;
+    `${areas.length} disease${areas.length !== 1 ? "s" : ""} · highest repurposing value, ordered by active clinical pipeline`;
   document.getElementById("areas-tbody").innerHTML = areas.map(a => {
-    const tc = TREND[a.trend];
-    const q  = encodeURIComponent(a.disease);
+    const q = encodeURIComponent(a.disease);
     return `<tr onclick="window.location.href='/discover?q=${q}'">
       <td><span style="font-family:var(--font-serif);font-size:0.92rem;font-weight:600;color:var(--text-primary)">${a.disease}</span></td>
-      <td><span style="font-size:0.72rem;color:var(--text-muted);background:var(--bg-sunken);padding:2px 8px;border-radius:6px;border:1px solid var(--border-default);white-space:nowrap">${a.category}</span></td>
-      <td><span class="mono" style="font-size:0.71rem;color:var(--accent-deep);background:var(--accent-soft);padding:2px 8px;border-radius:6px;border:1px solid var(--accent-line);white-space:nowrap">${a.mechanism}</span></td>
-      <td><span class="trend-pill" style="background:${tc.bg};color:${tc.color}"><span class="material-symbols-outlined mi">${tc.icon}</span>${tc.label}</span></td>
+      <td><span style="font-size:0.72rem;color:var(--text-muted);background:var(--bg-sunken);padding:2px 8px;border-radius:6px;border:1px solid var(--border-default);white-space:nowrap">${a.category || "Unclassified"}</span></td>
+      ${mechCell(a)}
+      <td>${opportunityChip(a)}</td>
       <td style="text-align:right;padding-right:18px">
         <a href="/discover?q=${q}" style="font-size:0.74rem;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px" onclick="event.stopPropagation()">
           Discover <span class="material-symbols-outlined" style="font-size:13px">arrow_forward</span>
@@ -289,47 +261,72 @@ function setFilter(cat) {
 }
 function filterSearch(q) { searchQuery = q; renderTable(); }
 
-function renderTrendBreakdown() {
-  const counts = {}, total = RESEARCH_AREAS.length;
-  RESEARCH_AREAS.forEach(a => counts[a.trend] = (counts[a.trend] || 0) + 1);
+function renderTierBreakdown() {
+  const counts = {}, total = RESEARCH_AREAS.length || 1;
+  RESEARCH_AREAS.forEach(a => counts[a.value_tier] = (counts[a.value_tier] || 0) + 1);
   document.getElementById("trend-breakdown").innerHTML =
-    ["hot","growing","established","emerging"].filter(t => counts[t]).map(t => {
-      const tc = TREND[t], pct = Math.round(counts[t] / total * 100);
+    TIER_ORDER.filter(t => counts[t]).map(t => {
+      const ts = tierStyle(t), pct = Math.round(counts[t] / total * 100);
       return `<div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-          <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.74rem;font-weight:600;color:${tc.color}">
-            <span class="material-symbols-outlined" style="font-size:13px">${tc.icon}</span>${tc.label}
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.74rem;font-weight:600;color:${ts.color}">
+            <span class="material-symbols-outlined" style="font-size:13px">${ts.icon}</span>${t}
           </span>
-          <span style="font-size:0.74rem;font-weight:600;color:var(--text-primary)">${counts[t]} area${counts[t]>1?"s":""}</span>
+          <span style="font-size:0.74rem;font-weight:600;color:var(--text-primary)">${counts[t]} disease${counts[t]>1?"s":""}</span>
         </div>
         <div style="height:6px;border-radius:4px;background:var(--bg-sunken);overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${tc.bar};border-radius:4px"></div>
+          <div style="height:100%;width:${pct}%;background:${ts.bar};border-radius:4px"></div>
         </div>
       </div>`;
-    }).join("");
+    }).join("") || `<div style="font-size:0.72rem;color:var(--text-muted)">Computing value tiers…</div>`;
 }
 
 function buildFilterBar() {
   const counts = {"All": RESEARCH_AREAS.length};
   RESEARCH_AREAS.forEach(a => counts[a.category] = (counts[a.category] || 0) + 1);
   document.getElementById("filter-bar").innerHTML = CATEGORIES.map(c =>
-    `<button class="filter-pill ${c==="All"?"active":""}" data-cat="${c}" onclick="setFilter('${c}')">
+    `<button class="filter-pill ${c===activeFilter?"active":""}" data-cat="${c}" onclick="setFilter('${c}')">
       ${c}<span class="ct">${counts[c]||0}</span>
     </button>`).join("");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("stat-areas-count").textContent = RESEARCH_AREAS.length;
+function renderMiniStats() {
+  const cnt = {};
+  RESEARCH_AREAS.forEach(a => cnt[a.value_tier] = (cnt[a.value_tier]||0)+1);
+  const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set("ind-hot",  cnt["High priority"]||0); set("ind-grow", cnt["Attractive"]||0);
+  set("ind-est",  cnt["Marginal"]||0);      set("ind-emrg", cnt["Low value"]||0);
+}
+
+async function loadWorkbench() {
+  let data = { rows: [], universe_size: 0, computing: true };
+  try {
+    const r = await fetch("/api/workbench-index");
+    if (r.ok) data = await r.json();
+  } catch (e) { /* fail-soft: honest empty table */ }
+  RESEARCH_AREAS = data.rows || [];
+  CATEGORIES = ["All", ...Array.from(new Set(RESEARCH_AREAS.map(a => a.category).filter(Boolean)))];
+
+  const areasStat = document.getElementById("stat-areas-count");
+  if (areasStat) areasStat.textContent = RESEARCH_AREAS.length || "-";
+
   buildFilterBar();
   renderTable();
-  renderTrendBreakdown();
-  const cnt = {};
-  RESEARCH_AREAS.forEach(a => cnt[a.trend] = (cnt[a.trend]||0)+1);
-  const set = (id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
-  set("ind-hot", cnt["hot"]||0); set("ind-grow", cnt["growing"]||0);
-  set("ind-est", cnt["established"]||0); set("ind-emrg", cnt["emerging"]||0);
+  renderTierBreakdown();
+  renderMiniStats();
+
+  if (data.computing && RESEARCH_AREAS.length === 0) {
+    document.getElementById("areas-showing").textContent =
+      "Precomputing the ranked disease table… refresh shortly";
+  } else if (data.computing) {
+    // fallback path: real diseases + tiers, mechanisms/trials not yet computed
+    document.getElementById("areas-showing").textContent =
+      `${RESEARCH_AREAS.length} diseases · mechanisms and trial counts computing`;
+  }
   requestAnimationFrame(syncAreasHeight);
-});
+}
+
+document.addEventListener("DOMContentLoaded", () => { loadWorkbench(); });
 
 // Match the Research Areas panel height to the right rail (Disease Indications bottom)
 function syncAreasHeight() {
