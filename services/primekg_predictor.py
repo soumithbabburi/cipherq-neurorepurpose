@@ -188,10 +188,16 @@ def _score_vs_all(node_idx: int, rel: str, target_ids: np.ndarray):
 
 
 def treat_plausibility(drug: str, disease: str, chembl_id: str = "") -> Optional[float]:
-    """Direction-aware P(treats), 0..1, from the supervised treats classifier (compound-
-    disjoint AUC 0.98 vs real contraindications). Unlike the raw DistMult it distinguishes
-    treat from contraindicate. Still a plausibility / candidate-generation signal that the
-    composite + guardrails rank and gate, NOT a probability of clinical success."""
+    """Direction-aware P(treats), 0..1, from the supervised treats classifier.
+    Honest AUC vs real contraindications for an UNSEEN DRUG on a KNOWN DISEASE is ~0.82,
+    measured leakage-free (2026-07-29). The previously-cited 0.98 was inflated by
+    input-embedding leakage: train_primekg.py kept 100% of contraindication edges in the
+    DistMult training graph, so the embedding memorized the very edges this classifier is
+    asked to distinguish. In a genuinely disease-zero-shot setting the classifier INVERTS
+    (~0.22, worse than random); the leakage-free direction path there is the disease-
+    similarity transfer ranker at ~0.55. So this is a plausibility / candidate-generation
+    signal that the composite + guardrails rank and gate, NOT a direction guarantee and
+    NOT a probability of clinical success."""
     s = _load()
     di = resolve_drug(drug, chembl_id)
     zi = resolve_disease(disease)
