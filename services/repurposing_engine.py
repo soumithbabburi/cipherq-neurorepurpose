@@ -339,6 +339,103 @@ def _local_targets_for_molecules(chembl_ids: List[str]) -> Optional[Dict[str, Li
             pool.putconn(conn)
 
 
+def offtarget_predictions(chembl_ids: List[str]) -> Dict[str, List[Dict]]:
+    """Predicted SECONDARY (off-)targets per molecule, from measured chembl_33
+    bioactivity, weighted + gated by services.offtarget. Curated drug_mechanism
+    targets are the PRIMARY set (excluded here + used to anchor therapeutic
+    potency); everything returned is a distinct off-target with a confidence
+    weight and provenance. {} when disabled/unavailable. Salt folds to parent so
+    a salt inherits the parent's measured activities."""
+    from services import offtarget as _ot
+    if not _ot.is_enabled():
+        return {}
+    pool = _get_chembl_pool()
+    ids = [c for c in chembl_ids if c]
+    if pool is None or not ids:
+        return {}
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT md.chembl_id, md.molregno, COALESCE(mh.parent_molregno, md.molregno)
+                FROM molecule_dictionary md
+                LEFT JOIN molecule_hierarchy mh ON mh.molregno = md.molregno
+                WHERE md.chembl_id = ANY(%s)
+                """,
+                (ids,),
+            )
+            mol_to_cids: Dict[int, set] = {}
+            all_mols: set = set()
+            for chembl, mol, parent in cur.fetchall():
+                for m in (mol, parent):
+                    if m is not None:
+                        mol_to_cids.setdefault(m, set()).add(chembl)
+                        all_mols.add(m)
+            if not all_mols:
+                return {}
+            mol_list = list(all_mols)
+
+            # curated PRIMARY targets per molregno (anchor + exclusion set)
+            primary_by_mol: Dict[int, set] = {m: set() for m in mol_list}
+            cur.execute(
+                """
+                SELECT dm.molregno, UPPER(csyn.component_synonym)
+                FROM drug_mechanism dm
+                JOIN target_components tc ON tc.tid = dm.tid
+                JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                            AND csyn.syn_type = 'GENE_SYMBOL'
+                WHERE dm.molregno = ANY(%s)
+                """,
+                (mol_list,),
+            )
+            for mol, gene in cur.fetchall():
+                if gene:
+                    primary_by_mol.setdefault(mol, set()).add(gene)
+
+            # measured single-protein activities (gene, max pchembl, n measurements)
+            cur.execute(
+                """
+                SELECT a.molregno, UPPER(csyn.component_synonym),
+                       MAX(a.pchembl_value), COUNT(*)
+                FROM activities a
+                JOIN assays ass            ON ass.assay_id = a.assay_id
+                JOIN target_dictionary td  ON td.tid = ass.tid
+                                          AND td.target_type = 'SINGLE PROTEIN'
+                JOIN target_components tc  ON tc.tid = ass.tid
+                JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                            AND csyn.syn_type = 'GENE_SYMBOL'
+                WHERE a.molregno = ANY(%s)
+                  AND a.pchembl_value IS NOT NULL
+                  AND a.standard_relation = '='
+                  AND ass.confidence_score >= 8
+                GROUP BY a.molregno, UPPER(csyn.component_synonym)
+                """,
+                (mol_list,),
+            )
+            mol_rows: Dict[int, list] = {}
+            for mol, gene, mx, n in cur.fetchall():
+                if gene and mx is not None:
+                    mol_rows.setdefault(mol, []).append((gene, float(mx), int(n or 0)))
+
+        # PURE weighting/gating per molregno, then fold molregno → chembl_id.
+        preds_by_mol = _ot.expand(mol_rows, primary_by_mol)
+        out: Dict[str, List[Dict]] = {}
+        for mol, preds in preds_by_mol.items():
+            for cid in mol_to_cids.get(mol, ()):
+                # a chembl id maps to own + parent molregno; keep the richer set
+                if cid not in out or len(preds) > len(out[cid]):
+                    out[cid] = preds
+        return out
+    except Exception as e:
+        logger.debug(f"offtarget predictions failed: {e}")
+        return {}
+    finally:
+        if conn is not None:
+            pool.putconn(conn)
+
+
 def _actions_for_molecules(chembl_ids: List[str]) -> Dict[str, Dict[str, str]]:
     """Map each molecule → {GENE_SYMBOL: action_type} from local chembl_33
     drug_mechanism. Powers the direction-aware pathway score. Returns {} when the
@@ -569,11 +666,19 @@ def _chembl_targets_for_molecules(chembl_ids: List[str]) -> Dict[str, List[str]]
 
 # ── Scoring functions ─────────────────────────────────────────────────────────
 
-def _score_target_overlap(drug_genes: List[str], disease_genes: List[str]) -> float:
+def _score_target_overlap(drug_genes: List[str], disease_genes: List[str],
+                          drug_weights: Optional[Dict[str, float]] = None) -> float:
     """Drug-centric target overlap: what fraction of the DRUG's targets are disease
     genes (recall), with a bonus when those targets rank among the disease's top genes.
     This replaces a Jaccard index, which structurally collapsed toward zero because a
-    drug's handful of targets was divided by the disease's large gene set."""
+    drug's handful of targets was divided by the disease's large gene set.
+
+    drug_weights (optional): {GENE_UPPER: confidence 0..1}. Curated primary targets
+    carry weight 1.0; predicted off-targets carry their (sub-1.0) confidence. Each
+    drug target's contribution to BOTH numerator and denominator is scaled by its
+    weight, so a weak predicted off-target adds little signal AND little dilution —
+    a promiscuous drug cannot inflate the score on off-target count. Absent → every
+    weight is 1.0 (identical to the original behaviour)."""
     if not drug_genes or not disease_genes:
         return 0.0
     a = {g.upper() for g in drug_genes}
@@ -582,26 +687,37 @@ def _score_target_overlap(drug_genes: List[str], disease_genes: List[str]) -> fl
     overlap = a & bset
     if not overlap:
         return 0.0
-    recall = len(overlap) / len(a)                       # fraction of drug targets that hit
+    w = (lambda g: float(drug_weights.get(g, 1.0))) if drug_weights else (lambda g: 1.0)
+    tot = sum(w(g) for g in a) or 1.0
+    recall = sum(w(g) for g in overlap) / tot            # weighted fraction of drug targets that hit
     top = set(ranked[:10])
-    in_top = bool(a & top)
-    rank_bonus = 0.3 * (len(a & top) / len(a))            # weight high-ranked disease genes
-    hit_floor = 0.25 if in_top else 0.0                  # a top-gene hit is meaningful on its own
+    a_top = a & top
+    rank_bonus = 0.3 * (sum(w(g) for g in a_top) / tot)  # weight high-ranked disease genes
+    top_w = max((w(g) for g in a_top), default=0.0)      # a WEAK off-target alone earns a smaller floor
+    hit_floor = 0.25 * min(1.0, top_w) if a_top else 0.0
     return min(1.0, 0.6 * recall + rank_bonus + hit_floor)
 
 
 def _score_target_overlap_weighted(drug_genes: List[str],
-                                   disease_weights: Dict[str, float]) -> float:
+                                   disease_weights: Dict[str, float],
+                                   drug_weights: Optional[Dict[str, float]] = None) -> float:
     """Genetics-weighted target overlap. disease_weights: {GENE_UPPER:
     genetic_association_score 0..1}. Rewards a drug for hitting GENETICALLY
     supported disease genes (strength), for hitting disease genes at all (recall),
     and for hitting several (breadth). Reduces to a sensible overlap score; used
     when genetics weights are available, else the engine falls back to the flat
-    _score_target_overlap."""
+    _score_target_overlap.
+
+    drug_weights (optional): {GENE_UPPER: confidence 0..1} for off-target
+    down-weighting (primary=1.0, predicted off-target<1.0). A hit's effective
+    strength is disease_weight * drug_weight, so a predicted off-target hitting a
+    strong disease gene is capped by its own (sub-1.0) confidence and cannot reach
+    a genuine primary-target match. Absent → every drug weight is 1.0."""
     if not drug_genes or not disease_weights:
         return 0.0
     a = {g.upper() for g in drug_genes}
-    hits = [disease_weights[g] for g in a if g in disease_weights]
+    dw = (lambda g: float(drug_weights.get(g, 1.0))) if drug_weights else (lambda g: 1.0)
+    hits = [(disease_weights[g], dw(g)) for g in a if g in disease_weights]
     if not hits:
         return 0.0
     # STRENGTH-dominated. The old form was recall-dominated, so a SELECTIVE drug
@@ -609,9 +725,10 @@ def _score_target_overlap_weighted(drug_genes: List[str],
     # weak the link was (Erlotinib→EGFR@0.35 for Cowden read like a real hit). Now
     # the association STRENGTH gates the score: a weak best-hit caps it low, while
     # hitting several genetically-supported drivers (weighted breadth) lifts it.
-    strength = max(hits)                                  # strongest disease-gene association hit
-    weighted_breadth = 1.0 - pow(2.71828, -sum(hits) / 1.0)   # saturating Σ of hit strengths
-    recall = len(hits) / len(a)                           # selectivity toward the disease (minor)
+    strength = max(ds * w for ds, w in hits)              # strongest hit, damped by off-target confidence
+    weighted_breadth = 1.0 - pow(2.71828, -sum(ds * w for ds, w in hits) / 1.0)
+    tot_w = sum(dw(g) for g in a) or 1.0
+    recall = sum(w for _, w in hits) / tot_w              # selectivity toward the disease (minor)
     # strength sets the ceiling; breadth fills it in; recall a small bonus.
     return min(1.0, round(strength * (0.65 + 0.35 * weighted_breadth) + 0.10 * recall, 4))
 
@@ -800,6 +917,7 @@ def score_compound_for_disease(
     drug_genes: Optional[List[str]] = None,
     drug_actions: Optional[Dict[str, str]] = None,
     disease_gene_weights: Optional[Dict[str, float]] = None,
+    drug_gene_weights: Optional[Dict[str, float]] = None,
     trial_count: int = 0,
     max_trial_phase: int = 0,
     trial_outcome: float = 0.0,
@@ -831,9 +949,11 @@ def score_compound_for_disease(
 
     # Genetics-weighted target overlap when weights are available (validated to
     # improve recovery + reduce leakage); flat overlap otherwise.
-    target_score = (_score_target_overlap_weighted(drug_genes, disease_gene_weights)
+    target_score = (_score_target_overlap_weighted(drug_genes, disease_gene_weights,
+                                                    drug_weights=drug_gene_weights)
                     if disease_gene_weights
-                    else _score_target_overlap(drug_genes, disease_genes))
+                    else _score_target_overlap(drug_genes, disease_genes,
+                                               drug_weights=drug_gene_weights))
     # Hub-degree damping (DWPC): weight each drug target's pathway/PPI contribution
     # by its global connectivity, so a network hub (EGFR, TP53…) cannot trivially
     # max out cohesion for every disease it touches. Fail-soft → no damping.
@@ -1681,6 +1801,12 @@ def run_repurposing_screen(
                 if (c.get("chembl_id", "") or "").startswith("CHEMBL")]
     actions_map = _actions_for_molecules(all_cids) if all_cids else {}
 
+    # Off-target / polypharmacology expansion (behind OFFTARGET_ENABLE, default off).
+    # Adds each drug's measured, potency-weighted SECONDARY targets so a non-obvious
+    # candidate can surface via secondary pharmacology; weights keep a weak off-target
+    # from out-ranking a genuine primary-target match. {} when disabled.
+    offtarget_map = offtarget_predictions(all_cids) if all_cids else {}
+
     # Confounding-by-indication set: molecules with ANY development record (phase >= 1)
     # for THIS disease. A drug developed for the disease has it in its FAERS, so its
     # adverse-event overlap must NOT be read as drug-caused toxicity. One batched query.
@@ -1700,6 +1826,20 @@ def run_repurposing_screen(
         drug_genes_list = [g.strip() for g in re.split(r"[;,]", targets_raw) if g.strip()]
         if not drug_genes_list and cid in api_gene_map:
             drug_genes_list = api_gene_map[cid]
+
+        # Expand with predicted off-targets (generation lever); build a per-gene
+        # weight map (curated/primary = 1.0, predicted off-target = its confidence)
+        # so the scorer down-weights secondary pharmacology and a promiscuous drug
+        # cannot climb on target count. Off-target provenance attached to the result.
+        drug_gene_weights = None
+        offtarget_preds = offtarget_map.get(cid) or []
+        if offtarget_preds:
+            primary_upper = {g.upper() for g in drug_genes_list}
+            drug_gene_weights = {g: 1.0 for g in primary_upper}
+            for p in offtarget_preds:
+                if p["gene"] not in primary_upper:
+                    drug_genes_list = drug_genes_list + [p["gene"]]
+                    drug_gene_weights[p["gene"]] = p["weight"]
 
         # KG-novelty candidates were surfaced by a Compound→Gene←Disease path (shared
         # disease genes in HetioNet) whose genes are, by construction, outside the
@@ -1747,8 +1887,11 @@ def run_repurposing_screen(
             therapeutic_areas=disease_areas,
             studied_for_disease=(cid in studied_set),
             indication_phase=_iphase,
+            drug_gene_weights=drug_gene_weights,
         )
         sc = {**comp, **sr, "score": sr["composite_score"]}
+        if offtarget_preds:
+            sc["offtarget_predictions"] = offtarget_preds
         # Same quality filters as every other surface (plausibility + lead-viability;
         # disease is the fixed input here so its value is attached once on the result).
         try:

@@ -163,14 +163,16 @@ def load_repodb(path):
 # ── Scoring ──────────────────────────────────────────────────────────────────────
 
 def mech_score(drug_genes, drug_sig, disease_genes, disease_pathways, ppi_adj, pathway_mode,
-               disease_weights=None):
+               disease_weights=None, drug_weights=None):
     """Mechanism-only composite. pathway_mode: 'aware' | 'blind' | 'off'.
-    disease_weights (optional): {GENE: genetic score} → genetics-weighted target overlap."""
+    disease_weights (optional): {GENE: genetic score} → genetics-weighted target overlap.
+    drug_weights (optional): {GENE: confidence} → off-target down-weighting."""
     from services.repurposing_engine import (
         _score_target_overlap, _score_target_overlap_weighted,
         _score_pathway_overlap, _score_ppi_network)
-    t = (_score_target_overlap_weighted(drug_genes, disease_weights)
-         if disease_weights else _score_target_overlap(drug_genes, disease_genes))
+    t = (_score_target_overlap_weighted(drug_genes, disease_weights, drug_weights=drug_weights)
+         if disease_weights else _score_target_overlap(drug_genes, disease_genes,
+                                                        drug_weights=drug_weights))
     p = _score_ppi_network(drug_genes, ppi_adj)
     if pathway_mode == "off":
         w = {"target": _W["target"], "ppi": _W["ppi"]}
@@ -181,7 +183,7 @@ def mech_score(drug_genes, drug_sig, disease_genes, disease_pathways, ppi_adj, p
     return MECH_W["target"] * t + MECH_W["pathway"] * pw + MECH_W["ppi"] * p
 
 
-def _resolve_drug_targets(eng, names, mode="rich"):
+def _resolve_drug_targets(eng, names, mode="rich", return_weights=False):
     """Map repoDB drug names -> target gene sets, action map, and a ChEMBL id.
 
     mode='legacy' : pref_name match + drug_mechanism targets only (the original).
@@ -190,14 +192,26 @@ def _resolve_drug_targets(eng, names, mode="rich"):
                     targets from the activities table (pchembl>=6, conf>=8) — the
                     coverage fix for drugs that have no curated mechanism row.
     Returns (drug_genes name->set(gene), drug_actions name->{gene:action},
-             drug_chembl name->chembl_id).
+             drug_chembl name->chembl_id). When return_weights=True a 4th element
+             drug_weights name->{gene:confidence} is appended.
+
+    drug_weights carries per-gene confidence only for predicted OFF-targets
+    (curated primary targets are implicitly 1.0 and left out of the map). It is
+    populated only when OFFTARGET_ENABLE is set; otherwise empty (flat scoring).
     """
     drug_genes = defaultdict(set)
     drug_actions = defaultdict(dict)
     drug_chembl = {}
+    drug_weights = defaultdict(dict)
+    primary_by_mol = defaultdict(set)
+
+    def _ret():
+        return ((drug_genes, drug_actions, drug_chembl, drug_weights) if return_weights
+                else (drug_genes, drug_actions, drug_chembl))
+
     names = [n for n in names if n]
     if not names:
-        return drug_genes, drug_actions, drug_chembl
+        return _ret()
 
     with eng.connect() as c:
         # name -> molregno(s); molregno -> name(s)
@@ -228,7 +242,7 @@ def _resolve_drug_targets(eng, names, mode="rich"):
                     all_mol.add(parent)
 
         if not all_mol:
-            return drug_genes, drug_actions, drug_chembl
+            return _ret()
         mol_list = list(all_mol)
 
         # curated mechanism targets (carry action_type for the direction term)
@@ -243,6 +257,7 @@ def _resolve_drug_targets(eng, names, mode="rich"):
                 """), {"mols": mol_list}).fetchall():
             if not gene:
                 continue
+            primary_by_mol[mol].add(gene)
             for nm in molregno_name.get(mol, ()):
                 drug_genes[nm].add(gene)
                 if action:
@@ -279,7 +294,42 @@ def _resolve_drug_targets(eng, names, mode="rich"):
                     for nm in molregno_name.get(mol, ()):
                         drug_genes[nm].add(gene)
 
-    return drug_genes, drug_actions, drug_chembl
+        # Off-target / polypharmacology expansion (behind OFFTARGET_ENABLE). Adds
+        # each drug's measured, potency-weighted SECONDARY targets and records their
+        # sub-1.0 confidence in drug_weights so the scorer down-weights them.
+        from services import offtarget as _ot
+        if _ot.is_enabled() and all_mol:
+            act_rows = defaultdict(list)   # molregno -> [(gene, max_pchembl, n)]
+            for mol, gene, mx, n in c.execute(text(
+                    """
+                    SELECT a.molregno, UPPER(csyn.component_synonym),
+                           MAX(a.pchembl_value), COUNT(*)
+                    FROM activities a
+                    JOIN assays ass             ON ass.assay_id = a.assay_id
+                    JOIN target_dictionary td   ON td.tid = ass.tid
+                                               AND td.target_type = 'SINGLE PROTEIN'
+                    JOIN target_components tc   ON tc.tid = ass.tid
+                    JOIN component_synonyms csyn ON csyn.component_id = tc.component_id
+                                                AND csyn.syn_type = 'GENE_SYMBOL'
+                    WHERE a.molregno = ANY(:mols)
+                      AND a.pchembl_value IS NOT NULL
+                      AND a.standard_relation = '='
+                      AND ass.confidence_score >= 8
+                    GROUP BY a.molregno, UPPER(csyn.component_synonym)
+                    """), {"mols": mol_list}).fetchall():
+                if gene and mx is not None:
+                    act_rows[mol].append((gene, float(mx), int(n or 0)))
+            preds_by_mol = _ot.expand(dict(act_rows), dict(primary_by_mol))
+            for mol, preds in preds_by_mol.items():
+                for nm in molregno_name.get(mol, ()):
+                    for p in preds:
+                        if p["gene"] not in drug_genes[nm]:
+                            drug_genes[nm].add(p["gene"])
+                            # keep the highest confidence if two mol forms disagree
+                            drug_weights[nm][p["gene"]] = max(
+                                drug_weights[nm].get(p["gene"], 0.0), p["weight"])
+
+    return _ret()
 
 
 def run(repodb_path, max_diseases=60, mapping="fallback"):
@@ -303,7 +353,8 @@ def run(repodb_path, max_diseases=60, mapping="fallback"):
     # 1. All drug names we might need → ChEMBL id + genes + actions (local chembl_33)
     all_drugs = sorted({d for dis in repo.values() for d in dis})
     eng = get_engine()
-    drug_genes, drug_actions, drug_chembl = _resolve_drug_targets(eng, all_drugs, mapping)
+    drug_genes, drug_actions, drug_chembl, drug_weights = _resolve_drug_targets(
+        eng, all_drugs, mapping, return_weights=True)
     mapped = set(drug_genes)
     log(f"Drug-target mapping mode: {mapping}")
     log(f"repoDB drugs total: {len(all_drugs):,} | mapped to ChEMBL w/ targets: {len(mapped):,} "
@@ -361,12 +412,13 @@ def run(repodb_path, max_diseases=60, mapping="fallback"):
         dis_pairs = []
         for d, y in labeled:
             g = sorted(drug_genes[d])
-            sa = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "aware")
+            dw = drug_weights.get(d) or None       # off-target confidence map (empty → flat)
+            sa = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "aware", drug_weights=dw)
             # clean isolation: same flat formula, disease genes RE-RANKED by genetics
-            sg = mech_score(g, drug_sig[d], dgenes_gen, dpath, ppi, "aware")
+            sg = mech_score(g, drug_sig[d], dgenes_gen, dpath, ppi, "aware", drug_weights=dw)
             pairs_genetics.append((sg, y))
-            sb = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "blind")
-            so = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "off")
+            sb = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "blind", drug_weights=dw)
+            so = mech_score(g, drug_sig[d], dgenes, dpath, ppi, "off", drug_weights=dw)
             all_pairs.append((sa, y)); pairs_blind.append((sb, y)); pairs_off.append((so, y))
             base_random.append((rng.random(), y))
             base_pop.append((float(len(g)), y))             # popularity = #targets
