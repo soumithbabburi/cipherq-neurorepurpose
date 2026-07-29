@@ -214,3 +214,179 @@ def mine_clinical_evidence(drug_name: str, disease_name: str,
         "determination.",
     ]
     return rec
+
+
+# ── Card display columns (Safety / Efficacy) ─────────────────────────────────
+# These SURFACE facts already computed by parse_adverse_events (serious-AE rate with
+# a real denominator) and endpoint_parser.aggregate (primary-endpoint verdict) as two
+# human-readable card columns. They add NOTHING to any composite/rank — display only,
+# so the clinical signal the engine already consumes internally is not double counted.
+#
+# HARD HONESTY RULE: a pair with NO trials reads "No trial data" for BOTH columns
+# (muted, never green, never blank). Absence of a trial is not evidence of safety or
+# efficacy. A pair WITH trials but no posted AE table / no parseable primary reads a
+# distinct, still-muted "not reported", never a default that implies safe/effective.
+
+_EFFICACY_LABELS = {
+    "met_primary": "Met primary endpoint",
+    "failed_primary": "Failed primary",
+    "biomarker_only": "Biomarker only",
+    "terminated_efficacy": "Terminated (efficacy)",
+    "terminated_safety": "Terminated (safety)",
+}
+
+
+def _phase_phrase(phase) -> str:
+    ph = int(phase or 0)
+    return f", Phase {ph}" if ph else ""
+
+
+def efficacy_column(verdict, *, n_trials: int = 0, phase: int = 0, note: str = "") -> Dict:
+    """Plain-language Efficacy column from an endpoint_parser verdict.
+    No trials -> 'No trial data' (muted). Trials present but no parseable primary
+    endpoint -> 'Outcome not reported' (muted). A met primary is the only positive."""
+    n = int(n_trials or 0)
+    ph = int(phase or 0)
+    if n <= 0:
+        return {"status": "no_data", "verdict": None, "label": "No trial data", "muted": True,
+                "tooltip": "No registered trials for this drug and disease pair."}
+    label = _EFFICACY_LABELS.get(verdict)
+    if not label:
+        return {"status": "not_reported", "verdict": verdict or "unknown",
+                "label": "Outcome not reported", "muted": True,
+                "tooltip": (f"{n} trial(s)" + (f" up to Phase {ph}" if ph else "")
+                            + "; no primary endpoint result posted or parseable in platform.")}
+    tip = (note + " " if note else "") + f"Based on {n} trial(s)" + (f" up to Phase {ph}" if ph else "") + "."
+    return {"status": "computed", "verdict": verdict, "label": label,
+            "muted": (verdict != "met_primary"), "phase": ph, "n_trials": n,
+            "tooltip": tip.strip()}
+
+
+def safety_column(ae, *, n_trials: int = 0, phase: int = 0) -> Dict:
+    """Serious-AE Safety column from parse_adverse_events output.
+    No trials -> 'No trial data'. Trials but no AE table -> 'Serious AE not reported'.
+    AE table without an at-risk denominator -> 'Rate not computable'. Denominator present
+    -> 'Serious AE X% (n=N, Phase P)'. All non-computed states are muted, never green."""
+    n = int(n_trials or 0)
+    ph = int(phase or (ae or {}).get("phase") or 0)
+    if n <= 0:
+        return {"status": "no_data", "label": "No trial data", "muted": True,
+                "tooltip": "No registered trials for this drug and disease pair."}
+    if not ae:
+        return {"status": "not_reported", "label": "Serious AE not reported", "muted": True,
+                "tooltip": (f"{n} trial(s)" + (f" up to Phase {ph}" if ph else "")
+                            + "; no structured adverse event table posted.")}
+    at_risk = int(ae.get("serious_num_at_risk") or 0)
+    if ae.get("no_denominator") or not at_risk:
+        return {"status": "no_denominator", "label": "Rate not computable", "muted": True,
+                "tooltip": ("Serious adverse events were posted without a denominator for "
+                            "participants at risk, so a rate cannot be computed.")}
+    rate = ae.get("serious_rate") or 0.0
+    affected = int(ae.get("serious_num_affected") or 0)
+    pct = round(rate * 100)
+    label = f"Serious AE {pct}% (n={at_risk}" + _phase_phrase(ph) + ")"
+    tip = (f"{affected} of {at_risk} participants had a serious adverse event in the largest "
+           f"trial that posted results" + (f" (Phase {ph})" if ph else "")
+           + ". This is a trial specific rate, not population incidence; do not compare with FAERS.")
+    return {"status": "computed", "label": label, "muted": False, "serious_rate": rate,
+            "serious_num_affected": affected, "serious_num_at_risk": at_risk,
+            "phase": ph, "n_trials": n, "tooltip": tip}
+
+
+def safety_approval_line(max_phase, approved_here: bool = False,
+                         market_status: str = "") -> Dict:
+    """DISPLAY-ONLY established-safety header for the Safety column.
+
+    An already-approved drug has cleared human safety trials — a DERISKING POSITIVE
+    for repurposing, not a risk. So the Safety column LEADS with what human safety
+    exposure the molecule already has, from data already on the candidate, and the
+    trial serious-AE rate is demoted to secondary context (see safety_column).
+
+    Reads ONLY: global max_phase, approved_here, market_status. Changes no score.
+    Returns {label, muted}. Never green (established safety is stated, not scored)."""
+    try:
+        mp = int(float(max_phase or 0))
+    except (TypeError, ValueError):
+        mp = 0
+    ms = (market_status or "").strip().lower()
+    if mp >= 4 or approved_here:
+        label = "Approved drug, established human safety profile"
+        muted = False
+    elif mp >= 1:
+        label = f"Phase {mp}, human safety data available"
+        muted = False
+    else:
+        label = "No approved human safety data"
+        muted = True
+    # A withdrawn/obsolete market status is a caution even for an approved drug —
+    # append it honestly rather than implying an unqualified safe profile.
+    if ms and ("withdrawn" in ms or "obsolete" in ms or "discontinued" in ms):
+        label += " (withdrawn from market)"
+        muted = True
+    return {"label": label, "muted": muted}
+
+
+def severity_qualifier(clinical_constraints: Optional[Dict]) -> str:
+    """DISPLAY-ONLY qualifier that reads the ALREADY-computed clinical_constraints
+    severity of the TARGET indication and frames the acceptable safety bar for it.
+    Returns "" when the field is absent (never fabricated)."""
+    cc = clinical_constraints or {}
+    sev = cc.get("disease_severity")
+    if sev == "high":
+        return "acceptable bar for a life threatening indication"
+    if sev == "low":
+        return "high safety bar for a benign indication"
+    return ""
+
+
+def _study_max_phase(study: Dict) -> int:
+    """Highest numeric trial phase from a CT.gov v2 study (0 if none / N/A)."""
+    _MAP = {"PHASE4": 4, "PHASE3": 3, "PHASE2": 2, "PHASE1": 1, "EARLY_PHASE1": 1}
+    phases = ((study.get("protocolSection") or {}).get("designModule") or {}).get("phases") or []
+    return max((_MAP.get((p or "").upper(), 0) for p in phases), default=0)
+
+
+# Per-process memo so repeated forward-screen renders of the same (drug, disease) pair
+# do not re-hit ClinicalTrials.gov. Bounded; display-only, so staleness is harmless.
+_PAIR_COL_CACHE: Dict[str, Dict] = {}
+
+
+def pair_clinical_columns(drug_name: str, disease_name: str, max_trials: int = 50) -> Dict:
+    """ONE ClinicalTrials.gov call for a (drug, disease) pair -> {safety_ct, efficacy_ct}
+    display columns. Intended for the FORWARD screen, where the engine does not otherwise
+    fetch per-candidate trials — so the CALLER must cap this to a few top leads to avoid a
+    live-call storm. Fail-soft: any error or no trials yields honest 'No trial data' for both."""
+    key = f"{(drug_name or '').strip().lower()}|{(disease_name or '').strip().lower()}"
+    if key in _PAIR_COL_CACHE:
+        return _PAIR_COL_CACHE[key]
+    result = {"safety_ct": safety_column(None, n_trials=0),
+              "efficacy_ct": efficacy_column(None, n_trials=0)}
+    if not (drug_name or "").strip() or not (disease_name or "").strip():
+        return result
+    try:
+        from services import http_client
+        data = http_client.get_json(
+            CT_STUDIES, default={},
+            params={"query.intr": drug_name, "query.cond": disease_name,
+                    "pageSize": max_trials, "format": "json"}) or {}
+        studies = data.get("studies", []) or []
+        n = len(studies)
+        if studies:
+            from services.endpoint_parser import aggregate
+            agg = aggregate(studies)
+            max_ph = max((_study_max_phase(s) for s in studies), default=0)
+            result["efficacy_ct"] = efficacy_column(
+                agg.get("verdict"), n_trials=n, phase=max_ph, note=agg.get("note", ""))
+            best_ae, best_n = None, -1
+            for s in studies:
+                ae = parse_adverse_events(s)
+                if ae is None:
+                    continue
+                m = ae.get("serious_num_at_risk") or 0
+                if m > best_n:
+                    best_ae, best_n = {**ae, "phase": _study_max_phase(s)}, m
+            result["safety_ct"] = safety_column(best_ae, n_trials=n, phase=max_ph)
+    except Exception as e:
+        logger.debug("pair_clinical_columns failed for %s / %s: %s", drug_name, disease_name, e)
+    _PAIR_COL_CACHE[key] = result
+    return result

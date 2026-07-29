@@ -1,0 +1,845 @@
+{
+  "built_at": "2026-07-29T16:51:17+00:00",
+  "n_requested": 60,
+  "n_rows": 60,
+  "pool_size": 300,
+  "pool_cap": 300,
+  "dropped_no_trial_count": [],
+  "universe_size": 31544,
+  "ranking": "within top repurposing-value tier, ordered by active clinical trial volume",
+  "sources": {
+    "value_score": "services/disease_value/build_disease_table.py (MONDO burden x unmet x market)",
+    "mechanism_genes": "services/disease_ontology.py resolve_disease (Open Targets associatedTargets)",
+    "category": "disease_value.db category (ICD10-chapter therapeutic area)",
+    "active_trials": "ClinicalTrials.gov API v2 studies countTotal, active statuses"
+  },
+  "rows": [
+    {
+      "disease": "interstitial lung disease",
+      "mondo_id": "MONDO:0015925",
+      "category": "Respiratory",
+      "mechanism_genes": [
+        "CASR",
+        "TERT",
+        "SMPD1",
+        "FOXF1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 501
+    },
+    {
+      "disease": "multiple endocrine neoplasia",
+      "mondo_id": "MONDO:0017169",
+      "category": "Endocrine / metabolic",
+      "mechanism_genes": [
+        "RET",
+        "MEN1",
+        "CDKN1B",
+        "NTRK1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 207
+    },
+    {
+      "disease": "plasma cell leukemia",
+      "mondo_id": "MONDO:0018689",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "NR3C1",
+        "PSMA2",
+        "PSMD2",
+        "PSMD3"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 194
+    },
+    {
+      "disease": "Burkitt lymphoma",
+      "mondo_id": "MONDO:0007243",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "TFAP4",
+        "MYC",
+        "TP53",
+        "FBXO11"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 193
+    },
+    {
+      "disease": "frontotemporal dementia",
+      "mondo_id": "MONDO:0017276",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "MAPT",
+        "CHMP2B",
+        "VCP",
+        "SQSTM1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 160
+    },
+    {
+      "disease": "Becker muscular dystrophy",
+      "mondo_id": "MONDO:0010311",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "DMD",
+        "RPL30",
+        "RPLP1",
+        "RPS5"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 135
+    },
+    {
+      "disease": "juvenile myelomonocytic leukemia",
+      "mondo_id": "MONDO:0011908",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "PTPN11",
+        "NF1",
+        "CBL",
+        "KRAS"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 122
+    },
+    {
+      "disease": "Down syndrome",
+      "mondo_id": "MONDO:0008608",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "GATA1",
+        "RNF212",
+        "FOXG1",
+        "MAPT"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 121
+    },
+    {
+      "disease": "idiopathic aplastic anemia",
+      "mondo_id": "MONDO:0012197",
+      "category": "Oncology / haematology",
+      "mechanism_genes": [
+        "ACTRT3",
+        "PNPLA3",
+        "ACKR1",
+        "SRSF2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 103
+    },
+    {
+      "disease": "Ewing sarcoma",
+      "mondo_id": "MONDO:0012817",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "STAG2",
+        "TP53",
+        "NF1",
+        "EGR2"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 102
+    },
+    {
+      "disease": "Charcot-Marie-Tooth disease",
+      "mondo_id": "MONDO:0015626",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "GDAP1",
+        "MPZ",
+        "NEFL",
+        "MFN2"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 90
+    },
+    {
+      "disease": "hereditary ataxia",
+      "mondo_id": "MONDO:0100309",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "SETX",
+        "ATM",
+        "CC2D2A",
+        "AFG3L2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 89
+    },
+    {
+      "disease": "neurofibromatosis type 1",
+      "mondo_id": "MONDO:0018975",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "NF1",
+        "SPRED1",
+        "EVI2B",
+        "HNF1A"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 84
+    },
+    {
+      "disease": "immunoglobulin A vasculitis",
+      "mondo_id": "MONDO:0019167",
+      "category": "Oncology / haematology",
+      "mechanism_genes": [],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 66
+    },
+    {
+      "disease": "histiocytic sarcoma",
+      "mondo_id": "MONDO:0019479",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "TP53",
+        "POT1",
+        "IL17A",
+        "CRP"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 65
+    },
+    {
+      "disease": "hemophilia B",
+      "mondo_id": "MONDO:0010604",
+      "category": "Oncology / haematology",
+      "mechanism_genes": [
+        "F9",
+        "F8",
+        "F7",
+        "TFPI"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 63
+    },
+    {
+      "disease": "atrial septal defect",
+      "mondo_id": "MONDO:0006664",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "NKX2-5",
+        "GATA4",
+        "ACTC1",
+        "TLL1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 60
+    },
+    {
+      "disease": "chronic inflammatory demyelinating polyradiculoneuropathy",
+      "mondo_id": "MONDO:0006702",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "GJB1",
+        "MPZ",
+        "SCN8A",
+        "PMP22"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 60
+    },
+    {
+      "disease": "myotonic dystrophy",
+      "mondo_id": "MONDO:0016107",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "DMPK",
+        "DM1-AS",
+        "CNBP",
+        "MBNL1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 60
+    },
+    {
+      "disease": "Arts syndrome",
+      "mondo_id": "MONDO:0010533",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "PRPS1",
+        "ATP2B2",
+        "AGTPBP1",
+        "SCN8A"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 58
+    },
+    {
+      "disease": "cleft palate",
+      "mondo_id": "MONDO:0016064",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "TBX22",
+        "TP63",
+        "GRHL3",
+        "SATB2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 57
+    },
+    {
+      "disease": "antiphospholipid syndrome",
+      "mondo_id": "MONDO:8000010",
+      "category": "Oncology / haematology",
+      "mechanism_genes": [
+        "FBN1",
+        "NOS3",
+        "TNF",
+        "PLAT"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 53
+    },
+    {
+      "disease": "progressive supranuclear palsy",
+      "mondo_id": "MONDO:0019037",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "FUS",
+        "SOD1",
+        "TARDBP",
+        "SQSTM1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 51
+    },
+    {
+      "disease": "dengue disease",
+      "mondo_id": "MONDO:0005502",
+      "category": "Infectious disease",
+      "mechanism_genes": [
+        "APOA1",
+        "HAVCR1",
+        "YBX1",
+        "CD209"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 50
+    },
+    {
+      "disease": "necrotizing enterocolitis",
+      "mondo_id": "MONDO:0005313",
+      "category": "Gastroenterology",
+      "mechanism_genes": [
+        "TLR4",
+        "FABP2",
+        "IL6",
+        "TNF"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 50
+    },
+    {
+      "disease": "autoimmune lymphoproliferative syndrome",
+      "mondo_id": "MONDO:0017979",
+      "category": "Oncology / haematology",
+      "mechanism_genes": [
+        "CASP8",
+        "PRKCD",
+        "KRAS",
+        "FAS"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 49
+    },
+    {
+      "disease": "multiple endocrine neoplasia type 1",
+      "mondo_id": "MONDO:0007540",
+      "category": "Endocrine / metabolic",
+      "mechanism_genes": [
+        "MEN1",
+        "CDC73",
+        "THRB",
+        "RB1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 49
+    },
+    {
+      "disease": "panuveitis",
+      "mondo_id": "MONDO:0017255",
+      "category": "Ophthalmology / ENT",
+      "mechanism_genes": [
+        "FOXE3",
+        "PAX6",
+        "PDE6B",
+        "FOXC1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 47
+    },
+    {
+      "disease": "anal fistula",
+      "mondo_id": "MONDO:0000754",
+      "category": "Gastroenterology",
+      "mechanism_genes": [
+        "KLC2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 46
+    },
+    {
+      "disease": "disorder of glycogen metabolism",
+      "mondo_id": "MONDO:0002412",
+      "category": "Endocrine / metabolic",
+      "mechanism_genes": [
+        "THRB",
+        "GAA",
+        "G6PC1",
+        "GBE1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 44
+    },
+    {
+      "disease": "congenital diaphragmatic hernia",
+      "mondo_id": "MONDO:0005711",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "ZFPM2",
+        "ALDH1A2",
+        "GATA6",
+        "PLS3"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 43
+    },
+    {
+      "disease": "complex regional pain syndrome",
+      "mondo_id": "MONDO:0019369",
+      "category": "Musculoskeletal / rheumatology",
+      "mechanism_genes": [
+        "RAB27A",
+        "PTBP2",
+        "KLF6",
+        "MITF"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 42
+    },
+    {
+      "disease": "congenital heart block",
+      "mondo_id": "MONDO:0009326",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "NKX2-5",
+        "SCN5A",
+        "MYH6",
+        "ZFPM2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 40
+    },
+    {
+      "disease": "Lyme disease",
+      "mondo_id": "MONDO:0019632",
+      "category": "Infectious disease",
+      "mechanism_genes": [
+        "SCGB1D2",
+        "TLR1",
+        "INCENP",
+        "SCGB2A1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 39
+    },
+    {
+      "disease": "Fanconi anemia",
+      "mondo_id": "MONDO:0019391",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "ZNF276",
+        "FANCA",
+        "FANCD2OS",
+        "POLG"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 38
+    },
+    {
+      "disease": "alpha 1-antitrypsin deficiency",
+      "mondo_id": "MONDO:0013282",
+      "category": "Endocrine / metabolic",
+      "mechanism_genes": [
+        "SERPINA1",
+        "ABCB4",
+        "HOXA5",
+        "NKX2-1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 36
+    },
+    {
+      "disease": "facioscapulohumeral muscular dystrophy",
+      "mondo_id": "MONDO:0001347",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "SMCHD1",
+        "DNMT3B",
+        "LRIF1",
+        "SCN4A"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 34
+    },
+    {
+      "disease": "tetralogy of fallot",
+      "mondo_id": "MONDO:0008542",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "NKX2-5",
+        "JAG1",
+        "GATA4",
+        "GATA6"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 33
+    },
+    {
+      "disease": "Ehlers-Danlos syndrome",
+      "mondo_id": "MONDO:0020066",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "COL3A1",
+        "PLOD1",
+        "SDF4",
+        "COL1A1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 32
+    },
+    {
+      "disease": "Friedreich ataxia",
+      "mondo_id": "MONDO:0100339",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "FXN",
+        "NFE2L2",
+        "CNTNAP1",
+        "SPTBN4"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 32
+    },
+    {
+      "disease": "autoimmune hepatitis",
+      "mondo_id": "MONDO:0016264",
+      "category": "Gastroenterology",
+      "mechanism_genes": [
+        "FAS",
+        "SYNPR",
+        "ICOS",
+        "FOXP3"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 32
+    },
+    {
+      "disease": "hepatoblastoma",
+      "mondo_id": "MONDO:0018666",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "CTNNB1",
+        "DROSHA",
+        "TP53",
+        "PRKACA"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 32
+    },
+    {
+      "disease": "interstitial cystitis",
+      "mondo_id": "MONDO:0018301",
+      "category": "Nephrology / urology",
+      "mechanism_genes": [
+        "SLC6A4",
+        "SLC6A2",
+        "TNF",
+        "INPP5D"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 32
+    },
+    {
+      "disease": "Takayasu arteritis",
+      "mondo_id": "MONDO:0017991",
+      "category": "Musculoskeletal / rheumatology",
+      "mechanism_genes": [
+        "PTK2B",
+        "IL12B",
+        "FCGR3B",
+        "IL6"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 30
+    },
+    {
+      "disease": "osteogenesis imperfecta",
+      "mondo_id": "MONDO:0019019",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "COL1A1",
+        "COL1A2",
+        "LRP5",
+        "CRTAP"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 30
+    },
+    {
+      "disease": "Moyamoya disease",
+      "mondo_id": "MONDO:0016820",
+      "category": "Cardiovascular",
+      "mechanism_genes": [
+        "STAMBPL1",
+        "RNF213",
+        "GUCY1A1",
+        "ACTA2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 27
+    },
+    {
+      "disease": "angioimmunoblastic T-cell lymphoma",
+      "mondo_id": "MONDO:0004977",
+      "category": "Oncology",
+      "mechanism_genes": [
+        "DNMT3A",
+        "TET2",
+        "IDH2",
+        "RHOA"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 27
+    },
+    {
+      "disease": "Tako-tsubo cardiomyopathy",
+      "mondo_id": "MONDO:0019018",
+      "category": "Cardiovascular",
+      "mechanism_genes": [
+        "SCN5A",
+        "NKX2-5",
+        "LMNA",
+        "NOS3"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 26
+    },
+    {
+      "disease": "epidermolysis bullosa dystrophica",
+      "mondo_id": "MONDO:0006543",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "COL7A1",
+        "FOXN1",
+        "MSX2",
+        "EN1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 26
+    },
+    {
+      "disease": "hereditary hemorrhagic telangiectasia",
+      "mondo_id": "MONDO:0019180",
+      "category": "Cardiovascular",
+      "mechanism_genes": [
+        "ENG",
+        "ACVRL1",
+        "GDF2",
+        "RASA1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 26
+    },
+    {
+      "disease": "hereditary spastic paraplegia",
+      "mondo_id": "MONDO:0019064",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "ATL1",
+        "CYP7B1",
+        "SPG11",
+        "KIF5A"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 26
+    },
+    {
+      "disease": "Charcot-Marie-Tooth disease type 1F",
+      "mondo_id": "MONDO:0011902",
+      "category": "Unclassified",
+      "mechanism_genes": [
+        "NEFL",
+        "PLP1",
+        "SCN8A",
+        "PMP22"
+      ],
+      "value_score": 0.8177,
+      "value_tier": "High priority",
+      "active_trials": 26
+    },
+    {
+      "disease": "craniosynostosis",
+      "mondo_id": "MONDO:0015469",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "FGFR2",
+        "SKI",
+        "TCF12",
+        "IFT122"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 25
+    },
+    {
+      "disease": "diphtheria",
+      "mondo_id": "MONDO:0005504",
+      "category": "Infectious disease",
+      "mechanism_genes": [
+        "HBEGF",
+        "CD9",
+        "EEF2",
+        "HSP90AB1"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 25
+    },
+    {
+      "disease": "biliary atresia",
+      "mondo_id": "MONDO:0008867",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "SCN9A",
+        "AKR1E2",
+        "ADD3",
+        "ABCB4"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 24
+    },
+    {
+      "disease": "idiopathic hypersomnia",
+      "mondo_id": "MONDO:0018044",
+      "category": "Psychiatry / behavioural",
+      "mechanism_genes": [
+        "GABBR1",
+        "GABBR2",
+        "HRH3",
+        "SLC6A3"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 24
+    },
+    {
+      "disease": "pseudotumor cerebri",
+      "mondo_id": "MONDO:0009468",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "PDE6B",
+        "ATOH7",
+        "MAB21L1",
+        "INTS15"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 23
+    },
+    {
+      "disease": "Guillain-Barre syndrome",
+      "mondo_id": "MONDO:0016218",
+      "category": "Neurology",
+      "mechanism_genes": [
+        "PMP22",
+        "MAG",
+        "DST",
+        "LGI4"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 22
+    },
+    {
+      "disease": "Hirschsprung disease",
+      "mondo_id": "MONDO:0018309",
+      "category": "Congenital / genetic",
+      "mechanism_genes": [
+        "RET",
+        "ECE1",
+        "SMO",
+        "ERBB2"
+      ],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 20
+    },
+    {
+      "disease": "rabies",
+      "mondo_id": "MONDO:0019173",
+      "category": "Infectious disease",
+      "mechanism_genes": [],
+      "value_score": 0.9262,
+      "value_tier": "High priority",
+      "active_trials": 20
+    }
+  ]
+}
