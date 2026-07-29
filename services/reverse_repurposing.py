@@ -1490,7 +1490,7 @@ def screen_indications_for_drug(
         exclude_oncology = onc_drug
 
     cache_key = (f"drug:{drug.lower().strip()}|area:{(area_filter or '').lower()}"
-                 f"|noonc:{int(exclude_oncology)}|v2")   # v2: subtype-expansion + excluded/studied split
+                 f"|noonc:{int(exclude_oncology)}|v3")   # v3: + recovered-known-indication lane
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -1755,6 +1755,26 @@ def screen_indications_for_drug(
             _narrowed += 1
     candidates = [c for c in candidate_map.values()
                   if not _is_approved_here(c) and not _is_ae_symptom(c["disease"])]
+
+    # RECOVERED KNOWN INDICATIONS (mechanism validation, not a novelty claim) ─────
+    # An approved indication is normally excluded from the NOVEL candidate list above.
+    # But when the mechanism machinery INDEPENDENTLY GENERATED it — target→disease
+    # association / knowledge-graph / a real target link, i.e. it arrived through the
+    # same evidence path a novel lead would — that is a validation signal: the platform
+    # re-derived a real approved use from mechanism alone. Silently dropping it hides
+    # exactly the proof the ranking works. Surface it in a SEPARATE, clearly-labelled
+    # lane (never mixed into the novel leads, never presented as a repurposing claim).
+    # Fully general: the test is "was it mechanistically generated?", with no per-drug
+    # or per-disease logic — any drug whose on-label use the engine recovers qualifies.
+    def _mechanistically_generated(c: Dict) -> bool:
+        srcs = c.get("sources", set())
+        return (float(c.get("association_score") or 0) > 0
+                or "genetic" in srcs or "knowledge-graph" in srcs
+                or bool(c.get("via_target")))
+    recovered_candidates = [c for c in candidate_map.values()
+                            if _is_approved_here(c)
+                            and not _is_ae_symptom(c["disease"])
+                            and _mechanistically_generated(c)]
 
     # 3a. Exclude oncology unless the user explicitly asked for it ──────────────
     if exclude_oncology and not _area_is_oncology(area_filter or ""):
@@ -2198,6 +2218,30 @@ def screen_indications_for_drug(
         _dedup.append(_c)
     scored = _dedup
 
+    # Score the RECOVERED known indications through the IDENTICAL scorer, so their
+    # mechanistic evidence chain is computed the same way a novel lead's is. They are
+    # kept in a separate list (never merged into `scored`) and each is flagged as an
+    # approved use recovered by mechanism, so the UI can present it as validation, not
+    # as a new repurposing opportunity.
+    recovered_scored: List[Dict] = []
+    if recovered_candidates:
+        with ThreadPoolExecutor(max_workers=4) as _rec_pool:
+            recovered_scored = list(_rec_pool.map(_score_one, recovered_candidates))
+        for _e in recovered_scored:
+            _e["is_known_indication"]    = True
+            _e["recovered_by_mechanism"] = True
+            _e["novelty"]                = "known indication, recovered by mechanism"
+        recovered_scored.sort(key=_rank, reverse=True)
+        _seen_rec, _rec_dedup = set(), []
+        for _c in recovered_scored:
+            _dn = (_c.get("disease") or "").lower()
+            _key = " ".join(sorted(w for w in re.split(r"[^a-z0-9]+", _dn) if len(w) > 3)) or _dn
+            if _key in _seen_rec:
+                continue
+            _seen_rec.add(_key)
+            _rec_dedup.append(_c)
+        recovered_scored = _rec_dedup
+
     # Positive-Pivot generation: for CCH-crushed candidates, turn the mismatch into a
     # discovery lead (severe/orphan variant, dose-sparing combination, or brain-
     # penetrant analogue) instead of only eliminating it. Bounded to the strongest
@@ -2248,6 +2292,9 @@ def screen_indications_for_drug(
         "excluded_anti_targets": excluded_anti,
         "candidate_count":   len(scored),
         "candidates":        scored,
+        # Approved indications the mechanism engine independently RE-DERIVED (validation
+        # signal, not novel leads). Scored by the same composite; ranked, labelled.
+        "recovered_indications": recovered_scored,
         "cns_mpo":           drug_mpo,
         # F7 biologic-aware: expose modality + an explicit list of the small-molecule-only
         # modules that do NOT apply, so the UI shows first-class "N/A (biologic)" instead

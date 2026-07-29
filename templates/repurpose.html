@@ -733,9 +733,34 @@ async function runScreen(){
       + 'Candidates are ranked by evidence and repurposing value, which can differ from the Evidence score shown on each card. '
       + 'The Safety and Efficacy columns report ClinicalTrials.gov facts for reference only; they do not change the score or the order.</div>';
     _REV_DRUG = {max_phase: +(d.max_phase||0), market_status: d.market_status||''};
+    // Validation lane: approved uses of this molecule that the engine independently
+    // derived from its targets. Shown separately as a mechanism check, never mixed into
+    // the ranked candidates and never presented as novel.
+    var recov = d.recovered_indications || [];
+    var recovHtml = recov.length ? (
+      '<div style="margin-top:26px">'
+      + '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker" style="color:#0e7490">Validation</span></div>'
+      + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">Known indications recovered by mechanism</div>'
+      + '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:12px">Established approved uses of this molecule that the engine independently derived from its targets. Shown as evidence that the mechanism reasoning works, kept out of the ranked candidates above and never presented as novel.</div>'
+      + '<div class="compound-grid">' + recov.map(function(c){
+          var sc = (c.score != null ? c.score : c.composite_score) || 0;
+          var col = (window.scoreColor ? window.scoreColor(sc) : '#0e7490');
+          var why = String(c.rationale || '').replace(/</g,'&lt;');
+          return '<div class="dossier" style="padding:13px 16px;display:flex;flex-direction:column;gap:7px">'
+            + '<div style="display:flex;align-items:center;gap:10px">'
+            +   '<div style="min-width:0;flex:1"><div class="cc-name" style="font-size:0.98rem">'+tcase(c.disease)+'</div></div>'
+            +   '<span class="mono" style="font-weight:800;color:'+col+';font-size:1rem">'+(sc*100).toFixed(0)+'</span>'
+            + '</div>'
+            + '<span class="chip" style="align-self:flex-start;background:#e9f5ec;color:#1b5e20;border:1px solid #c6e4cd;font-size:0.62rem;font-weight:600">Known use, recovered by mechanism</span>'
+            + (why ? '<div style="font-size:0.7rem;color:#6b7690;line-height:1.45">'+why+'</div>' : '')
+            + '</div>';
+        }).join('') + '</div>'
+      + '</div>'
+    ) : '';
     document.getElementById('results').innerHTML =
       scoreLegendHtml() + rankNote +
-      '<div class="compound-grid">' + cands.map(function(c,i){return candidateCard(c, d.chembl_id, i, cands);}).join('') + '</div>';
+      '<div class="compound-grid">' + cands.map(function(c,i){return candidateCard(c, d.chembl_id, i, cands);}).join('') + '</div>'
+      + recovHtml;
   } catch(e){
     _stopProgress();
     status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';
