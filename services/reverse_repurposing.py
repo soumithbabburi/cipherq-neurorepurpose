@@ -142,6 +142,39 @@ _BASE_ACTIONABLE_CUTOFF = 0.40
 _TRIAL_LINK_CUTOFF      = 0.30   # active/historic trial in THIS indication overrides
 _ORPHAN_CUTOFF_FACTOR   = 0.85   # rare disease → relax the bar 15%
 
+# ── NOVEL-BUCKET mechanism-only scoring (Task A) ──────────────────────────────
+# A truly NOVEL (untested) lead has, by definition, ZERO clinical-trial and ZERO
+# literature evidence — those features are structurally absent, so including them in
+# the novel bucket either zeros a real lead out or only surfaces one with a stray
+# co-mention. So novel candidates are re-scored on MECHANISM ALONE: target overlap +
+# direction-aware pathway + PPI, weighted by the engine's biology axes (.25/.20/.20)
+# renormalized. This is the EXACT leakage-free score benchmarked against repoDB
+# approved-vs-failed at AUROC 0.737 (validation/validate_predictions.py, 1,476 pairs;
+# target-only 0.746, label-shuffle 0.479). It is NOT a change to
+# score_compound_for_disease / the composite / the weights — the validated composite is
+# retained UNCHANGED for the approved (recovered) and in-development lanes; this mode is
+# applied ONLY to candidates routed to the novel bucket. Cutoffs are calibrated on that
+# same mechanism-only pair distribution: 41% of pairs (71% of FAILED, 27% of approved)
+# score exactly 0, so folding <0.05 removes noise not signal; precision is 0.85 at ≥0.20.
+_NOVEL_MECH_W          = {"target": 0.25, "pathway": 0.20, "ppi": 0.20}
+_NOVEL_WSUM            = sum(_NOVEL_MECH_W.values())
+_NOVEL_ACTIONABLE_CUTOFF = 0.20   # mech-only ≥ 0.20 → precision 0.853, recall 0.69 (repoDB)
+_NOVEL_LOWCONF_CUTOFF    = 0.05   # mech-only < 0.05 → the exact-zero KG-association noise pile
+# repoDB mechanism-only AUROC (measured), surfaced so the UI can label the novel lane honestly.
+_NOVEL_MECH_AUROC        = 0.737
+
+
+def _novel_mech_only_score(scores: Dict) -> float:
+    """Mechanism-only novel-bucket score from a canonical scorer's component `scores`
+    dict (target / pathway / ppi). Weighted by _NOVEL_MECH_W renormalized. Display/rank
+    for the NOVEL bucket only — the validated composite is untouched elsewhere."""
+    if not scores:
+        return 0.0
+    val = (_NOVEL_MECH_W["target"]  * float(scores.get("target", 0.0) or 0.0)
+           + _NOVEL_MECH_W["pathway"] * float(scores.get("pathway", 0.0) or 0.0)
+           + _NOVEL_MECH_W["ppi"]     * float(scores.get("ppi", 0.0) or 0.0))
+    return round(val / _NOVEL_WSUM, 4)
+
 try:
     from services.disease_ontology import is_orphan_candidate
 except Exception:                                    # pragma: no cover
@@ -2059,8 +2092,40 @@ def screen_indications_for_drug(
         if _orphan:
             eff_cutoff *= _ORPHAN_CUTOFF_FACTOR
         eff_cutoff = round(eff_cutoff, 3)
+
+        # DISPLAY GATING ONLY (no effect on composite_score or _rank — neither reads
+        # `actionable` / `deprioritized` / `low_confidence`; the mechanistic score and
+        # the rank order are unchanged). Compute the evidence tier once, up front, so a
+        # failed / contradicted indication can be stripped of its "Actionable"/"Lead"
+        # display flags and the ~0.02 KG-relatedness noise can be folded away.
+        _etier = _evidence_tier(c)
+        _tier_name = (_etier or {}).get("tier", "")
+        _osig = float(c.get("trial_outcome_signal", 0.0) or 0.0)
+        # A human already ran this pair and it did NOT work (a trial failed for efficacy /
+        # missed its primary endpoint / moved only a biomarker, or the trial-outcome signal
+        # is net-negative). Such a candidate must never read as an actionable "lead",
+        # whatever the mechanistic composite says — it can still rank where the mechanism
+        # puts it, but the badges reflect the failure.
+        deprioritized = (_tier_name in ("contradicted", "failed-endpoint", "biomarker-only")
+                         or _osig < 0.0)
+
         actionable = sr["composite_score"] >= eff_cutoff
+        if deprioritized:
+            actionable = False
         cutoff_kind = "raw"
+
+        # Low-confidence = sub-cutoff mechanism / association-only noise (the ~0.02
+        # knowledge-graph rows with no functional cohesion). Collapsed behind a fold in
+        # the UI and given no 505(b)(2) block — but kept in the payload, never dropped.
+        # A candidate with real trial evidence, or a de-prioritized failed lead with a
+        # human readout, is NOT noise and stays a full visible card.
+        _has_trial_ev = (trial_count > 0) or int(c.get("max_trial_phase", 0) or 0) > 0
+        _phantom = bool(ctpa.get("phantom"))
+        if deprioritized or _has_trial_ev:
+            low_confidence = _phantom     # only a genuine off-target phantom collapses
+        else:
+            low_confidence = bool(sr["composite_score"] < eff_cutoff
+                                  or _phantom or not overlap)
 
         entry = {
             **c,
@@ -2085,8 +2150,14 @@ def screen_indications_for_drug(
             "effective_cutoff":     eff_cutoff,
             "cutoff_kind":          cutoff_kind,
             "actionable":           bool(actionable and appr["appropriate"] and not pkg_contra),
+            # Display flags (not scoring): failed/contradicted lead vs sub-cutoff KG noise.
+            "deprioritized":        bool(deprioritized),
+            "low_confidence":       bool(low_confidence),
+            # Mechanism-only score (Task A) — used ONLY if this candidate is routed to the
+            # NOVEL bucket; the validated composite above stays the score for recovered/in-dev.
+            "mech_only_score":      _novel_mech_only_score(sc),
             "appropriateness":      appr,   # B/C: would the drug worsen or cause this disease?
-            "evidence_tier":        _evidence_tier(c),   # real-world strength: supported / promising / contradicted
+            "evidence_tier":        _etier,   # real-world strength: supported / promising / contradicted
             # Human-readable Safety / Efficacy columns sourced from ClinicalTrials.gov
             # (serious-AE rate with denominator; primary-endpoint verdict). DISPLAY ONLY —
             # not folded into composite_score or any rank key (no double counting). A pair
@@ -2274,6 +2345,68 @@ def screen_indications_for_drug(
                 _c["prior_studied_phase"] = _ph
                 break
 
+    # ── THREE honest buckets (display routing only — ranked order within each bucket is
+    # the order `scored` already has; composite/_rank untouched). An indication with prior
+    # clinical art for THIS molecule (an existing trial, or a recorded sub-phase-4 study
+    # phase) is ALREADY IN CLINICAL DEVELOPMENT — it is not a novel repurposing lead and
+    # must not be presented as one. Everything else stays in the novel path (still subject
+    # to the low_confidence fold). Approved uses are already held out in recovered_scored.
+    in_development: List[Dict] = []
+    novel: List[Dict] = []
+    for _c in scored:
+        _tc = int(_c.get("trial_count", 0) or 0)
+        _psp = float(_c.get("prior_studied_phase") or 0)
+        _c["in_development"] = bool(_tc > 0 or _psp >= 1)
+        (in_development if _c["in_development"] else novel).append(_c)
+
+    # ── Task A — NOVEL bucket is re-scored on MECHANISM ONLY (target + direction-aware
+    # pathway + PPI, renormalized; the repoDB-validated leakage-free score, AUROC 0.737).
+    # Clinical-trial and literature terms are dropped (structurally zero for an untested
+    # lead). The direction / appropriateness / functional-cohesion / off-target gates stay
+    # ACTIVE — they are the only noise filter now. This mode is applied to the novel bucket
+    # ONLY; recovered + in-development keep the untouched validated composite. Novel is then
+    # re-ranked by the mechanism-only score (its scoring intentionally changed).
+    for _c in novel:
+        _mech = float(_c.get("mech_only_score", 0.0) or 0.0)
+        _c["composite_full"] = _c.get("composite_score")   # keep the full composite for the dossier
+        _c["score"] = _c["composite_score"] = _mech        # displayed/ranked score = mechanism-only
+        _c["scoring_mode"] = "mechanism_only"
+        _phantom = bool((_c.get("ctpa") or {}).get("phantom"))
+        _appr_ok = (_c.get("appropriateness") or {}).get("appropriate", True) is not False
+        _contra  = (_c.get("primekg") or {}).get("relation") == "contraindication"
+        _overlap = bool(_c.get("overlapping_targets"))
+        # Fold = the exact-zero KG-association noise (no functional cohesion / off target /
+        # no shared target). Actionable = clears the mechanism-only precision bar AND passes
+        # every direction/appropriateness/contraindication/cohesion gate.
+        _c["low_confidence"] = bool(_mech < _NOVEL_LOWCONF_CUTOFF or _phantom or not _overlap)
+        _c["actionable"] = bool(_mech >= _NOVEL_ACTIONABLE_CUTOFF and _appr_ok
+                                and not _contra and not _phantom and not _c.get("deprioritized"))
+        _c["effective_cutoff"] = _NOVEL_ACTIONABLE_CUTOFF
+    novel.sort(key=lambda c: float(c.get("mech_only_score", 0.0) or 0.0), reverse=True)
+
+    # Computed headline summary (all counts derived from the buckets; nothing hardcoded,
+    # drug-agnostic). k approved recovered / d in clinical development (f failed) / m novel
+    # untested above cutoff / lc low-confidence folded.
+    _k_recovered = len(recovered_scored)
+    _d_indev = len(in_development)
+    _f_failed = sum(1 for c in in_development if c.get("deprioritized"))
+    # Novel = genuinely untested. Above-cutoff = actionable AND not low-confidence noise.
+    _m_novel = sum(1 for c in novel if c.get("actionable") and not c.get("low_confidence"))
+    _n_low = sum(1 for c in novel if c.get("low_confidence"))
+    _n_visible = len(novel) - _n_low
+
+    def _plural(n, one, many=None):
+        return one if n == 1 else (many or one + "s")
+
+    _summary_parts = [
+        f"{_k_recovered} approved {_plural(_k_recovered, 'use')} recovered by mechanism",
+        (f"{_d_indev} already in clinical development ({_f_failed} failed)"
+         if _d_indev else "none already in clinical development"),
+        f"{_m_novel} novel untested above the actionable cutoff"
+        + (f" ({_n_low} low-confidence folded)" if _n_low else ""),
+    ]
+    _summary = "; ".join(_summary_parts) + "."
+
     result = {
         "drug":              info["name"],
         "chembl_id":         chembl_id,
@@ -2290,10 +2423,36 @@ def screen_indications_for_drug(
         "exclude_oncology":  exclude_oncology,
         "is_oncology_drug":  onc_drug,
         "excluded_anti_targets": excluded_anti,
-        "candidate_count":   len(scored),
-        "candidates":        scored,
-        # Approved indications the mechanism engine independently RE-DERIVED (validation
-        # signal, not novel leads). Scored by the same composite; ranked, labelled.
+        "candidate_count":   len(novel),
+        # Computed headline + honest bucket counts (drug-agnostic; see above).
+        "summary":           _summary,
+        "n_recovered":       _k_recovered,
+        "n_in_development":  _d_indev,
+        "n_in_development_failed": _f_failed,
+        "n_novel_actionable": _m_novel,
+        "n_low_confidence":  _n_low,
+        "n_visible":         _n_visible,
+        # Task A — how the novel bucket is scored, surfaced so the UI labels it honestly.
+        # AUROC 0.737 (~0.7+) means novel is presented normally, with a mechanism-only note.
+        "novel_scoring": {
+            "mode": "mechanism_only",
+            "basis": "target overlap + direction-aware pathway + PPI (renormalized); "
+                     "clinical-trial and literature terms excluded (structurally zero for "
+                     "an untested lead).",
+            "repodb_auroc": _NOVEL_MECH_AUROC,
+            "actionable_cutoff": _NOVEL_ACTIONABLE_CUTOFF,
+            "lowconf_cutoff": _NOVEL_LOWCONF_CUTOFF,
+            "label": f"Mechanism-only scoring (target/pathway/PPI + direction), validated at "
+                     f"repoDB AUROC {_NOVEL_MECH_AUROC} for recovering approved uses. These "
+                     f"pairs are untested, so no clinical evidence exists for them yet.",
+        },
+        # BUCKET 3 — genuinely UNTESTED novel leads only (prior-art indications routed out).
+        "candidates":        novel,
+        # BUCKET 2 — indications ALREADY IN CLINICAL DEVELOPMENT for this molecule (an
+        # existing trial / recorded study phase), not approved and not novel. Reference lane.
+        "in_development":    in_development,
+        # BUCKET 1 — approved indications the mechanism engine independently RE-DERIVED
+        # (validation signal, not novel leads). Scored by the same composite; ranked, labelled.
         "recovered_indications": recovered_scored,
         "cns_mpo":           drug_mpo,
         # F7 biologic-aware: expose modality + an explicit list of the small-molecule-only

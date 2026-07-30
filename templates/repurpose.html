@@ -240,6 +240,26 @@ function firstSentence(s){
 // tier is no longer a separate chip) and the hard-negative gates into ONE recommendation.
 // Vocabulary is shared with the forward /discover screen so the same pair reads the same.
 function verdictReverse(c){
+  // Recovered/approved uses reuse this card, but they are NOT candidates to judge as
+  // pass/fail — they are established indications the mechanism engine re-derived. Give
+  // them their own honest verdict instead of a "Not a candidate" from the failed/contra gates.
+  if(c.is_known_indication){
+    return {word:'Approved use', col:'#1b5e20',
+            why:'Established approved indication, independently recovered by the mechanism engine.'};
+  }
+  // In-development uses are prior clinical art, not novel candidates to pass/fail. Give them
+  // an "In clinical development" verdict; the trial safety/efficacy panels below carry the
+  // decisive detail and the red "Failed" chip flags a failed readout.
+  if(c.in_development){
+    var ph = c.max_trial_phase ? ('Phase '+c.max_trial_phase)
+           : (c.prior_studied_phase ? ('Phase '+Math.round(c.prior_studied_phase)) : '');
+    var tl = c.trial_count ? (c.trial_count+' trial'+(c.trial_count>1?'s':'')+(ph?(' · up to '+ph):''))
+           : (ph ? ('Studied · '+ph) : 'Prior clinical art');
+    var etn = (c.evidence_tier && c.evidence_tier.note) ? (' — '+c.evidence_tier.note) : '';
+    return {word: (c.deprioritized ? 'In development · failed' : 'In clinical development'),
+            col:  (c.deprioritized ? '#922019' : '#8a5a00'),
+            why:  tl + etn};
+  }
   var ev  = (c.score != null ? c.score : c.composite_score) || 0;
   var appr= c.appropriateness || {}, pk = c.primekg || {}, et = c.evidence_tier || {};
   var wn  = c.why_not || [];
@@ -383,6 +403,15 @@ function candidateCard(c, chembl, idx, list){
   var vd = verdictReverse(c);
   // Context tags (not penalties): what KIND of candidate this is.
   var contextTags = ''
+    + (c.is_known_indication
+        ? '<span class="chip" style="background:#e9f5ec;color:#1b5e20;border:1px solid #c6e4cd;font-size:0.66rem;font-weight:700" title="An established approved indication for this molecule, independently re-derived from its targets by the mechanism engine. Shown as validation, not a novel lead.">Known use · recovered by mechanism</span>'
+        : '')
+    + ((c.in_development && !c.is_known_indication)
+        ? '<span class="chip" style="background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-size:0.66rem;font-weight:700" title="This indication already has clinical trials or a recorded study phase for this molecule. Prior clinical art, evaluated here with its trial safety and efficacy, not a novel repurposing lead.">In clinical development</span>'
+        : '')
+    + ((c.deprioritized && !c.is_known_indication)
+        ? '<span class="chip" style="background:#faece9;color:#922019;border:1px solid #e6c3bb;font-size:0.66rem;font-weight:700" title="A trial for this drug and indication failed for efficacy, missed its primary endpoint, or moved only a biomarker. De-prioritized: it ranks where the mechanism puts it, but it is not an actionable lead.">Failed</span>'
+        : '')
     + (c.is_subtype
         ? '<span class="chip" style="background:#eef3f0;color:#2563eb;border:1px solid #cfe0d8;font-size:0.66rem;font-weight:600" title="Scored individually as a specific subtype rather than as the broad umbrella indication.">Subtype of '+(c.parent_indication||'')+'</span>'
         : '')
@@ -409,8 +438,12 @@ function candidateCard(c, chembl, idx, list){
         : '');
   // Top ranked candidates get a real differentiator: rank basis (actionable + tier),
   // the strongest true contributor, and the honest score gap to the next candidate.
+  // A failed / de-prioritized indication (a human ran it and it did not work) or a
+  // sub-cutoff low-confidence lead must NEVER carry a "Lead candidate · Actionable"
+  // banner — that was the self-contradiction (Actionable strip over a "Not a candidate"
+  // verdict). Only a genuine, actionable top-3 lead gets the banner.
   var leadBanner = '';
-  if (idx!=null && idx<3){
+  if (idx!=null && idx<3 && !c.deprioritized && !c.low_confidence && c.actionable!==false){
     var rw = {0:'Lead',1:'Second',2:'Third'}[idx] || ('#'+(idx+1));
     var lr = leadReasonRev(c), lg = leadGapRev(list, idx);
     var lbits = []; if(lr) lbits.push(lr); if(lg) lbits.push(lg);
@@ -453,7 +486,7 @@ function candidateCard(c, chembl, idx, list){
   +   whyNotHtml(c.why_not)
   +   pivotsHtml(c.pivots)
   +   devBlock(dv)
-  +   reg505b2Block(c.regulatory_505b2)
+  +   (c.low_confidence ? '' : reg505b2Block(c.regulatory_505b2))
   +   trialDesignPanel(chembl, c.disease)
   +   '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
   +     '<span class="material-symbols-outlined" style="font-size:15px">description</span>505(b)(2) Dossier</a>'
@@ -723,44 +756,95 @@ async function runScreen(){
     sum.innerHTML = drugSummaryHtml(d);
     sum.style.display = 'block';
 
-    var cands = d.candidates || [];
-    if (!cands.length){
-      status.innerHTML = 'No new indications passed the evidence threshold' + (area?(' in '+area):'') + '.';
+    // THREE buckets from the engine: recovered (approved), in_development (prior clinical
+    // art for this molecule), and candidates (genuinely UNTESTED novel leads). The novel
+    // list is further split into visible vs low_confidence (folded KG noise).
+    var cands = d.candidates || [];          // bucket 3 — novel untested only
+    var indev = d.in_development || [];       // bucket 2 — already in clinical development
+    var recov = d.recovered_indications || [];// bucket 1 — approved, recovered by mechanism
+    if (!cands.length && !indev.length && !recov.length){
+      status.innerHTML = 'No indications passed the evidence threshold' + (area?(' in '+area):'') + '.';
       btn.disabled = false; return;
     }
-    status.innerHTML = 'Ranked <strong>'+cands.length+'</strong> candidate indication'+(cands.length>1?'s':'')+' for '+d.drug+(area?(' · '+area):'')+'.';
+    var visible = cands.filter(function(c){return !c.low_confidence;});
+    var lowc    = cands.filter(function(c){return c.low_confidence;});
+    status.innerHTML = '<strong>'+visible.length+'</strong> novel candidate'+(visible.length===1?'':'s')+' for '+d.drug+(area?(' · '+area):'')
+      + (indev.length ? ' · '+indev.length+' already in development' : '')
+      + (recov.length ? ' · '+recov.length+' approved recovered' : '')
+      + (lowc.length ? ' <span style="color:#98a1b6">('+lowc.length+' low-confidence folded)</span>' : '') + '.';
+    // Computed, honest headline summary (from the engine — nothing hardcoded).
+    var summaryStrip = d.summary
+      ? '<div style="display:flex;align-items:flex-start;gap:9px;background:var(--accent-soft,#eef4ff);border:1px solid rgba(37,99,235,0.16);border-radius:9px;padding:10px 14px;margin-bottom:12px">'
+        + '<span class="material-symbols-outlined" style="font-size:18px;color:#2563eb;flex-shrink:0">fact_check</span>'
+        + '<span style="font-size:0.78rem;color:#31415f;line-height:1.5;font-weight:600">'+d.summary+'</span></div>'
+      : '';
     var rankNote = '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;background:var(--bg-sunken,#f4f6f9);border:1px solid rgba(0,0,0,0.06);border-radius:8px;padding:8px 12px;margin-bottom:12px">'
       + 'Candidates are ranked by evidence and repurposing value, which can differ from the Evidence score shown on each card. '
       + 'The Safety and Efficacy columns report ClinicalTrials.gov facts for reference only; they do not change the score or the order.</div>';
     _REV_DRUG = {max_phase: +(d.max_phase||0), market_status: d.market_status||''};
     // Validation lane: approved uses of this molecule that the engine independently
-    // derived from its targets. Shown separately as a mechanism check, never mixed into
-    // the ranked candidates and never presented as novel.
-    var recov = d.recovered_indications || [];
+    // derived from its targets. Shown PROMINENTLY near the top as a mechanism check,
+    // never mixed into the ranked candidates and never presented as novel.
     var recovHtml = recov.length ? (
-      '<div style="margin-top:26px">'
+      '<div style="margin-bottom:22px">'
       + '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker" style="color:#0e7490">Validation</span></div>'
       + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">Known indications recovered by mechanism</div>'
-      + '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:12px">Established approved uses of this molecule that the engine independently derived from its targets. Shown as evidence that the mechanism reasoning works, kept out of the ranked candidates above and never presented as novel.</div>'
-      + '<div class="compound-grid">' + recov.map(function(c){
-          var sc = (c.score != null ? c.score : c.composite_score) || 0;
-          var col = (window.scoreColor ? window.scoreColor(sc) : '#0e7490');
-          var why = String(c.rationale || '').replace(/</g,'&lt;');
-          return '<div class="dossier" style="padding:13px 16px;display:flex;flex-direction:column;gap:7px">'
-            + '<div style="display:flex;align-items:center;gap:10px">'
-            +   '<div style="min-width:0;flex:1"><div class="cc-name" style="font-size:0.98rem">'+tcase(c.disease)+'</div></div>'
-            +   '<span class="mono" style="font-weight:800;color:'+col+';font-size:1rem">'+(sc*100).toFixed(0)+'</span>'
-            + '</div>'
-            + '<span class="chip" style="align-self:flex-start;background:#e9f5ec;color:#1b5e20;border:1px solid #c6e4cd;font-size:0.62rem;font-weight:600">Known use, recovered by mechanism</span>'
-            + (why ? '<div style="font-size:0.7rem;color:#6b7690;line-height:1.45">'+why+'</div>' : '')
-            + '</div>';
-        }).join('') + '</div>'
+      + '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:12px">Established approved uses of this molecule that the engine independently derived from its targets. Shown as evidence that the mechanism reasoning works, kept out of the ranked candidates below and never presented as novel. Each card is fully openable — 505(b)(2) dossier and trial design — so a recovered use can be evaluated like any candidate.</div>'
+      // Reuse the SAME candidateCard renderer as the ranked leads so recovered uses get the
+      // full drill-down (505(b)(2) block, trial design, dossier link). idx=null suppresses
+      // the "Lead" banner; is_known_indication (set server-side) gives them the "Approved
+      // use" verdict and the "Known use · recovered" chip instead of a candidate verdict.
+      + '<div class="compound-grid">' + recov.map(function(c){return candidateCard(c, d.chembl_id, null, recov);}).join('') + '</div>'
       + '</div>'
     ) : '';
+    // BUCKET 2 — "In clinical development": indications with prior clinical art for THIS
+    // molecule (existing trial / recorded study phase), not approved and not novel. A
+    // compact reference lane styled like the validation lane, placed right after it. A
+    // failed pair keeps its de-prioritized "Failed" chip; never merged with approved uses.
+    var devHtml = indev.length ? (
+      '<div style="margin-bottom:22px">'
+      + '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker" style="color:#8a5a00">In development</span></div>'
+      + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">In clinical development (already studied for this molecule, not novel)</div>'
+      + '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:12px">Indications with existing clinical trials or a recorded study phase for this molecule. Prior clinical art, kept for reference and 505(b)(2) framing, not counted as novel repurposing leads.</div>'
+      // Render with the SAME full candidateCard as the ranked leads (idx=null → no "Lead"
+      // banner) so these already-trialed indications keep their decisive ClinicalTrials.gov
+      // Safety and Efficacy panels (serious-AE % + n + phase; met/failed/biomarker-only/
+      // not-reported), the trial count/phase, the red "Failed" chip when deprioritized, and
+      // the 505(b)(2) Dossier + Trial design drill-downs. in_development (set server-side)
+      // gives them the "In clinical development" verdict instead of a novel-candidate one.
+      + '<div class="compound-grid">' + indev.map(function(c){return candidateCard(c, d.chembl_id, null, indev);}).join('') + '</div>'
+      + '</div>'
+    ) : '';
+    // BUCKET 3 — genuinely UNTESTED novel leads. Header + either the ranked visible cards
+    // or an honest empty state when nothing untested clears the actionable bar.
+    var ns = d.novel_scoring || {};
+    var novelHeader = '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker">Novel leads</span></div>'
+      + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">Novel candidate indications (untested for this molecule)</div>'
+      + (ns.label ? '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:8px" title="'+String(ns.basis||'').replace(/"/g,'')+'">'+String(ns.label).replace(/</g,'&lt;')+'</div>' : '');
+    var novelBody;
+    if (visible.length){
+      novelBody = rankNote + '<div class="compound-grid">'
+        + visible.map(function(c,i){return candidateCard(c, d.chembl_id, i, visible);}).join('') + '</div>';
+    } else {
+      novelBody = '<div style="font-size:0.8rem;color:#47526b;line-height:1.6;background:var(--bg-sunken,#f4f6f9);border:1px solid rgba(0,0,0,0.06);border-radius:9px;padding:14px 16px">'
+        + 'No untested novel indication clears the actionable bar. Every mechanistically plausible use for this molecule is already approved or already in clinical trials'
+        + (lowc.length ? (', and '+lowc.length+' weaker association-only lead'+(lowc.length===1?' is':'s are')+' folded below.') : '.')
+        + '</div>';
+    }
+    // Low-confidence leads are kept (retrievable) but collapsed behind a single fold —
+    // full cards, just not shown by default and with the 505(b)(2) block suppressed.
+    var lowHtml = lowc.length ? (
+      '<div style="margin-top:20px">'
+      + '<button type="button" class="btn btn-secondary" style="width:100%;justify-content:center"'
+      + ' onclick="var b=this.nextElementSibling;var open=b.style.display===\'none\';b.style.display=open?\'block\':\'none\';this.querySelector(\'.lc-caret\').textContent=open?\'expand_more\':\'chevron_right\';">'
+      + '<span class="lc-caret material-symbols-outlined" style="font-size:16px;vertical-align:middle">chevron_right</span>&nbsp;Show '+lowc.length+' low-confidence lead'+(lowc.length===1?'':'s')
+      + ' <span style="color:#98a1b6;font-weight:400">· association-only / off-target knowledge-graph signal</span></button>'
+      + '<div style="display:none;margin-top:12px"><div class="compound-grid">'
+      +   lowc.map(function(c){return candidateCard(c, d.chembl_id, null, lowc);}).join('')
+      + '</div></div></div>'
+    ) : '';
     document.getElementById('results').innerHTML =
-      scoreLegendHtml() + rankNote +
-      '<div class="compound-grid">' + cands.map(function(c,i){return candidateCard(c, d.chembl_id, i, cands);}).join('') + '</div>'
-      + recovHtml;
+      scoreLegendHtml() + summaryStrip + recovHtml + devHtml + novelHeader + novelBody + lowHtml;
   } catch(e){
     _stopProgress();
     status.innerHTML = '<span class="alert-error" style="display:inline-block">'+(e.message||e)+'</span>';
