@@ -1080,10 +1080,18 @@ def score_compound_for_disease(
     _MECH_DIMS = ("target", "pathway", "ppi")
     _MECH_MASS = sum(WEIGHTS[k] for k in _MECH_DIMS)              # 0.65
     _DENOM_FLOOR = 0.45          # never divide the mechanistic mass by less than this
-    _active = [k for k in _MECH_DIMS if scores[k] > 1e-9]
+    # The DISPLAYED and RANKED composite must reflect REAL evidence, not the KG-novelty
+    # prior. The prior stays folded into scores["pathway"] above ONLY so the pair clears the
+    # phantom-cohesion gate and is SURFACED; the composite here is computed from the
+    # evidence-derived pathway (_pathway_evidence), so a knowledge-graph-surfaced hypothesis
+    # shows its HONEST score, identical to the from-scratch dossier recompute, never an
+    # inflated number. This closes the card-versus-dossier gap and the prior-inflation
+    # false positive: a 0.1 pair reads 0.1 on the card and on the dossier.
+    _mech_val = {"target": scores["target"], "ppi": scores["ppi"], "pathway": _pathway_evidence}
+    _active = [k for k in _MECH_DIMS if _mech_val[k] > 1e-9]
     if _active:
         _w_active = sum(WEIGHTS[k] for k in _active)
-        _mech_raw = sum(scores[k] * WEIGHTS[k] for k in _active)
+        _mech_raw = sum(_mech_val[k] * WEIGHTS[k] for k in _active)
         mech_component = (_mech_raw / max(_DENOM_FLOOR, _w_active)) * _MECH_MASS
     else:
         mech_component = 0.0

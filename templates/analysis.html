@@ -124,25 +124,13 @@ async function init() {
     if (raw) c = JSON.parse(raw);
   } catch(_e) {}
 
-  // 2. Try API to enrich or load fresh data. SINGLE SOURCE OF TRUTH for the score:
-  // when we arrived from a leads list, sessionStorage already holds this pair's
-  // authoritative composite (including the discovery prior that a direct dossier
-  // recompute cannot reconstruct for a novel knowledge-graph lead). Let the API enrich
-  // other fields, but never let it overwrite the list's score for this pair, so the
-  // number is identical to what the list showed.
+  // 2. Try API to enrich or load fresh data. The composite is now evidence-based on both
+  // sides (the knowledge-graph novelty prior no longer inflates the displayed score), so
+  // the from-scratch dossier recompute equals the leads-list score for the same pair.
+  // A plain merge is therefore honest and consistent; no score-preference band-aid needed.
   try {
     const apiData = await apiFetch(`/api/compound/${CHEMBL_ID}?disease=${encodeURIComponent(DISEASE)}`);
-    if (c) {
-      const listScore = c.score, listScores = c.scores, listBreakdown = c.score_breakdown;
-      c = Object.assign({}, c, apiData);
-      if (listScore != null) {
-        c.score = listScore;
-        if (listScores) c.scores = listScores;
-        if (listBreakdown) c.score_breakdown = listBreakdown;
-      }
-    } else {
-      c = apiData;
-    }
+    c = c ? Object.assign({}, c, apiData) : apiData;
   } catch(_e) {
     if (!c) {
       // Neither sessionStorage nor API has data - create a minimal stub so the page
