@@ -3220,7 +3220,7 @@ async function loadDossier(el) {
             const appr = reg.is_approved || mp>=4;
             let lead = appr ? 'Approved drug, established human safety profile'
                      : mp>=1 ? ('Phase '+Math.round(mp)+', human safety data available')
-                     : 'No approved human safety data';
+                     : 'No approved safety data for this indication';
             const sev = ((d.clinical_constraints)||{}).disease_severity;
             const qual = sev==='high' ? 'acceptable bar for a life threatening indication'
                        : sev==='low'  ? 'high safety bar for a benign indication' : '';

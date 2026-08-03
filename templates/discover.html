@@ -268,7 +268,7 @@ function safetyApprovalLine(c) {
   const mp = +(c.max_phase || 0);
   if (mp >= 4 || c.approved_here) return { label: 'Approved drug, established human safety profile', muted: false };
   if (mp >= 1) return { label: 'Phase ' + Math.round(mp) + ', human safety data available', muted: false };
-  return { label: 'No approved human safety data', muted: true };
+  return { label: 'No approved safety data for this indication', muted: true };
 }
 function severityQualifier(c) {
   const sev = (c.clinical_constraints || {}).disease_severity;

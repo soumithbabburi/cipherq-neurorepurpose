@@ -19,6 +19,7 @@ block a candidate on missing data).
 from __future__ import annotations
 
 import logging
+import re
 from typing import FrozenSet
 
 from services import http_client
@@ -71,16 +72,58 @@ def _disease_stems(disease_name: str) -> FrozenSet:
                          if len(t) > 2)
 
 
+def _label_names_disease(text: str, stems: FrozenSet) -> bool:
+    """True iff the candidate's significant token set `stems` appears in `text` as a
+    SELF-CONTAINED disease phrase — a run of exactly those tokens (interleaved only with
+    stopwords) that is NOT directly preceded by another significant token which would make
+    it a QUALIFIED variant of a different disease.
+
+    Why (bug 2026-07): the old check `all(tok in text)` let a BROADER disease be marked
+    approved by a more-SPECIFIC approved string that merely contains its name — e.g.
+    "granulomatosis with polyangiitis" (GPA) matched the label's "EOSINOPHILIC
+    granulomatosis with polyangiitis" (EGPA, a different disease). Here the extra qualifier
+    "eosinophilic" sits directly before the phrase, so that run is rejected; GPA no longer
+    matches. Fully general — no disease names, no qualifier list; the discriminating token
+    is whatever significant word the more-specific indication carries and the candidate lacks.
+    """
+    from services.disease_id import _STOP, _stem
+    S = set(stems)
+    if not S:
+        return False
+    raw = [w for w in re.split(r"[^a-z0-9]+", (text or "").lower()) if w]
+    toks = [(_stem(w), (len(w) > 2 and w not in _STOP)) for w in raw]   # (stem, is_significant)
+    n = len(toks)
+    for a in range(n):
+        st, is_sig = toks[a]
+        if not is_sig or st not in S:
+            continue
+        # LEFT flank: an adjacent preceding SIGNIFICANT token absent from the candidate means
+        # the label's disease extends left into a qualified variant (e.g. eosinophilic|GPA).
+        if a > 0 and toks[a - 1][1] and toks[a - 1][0] not in S:
+            continue
+        seen, ok, b = set(), True, a
+        while b < n and len(seen) < len(S):
+            bst, bsig = toks[b]
+            if bsig:
+                if bst in S:
+                    seen.add(bst)
+                else:                    # a foreign significant token interrupts the phrase
+                    ok = False
+                    break
+            b += 1
+        if ok and seen == S:
+            return True
+    return False
+
+
 def is_label_approved_for(drug: str, disease_name: str) -> bool:
-    """True when the drug's FDA label indicates it for this disease — i.e. every
-    significant disease token appears in the label's indications text. Conservative
-    (needs ALL tokens) to avoid false exclusions; fail-soft to False."""
+    """True when the drug's FDA label indicates it for THIS disease. Requires the disease's
+    significant tokens to appear as a self-contained phrase in the label's indications text
+    (not merely as a substring of a more-specific, qualified indication). Fail-soft to False."""
     stems = _disease_stems(disease_name)
     if not stems:
         return False
     text = fda_label_indication_text(drug)
     if not text:
         return False
-    # A plural-stemmed token like "arthriti" must still hit the label's "arthritis";
-    # substring containment handles the stem→surface-form direction.
-    return all(s in text for s in stems)
+    return _label_names_disease(text, stems)

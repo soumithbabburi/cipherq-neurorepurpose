@@ -66,29 +66,65 @@ def exclusivity_profile(drug_name: str, is_biologic: bool = False) -> Dict:
 
     out["route"] = ("505(b)(2) — references the approved drug's safety/PK; a new-indication "
                     "study earns 3-year exclusivity")
+    # Two DISTINCT protections, never conflated (audited 2026-07): FDA regulatory
+    # exclusivity (NCE 5y / orphan 7y / new-indication 3y — a statutory market block that
+    # bars ANDA/505(b)(2) reliance) vs PATENT life (which may run a decade-plus longer on a
+    # late formulation/method-of-use patent). The headline "exclusivity runway" reports the
+    # REGULATORY exclusivity; patent life is reported separately so a 2044 formulation patent
+    # is never presented as "17.9y of exclusivity". The FRANCHISE runway (the longer of the
+    # two — competitors are blocked while EITHER holds) drives the feasibility SCORE only.
+    out.update({"patent_expiry": None, "patent_runway_years": None,
+                "regulatory_exclusivity_expiry": None, "regulatory_exclusivity_code": None,
+                "regulatory_exclusivity_label": None, "regulatory_runway_years": None,
+                "franchise_runway_years": None})
     try:
         from services.orange_book import orange_book_protection
         ob = orange_book_protection(drug_name) or {}
-        if ob.get("available") and ob.get("patents"):
+        if ob.get("available") and (ob.get("patents") or ob.get("exclusivities")):
             out["source"] = "FDA Orange Book"
-            active = [p for p in ob["patents"] if p.get("status") == "active"]
+            active = [p for p in ob.get("patents", []) if p.get("status") == "active"]
             out["patents_primary"] = sum(1 for p in active if "drug substance" in (p.get("type") or ""))
             out["patents_secondary"] = sum(1 for p in active if "drug substance" not in (p.get("type") or ""))
-            exps = [p["expiry_iso"] for p in active if p.get("expiry_iso")]
-            if exps:
-                latest = max(exps)
-                out["latest_active"] = latest
-                out["runway_years"] = _years_until(latest)
-                out["narrative"] = (f"Base compound protected until ~{latest} "
-                                    f"({out['runway_years']}y; {out['patents_primary']} substance / "
-                                    f"{out['patents_secondary']} formulation-or-use patents) — "
-                                    f"repurposing extends the franchise.")
-            else:
-                out["narrative"] = ("Base compound is off-patent — a repurposed use needs NEW "
-                                    "method-of-use / formulation IP; a 505(b)(2) reformulation is the play.")
+            pat_exps = [p["expiry_iso"] for p in active if p.get("expiry_iso")]
+            latest_patent = max(pat_exps) if pat_exps else None
+            out["patent_expiry"] = latest_patent
+            out["patent_runway_years"] = _years_until(latest_patent) if latest_patent else None
+
+            # Regulatory exclusivity — the statutory market block (NCE/ODE/NP/I…), distinct
+            # from patent life. Take the latest-expiring ACTIVE exclusivity as the headline.
+            active_excl = [e for e in ob.get("exclusivities", [])
+                           if e.get("status") == "active" and e.get("expiry_iso")]
+            reg = max(active_excl, key=lambda e: e["expiry_iso"]) if active_excl else None
+            if reg:
+                out["regulatory_exclusivity_expiry"] = reg["expiry_iso"]
+                out["regulatory_exclusivity_code"] = reg.get("code")
+                out["regulatory_exclusivity_label"] = reg.get("label")
+                out["regulatory_runway_years"] = _years_until(reg["expiry_iso"])
+
+            # Headline "exclusivity runway" = REGULATORY exclusivity (NOT the latest patent).
+            out["runway_years"] = out["regulatory_runway_years"]
+            out["latest_active"] = out["regulatory_exclusivity_expiry"]
+            # Franchise runway (feasibility scoring only) = the longer of patent vs exclusivity.
+            _runways = [r for r in (out["patent_runway_years"], out["regulatory_runway_years"])
+                        if r is not None]
+            out["franchise_runway_years"] = max(_runways) if _runways else None
+
+            _reg_bit = (f"Regulatory exclusivity ({out['regulatory_exclusivity_label']}) to ~"
+                        f"{out['regulatory_exclusivity_expiry']} ({out['regulatory_runway_years']}y)"
+                        if reg else "No unexpired FDA regulatory exclusivity")
+            _pat_bit = (f"latest patent to ~{latest_patent} ({out['patent_runway_years']}y; "
+                        f"{out['patents_primary']} substance / {out['patents_secondary']} "
+                        f"formulation-or-use)" if latest_patent else "no active Orange Book patents")
+            out["narrative"] = (f"{_reg_bit}; {_pat_bit}. Exclusivity and patent life are distinct — "
+                                f"the franchise is blocked while either holds; repurposing can add its "
+                                f"own new-indication (3y) exclusivity + method-of-use IP.")
+            if not latest_patent and not reg:
+                out["narrative"] = ("Base compound appears off-patent with no active exclusivity — a "
+                                    "repurposed use needs NEW method-of-use / formulation IP; a "
+                                    "505(b)(2) reformulation is the play.")
         else:
-            out["narrative"] = ("No Orange Book patents on file — likely off-patent; feasibility "
-                                "rests on new-indication (3y) exclusivity + any formulation IP.")
+            out["narrative"] = ("No Orange Book patents or exclusivity on file — likely off-patent; "
+                                "feasibility rests on new-indication (3y) exclusivity + any formulation IP.")
     except Exception as e:
         logger.debug(f"orange book lookup: {e}")
     return out
@@ -118,11 +154,18 @@ def feasibility(disease: str, drug_name: str, excl: Dict, is_biologic: bool = Fa
     except Exception as e:
         logger.debug(f"delivery feasibility: {e}")
 
-    runway = excl.get("runway_years")
-    if runway is not None and runway >= 5:
+    runway = excl.get("runway_years")                      # headline = REGULATORY exclusivity
+    # Feasibility SCORE uses the FRANCHISE runway (longer of patent vs exclusivity) — a drug
+    # blocked by a long patent is still a defensible franchise even after regulatory
+    # exclusivity lapses. Falls back to the regulatory runway when patent life is unknown.
+    franchise = excl.get("franchise_runway_years")
+    if franchise is None:
+        franchise = runway
+    if franchise is not None and franchise >= 5:
         score += 12
-        flags.append(f"Base franchise protected ~{runway}y — repurposing extends it, not a generic race.")
-    elif runway is not None and runway < 1:
+        flags.append(f"Base franchise protected ~{franchise}y (patent or exclusivity) — "
+                     f"repurposing extends it, not a generic race.")
+    elif franchise is not None and franchise < 1:
         score -= 6
         flags.append("Base compound is generic — exclusivity must come from the new use / formulation.")
 
@@ -135,6 +178,13 @@ def feasibility(disease: str, drug_name: str, excl: Dict, is_biologic: bool = Fa
     score = int(max(20, min(95, score)))
     return {"feasibility_score": score, "route": excl.get("route"), "runway_years": runway,
             "patents_primary": excl.get("patents_primary"), "patents_secondary": excl.get("patents_secondary"),
+            # Distinct patent vs regulatory-exclusivity fields (never conflated in display).
+            "patent_expiry": excl.get("patent_expiry"),
+            "patent_runway_years": excl.get("patent_runway_years"),
+            "regulatory_exclusivity_expiry": excl.get("regulatory_exclusivity_expiry"),
+            "regulatory_exclusivity_label": excl.get("regulatory_exclusivity_label"),
+            "regulatory_runway_years": excl.get("regulatory_runway_years"),
+            "franchise_runway_years": excl.get("franchise_runway_years"),
             "formulation_opportunity": form, "exclusivity_source": excl.get("source"),
             "exclusivity_narrative": excl.get("narrative"), "flags": flags,
             "tier": ("Fundable" if score >= 75 else "Workable" if score >= 55 else "Thin")}

@@ -61,6 +61,40 @@ _EFF_STOP = ("lack of efficacy", "no efficacy", "inefficac", "futility", "did no
              "failed", "insufficient efficacy", "no benefit", "lack of effect")
 _SAF_STOP = ("safety", "adverse", "toxicity", "death", "tolerab", "serious")
 
+# Underpowered-pilot threshold (audited 2026-07): a trial enrolling fewer than this many
+# participants that misses its primary only NUMERICALLY (no significant analysis) was almost
+# never powered to detect the effect, so calling it a rigorous efficacy FAILURE overstates the
+# evidence. Such trials are reclassified "inconclusive_underpowered" (neutral), not failed.
+# Example: NCT04527471 (ensifentrine, COVID-19) — a single-site n=45 pilot explicitly not
+# designed for statistical significance; placebo numerically recovered slightly more.
+_UNDERPOWERED_N = 100
+# Title markers that self-declare a study as exploratory / not powered for significance.
+_PILOT_TITLE_KW = ("pilot", "feasibility", "proof of concept", "proof-of-concept",
+                   "exploratory", "first-in-human", "first in human")
+
+
+def _enrollment_count(study: Dict) -> Optional[int]:
+    """Actual/target enrollment for a CT.gov v2 study, or None if unstated."""
+    ei = ((study.get("protocolSection") or {}).get("designModule") or {}).get("enrollmentInfo") or {}
+    try:
+        return int(ei.get("count")) if ei.get("count") is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_underpowered(study: Dict) -> bool:
+    """True when a study is a small pilot / explicitly exploratory design — a missed primary
+    here is inconclusive, not a rigorous failure. Enrollment below the threshold, OR a
+    pilot/feasibility/proof-of-concept title, OR an EARLY_PHASE1/PHASE1 efficacy readout."""
+    n = _enrollment_count(study)
+    if n is not None and n < _UNDERPOWERED_N:
+        return True
+    ps = study.get("protocolSection", {}) or {}
+    title = ((ps.get("identificationModule") or {}).get("briefTitle") or "").lower()
+    if any(k in title for k in _PILOT_TITLE_KW):
+        return True
+    return False
+
 
 def _kind_by_keyword(t: str) -> str:
     """Legacy last-resort typing by scanning the (lowercased) title. Lower confidence."""
@@ -185,6 +219,17 @@ def classify_study(study: Dict) -> Dict:
                     "note": (f"Biomarker moved but the PRIMARY clinical endpoint "
                              f"('{clin_failed['title']}') was missed (p={clin_failed['p']:.2g}). "
                              f"Right mechanism, wrong endpoint, a smarter-trial signal, not a win.")}
+        # Underpowered / pilot: a numerically-missed primary in a small or explicitly
+        # exploratory study is inconclusive, not a rigorous efficacy failure.
+        if _is_underpowered(study):
+            _n = _enrollment_count(study)
+            _nstr = f"n={_n}" if _n is not None else "small pilot"
+            return {"class": "inconclusive_underpowered", "primary_endpoint": clin_failed["title"],
+                    "primary_kind": "clinical", "p": clin_failed["p"], "biomarker_met": False,
+                    "note": (f"Underpowered pilot ({_nstr}): the primary endpoint "
+                             f"('{clin_failed['title']}') was numerically missed (p={clin_failed['p']:.2g}), "
+                             f"but the study was not powered for statistical significance — inconclusive, "
+                             f"not a rigorous efficacy failure.")}
         return {"class": "failed_primary", "primary_endpoint": clin_failed["title"],
                 "primary_kind": "clinical", "p": clin_failed["p"], "biomarker_met": False,
                 "note": f"Primary clinical endpoint missed ('{clin_failed['title']}', p={clin_failed['p']:.2g})."}
@@ -201,7 +246,8 @@ def classify_study(study: Dict) -> Dict:
 
 # outcome class → a directional evidence weight (fed into the clinical/outcome signal)
 _CLASS_SIGNAL = {"met_primary": 1.0, "biomarker_only": -0.45, "failed_primary": -0.7,
-                 "terminated_efficacy": -1.0, "terminated_safety": -0.9, "unknown": 0.0}
+                 "terminated_efficacy": -1.0, "terminated_safety": -0.9,
+                 "inconclusive_underpowered": 0.0, "unknown": 0.0}
 
 
 def aggregate(studies: List[Dict]) -> Dict:
@@ -210,19 +256,23 @@ def aggregate(studies: List[Dict]) -> Dict:
     counts: Dict[str, int] = {}
     best = {"class": "unknown", "note": "", "p": None}
     best_rank = -99
+    best_nct = ""
     _RANK = {"met_primary": 3, "biomarker_only": 1, "failed_primary": -1,
-             "terminated_safety": -2, "terminated_efficacy": -3, "unknown": 0}
+             "terminated_safety": -2, "terminated_efficacy": -3,
+             "inconclusive_underpowered": 0, "unknown": 0}
     for s in studies:
         c = classify_study(s)
         counts[c["class"]] = counts.get(c["class"], 0) + 1
         r = _RANK.get(c["class"], 0)
+        _nct = ((s.get("protocolSection", {}) or {}).get("identificationModule", {})
+                or {}).get("nctId", "")
         # keep the most INFORMATIVE verdict (a real met or a real fail beats 'unknown');
         # on an equal-magnitude tie, prefer the more-negative class so the verdict can't
         # read positive for the same evidence just because a met_primary was seen first.
         if (abs(r) > abs(best_rank)
                 or (abs(r) == abs(best_rank) and r < best_rank)
                 or (best["class"] == "unknown" and c["class"] != "unknown")):
-            best, best_rank = c, r
+            best, best_rank, best_nct = c, r, _nct
     # signal: worst credible negative dominates (a failed primary is stronger evidence
     # than another 'trial exists'); a clean met_primary is the only strong positive.
     sig = 0.0
@@ -239,4 +289,5 @@ def aggregate(studies: List[Dict]) -> Dict:
         sig = -0.45
     return {"counts": counts, "verdict": best.get("class"),
             "outcome_signal": round(sig, 3), "note": best.get("note", ""),
-            "primary_endpoint": best.get("primary_endpoint"), "p": best.get("p")}
+            "primary_endpoint": best.get("primary_endpoint"), "p": best.get("p"),
+            "nct_id": best_nct}

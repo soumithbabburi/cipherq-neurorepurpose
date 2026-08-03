@@ -303,7 +303,7 @@ def _is_phenotype_not_disease(efo_id: str, therapeutic_areas: List[str]) -> bool
 # Disease identity matching is centralized in services.disease_id (the platform-wide
 # reconciliation layer) so ChEMBL MeSH headings, OT MONDO/EFO names, and RepoDB/UMLS
 # free-text all match through one implementation. Thin local aliases keep call sites.
-from services.disease_id import canonical_key as _disease_tokens, same_disease as _same_disease
+from services.disease_id import canonical_key as _disease_tokens, same_disease as _same_disease, _stem as _stem_disease
 
 
 def _is_ae_symptom(name: str) -> bool:
@@ -545,6 +545,7 @@ def _trials_for_drug(drug_name: str, page_size: int = 200, probe: dict = None) -
                     e["endpoint_note"] = agg.get("note", "")
                     e["endpoint_primary"] = agg.get("primary_endpoint")
                     e["endpoint_p"] = agg.get("p")
+                    e["nct_id"] = agg.get("nct_id", "")
                     if agg["verdict"] == "terminated_efficacy":
                         e["failed_efficacy"] = max(e.get("failed_efficacy", 0), 1)
                 else:
@@ -598,7 +599,7 @@ def _attach_trials_by_name(c: Dict, trials: Dict) -> None:
         c["failed_safety"] = best.get("failed_safety", 0)
         c["serious_ae"] = best.get("serious_ae")          # for the Safety card column
         # Layer 1: carry the parsed primary-endpoint verdict onto the candidate
-        for _k in ("endpoint_verdict", "endpoint_note", "endpoint_primary", "endpoint_p"):
+        for _k in ("endpoint_verdict", "endpoint_note", "endpoint_primary", "endpoint_p", "nct_id"):
             if best.get(_k) is not None:
                 c[_k] = best.get(_k)
         # Display-only mirror for the Efficacy column (same key the merge path fills)
@@ -670,6 +671,14 @@ def _evidence_tier(c: Dict) -> Dict:
     if ev == "terminated_efficacy":
         return {"tier": "contradicted", "label": "Terminated for efficacy",
                 "note": epn or "A trial was stopped for lack of efficacy here."}
+    if ev == "inconclusive_underpowered":
+        _nct = c.get("nct_id") or ""
+        _base = epn or ("A small/exploratory trial numerically missed its primary "
+                        "endpoint but was not powered for statistical significance — "
+                        "inconclusive, not a rigorous efficacy failure.")
+        _disc = f"Prior trial found, inconclusive. {_base}" + (f" ({_nct})" if _nct else "")
+        return {"tier": "tested-inconclusive", "label": "Inconclusive · underpowered pilot",
+                "note": _disc}
     if ev == "failed_primary":
         return {"tier": "failed-endpoint", "label": "Failed primary endpoint",
                 "note": epn or "The primary clinical endpoint was missed here."}
@@ -1429,6 +1438,29 @@ def _is_oncology_name(name: str) -> bool:
     return any(t in n for t in _ONCOLOGY_TERMS)
 
 
+# Respiratory / pulmonary terms — used only for the route-transferability caveat (Priority
+# 5b): an inhaled/respiratory-delivered drug's human safety (established for its approved
+# airway route) does not automatically transfer to a candidate that would need a different
+# (oral / systemic / topical / CNS) route with different systemic exposure and cardiac risk.
+_RESPIRATORY_TERMS = ("pulmonary", "respiratory", "lung", "airway", "bronch", "copd",
+                      "asthma", "emphysema", "rhinosinus", "nasal", "pneumon")
+
+
+def _is_respiratory_context(name: str, therapeutic_areas: Optional[List[str]] = None) -> bool:
+    blob = ((name or "") + " " + " ".join(therapeutic_areas or [])).lower()
+    return any(t in blob for t in _RESPIRATORY_TERMS)
+
+
+def _target_evidence(drug_name: str, chembl_id: str, genes: List[str]) -> Dict:
+    """Fail-soft wrapper around services.target_evidence.annotate (Priority 5a)."""
+    try:
+        from services.target_evidence import annotate
+        return annotate(drug_name, [chembl_id] if chembl_id else [], genes)
+    except Exception as e:
+        logger.debug(f"target evidence annotate skipped: {e}")
+        return {"targets": {}, "measured": [], "inferred": [], "note": ""}
+
+
 # Anti-targets: proteins a drug commonly BINDS as a safety/ADME liability but never
 # engages therapeutically. Their disease associations are toxicities (hERG->arrhythmia),
 # not repurposing opportunities — so they must not GENERATE candidate indications. This
@@ -1523,7 +1555,10 @@ def screen_indications_for_drug(
         exclude_oncology = onc_drug
 
     cache_key = (f"drug:{drug.lower().strip()}|area:{(area_filter or '').lower()}"
-                 f"|noonc:{int(exclude_oncology)}|v3")   # v3: + recovered-known-indication lane
+                 f"|noonc:{int(exclude_oncology)}|v8")   # v8: class-validated precedent badge
+    # guard (EFO-id / exact-name only, no loose token overlap) so an AE artifact is not treated
+    # as a studied indication; v4: approval-aware safety header + AE-sourced suppression +
+    # patent/regulatory-exclusivity split
     cache = _load_cache()
     if cache_key in cache:
         return cache[cache_key]
@@ -1668,7 +1703,8 @@ def screen_indications_for_drug(
                         max_trial_phase: int = 0, lit_count: int = 0,
                         outcome_signal: float = 0.0, failed_efficacy: int = 0,
                         failed_safety: int = 0, serious_ae: dict = None,
-                        endpoint_verdict: str = None, endpoint_note: str = ""):
+                        endpoint_verdict: str = None, endpoint_note: str = "",
+                        nct_id: str = ""):
         # Safety trials can list a drug's symptom/AE as a studied "condition"
         # (e.g. a trial of nausea prophylaxis); the generic denylist keeps those
         # bare symptom terms out of the candidate indications.
@@ -1707,6 +1743,8 @@ def screen_indications_for_drug(
             if endpoint_verdict:
                 e["ct_efficacy_verdict"] = endpoint_verdict
                 e["ct_efficacy_note"] = endpoint_note or ""
+            if nct_id:
+                e["nct_id"] = nct_id
         if lit_count:
             e["sources"].add("literature")
             e["lit_count"] = max(e["lit_count"], lit_count)
@@ -1724,7 +1762,8 @@ def screen_indications_for_drug(
                             failed_safety=v.get("failed_safety", 0),
                             serious_ae=v.get("serious_ae"),
                             endpoint_verdict=v.get("endpoint_verdict"),
-                            endpoint_note=v.get("endpoint_note", ""))
+                            endpoint_note=v.get("endpoint_note", ""),
+                            nct_id=v.get("nct_id", ""))
     except Exception as e:
         logger.debug(f"trial merge failed: {e}")
     try:
@@ -1775,10 +1814,20 @@ def screen_indications_for_drug(
     # the EXACT disease, and an approved subtype is then correctly excluded. Bounded to the
     # strongest few (each subtype resolve is a live lookup); memoized.
     _narrowed = 0
+    # Priority 3 root-cause fix: NEVER narrow a candidate that IS one of the drug's own
+    # known indications. COPD (an approved ensifentrine indication) is is_broad in MONDO
+    # (5 children), so F4 was rewriting the COPD candidate to a subtype (bronchiectasis)
+    # BEFORE the approval/recovery check — which destroyed its approved-indication identity
+    # (so it was never counted as "recovered by mechanism") and minted a spurious novel
+    # subtype lead. Preserving a known-indication candidate's identity lets the recovery
+    # lane re-derive the approved use and keeps the summary counter honest.
+    _known_names_all = [k.get("name", "") for k in info.get("known_indications", []) if k.get("name")]
     for c in candidate_map.values():
         if _narrowed >= 8:
             break
         if float(c.get("association_score") or 0) < 0.20:
+            continue
+        if any(_same_disease(c.get("disease", ""), kn) for kn in _known_names_all):
             continue
         nb = narrow_broad_disease(c.get("disease", ""), drug_genes)
         if nb and nb.lower() != (c.get("disease", "") or "").lower():
@@ -1941,6 +1990,12 @@ def screen_indications_for_drug(
     # APPROVED indications (Phase 4) — drives Layer-2 off-label cannibalization: a candidate
     # in the same organ as one of these is already prescribable off-label.
     _approved_inds = [k.get("name", "") for k in _known_inds if float(k.get("max_phase") or 0) >= 4]
+    # Priority 5b — is the drug's ESTABLISHED (approved) use a respiratory/airway one? If so,
+    # its human safety was characterized for that airway route (ensifentrine is inhaled/
+    # nebulized for COPD); a candidate needing a different oral/systemic/topical/CNS route
+    # does not automatically inherit that safety (different systemic exposure + cardiac risk).
+    _approved_respiratory = bool(_approved_inds) and all(
+        _is_respiratory_context(n) for n in _approved_inds)
     # Layer 4 — base-compound exclusivity profile (drug-level, computed once): Orange Book
     # patents (small molecule) or Purple Book cliff (biologic).
     try:
@@ -1988,11 +2043,62 @@ def screen_indications_for_drug(
         )
         sc = sr["scores"]
 
-        # Disease-appropriateness gate (B loss-of-function/developmental, C adverse-event):
-        # would the drug WORSEN or does it CAUSE this disease? Gates ranking + actionability;
-        # does not overwrite the mechanistic composite.
+        # CONFOUNDING-BY-INDICATION guard (Priority 4): a disease the drug was actually
+        # STUDIED/developed in (a ChEMBL known indication) shows up in the drug's FAERS reports
+        # as the patients' UNDERLYING condition — not as a drug-caused toxicity. COVID-19 is
+        # exactly this: ensifentrine ran a real Phase-2 pilot (NCT04527471), so "COVID-19"
+        # appears in FAERS and the AE check wrongly flags it, which then STRIPS the trial and
+        # drops the prior clinical art. Suppress the FAERS adverse-event check for such studied
+        # indications so the prior trial is DISCLOSED, not hidden.
+        #
+        # DEFECT-A FIX (2026-07-31): match a studied indication ONLY by ChEMBL indication EFO id
+        # or EXACT (case-insensitive) studied-indication name — NEVER by the loose token overlap
+        # `_ind_phase_for` uses for phase-scaling. That loose match returned Phase 2 for
+        # "respiratory failure" purely because it shares the token "respiratory" with the known
+        # indication "Severe Acute Respiratory Syndrome", which wrongly suppressed the FAERS AE
+        # check and let an AE artifact (respiratory failure — the acute-respiratory-failure serious
+        # AE of the COVID pilot, mis-resolved onto the COPD trial NCT04027439) survive as a
+        # "clinically tested" lead. EFO-id match still protects the genuine COVID-19 disclosure
+        # (COVID candidate MONDO_0100096 == the SARS known indication's EFO id).
+        _cand_efo = (c.get("efo_id") or "")
+        _known_efos_any = {(k.get("efo_id") or "") for k in _known_inds if k.get("efo_id")}
+        _known_names_lc = {(k.get("name") or "").strip().lower() for k in _known_inds if k.get("name")}
+        _studied_indication = bool((_cand_efo and _cand_efo in _known_efos_any)
+                                   or (c.get("disease", "").strip().lower() in _known_names_lc))
+        _appr_faers = None if _studied_indication else _faers_rx
+
+        # Disease-appropriateness gate (B loss-of-function/developmental, C adverse-event,
+        # D class-level contraindication): would the drug WORSEN or does it CAUSE this disease?
+        # Gates ranking + actionability; does not overwrite the mechanistic composite.
         appr = appropriateness(info.get("name", drug), c["disease"], c["therapeutic_areas"],
-                               drug_action, faers_reactions=_faers_rx, faers_total=_faers_total)
+                               drug_action, faers_reactions=_appr_faers,
+                               faers_total=(0 if _studied_indication else _faers_total),
+                               drug_genes=screen_genes, drug_action_map=drug_action_map or None,
+                               disease_efo=c.get("efo_id", ""))
+
+        # AE-SOURCED GUARD (audited 2026-07): when the appropriateness engine flags this
+        # candidate as a REPORTED ADVERSE EVENT of the drug (direction C), the disease is a
+        # toxicity the drug CAUSES, not a treated indication. Any clinical-trial evidence
+        # token-joined onto it — e.g. a serious-AE row from an unrelated trial that becomes a
+        # fabricated denominator (ensifentrine → "Respiratory Failure", n=202 matching no real
+        # trial) — is a mis-join. Strip that trial evidence so the candidate is NOT labeled
+        # "in clinical development" and shows NO trial-derived AE rate; the wrong-direction
+        # "why not" flag stands. Runs AFTER score_compound_for_disease, so the composite is
+        # UNCHANGED — this only corrects display fields and bucket routing.
+        _ae_sourced = "reported adverse event" in (appr.get("flags") or [])
+        if _ae_sourced:
+            c["ae_sourced"] = True
+            c["serious_ae"] = None
+            c["trial_count"] = 0
+            c["max_trial_phase"] = 0
+            c["trial_outcome_signal"] = 0.0
+            # Also drop any trial IDENTITY token-/EFO-joined onto this AE artifact (e.g. the
+            # COPD trial NCT04027439 mis-resolved onto "respiratory failure"), so the folded
+            # card carries no phantom NCT or endpoint verdict.
+            for _stale in ("nct_id", "endpoint_verdict", "endpoint_note", "endpoint_primary",
+                           "endpoint_p", "ct_efficacy_verdict", "ct_efficacy_note"):
+                c.pop(_stale, None)
+
         overlap = sorted(drug_gene_set & {g.upper() for g in disease_genes})
 
         # Clinical/literature signal SPECIFIC to this indication (varies per disease,
@@ -2098,7 +2204,44 @@ def screen_indications_for_drug(
         # the rank order are unchanged). Compute the evidence tier once, up front, so a
         # failed / contradicted indication can be stripped of its "Actionable"/"Lead"
         # display flags and the ~0.02 KG-relatedness noise can be folded away.
+        # Priority 4 — surface a DISCLOSED inconclusive/underpowered prior trial (COVID-19,
+        # NCT04527471, n=45) in the evidence tier. The merge keeps the parsed verdict under a
+        # display-only key; for the NEUTRAL inconclusive class (outcome signal 0.0, no rank
+        # effect) we promote it so the tier reads "Inconclusive · underpowered pilot" and the
+        # NCT id is carried for disclosure, instead of a bare count-based "tested" label.
+        if (not c.get("endpoint_verdict")
+                and c.get("ct_efficacy_verdict") == "inconclusive_underpowered"):
+            c["endpoint_verdict"] = "inconclusive_underpowered"
+            if not c.get("endpoint_note"):
+                c["endpoint_note"] = c.get("ct_efficacy_note", "")
+
         _etier = _evidence_tier(c)
+        # CLASS-LEVEL mechanism contraindication (Priority 1): a curated, evidence-linked
+        # disease-specific mortality signal (e.g. PDE3 inhibition x heart failure) forces the
+        # candidate to the "Contradicted" tier — reusing the exact tier the psoriatic-arthritis
+        # trial-failure path uses — so it is DEMOTED out of any "Moderate/Promising candidate"
+        # badge and shown as Contradicted with the mortality reason + citation in the why-not.
+        _class_safety = (appr or {}).get("class_safety")
+        if _class_safety:
+            _etier = {"tier": "contradicted",
+                      "label": _class_safety.get("tier_label", "Contradicted"),
+                      "note": _class_safety.get("note", ""),
+                      "class_safety": True}
+            c["class_safety"] = _class_safety
+        # CLASS-VALIDATED PRECEDENT (positive mirror of the class-safety gate): a congener
+        # sharing this drug's target CLASS is already FDA-approved for this exact indication —
+        # the strongest possible validation of the mechanistic rationale. Display-only: it does
+        # NOT change the score/rank. Never shown on a contraindicated pair.
+        if not _class_safety:
+            try:
+                from services.class_precedent import class_precedent as _cprec
+                _cp = _cprec(screen_genes, c.get("disease", ""),
+                             disease_efo=c.get("efo_id", "") or c.get("mondo_id", "") or "",
+                             drug_action_map=drug_action_map or None)
+                if _cp:
+                    c["class_precedent"] = _cp
+            except Exception:
+                pass
         _tier_name = (_etier or {}).get("tier", "")
         _osig = float(c.get("trial_outcome_signal", 0.0) or 0.0)
         # A human already ran this pair and it did NOT work (a trial failed for efficacy /
@@ -2236,6 +2379,19 @@ def screen_indications_for_drug(
             logger.debug(f"verification stage skipped: {_ve}")
             entry["evidence_balance"] = {}
 
+        # Priority 5b — route-transferability caveat. The drug's approved human safety is for
+        # its approved route; when THIS candidate is in a different organ system than the
+        # approved (respiratory) indication, it would likely need a different route with
+        # different systemic exposure, so inhaled/airway safety does not automatically carry.
+        if _approved_respiratory and not _is_respiratory_context(c["disease"], c.get("therapeutic_areas")):
+            entry["route_transfer_caveat"] = True
+            entry["route_transfer_note"] = (
+                "Established human safety is for the approved respiratory (inhaled) route; "
+                "a non-respiratory indication would likely need a different oral/systemic/topical "
+                "route, so the inhaled safety and cardiac profile do not automatically transfer.")
+        else:
+            entry["route_transfer_caveat"] = False
+
         entry["why_not"] = _why_not(entry)
         return entry
 
@@ -2289,6 +2445,42 @@ def screen_indications_for_drug(
         _dedup.append(_c)
     scored = _dedup
 
+    # Priority 2 — PARENT-CHILD ontology collapse. Two candidates that are an is_a
+    # parent/child in the MONDO hierarchy (heart failure MONDO_0005252 / congestive heart
+    # failure MONDO_0005009; stroke disorder MONDO_0005098 / ischemic stroke MONDO_1060198)
+    # describe ONE disease node with near-identical target overlap — listing both
+    # double-counts it. `scored` is already rank-sorted best-first, so keep the higher-
+    # ranked (more-specific / higher-evidence) representative and fold the sibling into a
+    # `grouped_siblings` note on it. Deterministic (MONDO is_a graph), never LLM-guessed.
+    # Fail-soft: if the MONDO DB is unavailable, no collapse (behaves as before). Restricted
+    # to MONDO-id'd candidates so an EFO/HP-only candidate is never wrongly merged.
+    try:
+        from services import mondo_hierarchy as _mh
+        if _mh.available():
+            _kept: List[Dict] = []
+            for _c in scored:
+                _eid = (_c.get("efo_id") or "")
+                _mondo = _eid if _eid.upper().startswith("MONDO") else ""
+                _absorbed = False
+                if _mondo:
+                    for _k in _kept:
+                        _kid = (_k.get("efo_id") or "")
+                        if not _kid.upper().startswith("MONDO"):
+                            continue
+                        if _mh.is_ancestor(_kid, _mondo) or _mh.is_ancestor(_mondo, _kid):
+                            _k.setdefault("grouped_siblings", []).append({
+                                "disease": _c.get("disease"), "efo_id": _eid,
+                                "score": _c.get("composite_score"),
+                                "relation": ("child" if _mh.is_ancestor(_kid, _mondo) else "parent"),
+                            })
+                            _absorbed = True
+                            break
+                if not _absorbed:
+                    _kept.append(_c)
+            scored = _kept
+    except Exception as _me:
+        logger.debug(f"parent-child collapse skipped: {_me}")
+
     # Score the RECOVERED known indications through the IDENTICAL scorer, so their
     # mechanistic evidence chain is computed the same way a novel lead's is. They are
     # kept in a separate list (never merged into `scored`) and each is flagged as an
@@ -2303,12 +2495,37 @@ def screen_indications_for_drug(
             _e["recovered_by_mechanism"] = True
             _e["novelty"]                = "known indication, recovered by mechanism"
         recovered_scored.sort(key=_rank, reverse=True)
+        # De-duplicate the recovered lane: collapse a BROADER recovered row into the
+        # MORE-SPECIFIC approval it is an ancestor of, keeping the specific one (e.g.
+        # "chronic rhinosinusitis" and a bare "leukemia" collapse into the specific
+        # approved indication). SAFE RULE: strict token-SUBSET only, using a qualifier-
+        # KEEPING tokenizer (acute/chronic/primary/… are retained). This deliberately does
+        # NOT merge sibling diseases that merely share tokens — "acute myeloid leukemia" and
+        # "chronic myeloid leukemia" are neither a subset of the other, so both survive
+        # (a >=2-shared-token rule would wrongly merge them and could hide a real approval,
+        # since the platform's canonical_key drops acute/chronic). General; no disease names.
+        _DEDUP_STOP = {"disease", "diseases", "disorder", "disorders", "syndrome",
+                       "the", "of", "and", "with", "nos", "unspecified"}
+        def _dtoks(name: str) -> frozenset:
+            return frozenset(_stem_disease(t)
+                             for t in re.split(r"[^a-z0-9]+", (name or "").lower())
+                             if len(t) > 2 and t not in _DEDUP_STOP)
+        # recovered_scored is sorted best-first, so keep the highest-ranked representative of
+        # each ancestor/descendant chain and drop the rest. A row is a redundant variant when
+        # its token set is a SUBSET or a SUPERSET of an already-kept row's (i.e. one is a
+        # broader/narrower form of the other — "chronic rhinosinusitis" ⊂ CRSwNP; an AML
+        # molecular subtype ⊃ "acute myeloid leukemia"). Siblings (neither subset nor superset,
+        # e.g. AML vs CML vs ALL) are NEVER merged, so no distinct approval is hidden.
         _seen_rec, _rec_dedup = set(), []
         for _c in recovered_scored:
             _dn = (_c.get("disease") or "").lower()
             _key = " ".join(sorted(w for w in re.split(r"[^a-z0-9]+", _dn) if len(w) > 3)) or _dn
             if _key in _seen_rec:
                 continue
+            _kt = _dtoks(_c.get("disease", ""))
+            if _kt and any((lambda o: o and (_kt <= o or o <= _kt))(_dtoks(_k.get("disease", "")))
+                           for _k in _rec_dedup):
+                continue          # broader/narrower variant of an already-kept approval
             _seen_rec.add(_key)
             _rec_dedup.append(_c)
         recovered_scored = _rec_dedup
@@ -2356,7 +2573,10 @@ def screen_indications_for_drug(
     for _c in scored:
         _tc = int(_c.get("trial_count", 0) or 0)
         _psp = float(_c.get("prior_studied_phase") or 0)
-        _c["in_development"] = bool(_tc > 0 or _psp >= 1)
+        # An AE-sourced candidate (the disease is a reported adverse event, not a treated
+        # indication) is never "in clinical development" — its trial evidence was mis-joined.
+        _ae = bool(_c.get("ae_sourced"))
+        _c["in_development"] = bool((_tc > 0 or _psp >= 1) and not _ae)
         (in_development if _c["in_development"] else novel).append(_c)
 
     # ── Task A — NOVEL bucket is re-scored on MECHANISM ONLY (target + direction-aware
@@ -2378,9 +2598,11 @@ def screen_indications_for_drug(
         # Fold = the exact-zero KG-association noise (no functional cohesion / off target /
         # no shared target). Actionable = clears the mechanism-only precision bar AND passes
         # every direction/appropriateness/contraindication/cohesion gate.
-        _c["low_confidence"] = bool(_mech < _NOVEL_LOWCONF_CUTOFF or _phantom or not _overlap)
+        _c["low_confidence"] = bool(_mech < _NOVEL_LOWCONF_CUTOFF or _phantom or not _overlap
+                                    or _c.get("ae_sourced"))
         _c["actionable"] = bool(_mech >= _NOVEL_ACTIONABLE_CUTOFF and _appr_ok
-                                and not _contra and not _phantom and not _c.get("deprioritized"))
+                                and not _contra and not _phantom and not _c.get("deprioritized")
+                                and not _c.get("ae_sourced"))
         _c["effective_cutoff"] = _NOVEL_ACTIONABLE_CUTOFF
     novel.sort(key=lambda c: float(c.get("mech_only_score", 0.0) or 0.0), reverse=True)
 
@@ -2400,18 +2622,35 @@ def screen_indications_for_drug(
 
     _summary_parts = [
         f"{_k_recovered} approved {_plural(_k_recovered, 'use')} recovered by mechanism",
-        (f"{_d_indev} already in clinical development ({_f_failed} failed)"
-         if _d_indev else "none already in clinical development"),
+        (f"{_d_indev} previously studied ({_f_failed} failed)"
+         if _d_indev else "none previously studied"),
         f"{_m_novel} novel untested above the actionable cutoff"
         + (f" ({_n_low} low-confidence folded)" if _n_low else ""),
     ]
     _summary = "; ".join(_summary_parts) + "."
 
+    # Drug-level approval status (for the approval-aware Safety header). A drug FDA-approved
+    # for ITS OWN indication has a characterized human safety profile — the reverse screen
+    # must NOT imply it "has no human safety data" just because THIS candidate indication is
+    # new. Approved = any known indication at phase 4 (FDA-label-upgraded in resolve_drug) or
+    # a global max_phase of 4. Names carried so the card can say what the drug IS approved for.
+    _approved_names = [k["name"] for k in info["known_indications"]
+                       if float(k.get("max_phase") or 0) >= 4]
+    _drug_approved = bool(_approved_names) or float(info.get("max_phase") or 0) >= 4
+
     result = {
         "drug":              info["name"],
         "chembl_id":         chembl_id,
+        # Drug-level max phase + approval status (consumed by the Safety-header renderer so an
+        # approved drug never reads "No approved human safety data" on a novel-indication card).
+        "max_phase":         info.get("max_phase", 0),
+        "approved":          _drug_approved,
+        "approved_indications": _approved_names,
         "smiles":            info.get("smiles", ""),
         "drug_targets":      drug_genes[:20],
+        # Priority 5a — per-target evidence provenance so the header distinguishes MEASURED
+        # targets from family-INFERRED annotation members (no fabricated potency).
+        "target_evidence":   _target_evidence(info.get("name", drug), chembl_id, drug_genes[:20]),
         # Only APPROVED indications are actually excluded from results; studied (sub-
         # phase-4) ones remain candidates (flagged prior_studied_phase), so split them.
         "excluded_indications": [k["name"] for k in info["known_indications"]

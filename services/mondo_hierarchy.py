@@ -148,6 +148,41 @@ def is_broad(mondo_id: str) -> bool:
     return child_count(mondo_id) >= _MIN_CHILDREN_BROAD
 
 
+def _canon_id(mondo_id: str) -> str:
+    """Accept either the underscore form Open Targets uses (MONDO_0005252) or the colon
+    form stored in the DB (MONDO:0005252) and return the DB (colon) form."""
+    s = (mondo_id or "").strip()
+    if s.upper().startswith("MONDO_"):
+        s = "MONDO:" + s[len("MONDO_"):]
+    return s
+
+
+@lru_cache(maxsize=8192)
+def is_ancestor(ancestor_id: str, descendant_id: str, max_depth: int = 12) -> bool:
+    """True if `ancestor_id` is an is_a ancestor of `descendant_id` in the MONDO graph
+    (parent/child edges are stored as mondo_edges(parent, child)). Accepts underscore or
+    colon id forms. Used to collapse parent-child candidate pairs (heart failure /
+    congestive heart failure; stroke disorder / ischemic stroke) into one grouped lead."""
+    c = _c()
+    a, d = _canon_id(ancestor_id), _canon_id(descendant_id)
+    if not c or not a or not d or a == d:
+        return False
+    q = """
+    WITH RECURSIVE up(id, depth) AS (
+        SELECT ?, 0
+        UNION
+        SELECT e.parent, up.depth + 1 FROM mondo_edges e JOIN up ON e.child = up.id
+        WHERE up.depth < ?
+    )
+    SELECT 1 FROM up WHERE id = ? LIMIT 1
+    """
+    try:
+        return c.execute(q, (d, max_depth, a)).fetchone() is not None
+    except Exception as e:
+        logger.debug("is_ancestor query failed: %s", e)
+        return False
+
+
 if __name__ == "__main__":
     print("MONDO hierarchy available:", available())
     vid = resolve("vasculitis")

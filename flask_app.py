@@ -3465,15 +3465,151 @@ def api_new_indications(drug_id):
                 by_parent = _dd(list)
                 for s in subs:
                     by_parent[s["parent_indication"]].append(s)
-                broad_ids = {id(c) for c in broad}
-                kept = [c for c in cands if id(c) not in broad_ids]
+                # Keep the broad PARENT candidate — it carries the real Open Targets / pathway /
+                # PPI evidence. Only surface a subtype when it is a genuinely BETTER fit than the
+                # umbrella AND clears the actionable bar on its own; a rare leaf with no independent
+                # data (score ~0) must NEVER displace an evidence-bearing parent. (Regression fix
+                # 2026-07-31: "ischemic stroke" 0.43 was being buried as the zero-evidence subtype
+                # "lateral medullary syndrome" 0.02, and five all-zero leaves — CTEPH, CIDP, acute
+                # stress disorder, 2p16.3-deletion, a T2DM leaf — were surfaced as noise.) If no
+                # subtype beats the parent, the parent stands alone and the zero leaves are dropped.
+                _pscore = {}
+                for c in broad:
+                    _pscore[(c.get("disease") or "").strip().lower()] = \
+                        float(c.get("score") or c.get("composite_score") or 0.0)
+                kept = list(cands)   # parents retained (not deleted)
                 for grp in by_parent.values():
+                    if not grp:
+                        continue
+                    pname = (grp[0].get("parent_indication") or "").strip().lower()
+                    ps = _pscore.get(pname, 0.0)
                     grp.sort(key=lambda x: x["score"], reverse=True)
-                    kept.extend(grp[:3])
+                    winners = [s for s in grp if s["score"] > ps and s["score"] >= 0.20][:3]
+                    kept.extend(winners)
                 kept.sort(key=lambda c: (c.get("score") or c.get("composite_score") or 0), reverse=True)
                 result["candidates"] = kept
         except Exception as _e:
             logger.debug(f"broad→subtype expansion failed: {_e}")
+
+        # DEFECT-B FIX (2026-07-31): the MONDO parent-child collapse in
+        # services/reverse_repurposing.py runs BEFORE this endpoint expands broad diseases into
+        # subtypes, so it never sees the re-scored subtype set. That left near-identical siblings
+        # of one broad parent as separate leads (three "diabetes mellitus, noninsulin-dependent,
+        # 1/2/3" under "type 2 diabetes mellitus"; lateral-medullary / MCA-infarction /
+        # multi-infarct-dementia under "ischemic stroke"; cor pulmonale / rheumatic-CHF /
+        # kyphoscoliotic-heart-disease under "congestive heart failure"). Run a FINAL,
+        # deterministic (ontology-driven, no LLM) dedup+group pass over the expanded+scored set:
+        #   (a) exact same-display-name (case-insensitive) duplicates collapse to one;
+        #   (b) subtypes of the SAME broad parent — and any parent/child pair (parent_indication
+        #       identity, or a MONDO is_a relation) — GROUP under one representative (the
+        #       highest-ranked / most-specific member), the rest recorded in grouped_siblings.
+        # CONTRADICTION SAFETY: if ANY grouped member is class-safety Contradicted, the
+        # representative surfaces the Contradicted status (a PDE3-inhibitor heart-failure family
+        # must not be masked by a benign sibling). No candidate is dropped — every non-
+        # representative is preserved inside its representative's grouped_siblings.
+        try:
+            try:
+                from services import mondo_hierarchy as _mh
+                _mh_ok = _mh.available()
+            except Exception:
+                _mh, _mh_ok = None, False
+
+            def _tier_label(c):
+                et = c.get("evidence_tier")
+                if isinstance(et, dict):
+                    return et.get("label") or et.get("tier") or ""
+                return et or ""
+
+            def _is_contra(c):
+                return bool(c.get("class_safety")) or "contradict" in str(_tier_label(c)).lower()
+
+            def _rank_of(c):
+                v = c.get("score")
+                if v is None:
+                    v = c.get("composite_score")
+                return v or 0.0
+
+            def _nn(s):
+                return (s or "").strip().lower()
+
+            _cands = result.get("candidates", [])
+            # Best-first so the first member of each family becomes its representative.
+            _ordered = sorted(_cands, key=_rank_of, reverse=True)
+            _reps, _fam_index = [], {}
+            for _c in _ordered:
+                _name = _nn(_c.get("disease"))
+                # Family key: a subtype belongs to its broad parent's family; otherwise the
+                # disease is its own family. This groups siblings AND folds a parent candidate
+                # together with its expanded subtypes when the parent survived as a lead.
+                _fam = _nn(_c.get("parent_indication")) if (_c.get("is_subtype")
+                        and _c.get("parent_indication")) else _name
+                _rep = _fam_index.get(_fam)
+                # Secondary ontology check: fold a MONDO parent/child pair even across families.
+                if _rep is None and _mh_ok:
+                    _eid = (_c.get("efo_id") or "")
+                    _m = _eid if _eid.upper().startswith("MONDO") else ""
+                    if _m:
+                        for _rc in _reps:
+                            _rid = (_rc.get("efo_id") or "")
+                            if _rid.upper().startswith("MONDO") and (
+                                    _mh.is_ancestor(_rid, _m) or _mh.is_ancestor(_m, _rid)):
+                                _rep = _rc
+                                break
+                if _rep is None:
+                    _c.setdefault("grouped_siblings", [])
+                    # Record the family label so a card can name the disease family it represents.
+                    _c["grouped_family"] = (_c.get("parent_indication")
+                                            if (_c.get("is_subtype") and _c.get("parent_indication"))
+                                            else _c.get("disease"))
+                    _reps.append(_c)
+                    _fam_index[_fam] = _c
+                else:
+                    _rep.setdefault("grouped_siblings", []).append({
+                        "disease": _c.get("disease"), "efo_id": _c.get("efo_id", ""),
+                        "score": _rank_of(_c), "is_subtype": bool(_c.get("is_subtype")),
+                        "parent_indication": _c.get("parent_indication", ""),
+                        "contradicted": _is_contra(_c),
+                    })
+                    # Preserve/surface a Contradicted status carried by any grouped member.
+                    if _is_contra(_c) and not _is_contra(_rep):
+                        _rep["evidence_tier"] = _c.get("evidence_tier")
+                        if _c.get("class_safety"):
+                            _rep["class_safety"] = _c.get("class_safety")
+            result["candidates"] = _reps
+        except Exception as _e:
+            logger.debug(f"post-expansion dedup/group failed: {_e}")
+
+        # COUNT CONSISTENCY (2026-07-31): the fact-check summary string was built in
+        # reverse_repurposing.py BEFORE this endpoint's subtype expansion/grouping, so it
+        # disagreed with the header, which counts the FINAL post-expansion arrays client-side
+        # ("16 novel / 2 folded" header vs "10 / 7 folded" summary). Recompute the novel/low
+        # counts from the final candidate set and rebuild the summary from the SAME partition
+        # the header uses (visible = not low_confidence), so the two can no longer contradict.
+        try:
+            def _is_contra_c(c):
+                _et = c.get("evidence_tier")
+                _t = (_et.get("tier") if isinstance(_et, dict) else _et) or ""
+                return _t == "contradicted" or bool(c.get("class_safety"))
+            _final = result.get("candidates", [])
+            # A contradicted candidate is NOT an actionable novel lead, so it is excluded from
+            # the "novel untested above the actionable cutoff" count (it still renders as a
+            # Contradicted card). This matches the header, which excludes it the same way.
+            _vis = [c for c in _final if not c.get("low_confidence") and not _is_contra_c(c)]
+            _low = [c for c in _final if c.get("low_confidence")]
+            result["n_novel_actionable"] = len(_vis)
+            result["n_low_confidence"] = len(_low)
+            _kr = int(result.get("n_recovered", 0))
+            _di = int(result.get("n_in_development", 0))
+            _fd = int(result.get("n_in_development_failed", 0))
+            result["summary"] = "; ".join([
+                f"{_kr} approved {'use' if _kr == 1 else 'uses'} recovered by mechanism",
+                (f"{_di} previously studied ({_fd} failed)" if _di else "none previously studied"),
+                f"{len(_vis)} novel untested above the actionable cutoff"
+                + (f" ({len(_low)} low-confidence folded)" if _low else ""),
+            ]) + "."
+        except Exception as _e:
+            logger.debug(f"summary recount failed: {_e}")
+
         # Mark the source molecule's portfolio status for the 505(b)(2) framing
         if PORTFOLIO_OK:
             entry = _portfolio.match(chembl_id=result.get("chembl_id", ""),

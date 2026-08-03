@@ -1,0 +1,15 @@
+# Keep the build context small — exclude the (huge) venv, caches, logs, git.
+.venv312/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
+biocypher-log/
+cache/
+.qc/
+node_modules/
+*.log
+# malformed path-name dirs from a bad Windows copy (not real content)
+C:Users*

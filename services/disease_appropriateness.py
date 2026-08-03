@@ -93,12 +93,32 @@ def _matches_adverse_event(disease: str, reactions: List[Tuple[str, int]],
 
 def appropriateness(drug_name: str, disease_name: str, therapeutic_areas: List[str],
                     action: str, faers_reactions: Optional[List[Tuple[str, int]]] = None,
-                    faers_total: int = 0) -> Dict:
+                    faers_total: int = 0, drug_genes: Optional[List[str]] = None,
+                    drug_action_map: Optional[Dict] = None, disease_efo: str = "") -> Dict:
     """Bounded appropriateness verdict for a (drug, candidate-disease) pair.
     Returns {factor 0.3–1.0, appropriate, flags, reasons}. factor GATES ranking /
     actionability; it does not overwrite the mechanistic composite."""
     out = {"factor": 1.0, "appropriate": True, "flags": [], "reasons": []}
     areas_blob = " ".join(therapeutic_areas or []).lower()
+
+    # D — CLASS-LEVEL mechanism contraindication (curated, evidence-linked). A drug whose
+    # target CLASS + action direction carries a disease-SPECIFIC mortality/serious signal
+    # (e.g. PDE3 inhibition x heart failure — PROMISE / cilostazol boxed warning) is
+    # CONTRAINDICATED, not merely weak. This is the strongest negative: it drives the
+    # candidate to the "Contradicted" tier and out of the actionable bucket (see the
+    # reverse screen wiring). Disease-specific by design, so cilostazol's approved
+    # claudication use is NOT flagged. Fail-soft.
+    try:
+        from services.class_safety import class_contraindication
+        cs = class_contraindication(drug_genes, disease_name, disease_efo=disease_efo,
+                                    drug_action=action, drug_action_map=drug_action_map)
+        if cs:
+            out["factor"] = min(out["factor"], 0.2)
+            out["flags"].append(cs["flag"])
+            out["reasons"].append(cs["note"])
+            out["class_safety"] = cs
+    except Exception as e:                                   # pragma: no cover
+        logger.debug("class-safety check skipped: %s", e)
 
     # B — inhibitor proposed for a congenital/developmental (loss-of-function) disorder.
     if action == "inhibitor" and _DEVELOPMENTAL_AREA in areas_blob:

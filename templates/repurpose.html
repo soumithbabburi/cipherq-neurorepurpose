@@ -87,7 +87,19 @@ function drugSummaryHtml(d){
     var cls = port.status === 'pipeline' ? 'amber' : 'green';
     badge = '<span class="chip '+cls+'" style="font-size:11px">'+label+(port.form?(' · '+port.form):'')+'</span>';
   }
-  var targets = (d.drug_targets||[]).map(function(g){return '<span class="chip purple">'+g+'</span>';}).join(' ');
+  // Priority 5a — distinguish MEASURED targets from family-INFERRED annotation members.
+  // An inferred isoform (no isoform-specific potency measured / published) is marked so the
+  // header does not imply all targets were measured. No potency value is fabricated.
+  var tev = (d.target_evidence && d.target_evidence.targets) || {};
+  var targets = (d.drug_targets||[]).map(function(g){
+      var lvl = (tev[g]||{}).level;
+      if (lvl === 'family-inferred'){
+        return '<span class="chip" title="Family-inferred: appears via ChEMBL mechanism annotation only; no isoform-specific potency measured or published." '
+             + 'style="background:#f3eefc;color:#6b46a8;border:1px dashed #c3a6e8">'+g+' <span style="opacity:.7;font-weight:400">· inferred</span></span>';
+      }
+      return '<span class="chip purple" title="Measured/published potency for this target.">'+g+'</span>';
+  }).join(' ');
+  var tevNote = (d.target_evidence && d.target_evidence.note) ? d.target_evidence.note : '';
   var known = (d.known_indications||[]).slice(0,10).map(function(i){return '<span class="chip cyan">'+i+'</span>';}).join(' ');
   var excluded = (d.excluded_indications||[]).slice(0,12).map(function(i){return '<span class="chip cyan">'+i+'</span>';}).join(' ');
   var studied = (d.studied_indications||[]).slice(0,12).map(function(i){return '<span class="chip amber">'+i+'</span>';}).join(' ');
@@ -121,7 +133,9 @@ function drugSummaryHtml(d){
     +   '</div>'
     + '</div>'
     + mpoRow
-    + '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">Protein targets</div>'+ (targets||'<span class="text-dim">none found</span>') +'</div>';
+    + '<div style="margin-top:12px"><div class="kv-k" style="margin-bottom:4px">Protein targets</div>'+ (targets||'<span class="text-dim">none found</span>')
+    + (tevNote ? '<div style="font-size:0.68rem;color:#8a7bb0;line-height:1.45;margin-top:6px">'+tevNote+'</div>' : '')
+    + '</div>';
   // NOTE (2026-07): the "Approved indications (excluded)" and "Studied but not approved"
   // header banners were removed, they were redundant with the per-candidate status badge
   // (Approved · excluded / Prior art · Phase N / Novel) and were showing a stale, confusing
@@ -180,8 +194,12 @@ function evidenceTierBadge(et){
 // means the negative sources answered; amber "Unverified" means too few were
 // consulted to trust the pass (the pair is a hypothesis, not a vetted lead). The
 // score is unchanged either way, this only tells the user how much was verified.
-function verificationBadge(eb){
+function verificationBadge(eb, c){
   if(!eb || !eb.verdict) return '';
+  // Prior clinical art (in-development / recovered approved use) carries its own honest tier
+  // label; a coverage-aware "contradicted" verification verdict there reads as a class-level
+  // kill it is not (the genuine kill lives on the evidence_tier badge). Suppress the collision.
+  if(c && (c.in_development || c.is_known_indication) && eb.verdict==='contradicted') return '';
   var M={'verified_supported':['#e6f4ea','#1b5e20','#bfe0c8','Evidence checked'],
          'verified_clean':    ['#e6f4ea','#1b5e20','#bfe0c8','Evidence checked'],
          'mixed':             ['#eef1f4','#41566b','#d5dde6','Mixed evidence'],
@@ -223,7 +241,8 @@ function reg505b2Block(r){
     +   '<span class="chip" style="background:'+tc[0]+';color:'+tc[1]+';font-weight:700;font-size:11px">'+r.tier+' · '+r.feasibility_score+'/100</span>'
     + '</div>'
     + (r.route?'<div style="font-size:0.68rem;color:#47526b;line-height:1.45">'+r.route+'</div>':'')
-    + (r.runway_years!=null?'<div style="font-size:0.68rem;color:#98a1b6;margin-top:3px">Base exclusivity runway: <b style="color:#0f1e3d">'+r.runway_years+'y</b>'+((r.patents_primary||r.patents_secondary)?(' · '+(r.patents_primary||0)+' substance / '+(r.patents_secondary||0)+' formulation-or-use'):'')+'</div>':'')
+    + (r.regulatory_runway_years!=null?'<div style="font-size:0.68rem;color:#98a1b6;margin-top:3px">Regulatory exclusivity: <b style="color:#0f1e3d">'+r.regulatory_runway_years+'y</b>'+(r.regulatory_exclusivity_label?(' · '+r.regulatory_exclusivity_label):'')+(r.regulatory_exclusivity_expiry?(' · to '+r.regulatory_exclusivity_expiry):'')+'</div>':(r.exclusivity_source?'<div style="font-size:0.68rem;color:#98a1b6;margin-top:3px">Regulatory exclusivity: <b style="color:#0f1e3d">none unexpired</b></div>':''))
+    + (r.patent_runway_years!=null?'<div style="font-size:0.68rem;color:#98a1b6;margin-top:2px">Patent life: <b style="color:#0f1e3d">'+r.patent_runway_years+'y</b>'+(r.patent_expiry?(' · to '+r.patent_expiry):'')+((r.patents_primary||r.patents_secondary)?(' · '+(r.patents_primary||0)+' substance / '+(r.patents_secondary||0)+' formulation-or-use'):'')+'</div>':'')
     + (form && form.opportunity ? '<div class="chip" style="align-self:flex-start;margin-top:5px;background:#eef4ef;color:#065f46;border:1px solid #cfe0d8;font-weight:600" title="'+(form.note||'').replace(/"/g,'')+'">Reformulation opportunity · '+form.route+' → new IP</div>':'')
     + (r.exclusivity_narrative?'<div style="font-size:0.66rem;color:#98a1b6;margin-top:4px;line-height:1.4">'+r.exclusivity_narrative+'</div>':'')
     + '</div>';
@@ -256,7 +275,7 @@ function verdictReverse(c){
     var tl = c.trial_count ? (c.trial_count+' trial'+(c.trial_count>1?'s':'')+(ph?(' · up to '+ph):''))
            : (ph ? ('Studied · '+ph) : 'Prior clinical art');
     var etn = (c.evidence_tier && c.evidence_tier.note) ? (' — '+c.evidence_tier.note) : '';
-    return {word: (c.deprioritized ? 'In development · failed' : 'In clinical development'),
+    return {word: (c.deprioritized ? 'Previously studied · failed' : 'Previously studied'),
             col:  (c.deprioritized ? '#922019' : '#8a5a00'),
             why:  tl + etn};
   }
@@ -320,11 +339,24 @@ var _REV_DRUG = null;
 // Safety column LEADS with the drug's established human safety (an approved drug cleared
 // safety trials - a derisking positive for repurposing), then demotes the trial serious-AE
 // rate to a neutral secondary line, and qualifies by the target indication's severity.
-function safetyApprovalLineRev(){
+// APPROVAL-AWARE + INDICATION-SPECIFIC (audited 2026-07): "No approved human safety data"
+// was factually wrong for an approved drug (e.g. ensifentrine/Ohtuvayre, FDA-approved for
+// COPD) and undercut the 505(b)(2) derisking value. An approved drug's safety is ESTABLISHED
+// for its approved use; what is not yet established is safety for THIS candidate indication.
+function safetyApprovalLineRev(c){
   var mp = _REV_DRUG ? +(_REV_DRUG.max_phase||0) : 0;
-  if (mp>=4) return {label:'Approved drug, established human safety profile', muted:false};
-  if (mp>=1) return {label:'Phase '+Math.round(mp)+', human safety data available', muted:false};
-  return {label:'No approved human safety data', muted:true};
+  var appr = (_REV_DRUG && _REV_DRUG.approved_indications) || [];
+  var isAppr = mp>=4 || (_REV_DRUG && _REV_DRUG.approved) || appr.length>0;
+  var dis = (c && c.disease) ? c.disease : 'this indication';
+  // The drug's OWN approved / mechanism-recovered indication: safety IS established for it.
+  var ownUse = c && (c.is_known_indication || c.recovered_by_mechanism);
+  if (isAppr){
+    if (ownUse) return {label:'Approved drug, established human safety profile', muted:false};
+    var use = appr.length ? appr.slice(0,2).join(' / ') : 'its approved indication';
+    return {label:'Safety established for '+use+'; not yet established for '+dis, muted:false};
+  }
+  if (mp>=1) return {label:'Phase '+Math.round(mp)+' human safety data; not yet approved for any indication', muted:false};
+  return {label:'No approved safety data for '+dis, muted:true};
 }
 function severityQualifierRev(c){
   var sev = (c.clinical_constraints||{}).disease_severity;
@@ -333,7 +365,7 @@ function severityQualifierRev(c){
   return '';
 }
 function safetyCellRev(c){
-  var ap = safetyApprovalLineRev();
+  var ap = safetyApprovalLineRev(c);
   var qual = severityQualifierRev(c);
   var v = c.safety_ct;
   var secLabel = (v && v.label) ? String(v.label).replace(/</g,'&lt;') : '';
@@ -341,10 +373,14 @@ function safetyCellRev(c){
   var apCol = ap.muted ? '#8a94a8' : '#31415f';
   var sec = secLabel ? '<div title="'+secTip+'" style="font-size:0.66rem;color:#8a94a8;line-height:1.3;margin-top:3px">'+secLabel+'</div>' : '';
   var qh = qual ? '<div style="font-size:0.62rem;color:#98a1b6;line-height:1.3;margin-top:1px;font-style:italic">'+qual+'</div>' : '';
+  // Priority 5b — route-transferability caveat: inhaled/airway safety does not automatically
+  // transfer to a candidate needing a different systemic route.
+  var route = (c.route_transfer_caveat && c.route_transfer_note)
+    ? '<div style="font-size:0.62rem;color:#9a6a1a;line-height:1.3;margin-top:2px">Route caveat: '+String(c.route_transfer_note).replace(/</g,'&lt;')+'</div>' : '';
   return '<div style="flex:1;min-width:0">'
     + '<div style="font-size:0.56rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#98a1b6;margin-bottom:2px">Safety · established</div>'
     + '<div style="font-size:0.74rem;font-weight:600;color:'+apCol+';line-height:1.35">'+ap.label+'</div>'
-    + sec + qh + '</div>';
+    + sec + qh + route + '</div>';
 }
 function ctColumns(c){
   return '<div style="display:flex;gap:14px;background:var(--bg-sunken,#f4f6f9);border:1px solid rgba(0,0,0,0.06);border-radius:8px;padding:8px 12px">'
@@ -401,13 +437,18 @@ function candidateCard(c, chembl, idx, list){
   else if (c.lit_count) clinLine = c.lit_count+' PubMed co mentions';
   var dossierUrl = '/analysis?id='+encodeURIComponent(chembl)+'&disease='+encodeURIComponent(c.disease)+'&from=repurpose';
   var vd = verdictReverse(c);
+  var et = c.evidence_tier || {};
+  // A class-safety kill (contradicted) or a hard-negative "Not a candidate": suppress the
+  // commercial / developability panels so they do not visually undercut the kill flag.
+  var killed = (et.tier==='contradicted') || (vd.word==='Not a candidate');
+  var approvedUse = !!c.is_known_indication;
   // Context tags (not penalties): what KIND of candidate this is.
   var contextTags = ''
     + (c.is_known_indication
         ? '<span class="chip" style="background:#e9f5ec;color:#1b5e20;border:1px solid #c6e4cd;font-size:0.66rem;font-weight:700" title="An established approved indication for this molecule, independently re-derived from its targets by the mechanism engine. Shown as validation, not a novel lead.">Known use · recovered by mechanism</span>'
         : '')
     + ((c.in_development && !c.is_known_indication)
-        ? '<span class="chip" style="background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-size:0.66rem;font-weight:700" title="This indication already has clinical trials or a recorded study phase for this molecule. Prior clinical art, evaluated here with its trial safety and efficacy, not a novel repurposing lead.">In clinical development</span>'
+        ? '<span class="chip" style="background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-size:0.66rem;font-weight:700" title="This indication already has clinical trials or a recorded study phase for this molecule. Prior clinical art, evaluated here with its trial safety and efficacy, not a novel repurposing lead.">Previously studied</span>'
         : '')
     + ((c.deprioritized && !c.is_known_indication)
         ? '<span class="chip" style="background:#faece9;color:#922019;border:1px solid #e6c3bb;font-size:0.66rem;font-weight:700" title="A trial for this drug and indication failed for efficacy, missed its primary endpoint, or moved only a biomarker. De-prioritized: it ranks where the mechanism puts it, but it is not an actionable lead.">Failed</span>'
@@ -421,14 +462,17 @@ function candidateCard(c, chembl, idx, list){
     + ((c.directional_evidence && c.directional_evidence.covered && c.directional_evidence.signal>0)
         ? '<span class="chip" style="background:#eef4ef;color:#065f46;border:1px solid #cfe0d8;font-weight:600;font-size:0.66rem" title="'+((c.directional_evidence.note||'')).replace(/"/g,'')+'">'+(c.directional_evidence.direct_treat?'Directional evidence · treats-edge':'Directional path · '+c.directional_evidence.n_paths+' gene link'+(c.directional_evidence.n_paths===1?'':'s'))+'</span>'
         : '')
-    + safetyContextChip(c.safety);
+    + safetyContextChip(c.safety)
+    + (c.class_precedent
+        ? '<span class="chip" style="background:#e9f5ec;color:#1b5e20;border:1px solid #c6e4cd;font-size:0.66rem;font-weight:700" title="'+((c.class_precedent.note||'')).replace(/"/g,'')+'">Class-validated · '+(c.class_precedent.congener||'')+' ('+(c.class_precedent.congener_class||'')+') approved '+(c.class_precedent.year||'')+'</span>'
+        : '');
   // Caveat chips that are NOT already restated in the "Why not (yet)" section below
   // (safety / coverage / commercial / trial-failure / clinical-mismatch / wrong-direction /
   // ctpa are all in why_not, so they are shown ONCE, there, not duplicated as chips here).
   var caveatTags = ''
     + (c.bbb_caution?'<div class="chip amber" style="align-self:flex-start" title="CNS indication, but the molecule\'s CNS-MPO is below 4, so blood brain barrier penetration is uncertain">BBB risk · brain penetration uncertain</div>':'')
     + ((c.registry && c.registry.ghost)
-        ? '<div class="chip" style="align-self:flex-start;background:#faece9;color:#922019;border:1px solid #e6c3bb;font-weight:600" title="'+((c.registry.reason||'')).replace(/"/g,'')+'">Discontinued program · '+(c.registry.latest_year||'')+'</div>'
+        ? '<div class="chip" style="align-self:flex-start;background:#f8f2df;color:#8a5a00;border:1px solid #e6cf95;font-weight:600" title="'+((c.registry.reason||'')).replace(/"/g,'')+'">No active program · last study '+(c.registry.latest_year||'')+'</div>'
         : '')
     + ((c.clinical_constraints && c.clinical_constraints.cancer_predisposition)
         ? '<div class="chip" style="align-self:flex-start;background:#f4f0f6;color:#5b3b6b;border:1px solid #ddd0e4;font-weight:600" title="Hereditary cancer predisposition syndrome, judged at oncology grade severity, not benign.">Cancer predisposition · oncology grade</div>'
@@ -463,14 +507,14 @@ function candidateCard(c, chembl, idx, list){
   +   headlineHtml(vd)
   +   (contextTags?'<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+contextTags+'</div>':'')
   // ── ZONE 2 · SUPPORTING EVIDENCE ──────────────────────────────────────────────
-  +   '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+evidenceTierBadge(c.evidence_tier)+verificationBadge(c.evidence_balance)+plausibilityBadge(c.plausibility)+diseaseValueBadge(c.disease_value)+'</div>'
+  +   '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+(approvedUse?'<span class="chip" style="margin-top:5px;background:#e6f4ea;color:#1b5e20;border:1px solid #bfe0c8;font-weight:600;font-size:11px" title="This is the drug\'s approved indication; the clinical evidence here is the basis of its FDA approval, not a novel mechanistic hypothesis.">Approved use · established clinical evidence</span>':evidenceTierBadge(c.evidence_tier))+verificationBadge(c.evidence_balance, c)+plausibilityBadge(c.plausibility)+((c.actionable===false||killed)?'':diseaseValueBadge(c.disease_value))+'</div>'
   +   ctColumns(c)
   +   funnelHtml(c.lead_viability)
-  +   '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
+  +   (killed ? '' : '<div class="flex" style="gap:8px;align-items:center;background:var(--bg-sunken);border-radius:8px;padding:6px 10px">'
   +     '<span class="cc-bar-lbl">Developability</span>'
   +     '<div class="cc-bar-track" style="flex:1"><div class="cc-bar-fill" style="width:'+(dvScore!=null?Math.round(dvScore*100):0)+'%"></div></div>'
   +     '<span class="mono" style="font-size:11px;font-weight:600;color:'+dvCol+'">'+(dvScore!=null?(dvScore*100).toFixed(0):'-')+'</span>'
-  +   '</div>'
+  +   '</div>')
   +   '<div class="cc-tags">'+srcBadges+' '+kdBadge+'</div>'
   +   (areas?'<div class="cc-tags">'+areas+'</div>':'')
   +   (clinLine?'<div style="font-size:0.7rem;color:#2563eb;font-weight:600">'+clinLine+'</div>':'')
@@ -483,10 +527,10 @@ function candidateCard(c, chembl, idx, list){
   +   '</div>'
   // ── ZONE 3 · CAVEATS & DETAIL ─────────────────────────────────────────────────
   +   (caveatTags?'<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">'+caveatTags+'</div>':'')
-  +   whyNotHtml(c.why_not)
+  +   (approvedUse ? '' : whyNotHtml(c.why_not))
   +   pivotsHtml(c.pivots)
-  +   devBlock(dv)
-  +   (c.low_confidence ? '' : reg505b2Block(c.regulatory_505b2))
+  +   (killed ? '<div style="font-size:0.68rem;color:#98a1b6;font-style:italic;border-left:2px solid #e6c3bb;padding-left:8px">Developability and 505(b)(2) profile not shown — this pair is contraindicated (see status above).</div>' : devBlock(dv))
+  +   ((c.low_confidence||killed) ? '' : reg505b2Block(c.regulatory_505b2))
   +   trialDesignPanel(chembl, c.disease)
   +   '<a class="btn btn-secondary" href="'+dossierUrl+'" style="justify-content:center;margin-top:auto">'
   +     '<span class="material-symbols-outlined" style="font-size:15px">description</span>505(b)(2) Dossier</a>'
@@ -768,7 +812,11 @@ async function runScreen(){
     }
     var visible = cands.filter(function(c){return !c.low_confidence;});
     var lowc    = cands.filter(function(c){return c.low_confidence;});
-    status.innerHTML = '<strong>'+visible.length+'</strong> novel candidate'+(visible.length===1?'':'s')+' for '+d.drug+(area?(' · '+area):'')
+    // A contradicted candidate still RENDERS (as a "Not a candidate" card) but is not counted
+    // as a novel lead, so the header count matches the fact-check summary.
+    var _isContra = function(c){var t=(c.evidence_tier&&c.evidence_tier.tier)||''; return t==='contradicted'||c.class_safety;};
+    var novelCount = visible.filter(function(c){return !_isContra(c);}).length;
+    status.innerHTML = '<strong>'+novelCount+'</strong> novel candidate'+(novelCount===1?'':'s')+' for '+d.drug+(area?(' · '+area):'')
       + (indev.length ? ' · '+indev.length+' already in development' : '')
       + (recov.length ? ' · '+recov.length+' approved recovered' : '')
       + (lowc.length ? ' <span style="color:#98a1b6">('+lowc.length+' low-confidence folded)</span>' : '') + '.';
@@ -781,7 +829,8 @@ async function runScreen(){
     var rankNote = '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;background:var(--bg-sunken,#f4f6f9);border:1px solid rgba(0,0,0,0.06);border-radius:8px;padding:8px 12px;margin-bottom:12px">'
       + 'Candidates are ranked by evidence and repurposing value, which can differ from the Evidence score shown on each card. '
       + 'The Safety and Efficacy columns report ClinicalTrials.gov facts for reference only; they do not change the score or the order.</div>';
-    _REV_DRUG = {max_phase: +(d.max_phase||0), market_status: d.market_status||''};
+    _REV_DRUG = {max_phase: +(d.max_phase||0), approved: !!d.approved,
+                 approved_indications: d.approved_indications||[], market_status: d.market_status||''};
     // Validation lane: approved uses of this molecule that the engine independently
     // derived from its targets. Shown PROMINENTLY near the top as a mechanism check,
     // never mixed into the ranked candidates and never presented as novel.
@@ -803,8 +852,8 @@ async function runScreen(){
     // failed pair keeps its de-prioritized "Failed" chip; never merged with approved uses.
     var devHtml = indev.length ? (
       '<div style="margin-bottom:22px">'
-      + '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker" style="color:#8a5a00">In development</span></div>'
-      + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">In clinical development (already studied for this molecule, not novel)</div>'
+      + '<div class="section-head" style="margin-bottom:6px"><span class="s-kicker" style="color:#8a5a00">Prior clinical evidence</span></div>'
+      + '<div style="font-size:0.98rem;font-weight:700;color:var(--text-primary,#0f1e3d);margin-bottom:4px">Previously studied for this molecule (prior clinical art, not novel)</div>'
       + '<div style="font-size:0.72rem;color:#6b7690;line-height:1.5;margin-bottom:12px">Indications with existing clinical trials or a recorded study phase for this molecule. Prior clinical art, kept for reference and 505(b)(2) framing, not counted as novel repurposing leads.</div>'
       // Render with the SAME full candidateCard as the ranked leads (idx=null → no "Lead"
       // banner) so these already-trialed indications keep their decisive ClinicalTrials.gov

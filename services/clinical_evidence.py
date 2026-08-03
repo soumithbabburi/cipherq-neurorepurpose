@@ -230,6 +230,7 @@ def mine_clinical_evidence(drug_name: str, disease_name: str,
 _EFFICACY_LABELS = {
     "met_primary": "Met primary endpoint",
     "failed_primary": "Failed primary",
+    "inconclusive_underpowered": "Inconclusive (underpowered)",
     "biomarker_only": "Biomarker only",
     "terminated_efficacy": "Terminated (efficacy)",
     "terminated_safety": "Terminated (safety)",
@@ -316,7 +317,10 @@ def safety_approval_line(max_phase, approved_here: bool = False,
         label = f"Phase {mp}, human safety data available"
         muted = False
     else:
-        label = "No approved human safety data"
+        # Indication-specific wording: the drug not being approved does not mean it has "no
+        # human safety data" (it may have trial exposure); state it as no APPROVED safety
+        # data for this use, not an absence of any human safety characterization.
+        label = "No approved safety data for this indication"
         muted = True
     # A withdrawn/obsolete market status is a caution even for an approved drug —
     # append it honestly rather than implying an unqualified safe profile.
